@@ -156,10 +156,12 @@ export function safeOutput(value: any, defaultValue?: any): ReturnType<typeof to
       } else if (value instanceof String) {
         safeKey = "string_unsafe";
         block = text(value);
-      } else {
-        // Assuming it is a block
+      } else if (typeof value.mount === "function") {
         safeKey = "block_safe";
         block = value;
+      } else {
+        safeKey = "string_unsafe";
+        block = text(String(value));
       }
       break;
     case "string":

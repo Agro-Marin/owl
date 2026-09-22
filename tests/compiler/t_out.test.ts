@@ -244,14 +244,29 @@ describe("t-out", () => {
 
   test("t-out with arbitrary object", () => {
     const template = `<div t-out="var" />`;
-    const node = renderToBdom(template, { var: { someKey: "someValue" } });
-    expect(() => mount(node, fixture)).toThrow();
+    expect(renderToString(template, { var: { someKey: "someValue" } })).toBe(
+      "<div>[object Object]</div>"
+    );
   });
 
   test("t-out with arbitrary object 2", () => {
     const template = `<div t-out="var" />`;
-    const node = renderToBdom(template, { var: ["someValue"] });
-    expect(() => mount(node, fixture)).toThrow();
+    expect(renderToString(template, { var: ["someValue", "<b>x</b>"] })).toBe(
+      "<div>someValue,&lt;b&gt;x&lt;/b&gt;</div>"
+    );
+  });
+
+  test("t-out with an object that defines toString", () => {
+    const template = `<div t-out="var" />`;
+    const value = { toString: () => "2026-09-22 <now>" };
+    expect(renderToString(template, { var: value })).toBe("<div>2026-09-22 &lt;now&gt;</div>");
+  });
+
+  test("t-out renders an object like t-esc", () => {
+    const value = { toString: () => "<i>v</i>" };
+    expect(renderToString(`<div t-out="var" />`, { var: value })).toBe(
+      renderToString(`<div t-esc="var" />`, { var: value })
+    );
   });
 });
 
