@@ -96,6 +96,33 @@ def render_api_templates(files):
     return names
 
 
+STATIC_CALL = re.compile(r't-call="([\w.\-]+)"')
+TEMPLATE_START = re.compile(r'<[\w.\-]+[^<>]*?\st-name="([^"]+)"')
+
+
+def static_callees(files):
+    graph = {}
+    for f in files:
+        if not f.path.endswith(".xml") or "t-call" not in f.content:
+            continue
+        starts = [(m.start(), m[1]) for m in TEMPLATE_START.finditer(f.content)]
+        for i, (at, name) in enumerate(starts):
+            end = starts[i + 1][0] if i + 1 < len(starts) else len(f.content)
+            graph.setdefault(name, set()).update(STATIC_CALL.findall(f.content[at:end]))
+    return graph
+
+
+def close_over_calls(names, graph):
+    closed = set(names)
+    todo = list(names)
+    while todo:
+        for callee in graph.get(todo.pop(), ()):
+            if callee not in closed:
+                closed.add(callee)
+                todo.append(callee)
+    return closed
+
+
 def mask_render_bound_xml(files):
     masked = {}
     for f in files:
@@ -225,7 +252,11 @@ def main():
         name: {k: set(v) for k, v in getattr(up, name).items()}
         for name in ("MAIL_WHITELIST", "WEB_WHITELIST", "WEB_EXT_WHITELIST", "MISC_WHITELIST")
     }
-    up.EXCLUDED_TEMPLATES = tuple(set(up.EXCLUDED_TEMPLATES) | render_api_templates(files))
+    up.EXCLUDED_TEMPLATES = tuple(
+        close_over_calls(
+            set(up.EXCLUDED_TEMPLATES) | render_api_templates(files), static_callees(files)
+        )
+    )
     move_calls_onto_t(files)
     for _pass in range(3):
         before = [f.content for f in files]

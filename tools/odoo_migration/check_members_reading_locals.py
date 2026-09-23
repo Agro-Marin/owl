@@ -24,6 +24,25 @@ for r in roots:
         for m in GET.finditer(src):
             reads = set(re.findall(r"\bthis\.([A-Za-z_$][\w$]*)", body_at(src, m.end() - 1)))
             getters[m[1]].append((str(f), reads - members))
+sys.path.insert(0, str(pathlib.Path(__file__).parent))
+import this_scope as ts  # noqa: E402
+_files = ts.collect(roots)
+passed = ts.dynamic_whitelist(_files, ts.dynamic_calls(_files))
+_graph = {}
+for f in _files:
+    if not f.path.endswith(".xml"):
+        continue
+    try:
+        _root = etree.fromstring(f.content.encode())
+    except Exception:
+        continue
+    for t in _root.iter():
+        if isinstance(t.tag, str) and t.get("t-name"):
+            for el in t.iter():
+                if isinstance(el.tag, str) and el.get("t-call") and "{{" not in el.get("t-call"):
+                    names = {a for a in el.attrib if not a.startswith("t-")}
+                    names |= {c.get("t-set") for c in el if isinstance(c.tag, str) and c.get("t-set")}
+                    passed.setdefault(el.get("t-call").strip(), set()).update(names)
 out = set()
 for r in roots:
     for f in pathlib.Path(r).glob("*/static/**/*.xml"):
@@ -32,7 +51,7 @@ for r in roots:
         except Exception: continue
         for t in root.iter("t"):
             if not t.get("t-name"): continue
-            locals_ = set()
+            locals_ = set(passed.get(t.get("t-name"), ()))
             for el in t.iter():
                 if not isinstance(el.tag, str): continue
                 for a in ("t-as", "t-set", "t-slot-scope"):
