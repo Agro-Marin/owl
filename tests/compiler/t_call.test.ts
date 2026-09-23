@@ -525,6 +525,14 @@ describe("t-call (template calling)", () => {
     expect(context.renderToString("main")).toBe("<div><i>body</i></div>");
   });
 
+  test("parametric t-call: a .translate attribute is a translated literal", () => {
+    const context = new TestContext({ translateFn: (s: string) => (s === "UTM Campaign" ? "Campagne UTM" : s) });
+    context.addTemplate("sub", `<i t-esc="label"/>`);
+    context.addTemplate("main", `<div><t t-call="sub" label.translate="UTM Campaign"/></div>`);
+
+    expect(context.renderToString("main")).toBe("<div><i>Campagne UTM</i></div>");
+  });
+
   test("parametric t-call: t- directives on the node are not params", () => {
     const context = new TestContext();
     context.addTemplate("sub", `<i t-esc="typeof key"/>`);

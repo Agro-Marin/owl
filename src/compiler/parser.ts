@@ -667,11 +667,12 @@ function parseTCall(node: Element, ctx: ParsingContext): AST | null {
   const params: AST[] = [];
   for (const attributeName of node.getAttributeNames()) {
     if (!attributeName.startsWith("t-")) {
+      const translated = attributeName.endsWith(".translate");
       params.push({
         type: ASTType.TSet,
-        name: attributeName,
-        value: node.getAttribute(attributeName)!,
-        defaultValue: null,
+        name: translated ? attributeName.slice(0, -".translate".length) : attributeName,
+        value: translated ? null : node.getAttribute(attributeName)!,
+        defaultValue: translated ? node.getAttribute(attributeName)! : null,
         body: null,
         hasNoRepresentation: true,
       });
