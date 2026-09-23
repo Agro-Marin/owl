@@ -496,6 +496,43 @@ describe("t-call (template calling)", () => {
     expect(context.renderToString("main", { obj: { value: 123 } })).toBe("<span>123</span>");
   });
 
+  test("parametric t-call: an attribute is a value for the callee", () => {
+    const context = new TestContext();
+    context.addTemplate("sub", `<span><t t-esc="a"/>-<t t-esc="b"/></span>`);
+    context.addTemplate("main", `<div><t t-call="sub" a="x + 1" b="'lit'"/></div>`);
+
+    expect(context.renderToString("main", { x: 1 })).toBe("<div><span>2-lit</span></div>");
+  });
+
+  test("parametric t-call: a param does not leak into the caller", () => {
+    const context = new TestContext();
+    context.addTemplate("sub", `<i t-esc="a"/>`);
+    context.addTemplate("main", `<div><t t-call="sub" a="'inner'"/><b t-esc="a"/></div>`);
+
+    expect(context.renderToString("main", { a: "outer" })).toBe(
+      "<div><i>inner</i><b>outer</b></div>"
+    );
+  });
+
+  test("parametric t-call: a body t-set comes after the attribute params", () => {
+    const context = new TestContext();
+    context.addTemplate("sub", `<i t-esc="a"/>`);
+    context.addTemplate(
+      "main",
+      `<div><t t-call="sub" a="'attr'"><t t-set="a" t-value="'body'"/></t></div>`
+    );
+
+    expect(context.renderToString("main")).toBe("<div><i>body</i></div>");
+  });
+
+  test("parametric t-call: t- directives on the node are not params", () => {
+    const context = new TestContext();
+    context.addTemplate("sub", `<i t-esc="typeof key"/>`);
+    context.addTemplate("main", `<div><t t-call="sub" t-key="'k'"/></div>`);
+
+    expect(context.renderToString("main")).toBe("<div><i>undefined</i></div>");
+  });
+
   test("t-call-context exposes the context object as this", () => {
     const context = new TestContext();
     context.addTemplate("sub", `<span><t t-esc="this.value"/>/<t t-esc="value"/></span>`);

@@ -664,7 +664,20 @@ function parseTCall(node: Element, ctx: ParsingContext): AST | null {
       };
     }
   }
-  const body = parseChildren(node, ctx);
+  const params: AST[] = [];
+  for (const attributeName of node.getAttributeNames()) {
+    if (!attributeName.startsWith("t-")) {
+      params.push({
+        type: ASTType.TSet,
+        name: attributeName,
+        value: node.getAttribute(attributeName)!,
+        defaultValue: null,
+        body: null,
+        hasNoRepresentation: true,
+      });
+    }
+  }
+  const body = [...params, ...parseChildren(node, ctx)];
 
   return {
     type: ASTType.TCall,
