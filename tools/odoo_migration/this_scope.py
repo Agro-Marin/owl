@@ -17,6 +17,9 @@ DYNAMIC_EXPR = re.compile(r"\{\{\s*(.*?)\s*\}\}")
 GENERIC_KEYS = {"template"}
 COMPONENT_TEMPLATE = re.compile(r"""static\s+template\s*=\s*["']([^'"]+)["']""")
 TEMPLATE_BODY = re.compile(r'<t\s+t-name="([^"]+)"(.*?)</t>\s*(?=<t\s+t-name=|</templates>)', re.DOTALL)
+CALL_ON_ELEMENT = re.compile(
+    r'<(?!t[\s>/])([A-Za-z][\w.\-]*)([^<>]*?)\s+t-call="([^"]*)"([^<>]*?)\s*/>', re.DOTALL
+)
 INHERIT = re.compile(r't-name="([^"]+)"[^>]*?t-inherit="([^"]+)"')
 EXCLUDED = up.EXCLUDED_PATH + ("/static/lib/", "/static/src/o_spreadsheet/")
 
@@ -54,6 +57,17 @@ def collect(roots):
             f.path = Path(text)
             files.append(f)
     return files
+
+
+def move_calls_onto_t(files):
+    moved = 0
+    for f in files:
+        if f.path.endswith(".xml") and "t-call" in f.content:
+            f.content, n = CALL_ON_ELEMENT.subn(
+                lambda m: f'<{m[1]}{m[2]}{m[4]}><t t-call="{m[3]}"/></{m[1]}>', f.content
+            )
+            moved += n
+    return moved
 
 
 def render_api_templates(files):
@@ -168,6 +182,7 @@ def main():
         for name in ("MAIL_WHITELIST", "WEB_WHITELIST", "WEB_EXT_WHITELIST", "MISC_WHITELIST")
     }
     up.EXCLUDED_TEMPLATES = tuple(set(up.EXCLUDED_TEMPLATES) | render_api_templates(files))
+    move_calls_onto_t(files)
     for _pass in range(3):
         before = [f.content for f in files]
         if not args.tcall_only:
