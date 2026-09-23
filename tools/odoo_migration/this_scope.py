@@ -21,7 +21,11 @@ CALL_ON_ELEMENT = re.compile(
     r'<(?!t[\s>/])([A-Za-z][\w.\-]*)([^<>]*?)\s+t-call="([^"]*)"([^<>]*?)\s*/>', re.DOTALL
 )
 INHERIT = re.compile(r't-name="([^"]+)"[^>]*?t-inherit="([^"]+)"')
-EXCLUDED = up.EXCLUDED_PATH + ("/static/lib/", "/static/src/o_spreadsheet/")
+EXCLUDED = up.EXCLUDED_PATH + (
+    "/static/lib/",
+    "/static/src/o_spreadsheet/",
+    "/test_translation_import/static/src/xml/js_templates.xml",
+)
 
 
 class File:

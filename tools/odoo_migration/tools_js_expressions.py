@@ -547,7 +547,7 @@ class VariableAggregator:
             if node.get("t-foreach") or node.get("t-for-each"):
                 var_name = node.get("t-as")
                 if var_name:
-                    yield var_name
+                    yield from TemplateCompiler._expand_t_as(var_name)
 
                 var_name = node.get("t-foreach-index") or node.get("t-index")
                 if var_name:
@@ -2608,6 +2608,7 @@ def run_test_vars(test):
     if "all_vars" in test or "outside_vars" in test:
         aggregator.all_vars = test.get("all_vars", {})
         aggregator.t_call_vars = test.get("outside_vars", defaultdict(set))
+        aggregator.t_call_outer_vars = test.get("t_call_outer_vars", defaultdict(set))
         aggregator.full_inherit_and_call_map = test.get("full_inherit_and_call_map", defaultdict(str))
     else:
         # If vars not specified replicate the real process of using aggregator to map
@@ -2724,6 +2725,29 @@ test_vars = [
         </label>
     </xpath>
 </t>
+        """,
+    },
+    {
+        "name": "extension reads the parent loop's companion variables",
+        "content": """
+<templates>
+<t t-name="web.TagsList"><t t-foreach="tags" t-as="tag" t-key="tag.id"><span class="o_tag"/></t></t>
+<t t-name="mail.TagsList" t-inherit="web.TagsList" t-inherit-mode="primary">
+    <xpath expr="//span" position="replace">
+        <div t-att-data-index="tag_index" t-att-class="{ first: tag_first, last: tag_last }" t-att-title="tag_value"/>
+    </xpath>
+</t>
+</templates>
+        """,
+        "expected": """
+<templates>
+<t t-name="web.TagsList"><t t-foreach="this.tags" t-as="tag" t-key="tag.id"><span class="o_tag"/></t></t>
+<t t-name="mail.TagsList" t-inherit="web.TagsList" t-inherit-mode="primary">
+    <xpath expr="//span" position="replace">
+        <div t-att-data-index="tag_index" t-att-class="{ first: tag_first, last: tag_last }" t-att-title="tag_value"/>
+    </xpath>
+</t>
+</templates>
         """,
     },
     {
