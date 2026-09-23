@@ -65,13 +65,14 @@ def render_api_templates(files):
     }
 
 
-def dynamic_calls(files):
+def dynamic_calls(files, original=False):
     report = []
     for f in files:
-        if not f.path.endswith(".xml") or "t-call" not in f.content:
+        content = f._original if original else f.content
+        if not f.path.endswith(".xml") or "t-call" not in content:
             continue
         try:
-            root = etree.fromstring(f.content.encode())
+            root = etree.fromstring(content.encode())
         except etree.XMLSyntaxError:
             continue
         for el in root.iter():
@@ -92,6 +93,7 @@ def dynamic_calls(files):
             for child in el:
                 if isinstance(child.tag, str) and child.get("t-set"):
                     scope.add(child.get("t-set"))
+            scope |= {name for name in el.attrib if not name.startswith("t-")}
             report.append((f.path, el.sourceline, call, sorted(scope)))
     return report
 
@@ -161,13 +163,26 @@ def main():
     def log_error(path, exc):
         errors.append(f"{path}: {exc!r}")
 
-    up.upgrade_parametric_tcall(files, print, log_error)
-    if not args.tcall_only:
-        up.EXCLUDED_TEMPLATES = tuple(set(up.EXCLUDED_TEMPLATES) | render_api_templates(files))
-        for name, names in dynamic_whitelist(files, dynamic_calls(files)).items():
-            up.MISC_WHITELIST[name] = up.MISC_WHITELIST.get(name, set()) | names
-        up.upgrade_this(files, print, log_error, targets=[])
-        up.upgrade_this_in_js(files, print, log_error, targets=[])
+    upstream_lists = {
+        name: {k: set(v) for k, v in getattr(up, name).items()}
+        for name in ("MAIL_WHITELIST", "WEB_WHITELIST", "WEB_EXT_WHITELIST", "MISC_WHITELIST")
+    }
+    up.EXCLUDED_TEMPLATES = tuple(set(up.EXCLUDED_TEMPLATES) | render_api_templates(files))
+    for _pass in range(3):
+        before = [f.content for f in files]
+        if not args.tcall_only:
+            extra = dynamic_whitelist(files, dynamic_calls(files))
+            merged = {}
+            for wl in (*upstream_lists.values(), extra):
+                for name, names in wl.items():
+                    merged.setdefault(name, set()).update(names)
+            up.MAIL_WHITELIST, up.WEB_WHITELIST, up.WEB_EXT_WHITELIST = {}, {}, {}
+            up.MISC_WHITELIST = merged
+            up.upgrade_this(files, print, log_error, targets=[])
+            up.upgrade_this_in_js(files, print, log_error, targets=[])
+        up.upgrade_parametric_tcall(files, print, log_error)
+        if [f.content for f in files] == before:
+            break
 
     changed = [f for f in files if f.changed]
     if not args.check:
