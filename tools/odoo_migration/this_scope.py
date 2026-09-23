@@ -70,13 +70,57 @@ def move_calls_onto_t(files):
     return moved
 
 
+RENDER_CALL = re.compile(
+    r"\b(?:renderToString|renderToElement|renderToFragment|renderToMarkup|renderAt)"
+    r"\(\s*([A-Za-z_$][\w$.]*)\s*[,)]"
+)
+RENDER_XML_INLINE = re.compile(
+    r"\b(?:renderToString|renderToElement|renderToFragment|renderToMarkup|renderAt)\(\s*xml\s*`"
+)
+
+
+def render_bound_identifiers(content):
+    return {ref.rsplit(".", 1)[-1] for ref in RENDER_CALL.findall(content)}
+
+
 def render_api_templates(files):
-    return {
-        name
-        for f in files
-        if f.path.endswith(".js")
-        for name in RENDER_API.findall(f.content)
-    }
+    names = set()
+    for f in files:
+        if not f.path.endswith(".js"):
+            continue
+        names |= set(RENDER_API.findall(f.content))
+        for ident in render_bound_identifiers(f.content):
+            names |= set(
+                re.findall(rf"\b{re.escape(ident)}\s*[:=]\s*[\"']([\w.\-]+)[\"']", f.content)
+            )
+    return names
+
+
+def mask_render_bound_xml(files):
+    masked = {}
+    for f in files:
+        if not f.path.endswith(".js") or "xml" not in f.content:
+            continue
+        idents = render_bound_identifiers(f.content)
+        spans = [m.start() for m in RENDER_XML_INLINE.finditer(f.content)]
+        for ident in idents:
+            for m in re.finditer(rf"\b{re.escape(ident)}\s*[:=]\s*xml\s*`", f.content):
+                spans.append(m.start())
+        if not spans:
+            continue
+        content = f.content
+        for start in sorted(spans, reverse=True):
+            at = content.index("xml", start)
+            content = content[:at] + "MASKEDXML" + content[at + 3:]
+        masked[f.path] = True
+        f.content = content
+    return masked
+
+
+def unmask_render_bound_xml(files, masked):
+    for f in files:
+        if f.path in masked:
+            f.content = f.content.replace("MASKEDXML", "xml")
 
 
 def dynamic_calls(files, original=False):
@@ -194,7 +238,9 @@ def main():
             up.MAIL_WHITELIST, up.WEB_WHITELIST, up.WEB_EXT_WHITELIST = {}, {}, {}
             up.MISC_WHITELIST = merged
             up.upgrade_this(files, print, log_error, targets=[])
+            masked = mask_render_bound_xml(files)
             up.upgrade_this_in_js(files, print, log_error, targets=[])
+            unmask_render_bound_xml(files, masked)
         up.upgrade_parametric_tcall(files, print, log_error)
         if [f.content for f in files] == before:
             break
