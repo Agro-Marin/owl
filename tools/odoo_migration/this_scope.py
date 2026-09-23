@@ -94,10 +94,20 @@ def render_api_templates(files):
             continue
         names |= set(RENDER_API.findall(f.content))
         for ident in render_bound_identifiers(f.content):
-            names |= set(
-                re.findall(rf"\b{re.escape(ident)}\s*[:=]\s*[\"']([\w.\-]+)[\"']", f.content)
-            )
+            names |= set(assigned_template_names(ident, f.content))
     return names
+
+
+TEMPLATE_LITERAL = re.compile(r"""["']([\w\-]+(?:\.[\w\-]+)+)["']""")
+
+
+def assigned_template_names(ident, content):
+    for m in re.finditer(rf"\b{re.escape(ident)}\s*([:=])(?!=)\s*", content):
+        end = content.find(";" if m[1] == "=" else ",", m.end())
+        expr = content[m.end(): end if end != -1 else None]
+        if m[1] == ":":
+            expr = expr.split("}", 1)[0]
+        yield from TEMPLATE_LITERAL.findall(expr)
 
 
 STATIC_CALL = re.compile(r't-call="([\w.\-]+)"')
