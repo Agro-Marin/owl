@@ -8,10 +8,6 @@ sys.path.insert(0, str(pathlib.Path(__file__).parent))
 import upstream_owl3_migration as up  # noqa: E402
 from lxml import etree  # noqa: E402
 
-RENDER_API = re.compile(
-    r"""\b(?:renderToString|renderToElement|renderToFragment|renderToMarkup|renderAt)"""
-    r"""\(\s*["']([A-Za-z0-9_.\-]+)["']"""
-)
 DYNAMIC_CALL = re.compile(r"\{\{")
 DYNAMIC_EXPR = re.compile(r"\{\{\s*(.*?)\s*\}\}")
 GENERIC_KEYS = {"template"}
@@ -74,25 +70,68 @@ def move_calls_onto_t(files):
     return moved
 
 
-RENDER_CALL = re.compile(
-    r"\b(?:renderToString|renderToElement|renderToFragment|renderToMarkup|renderAt)"
-    r"\(\s*([A-Za-z_$][\w$.]*)\s*[,)]"
+RENDER_OPEN = re.compile(
+    r"\b(?:renderToString|renderToElement|renderToFragment|renderToMarkup|renderAt)\("
 )
 RENDER_XML_INLINE = re.compile(
     r"\b(?:renderToString|renderToElement|renderToFragment|renderToMarkup|renderAt)\(\s*xml\s*`"
 )
+COMMENT = re.compile(r"/\*.*?\*/|//[^\n]*", re.DOTALL)
+IDENTIFIER = re.compile(r"(?<![\w$.'\"`])[A-Za-z_$][\w$]*|(?<=\.)[A-Za-z_$][\w$]*")
+TEMPLATE_PREFIX = re.compile(r"`([\w\-]+(?:\.[\w\-]+)*[\w.\-]*)\$\{")
+NOT_A_NAME = {"this", "xml", "true", "false", "null", "undefined", "any", "type", "new"}
+
+
+def first_argument(content, start):
+    depth, quote, at = 0, None, start
+    while at < len(content):
+        c = content[at]
+        if quote:
+            if c == "\\":
+                at += 1
+            elif c == quote:
+                quote = None
+        elif c in "\"'`":
+            quote = c
+        elif c in "([{":
+            depth += 1
+        elif c in ")]}":
+            if not depth:
+                break
+            depth -= 1
+        elif c == "," and not depth:
+            break
+        at += 1
+    return COMMENT.sub("", content[start:at])
+
+
+def render_arguments(content):
+    for m in RENDER_OPEN.finditer(content):
+        yield first_argument(content, m.end())
 
 
 def render_bound_identifiers(content):
-    return {ref.rsplit(".", 1)[-1] for ref in RENDER_CALL.findall(content)}
+    return {
+        name
+        for arg in render_arguments(content)
+        if not arg.lstrip().startswith(("xml", '"', "'"))
+        for name in IDENTIFIER.findall(re.sub(r"(['\"]).*?\1", "", arg))
+        if name not in NOT_A_NAME
+    }
 
 
 def render_api_templates(files):
+    known = {
+        m[1] for f in files if f.path.endswith(".xml") for m in TEMPLATE_START.finditer(f.content)
+    }
     names = set()
     for f in files:
-        if not f.path.endswith(".js"):
+        if not f.path.endswith(".js") or not RENDER_OPEN.search(f.content):
             continue
-        names |= set(RENDER_API.findall(f.content))
+        for arg in render_arguments(f.content):
+            names |= set(TEMPLATE_LITERAL.findall(arg))
+            for prefix in TEMPLATE_PREFIX.findall(arg):
+                names |= {name for name in known if name.startswith(prefix)}
         for ident in render_bound_identifiers(f.content):
             names |= set(assigned_template_names(ident, f.content))
     return names
