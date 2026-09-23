@@ -383,20 +383,21 @@ describe("t-call", () => {
     expect(fixture.innerHTML).toBe("");
   });
 
-  test("t-call-context: this is not available inside t-call-context", async () => {
+  test("t-call-context: this is the context, never the calling component", async () => {
     class Root extends Component {
-      static template = xml`<t t-call="someTemplate" t-call-context="{}"/>`;
+      static template = xml`<t t-call="someTemplate" t-call-context="{ where: 'context' }"/>`;
+      where = "component";
     }
 
     await mount(Root, fixture, {
       templates: `
         <templates>
           <t t-name="someTemplate">
-            <t t-esc="this"/>
+            <t t-esc="this.where"/>
           </t>
         </templates>`,
     });
-    expect(fixture.innerHTML).toBe("");
+    expect(fixture.innerHTML).toBe("context");
   });
 
   test("dynamic t-call with same sub component", async () => {

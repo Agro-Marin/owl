@@ -806,6 +806,7 @@ exports[`t-call (template calling) t-call on a div with t-call-context 1`] = `
   
   return function template(ctx, node, key = \\"\\") {
     let ctx1 = ctx['obj'];
+    ctx1 = Object.assign(Object.create(ctx1), { this: ctx1 });
     const b2 = callTemplate_1.call(this, ctx1, node, key + \`__1\`);
     return block1([], [b2]);
   }
@@ -1107,6 +1108,7 @@ exports[`t-call (template calling) t-call-context 1`] = `
   
   return function template(ctx, node, key = \\"\\") {
     let ctx1 = ctx['obj'];
+    ctx1 = Object.assign(Object.create(ctx1), { this: ctx1 });
     return callTemplate_1.call(this, ctx1, node, key + \`__1\`);
   }
 }"
@@ -1137,6 +1139,7 @@ exports[`t-call (template calling) t-call-context and value in body 1`] = `
     ctx = Object.create(ctx);
     ctx[isBoundary] = 1
     let ctx1 = ctx['obj'];
+    ctx1 = Object.assign(Object.create(ctx1), { this: ctx1 });
     ctx1 = Object.create(ctx1);
     ctx1[isBoundary] = 1;
     setContextValue(ctx1, \\"value2\\", ctx['aaron']);
@@ -1156,6 +1159,91 @@ exports[`t-call (template calling) t-call-context and value in body 2`] = `
     let txt1 = ctx['value1'];
     let txt2 = ctx['value2'];
     return block1([txt1, txt2]);
+  }
+}"
+`;
+
+exports[`t-call (template calling) t-call-context calls a method with the context object as receiver 1`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler, comment } = bdom;
+  const callTemplate_1 = app.getTemplate(\`sub\`);
+  
+  return function template(ctx, node, key = \\"\\") {
+    let ctx1 = ctx['obj'];
+    ctx1 = Object.assign(Object.create(ctx1), { this: ctx1 });
+    return callTemplate_1.call(this, ctx1, node, key + \`__1\`);
+  }
+}"
+`;
+
+exports[`t-call (template calling) t-call-context calls a method with the context object as receiver 2`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler, comment } = bdom;
+  
+  let block1 = createBlock(\`<span><block-text-0/></span>\`);
+  
+  return function template(ctx, node, key = \\"\\") {
+    let txt1 = ctx['this'].label();
+    return block1([txt1]);
+  }
+}"
+`;
+
+exports[`t-call (template calling) t-call-context exposes the context object as this 1`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler, comment } = bdom;
+  const callTemplate_1 = app.getTemplate(\`sub\`);
+  
+  return function template(ctx, node, key = \\"\\") {
+    let ctx1 = ctx['obj'];
+    ctx1 = Object.assign(Object.create(ctx1), { this: ctx1 });
+    return callTemplate_1.call(this, ctx1, node, key + \`__1\`);
+  }
+}"
+`;
+
+exports[`t-call (template calling) t-call-context exposes the context object as this 2`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler, comment } = bdom;
+  
+  let block1 = createBlock(\`<span><block-text-0/>/<block-text-1/></span>\`);
+  
+  return function template(ctx, node, key = \\"\\") {
+    let txt1 = ctx['this'].value;
+    let txt2 = ctx['value'];
+    return block1([txt1, txt2]);
+  }
+}"
+`;
+
+exports[`t-call (template calling) t-call-context leaves the context object untouched 1`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler, comment } = bdom;
+  const callTemplate_1 = app.getTemplate(\`sub\`);
+  
+  return function template(ctx, node, key = \\"\\") {
+    let ctx1 = ctx['obj'];
+    ctx1 = Object.assign(Object.create(ctx1), { this: ctx1 });
+    return callTemplate_1.call(this, ctx1, node, key + \`__1\`);
+  }
+}"
+`;
+
+exports[`t-call (template calling) t-call-context leaves the context object untouched 2`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler, comment } = bdom;
+  
+  let block1 = createBlock(\`<span><block-text-0/></span>\`);
+  
+  return function template(ctx, node, key = \\"\\") {
+    let txt1 = ctx['this'].value;
+    return block1([txt1]);
   }
 }"
 `;

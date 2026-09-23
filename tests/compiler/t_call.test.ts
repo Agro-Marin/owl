@@ -496,6 +496,38 @@ describe("t-call (template calling)", () => {
     expect(context.renderToString("main", { obj: { value: 123 } })).toBe("<span>123</span>");
   });
 
+  test("t-call-context exposes the context object as this", () => {
+    const context = new TestContext();
+    context.addTemplate("sub", `<span><t t-esc="this.value"/>/<t t-esc="value"/></span>`);
+    context.addTemplate("main", `<t t-call="sub" t-call-context="obj"/>`);
+
+    expect(context.renderToString("main", { obj: { value: 123 } })).toBe("<span>123/123</span>");
+  });
+
+  test("t-call-context leaves the context object untouched", () => {
+    const context = new TestContext();
+    context.addTemplate("sub", `<span t-esc="this.value"/>`);
+    context.addTemplate("main", `<t t-call="sub" t-call-context="obj"/>`);
+    const obj = Object.freeze({ value: 1 });
+
+    expect(context.renderToString("main", { obj })).toBe("<span>1</span>");
+    expect(Object.keys(obj)).toEqual(["value"]);
+  });
+
+  test("t-call-context calls a method with the context object as receiver", () => {
+    const context = new TestContext();
+    context.addTemplate("sub", `<span t-esc="this.label()"/>`);
+    context.addTemplate("main", `<t t-call="sub" t-call-context="obj"/>`);
+    const obj = {
+      name: "a",
+      label() {
+        return this === obj ? this.name : "wrong receiver";
+      },
+    };
+
+    expect(context.renderToString("main", { obj })).toBe("<span>a</span>");
+  });
+
   test("t-call on a div with t-call-context", () => {
     const context = new TestContext();
     context.addTemplate("sub", `<span><t t-esc="value"/></span>`);

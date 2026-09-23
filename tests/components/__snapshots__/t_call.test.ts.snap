@@ -463,6 +463,7 @@ exports[`t-call t-call with t-call-context and subcomponent 1`] = `
   
   return function template(ctx, node, key = \\"\\") {
     let ctx1 = ctx['subctx'];
+    ctx1 = Object.assign(Object.create(ctx1), { this: ctx1 });
     return callTemplate_1.call(this, ctx1, node, key + \`__1\`);
   }
 }"
@@ -504,6 +505,7 @@ exports[`t-call t-call with t-call-context and subcomponent, in dev mode 1`] = `
   
   return function template(ctx, node, key = \\"\\") {
     let ctx1 = ctx['subctx'];
+    ctx1 = Object.assign(Object.create(ctx1), { this: ctx1 });
     return callTemplate_1.call(this, ctx1, node, key + \`__1\`);
   }
 }"
@@ -549,6 +551,7 @@ exports[`t-call t-call with t-call-context, simple use 1`] = `
   
   return function template(ctx, node, key = \\"\\") {
     let ctx1 = ctx['subctx'];
+    ctx1 = Object.assign(Object.create(ctx1), { this: ctx1 });
     return callTemplate_1.call(this, ctx1, node, key + \`__1\`);
   }
 }"
@@ -575,6 +578,7 @@ exports[`t-call t-call-context: ComponentNode is not looked up in the context 1`
   
   return function template(ctx, node, key = \\"\\") {
     let ctx1 = {method:function(){}};
+    ctx1 = Object.assign(Object.create(ctx1), { this: ctx1 });
     return callTemplate_1.call(this, ctx1, node, key + \`__1\`);
   }
 }"
@@ -632,6 +636,7 @@ exports[`t-call t-call-context: slots don't make component available again when 
   
   return function template(ctx, node, key = \\"\\") {
     let ctx1 = {};
+    ctx1 = Object.assign(Object.create(ctx1), { this: ctx1 });
     return callTemplate_1.call(this, ctx1, node, key + \`__1\`);
   }
 }"
@@ -672,26 +677,27 @@ exports[`t-call t-call-context: slots don't make component available again when 
 }"
 `;
 
-exports[`t-call t-call-context: this is not available inside t-call-context 1`] = `
+exports[`t-call t-call-context: this is the context, never the calling component 1`] = `
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler, comment } = bdom;
   const callTemplate_1 = app.getTemplate(\`someTemplate\`);
   
   return function template(ctx, node, key = \\"\\") {
-    let ctx1 = {};
+    let ctx1 = {where:'context'};
+    ctx1 = Object.assign(Object.create(ctx1), { this: ctx1 });
     return callTemplate_1.call(this, ctx1, node, key + \`__1\`);
   }
 }"
 `;
 
-exports[`t-call t-call-context: this is not available inside t-call-context 2`] = `
+exports[`t-call t-call-context: this is the context, never the calling component 2`] = `
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler, comment } = bdom;
   
   return function template(ctx, node, key = \\"\\") {
-    return text(ctx['this']);
+    return text(ctx['this'].where);
   }
 }"
 `;
