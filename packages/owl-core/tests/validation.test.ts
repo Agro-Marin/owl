@@ -999,6 +999,22 @@ describe(".optional()", () => {
   });
 });
 
+describe("optional on an optional type", () => {
+  test("keeps the inner type", () => {
+    const type = (t.number().optional() as any).optional();
+    expect(() => assertType(undefined, type)).not.toThrow();
+    expect(() => assertType(3, type)).not.toThrow();
+    expect(() => assertType("3", type)).toThrow();
+  });
+
+  test("keeps the default unless given a new one", () => {
+    const base = t.number().optional(3) as any;
+    expect(applyDefaults(undefined, base.optional())).toBe(3);
+    expect(applyDefaults(undefined, base.optional(7))).toBe(7);
+    expect(applyDefaults(undefined, base)).toBe(3);
+  });
+});
+
 describe("applyDefaults", () => {
   test("fills in a top level default", () => {
     expect(applyDefaults(undefined, t.number().optional(3))).toBe(3);

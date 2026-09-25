@@ -163,6 +163,10 @@ function makeOptional(type: any, value?: any): any {
   if (value !== undefined) {
     validate[defaultSymbol] = typeof value === "function" ? value : () => value;
   }
+  // re-declaring an optional type (a subclass extending its parent's prop)
+  // keeps the inner type, and the parent's default unless it gives its own
+  validate.optional = (newValue?: any) =>
+    makeOptional(type, newValue !== undefined ? newValue : validate[defaultSymbol]);
   return validate;
 }
 
