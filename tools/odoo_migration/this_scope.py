@@ -330,7 +330,10 @@ def main():
             break
 
     changed = [f for f in files if f.changed]
-    if not args.check:
+    if args.check:
+        for f in changed:
+            print("would change", f.path)
+    else:
         for f in changed:
             f.path_obj = pathlib.Path(f.path)
             f.path_obj.write_text(f.content)
