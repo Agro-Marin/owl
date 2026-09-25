@@ -121,6 +121,27 @@ test("accepts a CSS selector string as target", async () => {
   app.destroy();
 });
 
+test("a selector the same render creates is resolved once the Portal is mounted", async () => {
+  class Root extends Component {
+    static components = { Portal };
+    static template = xml`
+      <div class="root">
+        <Portal target="'#created-by-render'">
+          <span class="payload">late target</span>
+        </Portal>
+        <div id="created-by-render"/>
+      </div>
+    `;
+  }
+
+  const app = new App();
+  await app.createRoot(Root).mount(fixture);
+  await nextTick();
+
+  expect(fixture.querySelector("#created-by-render")!.innerHTML).toContain("late target");
+  app.destroy();
+});
+
 test("ref signal: waits for target to appear, then mounts", async () => {
   class Root extends Component {
     static components = { Portal };

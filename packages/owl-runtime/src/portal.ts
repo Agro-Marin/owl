@@ -1,7 +1,7 @@
 import { Signal } from "@odoo/owl-core";
 import { Component } from "./component";
 import { useEffect } from "./hooks";
-import { onWillDestroy } from "./lifecycle_hooks";
+import { onMounted, onWillDestroy } from "./lifecycle_hooks";
 import { props } from "./props";
 import { forwardErrorToParent } from "./rendering/error_handling";
 import { xml } from "./template_set";
@@ -36,12 +36,7 @@ export class Portal extends Component {
       }
     };
 
-    useEffect(() => {
-      const target = resolveTarget(this.props.target);
-      if (!target) {
-        return;
-      }
-
+    const mountInto = (target: HTMLElement) => {
       root = app.createRoot(PortalContent, {
         props: { slots },
         // Forward the plugin chain from this Portal (createRoot defaults
@@ -60,8 +55,27 @@ export class Portal extends Component {
       } as any);
 
       root.mount(target);
+    };
 
+    useEffect(() => {
+      const target = resolveTarget(this.props.target);
+      if (!target) {
+        return;
+      }
+      mountInto(target);
       return tearDown;
+    });
+
+    // a selector often names an element the same render creates (a dialog's
+    // footer, a sibling's container): as t-portal did, it is looked up again
+    // once the Portal is in the document
+    onMounted(() => {
+      if (!root && typeof this.props.target === "string") {
+        const target = resolveTarget(this.props.target);
+        if (target) {
+          mountInto(target);
+        }
+      }
     });
 
     onWillDestroy(tearDown);
