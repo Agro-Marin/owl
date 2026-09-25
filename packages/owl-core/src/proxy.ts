@@ -217,6 +217,10 @@ export function proxy<T extends Target>(target: T): T {
  * @param callback called when an observed value changes
  * @returns a view of the proxy of `target`
  */
+// the proxy each observe() view reads through, so that a view of a view
+// observes the same target instead of stacking observers
+const viewBases = new WeakMap<object, any>();
+
 export function observe<T extends Target>(target: T, callback: () => void): T {
   const computation = createComputation(
     () => untrack(callback),
@@ -228,7 +232,8 @@ export function observe<T extends Target>(target: T, callback: () => void): T {
   const read = <R>(fn: () => R): R => withObserver(computation, fn);
   const wrap = (value: any): any =>
     typeof value === "object" && value !== null && targets.has(value) ? view(value) : value;
-  function view(reactive: any): any {
+  function view(target: any): any {
+    const reactive = viewBases.get(target) ?? target;
     let result = views.get(reactive);
     if (result) {
       return result;
@@ -260,6 +265,7 @@ export function observe<T extends Target>(target: T, callback: () => void): T {
       },
     });
     views.set(reactive, result);
+    viewBases.set(result, reactive);
     targets.set(result, raw);
     return result;
   }

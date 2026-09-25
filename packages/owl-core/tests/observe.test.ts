@@ -101,4 +101,15 @@ describe("observe", () => {
     proxy(toRaw(state)).value = 2;
     expect(calls).toBe(1);
   });
+
+  test("a view of a view observes the same target, for its own callback", () => {
+    let outer = 0;
+    let inner = 0;
+    const innerView = observe({ counter: 0 }, () => inner++);
+    const outerView = observe([innerView], () => outer++);
+    void outerView[0].counter;
+    innerView.counter = 1;
+    expect(outer).toBe(1);
+    expect(inner).toBe(0);
+  });
 });
