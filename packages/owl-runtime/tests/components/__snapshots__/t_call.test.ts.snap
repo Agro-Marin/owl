@@ -510,7 +510,7 @@ exports[`t-call > t-call with t-call-context and subcomponent 1`] = `
   
   return function template(ctx, node, key = "") {
     const ctx1 = ctx['this'].subctx;
-    return callTemplate(\`someTemplate\`, this, app, {this: ctx1}, node, key + \`__1\`);
+    return callTemplate(\`someTemplate\`, this, app, Object.assign({}, ctx1, {this: ctx1}), node, key + \`__1\`);
   }
 }"
 `;
@@ -553,7 +553,7 @@ exports[`t-call > t-call with t-call-context and subcomponent, in dev mode 1`] =
   
   return function template(ctx, node, key = "") {
     const ctx1 = ctx['this'].subctx;
-    return callTemplate(\`someTemplate\`, this, app, {this: ctx1}, node, key + \`__1\`);
+    return callTemplate(\`someTemplate\`, this, app, Object.assign({}, ctx1, {this: ctx1}), node, key + \`__1\`);
   }
 }"
 `;
@@ -598,7 +598,7 @@ exports[`t-call > t-call with t-call-context, simple use 1`] = `
   
   return function template(ctx, node, key = "") {
     const ctx1 = ctx['this'].subctx;
-    return callTemplate(\`someTemplate\`, this, app, {this: ctx1}, node, key + \`__1\`);
+    return callTemplate(\`someTemplate\`, this, app, Object.assign({}, ctx1, {this: ctx1}), node, key + \`__1\`);
   }
 }"
 `;
@@ -617,6 +617,34 @@ exports[`t-call > t-call with t-call-context, simple use 2`] = `
 }"
 `;
 
+exports[`t-call > t-call-context keys are also variables of the called template 1`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { callTemplate } = helpers;
+  
+  return function template(ctx, node, key = "") {
+    const ctx1 = ctx['this'].subctx;
+    return callTemplate(\`someTemplate\`, this, app, Object.assign({}, ctx1, {this: ctx1}), node, key + \`__1\`);
+  }
+}"
+`;
+
+exports[`t-call > t-call-context keys are also variables of the called template 2`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { safeOutput } = helpers;
+  
+  return function template(ctx, node, key = "") {
+    const b2 = safeOutput(ctx['aab']);
+    const b3 = text(\`-\`);
+    const b4 = safeOutput(ctx['this'].lpe);
+    return multi([b2, b3, b4]);
+  }
+}"
+`;
+
 exports[`t-call > t-call-context: ComponentNode is not looked up in the context 1`] = `
 "function anonymous(app, bdom, helpers
 ) {
@@ -625,7 +653,7 @@ exports[`t-call > t-call-context: ComponentNode is not looked up in the context 
   
   return function template(ctx, node, key = "") {
     const ctx1 = {method:function(){},myRef:ctx['this'].myRef,myRef2:ctx['this'].myRef2};
-    return callTemplate(\`someTemplate\`, this, app, {this: ctx1}, node, key + \`__1\`);
+    return callTemplate(\`someTemplate\`, this, app, Object.assign({}, ctx1, {this: ctx1}), node, key + \`__1\`);
   }
 }"
 `;
@@ -680,7 +708,7 @@ exports[`t-call > t-call-context: slots don't make component available again whe
   
   return function template(ctx, node, key = "") {
     const ctx1 = {};
-    return callTemplate(\`template\`, this, app, {this: ctx1}, node, key + \`__1\`);
+    return callTemplate(\`template\`, this, app, Object.assign({}, ctx1, {this: ctx1}), node, key + \`__1\`);
   }
 }"
 `;
@@ -725,7 +753,7 @@ exports[`t-call > t-call-context: this is not available inside t-call-context 1`
   
   return function template(ctx, node, key = "") {
     const ctx1 = {};
-    return callTemplate(\`someTemplate\`, this, app, {this: ctx1}, node, key + \`__1\`);
+    return callTemplate(\`someTemplate\`, this, app, Object.assign({}, ctx1, {this: ctx1}), node, key + \`__1\`);
   }
 }"
 `;

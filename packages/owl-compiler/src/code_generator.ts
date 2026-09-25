@@ -994,11 +994,10 @@ export class CodeGenerator {
     if (ast.context) {
       const dynCtxVar = generateId("ctx");
       this.addLine(`const ${dynCtxVar} = ${compileExpr(ast.context)};`);
-      if (attrs.length) {
-        ctxExpr = `Object.assign({this: ${dynCtxVar}}, ${ctxString})`;
-      } else {
-        ctxExpr = `{this: ${dynCtxVar}}`;
-      }
+      // the context is the called template's `this`, and its keys are also its
+      // variables: Odoo's arch templates read `record`, `__comp__`... by name
+      const extra = attrs.length ? `, ${ctxString}` : "";
+      ctxExpr = `Object.assign({}, ${dynCtxVar}, {this: ${dynCtxVar}}${extra})`;
     } else {
       if (attrs.length === 0) {
         ctxExpr = "ctx";

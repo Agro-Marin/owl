@@ -262,6 +262,23 @@ describe("t-call", () => {
     expect(fixture.innerHTML).toBe("aaronlucas");
   });
 
+  test("t-call-context keys are also variables of the called template", async () => {
+    class Root extends Component {
+      static template = xml`
+          <t t-call="someTemplate" t-call-context="this.subctx"/>`;
+
+      subctx = { aab: "aaron", lpe: "lucas" };
+    }
+
+    await mount(Root, fixture, {
+      templates: `
+        <templates>
+          <t t-name="someTemplate"><t t-out="aab"/>-<t t-out="this.lpe"/></t>
+        </templates>`,
+    });
+    expect(fixture.innerHTML).toBe("aaron-lucas");
+  });
+
   test("t-call with t-call-context and subcomponent", async () => {
     class Child extends Component {
       static template = xml`child<t t-out="this.props.name"/>`;
