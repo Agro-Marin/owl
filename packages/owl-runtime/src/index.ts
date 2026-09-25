@@ -54,6 +54,7 @@ export {
   effect,
   immediateEffect,
   markRaw,
+  observe,
   proxy,
   signal,
   toRaw,

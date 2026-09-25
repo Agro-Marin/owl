@@ -1,5 +1,13 @@
 import { OwlError } from "./owl_error";
-import { onReadAtom, onWriteAtom, Atom } from "./computations";
+import {
+  onReadAtom,
+  onWriteAtom,
+  Atom,
+  ComputationState,
+  createComputation,
+  untrack,
+  withObserver,
+} from "./computations";
 
 // Special key to subscribe to, to be notified of key creation/deletion
 const KEYCHANGES = Symbol("Key changes");
@@ -195,6 +203,67 @@ export function proxifyTarget<T extends Target>(target: T, atom: Atom | null): T
  */
 export function proxy<T extends Target>(target: T): T {
   return proxifyTarget(target, null);
+}
+
+/**
+ * Returns a view of `target` that calls `callback` the first time a value read
+ * through the view changes, synchronously, as OWL 2's `reactive(target,
+ * callback)` did. The subscription is one-shot: once `callback` ran, only the
+ * values read through the view again are observed. Objects read through the
+ * view are views too, with the same callback; reads keep subscribing the
+ * computation they happen in (a render, an effect) as a plain proxy read does.
+ *
+ * @param target the object to observe
+ * @param callback called when an observed value changes
+ * @returns a view of the proxy of `target`
+ */
+export function observe<T extends Target>(target: T, callback: () => void): T {
+  const computation = createComputation(
+    () => untrack(callback),
+    false,
+    ComputationState.EXECUTED,
+    true
+  );
+  const views = new WeakMap<Target, any>();
+  const read = <R>(fn: () => R): R => withObserver(computation, fn);
+  const wrap = (value: any): any =>
+    typeof value === "object" && value !== null && targets.has(value) ? view(value) : value;
+  function view(reactive: any): any {
+    let result = views.get(reactive);
+    if (result) {
+      return result;
+    }
+    const raw = toRaw(reactive);
+    const isCollection = raw instanceof Map || raw instanceof Set || raw instanceof WeakMap;
+    result = new Proxy(reactive, {
+      get(r, key) {
+        const value = read(() => Reflect.get(r, key, r));
+        if (isCollection && typeof value === "function") {
+          return (...args: any[]) => wrap(read(() => value.apply(r, args)));
+        }
+        return wrap(value);
+      },
+      has(r, key) {
+        return read(() => Reflect.has(r, key));
+      },
+      ownKeys(r) {
+        return read(() => Reflect.ownKeys(r));
+      },
+      getOwnPropertyDescriptor(r, key) {
+        return read(() => Reflect.getOwnPropertyDescriptor(r, key));
+      },
+      set(r, key, value) {
+        return Reflect.set(r, key, value, r);
+      },
+      deleteProperty(r, key) {
+        return Reflect.deleteProperty(r, key);
+      },
+    });
+    views.set(reactive, result);
+    targets.set(result, raw);
+    return result;
+  }
+  return view(proxy(target));
 }
 
 /**

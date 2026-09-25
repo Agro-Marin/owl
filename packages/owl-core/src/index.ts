@@ -17,7 +17,7 @@ export {
 } from "./scope";
 
 // Reactivity: proxy
-export { proxy, markRaw, toRaw, proxifyTarget } from "./proxy";
+export { proxy, observe, markRaw, toRaw, proxifyTarget } from "./proxy";
 
 // Reactivity: computations (core tracking primitives)
 export {
@@ -36,6 +36,7 @@ export {
   updateComputation,
   removeSources,
   disposeComputation,
+  withObserver,
 } from "./computations";
 
 // Reactivity: signal

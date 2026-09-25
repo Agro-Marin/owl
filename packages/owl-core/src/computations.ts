@@ -97,12 +97,29 @@ export function createComputation(
   };
 }
 
+// The computation of the observe() view a read goes through: it subscribes in
+// addition to the current computation, which keeps tracking as usual.
+let currentObserver: ComputationAtom | undefined;
+
 export function onReadAtom(atom: Atom) {
-  if (!currentComputation) {
-    return;
+  if (currentComputation) {
+    currentComputation.sources.add(atom);
+    atom.observers.add(currentComputation);
   }
-  currentComputation.sources.add(atom);
-  atom.observers.add(currentComputation);
+  if (currentObserver && currentObserver !== currentComputation) {
+    currentObserver.sources.add(atom);
+    atom.observers.add(currentObserver);
+  }
+}
+
+export function withObserver<T>(observer: ComputationAtom, fn: () => T): T {
+  const previousObserver = currentObserver;
+  currentObserver = observer;
+  try {
+    return fn();
+  } finally {
+    currentObserver = previousObserver;
+  }
 }
 
 export function onWriteAtom(atom: Atom) {
@@ -193,7 +210,9 @@ export function updateComputation(computation: ComputationAtom) {
   // directly re-add them at compute. Especially as we are making them stale.
   removeSources(computation);
   const previousComputation = currentComputation;
+  const previousObserver = currentObserver;
   currentComputation = computation;
+  currentObserver = undefined;
   try {
     computation.value = computation.compute();
     computation.state = ComputationState.EXECUTED;
@@ -202,6 +221,7 @@ export function updateComputation(computation: ComputationAtom) {
     // subsequent atom read does not silently attach itself as a source of
     // the failed computation.
     currentComputation = previousComputation;
+    currentObserver = previousObserver;
   }
 }
 
