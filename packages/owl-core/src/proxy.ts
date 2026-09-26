@@ -241,8 +241,10 @@ export function observe<T extends Target>(target: T, callback: () => void): T {
     const raw = toRaw(reactive);
     const isCollection = raw instanceof Map || raw instanceof Set || raw instanceof WeakMap;
     result = new Proxy(reactive, {
-      get(r, key) {
-        const value = read(() => Reflect.get(r, key, r));
+      get(r, key, receiver) {
+        // the view is the receiver: a getter, or a target that is itself a
+        // proxy, reads through it and so subscribes the callback
+        const value = read(() => Reflect.get(r, key, receiver));
         if (isCollection && typeof value === "function") {
           return (...args: any[]) => {
             const result = read(() => value.apply(r, args));

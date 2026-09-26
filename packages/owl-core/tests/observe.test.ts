@@ -71,6 +71,29 @@ describe("observe", () => {
     expect(calls).toBe(3);
   });
 
+  test("reads through the view reach getters and inner proxies with the view as receiver", () => {
+    let calls = 0;
+    const data = { items: [1] };
+    const receivers: any[] = [];
+    const target = new Proxy(data, {
+      get(t, key, receiver) {
+        receivers.push(receiver);
+        return Reflect.get(t, key, receiver);
+      },
+    });
+    const holder = {
+      target,
+      get count() {
+        return this.target.items.length;
+      },
+    };
+    const view = observe(holder, () => calls++);
+    expect(view.count).toBe(1);
+    expect(receivers.every((r) => r !== proxy(target))).toBe(true);
+    proxy(toRaw(view)).target.items.push(2);
+    expect(calls).toBe(1);
+  });
+
   test("a view written into the state is stored raw", () => {
     const raw = { a: { value: 1 }, b: null as any };
     const state = observe(raw, () => {});
