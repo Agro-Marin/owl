@@ -60,6 +60,12 @@ export class Scheduler {
         this.tasks.delete(fiber);
         continue;
       }
+      // superseded: another render (a slot of this app rendered by a
+      // component of another one) patched the node and cleared its fiber
+      if (fiber.node.fiber !== fiber) {
+        this.tasks.delete(fiber);
+        continue;
+      }
       const hasError = fibersInError.has(fiber);
       if (hasError && fiber.counter !== 0) {
         this.tasks.delete(fiber);

@@ -4422,3 +4422,27 @@ test("slot content renders after microtick when child has willStart", async () =
   `);
   expect(fixture.innerHTML).toBe("<div><div><p>content</p></div><span>sibling</span></div>");
 });
+
+test("a root fiber whose node was patched through another render is dropped, not completed", async () => {
+  // a slot of one app rendered by a component of another: the owner app's
+  // scheduler keeps the node's own root fiber while the other app's render
+  // patches the node and clears node.fiber
+  class Comp extends Component {
+    static template = xml`<div><t t-out="this.state.value"/></div>`;
+    state = proxy({ value: 1 });
+  }
+  const comp = await mount(Comp, fixture);
+  comp.state.value = 2;
+  await nextMicroTick();
+  await nextMicroTick();
+  const node = (comp as any).__owl__;
+  const fiber = node.fiber;
+  expect(fiber).toBeTruthy();
+  expect(fiber.root).toBe(fiber);
+  node.fiber = null;
+  await nextTick();
+  expect(fixture.innerHTML).toBe("<div>1</div>");
+  comp.state.value = 3;
+  await nextTick();
+  expect(fixture.innerHTML).toBe("<div>3</div>");
+});
