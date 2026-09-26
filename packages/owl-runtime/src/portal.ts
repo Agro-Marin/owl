@@ -36,7 +36,7 @@ export class Portal extends Component {
       }
     };
 
-    const mountInto = (target: HTMLElement) => {
+    const mountInto = (target: HTMLElement, position?: "first-child") => {
       root = app.createRoot(PortalContent, {
         props: { slots },
         // Forward the plugin chain from this Portal (createRoot defaults
@@ -54,7 +54,7 @@ export class Portal extends Component {
         host: portalNode,
       } as any);
 
-      root.mount(target);
+      root.mount(target, { position });
     };
 
     useEffect(() => {
@@ -68,12 +68,13 @@ export class Portal extends Component {
 
     // a selector often names an element the same render creates (a dialog's
     // footer, a sibling's container): as t-portal did, it is looked up again
-    // once the Portal is in the document
+    // once the Portal is in the document, and the content goes first, before
+    // what that render put there
     onMounted(() => {
       if (!root && typeof this.props.target === "string") {
         const target = resolveTarget(this.props.target);
         if (target) {
-          mountInto(target);
+          mountInto(target, "first-child");
         }
       }
     });

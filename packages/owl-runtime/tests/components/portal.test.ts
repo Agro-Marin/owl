@@ -142,6 +142,29 @@ test("a selector the same render creates is resolved once the Portal is mounted"
   app.destroy();
 });
 
+test("content portaled into a target the same render creates goes before what it holds", async () => {
+  class Root extends Component {
+    static components = { Portal };
+    static template = xml`
+      <div class="root">
+        <Portal target="'#footer'">
+          <button class="portaled">save</button>
+        </Portal>
+        <div id="footer"><button class="own">ok</button></div>
+      </div>
+    `;
+  }
+
+  const app = new App();
+  await app.createRoot(Root).mount(fixture);
+  await nextTick();
+
+  expect(fixture.querySelector("#footer")!.innerHTML).toBe(
+    '<button class="portaled">save</button><button class="own">ok</button>'
+  );
+  app.destroy();
+});
+
 test("ref signal: waits for target to appear, then mounts", async () => {
   class Root extends Component {
     static components = { Portal };
