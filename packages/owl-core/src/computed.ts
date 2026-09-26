@@ -21,6 +21,12 @@ interface ComputedOptions<TRead, TWrite = TRead> {
    * `shallowEqual`, an equal result stops the propagation.
    */
   equals?: Equals<TRead>;
+  /**
+   * Keep the computed alive past the scope it is created in: a value owned by
+   * a data object (not by a component) must not be disposed with the
+   * component that happened to create that object.
+   */
+  detached?: boolean;
 }
 
 function readonlySetter(): never {
@@ -62,7 +68,9 @@ export function computed<TRead, TWrite = TRead>(
   readComputed[atomSymbol] = computation;
   readComputed.set = options.set ?? readonlySetter;
 
-  getScope()?.computations.push(computation);
+  if (!options.detached) {
+    getScope()?.computations.push(computation);
+  }
 
   return readComputed;
 }

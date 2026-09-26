@@ -1,5 +1,6 @@
 import { vi, type Mock } from "vitest";
 import { proxy, computed, shallowEqual, signal } from "../src";
+import { PluginManager } from "../src/plugin_manager";
 import {
   atomSymbol,
   ComputationAtom,
@@ -741,5 +742,19 @@ describe("equals option", () => {
     other.set(5); // must not invalidate the computed
     await waitScheduler();
     expectSpy(e.spy, 2);
+  });
+});
+
+describe("detached", () => {
+  test("a detached computed survives the scope it was created in", () => {
+    const state = proxy({ value: 1 });
+    const manager = new PluginManager({});
+    const attached = manager.run(() => computed(() => state.value * 2));
+    const detached = manager.run(() => computed(() => state.value * 2, { detached: true }));
+    expect(attached()).toBe(2);
+    expect(detached()).toBe(2);
+    manager.destroy();
+    state.value = 2;
+    expect(detached()).toBe(4);
   });
 });
