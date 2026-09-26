@@ -639,6 +639,41 @@ test("schema defaults and signal-driven props", async () => {
   expect(fixture.innerHTML).toBe("1 / 123");
 });
 
+test("a schema-less view resolves the defaults the component declared", async () => {
+  const seen: any[] = [];
+  function useSizes() {
+    const view = props();
+    return () => [view.width, view.minWidth, "minWidth" in view];
+  }
+  let sizes!: () => any[];
+  class Child extends Component {
+    static template = xml`<t t-out="this.props.width"/>`;
+    props = props({
+      width: t.number().optional(400),
+      minWidth: t.number().optional(100),
+      label: t.string().optional(),
+    });
+    setup() {
+      sizes = useSizes();
+      seen.push(sizes());
+    }
+  }
+  class Parent extends Component {
+    static template = xml`<Child width="this.width()"/>`;
+    static components = { Child };
+    width = signal<number | undefined>(undefined);
+  }
+
+  const parent = await mount(Parent, fixture);
+  expect(seen).toEqual([[400, 100, true]]);
+  expect(fixture.innerHTML).toBe("400");
+
+  parent.width.set(10);
+  await nextTick();
+  expect(fixture.innerHTML).toBe("10");
+  expect(sizes()).toEqual([10, 100, true]);
+});
+
 test("default props don't cause spurious updates with t-props", async () => {
   // Regression test: when a parent re-renders with `t-props`, the child's
   // arePropsDifferent walks every key in node.props. If defaults were stored

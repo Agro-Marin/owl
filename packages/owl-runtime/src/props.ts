@@ -64,9 +64,11 @@ function makeProps(type?: any): Props<{}> {
     node.defaultProps = Object.assign(node.defaultProps || {}, defaults);
   }
 
+  // a schema-less view (a hook's) resolves the defaults the component declared
   function resolveValue(props: Record<string, any>, key: string) {
-    if (props[key] === undefined && defaults && key in defaults) {
-      return defaults[key];
+    const known = type ? defaults : node.defaultProps;
+    if (props[key] === undefined && known && key in known) {
+      return known[key];
     }
     return props[key];
   }
@@ -125,6 +127,11 @@ function makeProps(type?: any): Props<{}> {
       const keys: string[] = [];
       for (const k in props) {
         if (k.charCodeAt(0) !== 1) {
+          keys.push(k);
+        }
+      }
+      for (const k in node.defaultProps) {
+        if (!(k in props)) {
           keys.push(k);
         }
       }
