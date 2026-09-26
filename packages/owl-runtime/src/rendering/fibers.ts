@@ -183,7 +183,9 @@ export class Fiber {
           ) {
             current = root.node;
           } else {
-            scheduler.delayedRenders.push(this);
+            // the ancestor's app flushes its delayed renders once that
+            // ancestor has rendered; it may not be this fiber's app
+            root.node.app.scheduler.delayedRenders.push(this);
             return;
           }
         }
