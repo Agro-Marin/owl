@@ -42,7 +42,10 @@ function isAttachedToDocument(
   return false;
 }
 
-export function validateTarget(target: HTMLElement | ShadowRoot) {
+export function validateTarget(
+  target: HTMLElement | ShadowRoot,
+  { attached = true }: { attached?: boolean } = {}
+) {
   // Get the document and HTMLElement corresponding to the target to allow mounting in iframes
   const document = target && target.ownerDocument;
   if (document) {
@@ -53,7 +56,7 @@ export function validateTarget(target: HTMLElement | ShadowRoot) {
     }
     const HTMLElement = document.defaultView.HTMLElement;
     if (target instanceof HTMLElement || target instanceof ShadowRoot) {
-      if (!isAttachedToDocument(target, document)) {
+      if (attached && !isAttachedToDocument(target, document)) {
         throw new OwlError("Cannot mount a component on a detached dom node");
       }
       return;

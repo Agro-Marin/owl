@@ -28,11 +28,13 @@ export class Portal extends Component {
     const app = portalNode.app;
     const slots = this.props.slots;
     let root: ReturnType<typeof app.createRoot> | null = null;
+    let mountedTarget: HTMLElement | null = null;
 
     const tearDown = () => {
       if (root) {
         root.destroy();
         root = null;
+        mountedTarget = null;
       }
     };
 
@@ -54,7 +56,8 @@ export class Portal extends Component {
         host: portalNode,
       } as any);
 
-      root.mount(target, { position });
+      mountedTarget = target;
+      root.mount(target, { position, allowDetached: true } as any);
     };
 
     useEffect(() => {
@@ -71,6 +74,10 @@ export class Portal extends Component {
     // once the Portal is in the document, and the content goes first, before
     // what that render put there
     onMounted(() => {
+      // the target found during setup may belong to what this render replaced
+      if (root && mountedTarget && !mountedTarget.isConnected && typeof this.props.target === "string") {
+        tearDown();
+      }
       if (!root && typeof this.props.target === "string") {
         const target = resolveTarget(this.props.target);
         if (target) {

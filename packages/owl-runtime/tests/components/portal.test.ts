@@ -1,5 +1,7 @@
 import {
   App,
+  mount,
+  proxy,
   Component,
   onError,
   onWillStart,
@@ -447,4 +449,24 @@ test("waits for descendant onWillStart before mounting", async () => {
   expect(target.querySelector(".payload")!.textContent).toBe("ready");
 
   app.destroy();
+});
+
+test("a portal created by the render that replaces its target goes to the new target", async () => {
+  class Parent extends Component {
+    static components = { Portal };
+    static template = xml`
+      <div>
+        <div t-if="this.state.first" class="host first"><span class="target"/></div>
+        <div t-else="" class="host second"><span class="target"/></div>
+        <t t-if="!this.state.first">
+          <Portal target="'.target'"><p>content</p></Portal>
+        </t>
+      </div>`;
+    state = proxy({ first: true });
+  }
+  const parent = await mount(Parent, fixture);
+  parent.state.first = false;
+  await nextTick();
+  await nextTick();
+  expect(fixture.querySelector(".second .target")!.innerHTML).toBe("<p>content</p>");
 });

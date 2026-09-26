@@ -324,12 +324,18 @@ export interface MountOptions {
   // (ignoring `position`). Used by Suspense to anchor its sub-root next to
   // an in-template text node instead of requiring a dedicated wrapper.
   afterNode?: Node | null;
+  // The target was attached when the mount was requested; a render phase that
+  // outlives it (the target's container replaced meanwhile) mounts into it
+  // anyway instead of failing. Used by Portal, which then looks its target up
+  // again.
+  allowDetached?: boolean;
 }
 
 export class MountFiber extends RootFiber {
   target: MountTarget | null;
   position: Position;
   afterNode: Node | null = null;
+  allowDetached = false;
   // true once the render phase finishes (counter reaches 0). If target is
   // set at that point, we mount immediately; otherwise we signal readiness
   // via onPrepared and wait for commit() to supply a target.
@@ -341,6 +347,7 @@ export class MountFiber extends RootFiber {
     this.target = target;
     this.position = options.position || "last-child";
     this.afterNode = options.afterNode ?? null;
+    this.allowDetached = options.allowDetached ?? false;
   }
 
   complete() {
@@ -360,6 +367,7 @@ export class MountFiber extends RootFiber {
     this.target = target;
     this.position = options.position || "last-child";
     this.afterNode = options.afterNode ?? null;
+    this.allowDetached = options.allowDetached ?? false;
     if (this.prepared) {
       this._mount();
     }
@@ -372,7 +380,9 @@ export class MountFiber extends RootFiber {
     try {
       const node = this.node;
       node.children = this.childrenMap;
-      (node.app.constructor as any).validateTarget(this.target!);
+      (node.app.constructor as any).validateTarget(this.target!, {
+        attached: !this.allowDetached,
+      });
       if (node.bdom) {
         // this is a complicated situation: if we mount a fiber with an existing
         // bdom, this means that this same fiber was already completed, mounted,
