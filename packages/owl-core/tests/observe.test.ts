@@ -54,6 +54,23 @@ describe("observe", () => {
     expect(calls).toBe(2);
   });
 
+  test("observes maps and sets iterated through the view", () => {
+    let calls = 0;
+    const state = observe({ set: new Set<number>(), map: new Map<string, { v: number }>() }, () => calls++);
+    void [...state.set];
+    proxy(toRaw(state)).set.add(1);
+    expect(calls).toBe(1);
+    void Array.from(state.set.values());
+    proxy(toRaw(state)).set.add(2);
+    expect(calls).toBe(2);
+    proxy(toRaw(state)).map.set("k", { v: 1 });
+    for (const [, entry] of state.map) {
+      void entry.v;
+    }
+    proxy(toRaw(state)).map.get("k")!.v = 2;
+    expect(calls).toBe(3);
+  });
+
   test("a view written into the state is stored raw", () => {
     const raw = { a: { value: 1 }, b: null as any };
     const state = observe(raw, () => {});

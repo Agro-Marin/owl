@@ -244,7 +244,10 @@ export function observe<T extends Target>(target: T, callback: () => void): T {
       get(r, key) {
         const value = read(() => Reflect.get(r, key, r));
         if (isCollection && typeof value === "function") {
-          return (...args: any[]) => wrap(read(() => value.apply(r, args)));
+          return (...args: any[]) => {
+            const result = read(() => value.apply(r, args));
+            return isIterator(result) ? observedIterator(result) : wrap(result);
+          };
         }
         return wrap(value);
       },
@@ -269,7 +272,33 @@ export function observe<T extends Target>(target: T, callback: () => void): T {
     targets.set(result, raw);
     return result;
   }
+  // a collection's iterator reads its entries as it advances: each step is
+  // read through the view, not only the call that created the iterator
+  function observedIterator(iterator: Iterator<any>): IterableIterator<any> {
+    return {
+      next() {
+        const step = read(() => iterator.next());
+        if (step.done) {
+          return step;
+        }
+        const value = Array.isArray(step.value) ? step.value.map(wrap) : wrap(step.value);
+        return { done: false, value };
+      },
+      [Symbol.iterator]() {
+        return this;
+      },
+    };
+  }
   return view(proxy(target));
+}
+
+function isIterator(value: any): value is Iterator<any> {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    typeof value.next === "function" &&
+    typeof value[Symbol.iterator] === "function"
+  );
 }
 
 /**
