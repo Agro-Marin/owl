@@ -3,6 +3,7 @@ import { ComponentConstructor } from "./component";
 import { ComponentNode } from "./component_node";
 import { GetProps } from "./props";
 import {
+  OwlError,
   PluginConstructor,
   PluginManager,
   proxy,
@@ -164,6 +165,7 @@ export class App extends TemplateSet {
     let preparedPromise: Promise<void> | null = null;
     let resolvePrepared: (() => void) | null = null;
     let destroyed = false;
+    let mounted = false;
 
     const prepare = (): Promise<void> => {
       if (preparedPromise) {
@@ -239,8 +241,14 @@ export class App extends TemplateSet {
       if (error) {
         return promise;
       }
+      if (mounted) {
+        // a second commit would retarget a pending mount, or do nothing once
+        // the first one completed
+        throw new OwlError("This root is already mounted: create another root to mount again");
+      }
       App.validateTarget(target);
       prepare();
+      mounted = true;
       fiber!.commit(target, options);
       return promise;
     };

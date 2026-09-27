@@ -290,3 +290,20 @@ test("destroy() is idempotent and keeps the component destroyed", async () => {
   expect(status(component)).toBe("destroyed");
   app.destroy();
 });
+
+test("mounting a root a second time throws, while pending or once mounted", async () => {
+  class Root extends Component {
+    static template = xml`<span>root</span>`;
+  }
+  const other = document.createElement("div");
+  fixture.appendChild(other);
+  const app = new App();
+  const root = app.createRoot(Root);
+  const promise = root.mount(fixture);
+  expect(() => root.mount(other)).toThrow("already mounted");
+  await promise;
+  expect(() => root.mount(other)).toThrow("already mounted");
+  expect(fixture.innerHTML).toBe("<div></div><span>root</span>");
+  expect(other.innerHTML).toBe("");
+  app.destroy();
+});
