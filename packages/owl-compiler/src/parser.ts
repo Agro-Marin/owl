@@ -198,7 +198,8 @@ export type AST =
 // -----------------------------------------------------------------------------
 // Parser
 // -----------------------------------------------------------------------------
-const cache: WeakMap<Element, AST> = new WeakMap();
+const NO_DIRECTIVES = {};
+const cache: WeakMap<object, WeakMap<Element, AST>> = new WeakMap();
 
 export function parse(xml: string | Element, customDir?: CustomDirectives): AST {
   const ctx = {
@@ -209,11 +210,17 @@ export function parse(xml: string | Element, customDir?: CustomDirectives): AST 
     const elem = parseXML(`<t>${xml}</t>`).firstChild as Element;
     return _parse(elem, ctx);
   }
-  let ast = cache.get(xml);
+  const directivesKey = customDir || NO_DIRECTIVES;
+  let astCache = cache.get(directivesKey);
+  if (!astCache) {
+    astCache = new WeakMap();
+    cache.set(directivesKey, astCache);
+  }
+  let ast = astCache.get(xml);
   if (!ast) {
     // we clone here the xml to prevent modifying it in place
     ast = _parse(xml.cloneNode(true) as Element, ctx);
-    cache.set(xml, ast);
+    astCache.set(xml, ast);
   }
   return ast;
 }

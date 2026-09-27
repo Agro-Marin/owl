@@ -2173,3 +2173,18 @@ describe("parseXML", () => {
     );
   });
 });
+
+describe("parse cache", () => {
+  test("an element parsed with different custom directives is parsed again", () => {
+    const elem = parseXML(`<div t-custom-mark="x"/>`).firstChild as Element;
+    const mark = (cls: string) => ({
+      mark: (node: Element) => node.setAttribute("class", cls),
+    });
+    const ast1 = parse(elem, mark("a")) as any;
+    const ast2 = parse(elem, mark("b")) as any;
+    expect(ast1.attrs).toEqual({ class: "a" });
+    expect(ast2.attrs).toEqual({ class: "b" });
+    const directives = mark("c");
+    expect(parse(elem, directives)).toBe(parse(elem, directives));
+  });
+});
