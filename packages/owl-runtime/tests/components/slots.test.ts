@@ -1984,4 +1984,96 @@ describe("slots", () => {
       "<p>1 hello <div>child</div></p><p>2 hello <div>child</div></p>"
     );
   });
+
+  test("slot called inside nested loops gets one component per outer iteration", async () => {
+    let n = 0;
+    class Cell extends Component {
+      static template = xml`<b t-out="this.id"/>`;
+      id = ++n;
+    }
+    class Grid extends Component {
+      props = props();
+      static template = xml`
+        <div>
+          <t t-foreach="[1, 2]" t-as="r" t-key="r">
+            <p><t t-foreach="['a']" t-as="c" t-key="c"><t t-call-slot="cell"/></t></p>
+          </t>
+        </div>`;
+    }
+    class Parent extends Component {
+      static template = xml`<Grid><t t-set-slot="cell"><Cell/></t></Grid>`;
+      static components = { Grid, Cell };
+    }
+    await mount(Parent, fixture);
+    expect(fixture.innerHTML).toBe("<div><p><b>1</b></p><p><b>2</b></p></div>");
+  });
+
+  test("t-out='0' inside nested loops gets one component per outer iteration", async () => {
+    let n = 0;
+    class Cell extends Component {
+      static template = xml`<b t-out="this.id"/>`;
+      id = ++n;
+    }
+    class Parent extends Component {
+      static template = xml`
+        <t t-call="sub"><Cell/></t>`;
+      static components = { Cell };
+    }
+    await mount(Parent, fixture, {
+      templates: `
+        <templates>
+          <t t-name="sub">
+            <t t-foreach="[1, 2]" t-as="r" t-key="r">
+              <p><t t-foreach="['a']" t-as="c" t-key="c"><t t-out="0"/></t></p>
+            </t>
+          </t>
+        </templates>`,
+    });
+    expect(fixture.innerHTML).toBe("<p><b>1</b></p><p><b>2</b></p>");
+  });
+
+  test("a sub-template looping over a slot can be called twice", async () => {
+    let n = 0;
+    class Cell extends Component {
+      static template = xml`<b t-out="this.id"/>`;
+      id = ++n;
+    }
+    class Wrapper extends Component {
+      props = props();
+      static template = xml`<div><t t-call="sub"/><t t-call="sub"/></div>`;
+    }
+    class Parent extends Component {
+      static template = xml`<Wrapper><Cell/></Wrapper>`;
+      static components = { Wrapper, Cell };
+    }
+    await mount(Parent, fixture, {
+      templates: `
+        <templates>
+          <t t-name="sub"><t t-foreach="[1]" t-as="i" t-key="i"><t t-call-slot="default"/></t></t>
+        </templates>`,
+    });
+    expect(fixture.innerHTML).toBe("<div><b>1</b><b>2</b></div>");
+  });
+
+  test("slot under a t-key is recreated when the key changes", async () => {
+    let n = 0;
+    class Cell extends Component {
+      static template = xml`<b t-out="this.id"/>`;
+      id = ++n;
+    }
+    class Keyed extends Component {
+      props = props();
+      static template = xml`<i/><t t-key="this.props.k"><t t-call-slot="default"/></t>`;
+    }
+    class Parent extends Component {
+      static template = xml`<Keyed k="this.state.k"><Cell/></Keyed>`;
+      static components = { Keyed, Cell };
+      state = proxy({ k: 1 });
+    }
+    const parent = await mount(Parent, fixture);
+    expect(fixture.innerHTML).toBe("<i></i><b>1</b>");
+    parent.state.k = 2;
+    await nextTick();
+    expect(fixture.innerHTML).toBe("<i></i><b>2</b>");
+  });
 });

@@ -278,4 +278,25 @@ describe("t-set", () => {
 
     expect(fixture.innerHTML).toBe("Blorg  tea Child<div>coffee</div>");
   });
+
+  test("t-set body with a component, output in nested loops", async () => {
+    let n = 0;
+    class Cell extends Component {
+      static template = xml`<b t-out="this.id"/>`;
+      id = ++n;
+    }
+    class Comp extends Component {
+      static template = xml`
+        <div>
+          <t t-foreach="[1, 2]" t-as="r" t-key="r">
+            <p><t t-foreach="['a']" t-as="c" t-key="c">
+              <t t-set="v"><Cell/></t><t t-out="v"/>
+            </t></p>
+          </t>
+        </div>`;
+      static components = { Cell };
+    }
+    await mount(Comp, fixture);
+    expect(fixture.innerHTML).toBe("<div><p><b>1</b></p><p><b>2</b></p></div>");
+  });
 });

@@ -1,5 +1,5 @@
 import { snapshotEverything, makeTestFixture, render, nextTick, elem } from "../helpers";
-import { Component, mount, props, xml } from "../../src";
+import { Component, mount, props, proxy, xml } from "../../src";
 
 snapshotEverything();
 
@@ -265,5 +265,25 @@ describe("t-key", () => {
     await nextTick();
     expect(elem(parent).innerHTML).toBe("<div>1key2</div><div>2key2</div>");
     expect(childInstances.length).toBe(2);
+  });
+
+  test("t-call under a t-key is recreated when the key changes", async () => {
+    let n = 0;
+    class Cell extends Component {
+      static template = xml`<b t-out="this.id"/>`;
+      id = ++n;
+    }
+    class Parent extends Component {
+      static template = xml`<t t-key="this.state.k"><t t-call="sub"/></t>`;
+      static components = { Cell };
+      state = proxy({ k: 1 });
+    }
+    const parent = await mount(Parent, fixture, {
+      templates: `<templates><t t-name="sub"><Cell/></t></templates>`,
+    });
+    expect(fixture.innerHTML).toBe("<b>1</b>");
+    parent.state.k = 2;
+    await nextTick();
+    expect(fixture.innerHTML).toBe("<b>2</b>");
   });
 });

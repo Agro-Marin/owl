@@ -753,14 +753,11 @@ export class CodeGenerator {
     return block!.varName;
   }
 
-  compileZero() {
+  compileZero(ctx: Context) {
     this.helpers.add("zero");
     const isMultiple = this.slotNames.has(zero);
     this.slotNames.add(zero);
-    let key = this.target.loopLevel ? `key${this.target.loopLevel}` : "key";
-    if (isMultiple) {
-      key = this.generateComponentKey(key);
-    }
+    const key = this.scopeKey(ctx, isMultiple);
     return `ctx[zero]?.(node, ${key}) || text("")`;
   }
 
@@ -772,7 +769,7 @@ export class CodeGenerator {
     block = this.createBlock(block, "html", ctx);
     let blockStr;
     if (ast.expr === "0") {
-      blockStr = this.compileZero();
+      blockStr = this.compileZero(ctx);
     } else if (ast.body) {
       let bodyValue = null;
       bodyValue = BlockDescription.nextBlockId;
@@ -1011,7 +1008,7 @@ export class CodeGenerator {
         ctxExpr = `Object.assign(Object.create(ctx), ${ctxString})`;
       }
     }
-    const key = this.generateComponentKey();
+    const key = this.scopeKey(ctx, true);
     this.helpers.add("callTemplate");
     this.insertBlock(`callTemplate(${subTemplate}, this, app, ${ctxExpr}, node, ${key})`, block!, {
       ...ctx,
@@ -1041,8 +1038,7 @@ export class CodeGenerator {
       this.helpers.add("LazyValue");
       const bodyAst: AST = { type: ASTType.Multi, content: ast.body };
       const name = this.compileInNewTarget("value", bodyAst, ctx);
-      let key = this.target.currentKey(ctx);
-      let value = `new LazyValue(${name}, ctx, this, node, ${key})`;
+      let value = `new LazyValue(${name}, ctx, this, node, ${this.scopeKey(ctx)})`;
       value = ast.value ? (value ? `withDefault(${expr}, ${value})` : expr) : value;
       this.helpers.add("withDefault");
       if (isReassignment) {
@@ -1086,12 +1082,13 @@ export class CodeGenerator {
     return null;
   }
 
-  generateComponentKey(currentKey: string = "key") {
-    const parts = [generateId("__")];
-    for (let i = 0; i < this.target.loopLevel; i++) {
-      parts.push(`\${key${i + 1}}`);
+  scopeKey(ctx: Context, unique: boolean = false): string {
+    let suffix = unique ? generateId("__") : "";
+    for (let i = 1; i <= this.target.loopLevel; i++) {
+      suffix += `__\${key${i}}`;
     }
-    return `${currentKey} + \`${parts.join("__")}\``;
+    const key = suffix ? `key + \`${suffix}\`` : "key";
+    return ctx.tKeyExpr ? `${ctx.tKeyExpr} + ${key}` : key;
   }
 
   generateSignalCacheKey() {
@@ -1267,10 +1264,7 @@ export class CodeGenerator {
       this.insertAnchor(block);
     }
 
-    let keyArg = this.generateComponentKey();
-    if (ctx.tKeyExpr) {
-      keyArg = `${ctx.tKeyExpr} + ${keyArg}`;
-    }
+    let keyArg = this.scopeKey(ctx, true);
     let id = generateId("comp");
     this.helpers.add("createComponent");
     this.staticDefs.push({
@@ -1337,10 +1331,7 @@ export class CodeGenerator {
     const attrs = { ...ast.attrs };
     const dynProps = attrs["t-props"];
     delete attrs["t-props"];
-    let key = this.target.loopLevel ? `key${this.target.loopLevel}` : "key";
-    if (isMultiple) {
-      key = this.generateComponentKey(key);
-    }
+    const key = this.scopeKey(ctx, isMultiple);
 
     const props = ast.attrs
       ? this.formatPropObject(attrs, ast.attrsTranslationCtx, ctx.translationCtx)

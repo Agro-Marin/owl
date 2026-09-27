@@ -234,7 +234,7 @@ exports[`list of components > order is correct when slots are not of same type 2
       ctx[\`slotName_value\`] = v_block1[i1];
       const key1 = ctx['slotName'];
       const slot1 = (ctx['slotName']);
-      c_block1[i1] = withKey(toggler(slot1, callSlot(ctx, node, key1 + \`__1__\${key1}\`, slot1, true, {})), key1);
+      c_block1[i1] = withKey(toggler(slot1, callSlot(ctx, node, key + \`__1__\${key1}\`, slot1, true, {})), key1);
     }
     return list(c_block1);
   }
