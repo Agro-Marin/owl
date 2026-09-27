@@ -370,7 +370,7 @@ export class CodeGenerator {
     const target = new CodeTarget(name, on);
     this.targets.push(target);
     this.target = target;
-    this.compileAST(ast, createContext(ctx));
+    this.compileAST(ast, createContext(ctx, { tModelSelectedExpr: undefined }));
     this.target = initialTarget;
     return name;
   }

@@ -469,6 +469,44 @@ exports[`t-model directive > t-model on radios with quotes in the value, or a t-
 }"
 `;
 
+exports[`t-model directive > t-model on select with a dynamic option inside a t-call body 1`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { modelExpr, toNumber, zero, callTemplate } = helpers;
+  
+  let block1 = createBlock(\`<select block-handler-0="change"><option value="a" block-attribute-1="selected">A</option><block-child-0/></select>\`);
+  let block3 = createBlock(\`<option block-attribute-0="value">B</option>\`);
+  
+  function callBody1(ctx, node, key = "") {
+    let attr2 = 'b';
+    return block3([attr2]);
+  }
+  
+  return function template(ctx, node, key = "") {
+    const expr1 = modelExpr(ctx['this'].model);
+    const bValue1 = expr1();
+    let hdlr1 = [(ctx, ev) => { expr1.set(ev.target.value); }, ctx];
+    let attr1 = bValue1 === "a";
+    const lazyBlock1 = callBody1.bind(this, ctx);
+    const b2 = callTemplate(\`sub\`, this, app, Object.assign(Object.create(ctx), {[zero]: lazyBlock1}), node, key + \`__1\`);
+    return block1([hdlr1, attr1], [b2]);
+  }
+}"
+`;
+
+exports[`t-model directive > t-model on select with a dynamic option inside a t-call body 2`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { zero } = helpers;
+  
+  return function template(ctx, node, key = "") {
+    return ctx[zero]?.(node, key) || text("");
+  }
+}"
+`;
+
 exports[`t-model directive > t-model on select with static options 1`] = `
 "function anonymous(app, bdom, helpers
 ) {

@@ -644,6 +644,23 @@ describe("t-model directive", () => {
     expect(second.checked).toBe(false);
   });
 
+  test("t-model on select with a dynamic option inside a t-call body", async () => {
+    class Test extends Component {
+      static template = xml`
+        <select t-model="this.model">
+          <option value="a">A</option>
+          <t t-call="sub"><option t-att-value="'b'">B</option></t>
+        </select>`;
+      model = signal("a");
+    }
+
+    await mount(Test, fixture, {
+      templates: `<templates><t t-name="sub"><t t-out="0"/></t></templates>`,
+    });
+    expect(fixture.querySelector("select")!.value).toEqual("a");
+    expect(fixture.querySelectorAll("option").length).toBe(2);
+  });
+
   test("t-model with dynamic values on select options -- 2", async () => {
     class Test extends Component {
       static template = xml`
