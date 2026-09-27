@@ -85,7 +85,7 @@ export function handleError(params: ErrorParams) {
   const finalize = () => {
     try {
       app.destroy();
-    } catch (e) {
+    } catch {
       // mute all errors here because we are in a corrupted state anyway
     }
     return error;

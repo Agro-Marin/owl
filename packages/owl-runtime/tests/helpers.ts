@@ -1,4 +1,4 @@
-import { vi, type Mock } from "vitest";
+import { type Mock } from "vitest";
 
 export function getConsoleOutput(): string[] {
   return (globalThis as any).__owl_console_output.splice(0);
@@ -16,7 +16,6 @@ import {
   onWillUpdateProps,
   status,
   xml,
-  effect,
 } from "../src";
 import { helpers } from "../src/rendering/template_helpers";
 import { TemplateSet, globalTemplates } from "../src/template_set";
@@ -309,12 +308,4 @@ declare module "vitest" {
   interface Assertion {
     toBeLogged(): void;
   }
-}
-
-export type SpyEffect<T> = (() => () => void) & { spy: Mock };
-export function spyEffect<T>(fn: () => T): SpyEffect<T> {
-  const spy = vi.fn(fn);
-  const unsubscribeWrapper = () => effect(spy);
-  const wrapped = Object.assign(unsubscribeWrapper, { spy }) as SpyEffect<T>;
-  return wrapped;
 }

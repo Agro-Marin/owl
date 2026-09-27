@@ -1,5 +1,4 @@
-import { parseXML } from "@odoo/owl-compiler";
-import { compile } from "@odoo/owl-compiler";
+import { compile, parseXML } from "@odoo/owl-compiler";
 import { getConsoleOutput } from "../helpers";
 
 describe("t-call-slot", () => {

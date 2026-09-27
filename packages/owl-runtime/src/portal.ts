@@ -75,7 +75,12 @@ export class Portal extends Component {
     // what that render put there
     onMounted(() => {
       // the target found during setup may belong to what this render replaced
-      if (root && mountedTarget && !mountedTarget.isConnected && typeof this.props.target === "string") {
+      if (
+        root &&
+        mountedTarget &&
+        !mountedTarget.isConnected &&
+        typeof this.props.target === "string"
+      ) {
         tearDown();
       }
       if (!root && typeof this.props.target === "string") {

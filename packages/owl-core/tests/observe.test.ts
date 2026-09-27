@@ -56,7 +56,10 @@ describe("observe", () => {
 
   test("observes maps and sets iterated through the view", () => {
     let calls = 0;
-    const state = observe({ set: new Set<number>(), map: new Map<string, { v: number }>() }, () => calls++);
+    const state = observe(
+      { set: new Set<number>(), map: new Map<string, { v: number }>() },
+      () => calls++
+    );
     void [...state.set];
     proxy(toRaw(state)).set.add(1);
     expect(calls).toBe(1);
