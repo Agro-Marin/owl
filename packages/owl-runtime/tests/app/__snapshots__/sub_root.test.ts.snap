@@ -1,5 +1,35 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`a sub-root error handler runs after the root component's own onError 1`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { createComponent } = helpers;
+  const comp1 = createComponent(app, \`Broken\`, true, false, false, []);
+  
+  return function template(ctx, node, key = "") {
+    let b2;
+    if (!ctx['this'].failed()) {
+      b2 = comp1({}, key + \`__1\`, node, this, null);
+    }
+    return multi([b2]);
+  }
+}"
+`;
+
+exports[`a sub-root error handler runs after the root component's own onError 2`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  
+  let block1 = createBlock(\`<div/>\`);
+  
+  return function template(ctx, node, key = "") {
+    return block1();
+  }
+}"
+`;
+
 exports[`destroy a subroot while another component is mounted in main app 1`] = `
 "function anonymous(app, bdom, helpers
 ) {

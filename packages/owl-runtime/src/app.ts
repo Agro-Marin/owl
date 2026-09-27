@@ -145,7 +145,12 @@ export class App extends TemplateSet {
         node.pluginManager = subConfig.pluginManager;
       }
       if (subConfig.onError) {
-        nodeErrorHandlers.set(node, [subConfig.onError]);
+        const handlers = nodeErrorHandlers.get(node);
+        if (handlers) {
+          handlers.unshift(subConfig.onError);
+        } else {
+          nodeErrorHandlers.set(node, [subConfig.onError]);
+        }
       }
       if (subConfig.host) {
         subRootHosts.set(node, subConfig.host);

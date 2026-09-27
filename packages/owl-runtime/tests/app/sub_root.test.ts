@@ -1,4 +1,4 @@
-import { App, Component, onMounted, onWillDestroy, proxy, signal, xml } from "../../src";
+import { App, Component, onError, onMounted, onWillDestroy, proxy, signal, xml } from "../../src";
 import { status } from "../../src/status";
 import { makeTestFixture, nextTick, snapshotEverything } from "../helpers";
 
@@ -120,4 +120,34 @@ test("destroy a subroot while another component is mounted in main app", async (
   comp.state.flag = true;
   await nextTick();
   expect(fixture.innerHTML).toBe("b");
+});
+
+test("a sub-root error handler runs after the root component's own onError", async () => {
+  const steps: string[] = [];
+  class Broken extends Component {
+    static template = xml`<div/>`;
+    setup() {
+      throw new Error("boom");
+    }
+  }
+  class Host extends Component {
+    static components = { Broken };
+    static template = xml`<t t-if="!this.failed()"><Broken/></t>`;
+    failed = signal(false);
+    setup() {
+      onError((e) => {
+        steps.push(`own: ${e.message}`);
+        this.failed.set(true);
+      });
+    }
+  }
+  const app = new App();
+  const root = app.createRoot(Host, {
+    onError: (e: Error) => steps.push(`sub-root: ${e.message}`),
+  } as any);
+  root.mount(fixture);
+  await nextTick();
+  expect(steps).toEqual(["own: boom"]);
+  expect(fixture.innerHTML).toBe("");
+  app.destroy();
 });
