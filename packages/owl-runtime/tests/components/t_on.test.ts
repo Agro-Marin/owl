@@ -441,4 +441,22 @@ describe("t-on", () => {
     await nextTick();
     expect(["lucas"]).toBeLogged();
   });
+
+  test("t-on.stop on a component does not stop a click on its sibling", async () => {
+    class Child extends Component {
+      static template = xml`<span>c</span>`;
+    }
+    class Parent extends Component {
+      static components = { Child };
+      static template = xml`<div><button>b</button><Child t-on-click.stop="() => {}"/></div>`;
+    }
+    await mount(Parent, fixture);
+    let reached = 0;
+    const onBody = () => reached++;
+    document.body.addEventListener("click", onBody);
+    fixture.querySelector("button")!.click();
+    fixture.querySelector("span")!.click();
+    document.body.removeEventListener("click", onBody);
+    expect(reached).toBe(1);
+  });
 });

@@ -1,3 +1,4 @@
+import { config } from "./config";
 import { createEventHandler } from "./events";
 import type { VNode } from "./index";
 
@@ -26,38 +27,30 @@ export function createCatcher(eventsSpec: EventsSpec): Catcher {
       this.child.mount(parent, afterNode);
       this.afterNode = document.createTextNode("");
       parent.insertBefore(this.afterNode, afterNode);
-      this.wrapHandlerData();
       for (let name in eventsSpec) {
         const index = eventsSpec[name];
         const handler = createEventHandler(name);
         this.handlerFns[index] = handler;
-        handler.setup.call(parent, this.handlerData[index]);
+        handler.setup.call(parent, [this.makeDispatcher(index), null]);
       }
     }
 
-    wrapHandlerData() {
-      for (let i = 0; i < n; i++) {
-        let handler = this.handlerData[i];
-        // handler = [...mods, fn, comp], so we need to replace second to last elem
-        let idx = handler.length - 2;
-        if (!(idx in handler)) {
-          // an empty handler (`t-on-click.stop=""`) has only modifiers
-          continue;
-        }
-        let origFn = handler[idx];
-        const self = this;
-        handler[idx] = function (ctx: any, ev: any) {
-          const target = ev.target;
-          let currentNode: any = self.child.firstNode();
-          const afterNode = self.afterNode;
-          while (currentNode && currentNode !== afterNode) {
-            if (currentNode.contains(target)) {
-              return origFn(ctx, ev);
-            }
-            currentNode = currentNode.nextSibling;
+    // Registered once per event, it reads the latest handler data at dispatch,
+    // and applies its modifiers only to an event from inside the child: the
+    // listener sits on the parent, which the child shares with its siblings.
+    makeDispatcher(index: number) {
+      return (_: null, ev: Event) => {
+        const target = ev.target as Node;
+        const afterNode = this.afterNode;
+        let currentNode: Node | null | undefined = this.child.firstNode();
+        while (currentNode && currentNode !== afterNode) {
+          if (currentNode.contains(target)) {
+            config.mainEventHandler(this.handlerData[index], ev, this.parentEl);
+            return;
           }
-        };
-      }
+          currentNode = currentNode.nextSibling;
+        }
+      };
     }
 
     moveBeforeDOMNode(node: Node | null) {
@@ -79,11 +72,6 @@ export function createCatcher(eventsSpec: EventsSpec): Catcher {
         return;
       }
       this.handlerData = other.handlerData;
-      this.wrapHandlerData();
-      for (let i = 0; i < n; i++) {
-        this.handlerFns[i].update.call(this.parentEl!, this.handlerData[i]);
-      }
-
       this.child.patch(other.child, withBeforeRemove);
     }
 

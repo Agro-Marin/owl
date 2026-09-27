@@ -159,3 +159,38 @@ test("removing a catcher keeps the other synthetic handlers of its parent", asyn
   (fixture.firstChild as HTMLElement).click();
   expect(calls).toEqual(["outer"]);
 });
+
+test("modifiers apply only to events from inside the catcher", async () => {
+  const catcher = createCatcher({ click: 0 });
+  const parent = createBlock("<div><button>b</button><block-child-0/></div>");
+  const inner = createBlock("<span>c</span>");
+  let n = 0;
+  mount(parent([], [catcher(inner(), [["stop", "prevent", () => n++, {}]])]), fixture);
+  let reachedBody = 0;
+  const onBody = () => reachedBody++;
+  document.body.addEventListener("click", onBody);
+  const outside = new MouseEvent("click", { bubbles: true, cancelable: true });
+  fixture.querySelector("button")!.dispatchEvent(outside);
+  const inside = new MouseEvent("click", { bubbles: true, cancelable: true });
+  fixture.querySelector("span")!.dispatchEvent(inside);
+  document.body.removeEventListener("click", onBody);
+  expect(reachedBody).toBe(1);
+  expect(outside.defaultPrevented).toBe(false);
+  expect(inside.defaultPrevented).toBe(true);
+  expect(n).toBe(1);
+});
+
+test("a patched catcher calls the handler of the latest render", async () => {
+  const catcher = createCatcher({ click: 0, "click.synthetic": 1 });
+  const block = createBlock("<button>b</button>");
+  const calls: string[] = [];
+  const handlers = (v: string) => [
+    [() => calls.push(`native ${v}`), {}],
+    [() => calls.push(`synthetic ${v}`), {}],
+  ];
+  const tree = catcher(block(), handlers("1"));
+  mount(tree, fixture);
+  patch(tree, catcher(block(), handlers("2")));
+  (fixture.firstChild as HTMLElement).click();
+  expect(calls).toEqual(["native 2", "synthetic 2"]);
+});
