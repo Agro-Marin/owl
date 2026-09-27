@@ -1170,3 +1170,24 @@ test("a props view is read-only, declared keys and new ones alike", async () => 
   await mount(Parent, fixture);
   expect(errors).toEqual(["a: TypeError", "other: TypeError", "a: TypeError", "other: TypeError"]);
 });
+
+test("every view of a component resolves the defaults the component declared", async () => {
+  let keyList: any;
+  let otherSchema: any;
+  class Child extends Component {
+    static template = xml`<span/>`;
+    props = props({ w: t.number().optional(400), label: t.string().optional("x") });
+    setup() {
+      keyList = props(["w"]);
+      otherSchema = props({ w: t.number().optional(), label: t.string().optional("own") });
+    }
+  }
+  class Parent extends Component {
+    static template = xml`<Child/>`;
+    static components = { Child };
+  }
+  await mount(Parent, fixture);
+  expect(keyList.w).toBe(400);
+  expect(otherSchema.w).toBe(400);
+  expect(otherSchema.label).toBe("own");
+});

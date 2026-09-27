@@ -913,6 +913,32 @@ exports[`do not crash when binding anonymous function prop with bind suffix 2`] 
 }"
 `;
 
+exports[`every view of a component resolves the defaults the component declared 1`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { createComponent } = helpers;
+  const comp1 = createComponent(app, \`Child\`, true, false, false, []);
+  
+  return function template(ctx, node, key = "") {
+    return comp1({}, key + \`__1\`, node, this, null);
+  }
+}"
+`;
+
+exports[`every view of a component resolves the defaults the component declared 2`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  
+  let block1 = createBlock(\`<span/>\`);
+  
+  return function template(ctx, node, key = "") {
+    return block1();
+  }
+}"
+`;
+
 exports[`reactive props (issue #1908) > a prop read only in an effect (not the template) still reacts to a value swap 1`] = `
 "function anonymous(app, bdom, helpers
 ) {

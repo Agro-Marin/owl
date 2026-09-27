@@ -69,13 +69,20 @@ function makeProps(type?: any): Props<{}> {
     defaultsVersions.set(node, (defaultsVersions.get(node) || 0) + 1);
   }
 
-  // a schema-less view (a hook's) resolves the defaults the component declared
+  // a missing prop resolves to this view's default, else to the default another
+  // view of the component declared
   function resolveValue(props: Record<string, any>, key: string) {
-    const known = type ? defaults : node.defaultProps;
-    if (props[key] === undefined && known && key in known) {
-      return known[key];
+    const value = props[key];
+    if (value === undefined) {
+      if (defaults && key in defaults) {
+        return defaults[key];
+      }
+      const declared = node.defaultProps;
+      if (declared && key in declared) {
+        return declared[key];
+      }
     }
-    return props[key];
+    return value;
   }
 
   const signals: Record<string, Signal<any>> = Object.create(null);
