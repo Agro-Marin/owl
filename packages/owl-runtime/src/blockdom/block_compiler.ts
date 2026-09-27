@@ -30,6 +30,10 @@ if (typeof Node !== "undefined") {
 
 const NO_OP = () => {};
 
+// toString mounts into a detached element, children included: nothing it
+// builds may reach a ref
+let stringifying = 0;
+
 function makePropSetter(name: string): Setter<HTMLElement> {
   return function setProp(this: HTMLElement, value: any) {
     // support 0, fallback to empty string for other falsy values
@@ -547,7 +551,12 @@ function createBlockClass(template: HTMLElement, ctx: BlockCtx): BlockClass {
 
     toString() {
       const div = document.createElement("div");
-      this.mount(div, null);
+      stringifying++;
+      try {
+        this.mount(div, null);
+      } finally {
+        stringifying--;
+      }
       return div.innerHTML;
     }
 
@@ -599,7 +608,7 @@ function createBlockClass(template: HTMLElement, ctx: BlockCtx): BlockClass {
       this.el = el as HTMLElement;
       this.parentEl = parent;
 
-      if (cbRefs.length) {
+      if (cbRefs.length && !stringifying) {
         const data = this.data!;
         const refs = this.refs!;
         for (let cbRef of cbRefs) {

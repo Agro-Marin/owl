@@ -111,4 +111,14 @@ describe("t-ref", () => {
 
     expect(name().tagName).toBe("SPAN");
   });
+
+  test("a lazy t-set body used as a string does not bind its refs", () => {
+    const template = `<t t-set="v"><b t-ref="r">x</b></t><span t-att-title="v"/>`;
+    const calls: any[] = [];
+    const r = { set: (el: any) => calls.push(el) };
+    const fixture = document.createElement("div");
+    mount(renderToBdom(template, { r }), fixture);
+    expect(fixture.innerHTML).toBe('<span title="<b>x</b>"></span>');
+    expect(calls).toEqual([]);
+  });
 });

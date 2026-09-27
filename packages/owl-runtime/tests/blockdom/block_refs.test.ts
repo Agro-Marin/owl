@@ -84,3 +84,15 @@ test("changing the ref callback unbinds the old one and binds the new one", asyn
   remove(tree);
   expect(["ref2 undefined SPAN"]).toBeLogged();
 });
+
+test("toString does not call ref callbacks", async () => {
+  const block = createBlock('<div block-ref="0"><block-text-1/><block-child-0/></div>');
+  const refFn = (el: any) => logStep(`ref ${el?.textContent}`);
+  const tree = block([refFn, "parent"], [block([refFn, "child"], [])]);
+
+  expect(tree.toString()).toBe("<div>parent<div>child</div></div>");
+  expect([]).toBeLogged();
+
+  mount(tree, fixture);
+  expect(["ref child", "ref parentchild"]).toBeLogged();
+});
