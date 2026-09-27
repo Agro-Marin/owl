@@ -62,6 +62,16 @@ export function shallowEqual(a: unknown, b: unknown): boolean {
  */
 export class Markup extends String {}
 
+const ESCAPES: Record<string, string> = {
+  "&": "&amp;",
+  "<": "&lt;",
+  ">": "&gt;",
+  "'": "&#x27;",
+  '"': "&quot;",
+  "`": "&#x60;",
+};
+const ESCAPED_CHAR = /[&<>'"`]/g;
+
 export function htmlEscape(str: any): Markup {
   if (str instanceof Markup) {
     return str;
@@ -72,17 +82,7 @@ export function htmlEscape(str: any): Markup {
   if (typeof str === "number") {
     return markup(String(str));
   }
-  [
-    ["&", "&amp;"],
-    ["<", "&lt;"],
-    [">", "&gt;"],
-    ["'", "&#x27;"],
-    ['"', "&quot;"],
-    ["`", "&#x60;"],
-  ].forEach((pairs) => {
-    str = String(str).replace(new RegExp(pairs[0], "g"), pairs[1]);
-  });
-  return markup(str);
+  return markup(String(str).replace(ESCAPED_CHAR, (char) => ESCAPES[char]));
 }
 
 /*

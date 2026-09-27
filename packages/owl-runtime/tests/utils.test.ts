@@ -175,3 +175,10 @@ test("validateTarget accepts a shadow root inside an iframe", () => {
     iframe.remove();
   }
 });
+
+test("htmlEscape escapes every special character, each occurrence", () => {
+  expect(htmlEscape(`&&<<>>''""\`\``).toString()).toBe(
+    "&amp;&amp;&lt;&lt;&gt;&gt;&#x27;&#x27;&quot;&quot;&#x60;&#x60;"
+  );
+  expect(htmlEscape(null).toString()).toBe("null");
+});
