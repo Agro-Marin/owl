@@ -305,6 +305,31 @@ describe("t-on", () => {
     expect(fixture.innerHTML).toBe(" [1] <p>something</p><p>paragraph</p>");
   });
 
+  test("t-on on a t-set-slot whose content ends with a t-set", async () => {
+    class Child extends Component {
+      static template = xml`<t t-call-slot="myslot"/>`;
+      props = props();
+    }
+
+    class Parent extends Component {
+      static template = xml`
+        <Child>
+          <t t-set-slot="myslot" t-on-click="() => this.state.count++">
+            <button t-out="this.state.count"/>
+            <t t-set="x" t-value="1"/>
+          </t>
+        </Child>`;
+      static components = { Child };
+      state = proxy({ count: 0 });
+    }
+
+    await mount(Parent, fixture);
+    expect(fixture.innerHTML).toBe("<button>0</button>");
+    fixture.querySelector("button")!.click();
+    await nextTick();
+    expect(fixture.innerHTML).toBe("<button>1</button>");
+  });
+
   test("t-on on components, with 'prevent' modifier", async () => {
     expect.assertions(4); // 2 snaps and 2 expects
     class Child extends Component {

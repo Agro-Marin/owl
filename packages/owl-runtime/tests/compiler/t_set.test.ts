@@ -341,4 +341,8 @@ describe("t-set", () => {
     fixture.querySelector("button")!.click();
     expect(received).toBe(2);
   });
+
+  test("template made only of t-set renders nothing", () => {
+    expect(renderToString(`<t t-set="a" t-value="1"/><t t-set="b" t-value="2"/>`)).toBe("");
+  });
 });

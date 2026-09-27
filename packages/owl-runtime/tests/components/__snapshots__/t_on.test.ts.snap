@@ -119,6 +119,44 @@ exports[`t-on > t-on method call in t-foreach 1`] = `
 }"
 `;
 
+exports[`t-on > t-on on a t-set-slot whose content ends with a t-set 1`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { safeOutput, createCatcher, markRaw, createComponent } = helpers;
+  const hdlr_fn1 = (ctx)=>ctx['this'].state.count++;
+  const catcher1 = createCatcher({"click":0});
+  const comp1 = createComponent(app, \`Child\`, true, true, false, []);
+  
+  let block1 = createBlock(\`<button><block-child-0/></button>\`);
+  
+  function slot1(ctx, node, key = "") {
+    ctx = Object.create(ctx);
+    const b2 = safeOutput(ctx['this'].state.count);
+    const b1 = block1([], [b2]);
+    ctx["x"] = 1;
+    const hdlr1 = [hdlr_fn1, ctx];
+    return catcher1(b1, [hdlr1]);
+  }
+  
+  return function template(ctx, node, key = "") {
+    return comp1({slots: markRaw({'myslot': {__render: slot1.bind(this), __ctx: ctx}})}, key + \`__1\`, node, this, null);
+  }
+}"
+`;
+
+exports[`t-on > t-on on a t-set-slot whose content ends with a t-set 2`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { callSlot } = helpers;
+  
+  return function template(ctx, node, key = "") {
+    return callSlot(ctx, node, key, 'myslot', false, {});
+  }
+}"
+`;
+
 exports[`t-on > t-on on component next to t-on on div 1`] = `
 "function anonymous(app, bdom, helpers
 ) {

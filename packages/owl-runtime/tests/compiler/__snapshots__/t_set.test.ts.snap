@@ -657,6 +657,20 @@ exports[`t-set > t-set, t-if, and mix of expression/body lookup, 3 1`] = `
 }"
 `;
 
+exports[`t-set > template made only of t-set renders nothing 1`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  
+  return function template(ctx, node, key = "") {
+    ctx = Object.create(ctx);
+    ctx["a"] = 1;
+    ctx["b"] = 2;
+  return text('');
+  }
+}"
+`;
+
 exports[`t-set > value priority (with non text body 1`] = `
 "function anonymous(app, bdom, helpers
 ) {

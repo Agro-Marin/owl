@@ -425,13 +425,17 @@ export class CodeGenerator {
     }
 
     if (block.isRoot && !this.target.deferReturn) {
-      if (this.target.on) {
-        blockExpr = this.wrapWithEventCatcher(blockExpr, this.target.on);
-      }
-      this.addLine(`return ${blockExpr};`);
+      this.emitRootReturn(blockExpr);
     } else {
       this.define(block.varName, blockExpr);
     }
+  }
+
+  emitRootReturn(expr: string) {
+    if (this.target.on) {
+      expr = this.wrapWithEventCatcher(expr, this.target.on);
+    }
+    this.addLine(`return ${expr};`);
   }
 
   translate(str: string, translationCtx: string): string {
@@ -910,7 +914,9 @@ export class CodeGenerator {
         // Check if there are non-DOM directives (like t-set) after the DOM child.
         // If so, defer the return so those directives are compiled before it.
         const shouldDefer =
-          !this.target.hasRoot && ast.content[ast.content.length - 1].hasNoRepresentation;
+          !this.target.hasRoot &&
+          n === 1 &&
+          ast.content[ast.content.length - 1].hasNoRepresentation;
         if (shouldDefer) {
           this.target.deferReturn = true;
         }
@@ -920,7 +926,7 @@ export class CodeGenerator {
         }
         if (shouldDefer) {
           this.target.deferReturn = false;
-          this.addLine(`return ${result};`);
+          this.emitRootReturn(result!);
         }
         return result;
       }
