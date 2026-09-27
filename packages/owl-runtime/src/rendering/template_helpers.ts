@@ -166,8 +166,15 @@ function makeRefCallback(ref: any, node: ComponentNode): RefCallback {
   let remove: (el: HTMLElement) => void;
 
   if (ref.add && ref.delete) {
-    add = ref.add.bind(ref);
-    remove = ref.delete.bind(ref);
+    // tracked like a signal below, element by element
+    add = (el: HTMLElement) => {
+      ref.add(el);
+      node.trackRefElement(ref, el, true);
+    };
+    remove = (prevEl: HTMLElement) => {
+      ref.delete(prevEl);
+      node.trackRefElement(ref, prevEl, false);
+    };
   } else if (ref.set) {
     // A sibling slot in the same patch may have already taken ownership of the
     // signal (e.g. t-if/t-else swap with a shared ref). In that case the new

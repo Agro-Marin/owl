@@ -485,4 +485,17 @@ describe("miscellaneous operations", () => {
     expect(children[0]).toBe(s1);
     expect(children[2]).toBe(n1);
   });
+
+  test("a list mounted by a patch into an only-child slot is an only child", () => {
+    const block = createBlock("<div><block-child-0/></div>");
+    const tree = block([], []);
+    mount(tree, fixture);
+    const items = list([1, 2].map(n));
+    patch(tree, block([], [items]));
+    expect(fixture.innerHTML).toBe("<div>12</div>");
+    expect(items.isOnlyChild).toBe(true);
+
+    patch(tree, block([], [list([])]));
+    expect(fixture.innerHTML).toBe("<div></div>");
+  });
 });

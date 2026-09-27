@@ -589,4 +589,60 @@ describe("refs", () => {
     expect(fixture.innerHTML).toBe('<div title="c"></div>');
     expect(steps).toEqual(["add"]);
   });
+
+  test("set-like ref drops the items of a list cleared in bulk", async () => {
+    class Test extends Component {
+      static template = xml`
+        <div><t t-foreach="this.items()" t-as="i" t-key="i"><p t-ref="this.refs"/></t></div>`;
+      items = signal([1, 2]);
+      refs = new Set<HTMLElement>();
+    }
+    const test = await mount(Test, fixture);
+    expect(test.refs.size).toBe(2);
+
+    test.items.set([]);
+    await nextTick();
+    expect(fixture.innerHTML).toBe("<div></div>");
+    expect(test.refs.size).toBe(0);
+
+    test.items.set([3]);
+    await nextTick();
+    expect([...test.refs]).toEqual([fixture.querySelector("p")]);
+  });
+
+  test("set-like ref drops the elements of an enclosing block removed in bulk", async () => {
+    class Test extends Component {
+      static template = xml`
+        <div t-if="this.show()"><p t-foreach="[1, 2]" t-as="i" t-key="i" t-ref="this.refs"/></div>`;
+      show = signal(true);
+      refs = new Set<HTMLElement>();
+    }
+    const test = await mount(Test, fixture);
+    expect(test.refs.size).toBe(2);
+
+    test.show.set(false);
+    await nextTick();
+    expect(test.refs.size).toBe(0);
+  });
+
+  test("set-like ref in slot drops its element when the slot host is removed", async () => {
+    class Wrapper extends Component {
+      static template = xml`<div><t t-call-slot="default"/></div>`;
+    }
+    class Root extends Component {
+      static components = { Wrapper };
+      static template = xml`
+        <t t-if="this.visible()">
+          <Wrapper><div class="slotted" t-ref="this.refs">Coucou</div></Wrapper>
+        </t>`;
+      visible = signal(true);
+      refs = new Set<HTMLElement>();
+    }
+    const root = await mount(Root, fixture);
+    expect([...root.refs]).toEqual([fixture.querySelector(".slotted")]);
+
+    root.visible.set(false);
+    await nextTick();
+    expect(root.refs.size).toBe(0);
+  });
 });

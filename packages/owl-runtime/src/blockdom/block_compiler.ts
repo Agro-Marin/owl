@@ -649,6 +649,7 @@ function createBlockClass(template: HTMLElement, ctx: BlockCtx): BlockClass {
             const info = childInfos[i];
             const afterRefIdx = (info >> 16) & 0x7fff;
             const afterNode = afterRefIdx ? refs[afterRefIdx] : null;
+            child2.isOnlyChild = !!(info & (1 << 15));
             child2.mount(refs[info & 0x7fff] as any, afterNode);
             children1![i] = child2;
           }

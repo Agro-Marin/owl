@@ -96,7 +96,7 @@ export function renderToBdom(template: string, context: any = {}, node?: any): B
     }
     // Compiled templates always run with a ComponentNode as `node`; at this
     // blockdom level there is none, so stub the bits createRef needs.
-    node = { trackRef() {} };
+    node = { trackRef() {}, trackRefElement() {} };
   }
   const fn = compile(template);
   if (shouldSnapshot && !snapshottedTemplates.has(template)) {

@@ -48,11 +48,13 @@ export class ComponentNode extends Scope implements VNode<ComponentNode> {
   willPatch: LifecycleHook[] = [];
   patched: LifecycleHook[] = [];
   signalComputation: ComputationAtom;
-  // t-ref signals bound to an element hosted by this component, mapped to their
-  // atom (so the element can be read without subscribing). Swept by isConnected
-  // after each patch and after this subtree is removed, to unset a ref pointing
-  // at a bulk-removed element (slot host, enclosing t-if) — see sweepRefs.
-  trackedRefs: Map<{ set(v: null): void }, { value: HTMLElement | null }> | null = null;
+  // t-refs bound to an element hosted by this component: a signal mapped to its
+  // atom (so the element can be read without subscribing), a set-like ref to
+  // the elements this component added to it. Swept by isConnected after each
+  // patch and after this subtree is removed, to unbind a ref from a
+  // bulk-removed element (slot host, enclosing t-if, cleared list) — see
+  // sweepRefs.
+  trackedRefs: Map<any, { value: HTMLElement | null } | Set<HTMLElement>> | null = null;
   refCallbacks: WeakMap<object, RefCallback> | null = null;
 
   constructor(
@@ -230,12 +232,13 @@ export class ComponentNode extends Scope implements VNode<ComponentNode> {
   }
 
   /**
-   * Unset any tracked t-ref whose element is no longer in the document, and stop
-   * tracking it (its ref callback re-registers it when it binds an element
-   * again). `isConnected` is the discriminator: a ref the block's own
-   * remove() failed to clear (bulk removal) points at a detached element and is
-   * cleared, while a ref a surviving sibling just took over (t-if/t-else with a
-   * shared signal) points at a still-connected element and is left alone.
+   * Unbind any tracked t-ref from the elements no longer in the document, and
+   * stop tracking what is left unbound (its ref callback re-registers it when it
+   * binds an element again). `isConnected` is the discriminator: a ref the
+   * block's own remove() failed to unbind (bulk removal) points at a detached
+   * element and is unbound, while a ref a surviving sibling just took over
+   * (t-if/t-else with a shared signal) points at a still-connected element and
+   * is left alone.
    *
    * Called after this component's dom settles: at the tail of `_patch` (before
    * user `onPatched`), so an element removed in place is caught, and — for the
@@ -246,8 +249,20 @@ export class ComponentNode extends Scope implements VNode<ComponentNode> {
     if (!refs) {
       return;
     }
-    for (const [ref, atom] of refs) {
-      const el = atom.value;
+    for (const [ref, tracked] of refs) {
+      if (tracked instanceof Set) {
+        for (const el of tracked) {
+          if (!el.isConnected) {
+            ref.delete(el);
+            tracked.delete(el);
+          }
+        }
+        if (!tracked.size) {
+          refs.delete(ref);
+        }
+        continue;
+      }
+      const el = tracked.value;
       if (!el) {
         refs.delete(ref);
       } else if (!el.isConnected) {
@@ -323,6 +338,23 @@ export class ComponentNode extends Scope implements VNode<ComponentNode> {
    */
   trackRef(ref: { set(v: null): void }, atom: { value: HTMLElement | null }) {
     (this.trackedRefs ||= new Map()).set(ref, atom);
+  }
+
+  /**
+   * Register an element this component added to a set-like t-ref, or forget it
+   * once its block removed it from the ref (`bound` false).
+   */
+  trackRefElement(ref: { delete(el: HTMLElement): void }, el: HTMLElement, bound: boolean) {
+    const refs = (this.trackedRefs ||= new Map());
+    let els = refs.get(ref) as Set<HTMLElement> | undefined;
+    if (bound) {
+      if (!els) {
+        refs.set(ref, (els = new Set()));
+      }
+      els.add(el);
+    } else if (els) {
+      els.delete(el);
+    }
   }
 
   patch() {
