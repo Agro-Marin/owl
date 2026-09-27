@@ -135,7 +135,7 @@ export function safeOutput(value: any, defaultValue?: any): ReturnType<typeof to
   let block;
   if (value instanceof Markup) {
     safeKey = `string_safe`;
-    block = html(value as string);
+    block = html(value);
   } else if (value instanceof LazyValue) {
     safeKey = `lazy_value`;
     block = value.evaluate();

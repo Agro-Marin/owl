@@ -13,8 +13,9 @@ class VHtml {
   parentEl?: HTMLElement | undefined;
   content: ChildNode[] = [];
 
-  constructor(html: string) {
-    this.html = html;
+  constructor(html: string | String) {
+    // a Markup is a String object: compare its value, not its identity
+    this.html = String(html);
   }
 
   mount(parent: HTMLElement, afterNode: Node | null) {
@@ -90,6 +91,6 @@ class VHtml {
   }
 }
 
-export function html(str: string): VNode<VHtml> {
+export function html(str: string | String): VNode<VHtml> {
   return new VHtml(str);
 }

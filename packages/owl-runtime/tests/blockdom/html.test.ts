@@ -1,3 +1,4 @@
+import { markup } from "@odoo/owl-core";
 import { html, mount, patch, text } from "../../src/blockdom";
 import { makeTestFixture } from "./helpers";
 
@@ -44,5 +45,19 @@ describe("html block", () => {
 
     patch(tree, html(`<tr><td>potato</td></tr>`));
     expect(fixture.innerHTML).toBe("<tr><td>potato</td></tr>");
+  });
+
+  test("equal markup in a new object keeps the mounted content", () => {
+    const tree = html(markup("<details open=''><b>a</b></details>"));
+    mount(tree, fixture);
+    const details = fixture.firstChild as HTMLDetailsElement;
+    details.open = false;
+
+    patch(tree, html(markup("<details open=''><b>a</b></details>")));
+    expect(fixture.firstChild).toBe(details);
+    expect(details.open).toBe(false);
+
+    patch(tree, html(markup("<b>b</b>")));
+    expect(fixture.innerHTML).toBe("<b>b</b>");
   });
 });
