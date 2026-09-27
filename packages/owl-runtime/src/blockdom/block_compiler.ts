@@ -264,7 +264,7 @@ function buildTree(
           }
         }
       }
-      if (tree.info.length) {
+      if (tree.info.length && !tree.isRef) {
         addRef(tree);
       }
       return tree;

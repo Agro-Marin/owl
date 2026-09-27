@@ -260,4 +260,16 @@ describe("misc", () => {
       "http://www.w3.org/1999/xhtml",
     ]);
   });
+
+  test("an element with dynamic data and a child anchor is collected once", () => {
+    const block = createBlock(
+      `<div block-attribute-0="title"><p><block-text-1/></p><block-child-0/></div>`
+    );
+    const tree: any = block(["t", "x"], [text("c")]);
+    mount(tree, fixture);
+    expect(fixture.innerHTML).toBe(`<div title="t"><p>x</p>c</div>`);
+    const refs: Node[] = tree.refs;
+    expect(refs.length).toBe(3);
+    expect(refs.every((r) => r !== undefined)).toBe(true);
+  });
 });
