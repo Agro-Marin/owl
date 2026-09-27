@@ -113,7 +113,8 @@ function makeProps(type?: any): Props<{}> {
         assertType(np, validation, `Invalid component props (${componentName})`);
       });
     }
-    return result;
+    // read-only like the schema-less view: a new key throws, not only a declared one
+    return Object.preventExtensions(result);
   }
 
   const getKeys = (props: Record<string, any>) => {

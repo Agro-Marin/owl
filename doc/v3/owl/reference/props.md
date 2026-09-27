@@ -458,6 +458,8 @@ A `props` object is a collection of values that come from the parent. As such,
 they are owned by the parent, and should never be modified by the child.
 
 Props should be considered readonly, from the perspective of the child component.
+A props view enforces it: assigning to it throws a `TypeError`. To pass a
+modified copy on, spread it: `{ ...this.props, groupBy: [] }`.
 If there is a need to modify them, then the request to update them should be
 sent to the parent (for example, with an event).
 

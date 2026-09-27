@@ -1144,3 +1144,29 @@ describe("schema-less view key set", () => {
     expect({ ...hookView }).toEqual({ w: 400 });
   });
 });
+
+test("a props view is read-only, declared keys and new ones alike", async () => {
+  const errors: string[] = [];
+  class Child extends Component {
+    static template = xml`<span/>`;
+    schema = props({ a: t.number() });
+    schemaless = props();
+    setup() {
+      for (const view of [this.schema, this.schemaless] as any[]) {
+        for (const key of ["a", "other"]) {
+          try {
+            view[key] = 5;
+          } catch (e) {
+            errors.push(`${key}: ${(e as Error).constructor.name}`);
+          }
+        }
+      }
+    }
+  }
+  class Parent extends Component {
+    static template = xml`<Child a="1"/>`;
+    static components = { Child };
+  }
+  await mount(Parent, fixture);
+  expect(errors).toEqual(["a: TypeError", "other: TypeError", "a: TypeError", "other: TypeError"]);
+});

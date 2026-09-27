@@ -284,6 +284,32 @@ exports[`.translate props are translated 2`] = `
 }"
 `;
 
+exports[`a props view is read-only, declared keys and new ones alike 1`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { createComponent } = helpers;
+  const comp1 = createComponent(app, \`Child\`, true, false, false, ["a"]);
+  
+  return function template(ctx, node, key = "") {
+    return comp1({a: 1}, key + \`__1\`, node, this, null);
+  }
+}"
+`;
+
+exports[`a props view is read-only, declared keys and new ones alike 2`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  
+  let block1 = createBlock(\`<span/>\`);
+  
+  return function template(ctx, node, key = "") {
+    return block1();
+  }
+}"
+`;
+
 exports[`a schema-less view resolves the defaults the component declared 1`] = `
 "function anonymous(app, bdom, helpers
 ) {

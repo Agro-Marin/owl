@@ -51,7 +51,7 @@ commands.add(a).add(b).add(c); // chainable
 ```
 
 `options.sequence` defaults to `50`. Items are sorted ascending by sequence
-when read via `items()`. The expected range is `1`–`100`, with `50` sitting in
+when read via `items()`, items of equal sequence in the order they were added. The expected range is `1`–`100`, with `50` sitting in
 the middle so callers can insert items before or after the default without
 having to renumber existing ones.
 

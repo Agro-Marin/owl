@@ -59,7 +59,8 @@ views.add("list", OtherComponent, { force: true }); // ok, overwrites
 ```
 
 `options.sequence` defaults to `50`. Entries are sorted ascending by sequence
-in `entries()` and `items()`. The expected range is `1`–`100`, with `50` sitting
+in `entries()` and `items()`, entries of equal sequence in the order their keys
+were first added (a `force` re-add keeps its place). The expected range is `1`–`100`, with `50` sitting
 in the middle so callers can insert entries before or after the default without
 having to renumber existing ones.
 
