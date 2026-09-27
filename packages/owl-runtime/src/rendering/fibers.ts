@@ -1,10 +1,4 @@
-import {
-  ComputationState,
-  getCurrentComputation,
-  OwlError,
-  removeSources,
-  setComputation,
-} from "@odoo/owl-core";
+import { ComputationState, OwlError, runTracked } from "@odoo/owl-core";
 import { BDom, mount, type MountTarget } from "../blockdom";
 import type { ComponentNode } from "../component_node";
 import { STATUS } from "../status";
@@ -225,19 +219,20 @@ export class Fiber {
         });
         return;
       }
-      const c = getCurrentComputation();
-      removeSources(node.signalComputation);
-      setComputation(node.signalComputation);
       node.signalComputation.state = ComputationState.EXECUTED;
       this.phase = FiberPhase.RENDERING;
-      try {
-        this.bdom = node.renderFn();
-      } catch (e) {
-        handleError({ node, error: e });
-      } finally {
-        this.phase = FiberPhase.RENDERED;
-        setComputation(c);
-      }
+      // the error is handled while the render is still the current
+      // computation, as onError handlers have always run
+      this.bdom = runTracked(node.signalComputation, () => {
+        try {
+          return node.renderFn() as BDom;
+        } catch (e) {
+          handleError({ node, error: e });
+          return null;
+        } finally {
+          this.phase = FiberPhase.RENDERED;
+        }
+      });
       const newCounter = root.counter - 1;
       root.counter = newCounter;
       if (newCounter === 0) {

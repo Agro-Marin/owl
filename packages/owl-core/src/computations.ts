@@ -232,22 +232,41 @@ export function updateComputation(computation: ComputationAtom) {
       return;
     }
   }
-  // todo: test performance. We might want to avoid removing the atoms to
-  // directly re-add them at compute. Especially as we are making them stale.
-  removeSources(computation);
+  try {
+    computation.value = runTracked(computation, computation.compute);
+  } finally {
+    // A computation that threw stays subscribed to what it read before the
+    // throw, and runs again when one of those changes.
+    computation.state = ComputationState.EXECUTED;
+  }
+}
+
+/**
+ * Runs `fn` as `computation`: what it reads becomes the computation's sources,
+ * replacing the previous ones. A source read again keeps its subscription (and
+ * its place among the source's observers) instead of being unsubscribed and
+ * subscribed anew; only the sources `fn` no longer read are dropped, once it
+ * returns or throws.
+ */
+export function runTracked<T>(computation: ComputationAtom, fn: () => T): T {
+  const previousSources = computation.sources;
+  computation.sources = new Set();
   const previousComputation = currentComputation;
   const previousObserver = currentObserver;
   currentComputation = computation;
   currentObserver = undefined;
   try {
-    computation.value = computation.compute();
+    return fn();
   } finally {
-    // A computation that threw stays subscribed to what it read before the
-    // throw, and runs again when one of those changes. Restore the tracking
-    // pointer too, so a later read does not attach to the failed computation.
-    computation.state = ComputationState.EXECUTED;
+    // restored even if fn threw, so a later read does not attach to it
     currentComputation = previousComputation;
     currentObserver = previousObserver;
+    const sources = computation.sources;
+    for (const source of previousSources) {
+      if (!sources.has(source)) {
+        source.observers.delete(computation);
+      }
+    }
   }
 }
 

@@ -19,19 +19,14 @@ export function immediateEffect<T>(fn: () => T) {
 function createEffect<T>(fn: () => T, immediate: boolean) {
   const computation = createComputation(
     () => {
-      // Only run the unsubscribe dance (and the surrounding setComputation
-      // save/restore) when there's actually something to clean up: a stored
-      // cleanup function (computation.value) or nested child effects
-      // (computation.observers). For the common "leaf effect" case this is
-      // both empty, and removeSources alone suffices.
+      // A stored cleanup function (computation.value) or nested child effects
+      // (computation.observers) are disposed before the re-run, untracked so
+      // they do not become sources of this effect. updateComputation handles
+      // the effect's own sources.
       if (computation.value || computation.observers.size) {
-        // Keep cleanup function and child cleanup from tracking atom reads as
-        // sources of this effect.
         setComputation(undefined);
         unsubscribeEffect(computation);
         setComputation(computation);
-      } else {
-        removeSources(computation);
       }
       return fn();
     },

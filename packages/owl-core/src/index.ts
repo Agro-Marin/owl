@@ -28,6 +28,7 @@ export {
   getCurrentComputation,
   setComputation,
   updateComputation,
+  runTracked,
   removeSources,
   disposeComputation,
   withObserver,
