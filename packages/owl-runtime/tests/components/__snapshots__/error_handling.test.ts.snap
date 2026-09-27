@@ -414,6 +414,39 @@ exports[`can catch errors > an error in onWillDestroy, variation 3`] = `
 }"
 `;
 
+exports[`can catch errors > an error in onWillUnmount still destroys the component 1`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { safeOutput, createComponent } = helpers;
+  const comp1 = createComponent(app, \`Child\`, true, false, false, []);
+  
+  return function template(ctx, node, key = "") {
+    let b2, b3;
+    b2 = safeOutput(ctx['this'].state.value);
+    if (ctx['this'].state.hasChild) {
+      b3 = comp1({}, key + \`__1\`, node, this, null);
+    }
+    return multi([b2, b3]);
+  }
+}"
+`;
+
+exports[`can catch errors > an error in onWillUnmount still destroys the component 2`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { safeOutput } = helpers;
+  
+  let block1 = createBlock(\`<div><block-child-0/></div>\`);
+  
+  return function template(ctx, node, key = "") {
+    const b2 = safeOutput(ctx['this'].s());
+    return block1([], [b2]);
+  }
+}"
+`;
+
 exports[`can catch errors > calling a hook outside setup should crash 1`] = `
 "function anonymous(app, bdom, helpers
 ) {

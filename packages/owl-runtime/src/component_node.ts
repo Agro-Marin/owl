@@ -193,9 +193,17 @@ export class ComponentNode extends Scope implements VNode<ComponentNode> {
 
   _destroy() {
     const component = this.component;
+    // a throwing onWillUnmount must not leave this subtree alive (still
+    // MOUNTED, rendering, running its effects): the error is rethrown once the
+    // destruction is complete
+    let failure: { error: unknown } | null = null;
     if (this.status === STATUS.MOUNTED) {
       for (let cb of this.willUnmount) {
-        cb.call(component);
+        try {
+          cb.call(component);
+        } catch (error) {
+          failure ||= { error };
+        }
       }
     }
     // While a removal is in progress, collect ref-bearing nodes on the way down
@@ -207,10 +215,17 @@ export class ComponentNode extends Scope implements VNode<ComponentNode> {
       (removed ||= []).push(this);
     }
     for (let childKey in this.children) {
-      this.children[childKey]._destroy();
+      try {
+        this.children[childKey]._destroy();
+      } catch (error) {
+        failure ||= { error };
+      }
     }
     this.finalize((e) => handleError({ error: e, node: this }));
     disposeComputation(this.signalComputation);
+    if (failure) {
+      throw failure.error;
+    }
   }
 
   /**

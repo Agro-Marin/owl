@@ -13,6 +13,8 @@ import {
   onWillUnmount,
   onWillUpdateProps,
   proxy,
+  signal,
+  useEffect,
   xml,
 } from "../../src";
 import { getCurrentComputation, useScope } from "@odoo/owl-core";
@@ -1541,6 +1543,49 @@ describe("can catch errors", () => {
     await nextTick();
     expect(fixture.innerHTML).toBe("<div>Child 2</div>");
     expect(steps).toEqual(["Error Component"]);
+  });
+
+  test("an error in onWillUnmount still destroys the component", async () => {
+    const s = signal(0);
+    const log: string[] = [];
+    class Child extends Component {
+      static template = xml`<div t-out="this.s()"/>`;
+      s = s;
+      setup() {
+        useEffect(() => {
+          log.push(`effect ${s()}`);
+          return () => log.push("effect cleanup");
+        });
+        onWillUnmount(() => {
+          throw new Error("boom");
+        });
+      }
+    }
+
+    class Parent extends Component {
+      static template = xml`
+        <t t-out="this.state.value"/>
+        <t t-if="this.state.hasChild"><Child/></t>`;
+      static components = { Child };
+
+      state = proxy({ value: 1, hasChild: true });
+      setup() {
+        onError((e) => {
+          log.push(`caught ${e.message}`);
+          this.state.value++;
+        });
+      }
+    }
+
+    const parent = await mount(Parent, fixture);
+    expect(fixture.innerHTML).toBe("1<div>0</div>");
+    parent.state.hasChild = false;
+    await nextTick();
+    await nextTick();
+    expect(fixture.innerHTML).toBe("2");
+    s.set(1);
+    await nextTick();
+    expect(log).toEqual(["effect 0", "effect cleanup", "caught boom"]);
   });
 
   test("an error in onWillDestroy", async () => {
