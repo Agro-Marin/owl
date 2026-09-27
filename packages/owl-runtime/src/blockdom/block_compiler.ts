@@ -549,9 +549,8 @@ function createBlockClass(template: HTMLElement, ctx: BlockCtx): BlockClass {
       return this.el!;
     }
 
-    moveBeforeDOMNode(node: Node | null, parent = this.parentEl) {
-      this.parentEl = parent;
-      nodeInsertBefore.call(parent, this.el!, node);
+    moveBeforeDOMNode(node: Node | null) {
+      nodeInsertBefore.call(this.parentEl, this.el!, node);
     }
 
     moveBeforeVNode(other: Block | null, afterNode: Node | null) {

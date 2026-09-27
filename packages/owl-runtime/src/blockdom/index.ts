@@ -13,7 +13,7 @@ export type MountTarget = HTMLElement | ShadowRoot;
 
 export interface VNode<T = any> {
   mount(parent: MountTarget, afterNode: Node | null): void;
-  moveBeforeDOMNode(node: Node | null, parent?: MountTarget): void;
+  moveBeforeDOMNode(node: Node | null): void;
   moveBeforeVNode(other: T | null, afterNode: Node | null): void;
   patch(other: T, withBeforeRemove: boolean): void;
   beforeRemove(): void;

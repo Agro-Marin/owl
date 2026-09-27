@@ -33,8 +33,8 @@ class VHtml {
     }
   }
 
-  moveBeforeDOMNode(node: Node | null, parent = this.parentEl) {
-    this.parentEl = parent;
+  moveBeforeDOMNode(node: Node | null) {
+    const parent = this.parentEl;
     for (let elem of this.content) {
       nodeInsertBefore.call(parent, elem, node);
     }

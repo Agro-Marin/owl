@@ -27,9 +27,8 @@ class VText {
     this.el = node;
   }
 
-  moveBeforeDOMNode(node: Node | null, parent = this.parentEl) {
-    this.parentEl = parent;
-    nodeInsertBefore.call(parent, this.el!, node);
+  moveBeforeDOMNode(node: Node | null) {
+    nodeInsertBefore.call(this.parentEl, this.el!, node);
   }
 
   moveBeforeVNode(other: VText | null, afterNode: Node | null) {

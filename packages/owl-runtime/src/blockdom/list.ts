@@ -43,13 +43,12 @@ class VList {
     this.parentEl = parent;
   }
 
-  moveBeforeDOMNode(node: Node | null, parent = this.parentEl) {
-    this.parentEl = parent;
+  moveBeforeDOMNode(node: Node | null) {
     const children = this.children;
     for (let i = 0, l = children.length; i < l; i++) {
-      children[i].moveBeforeDOMNode(node, parent);
+      children[i].moveBeforeDOMNode(node);
     }
-    parent!.insertBefore(this.anchor!, node);
+    this.parentEl!.insertBefore(this.anchor!, node);
   }
 
   moveBeforeVNode(other: VList | null, afterNode: Node | null) {

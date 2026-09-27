@@ -323,8 +323,8 @@ export class ComponentNode extends Scope implements VNode<ComponentNode> {
     this.fiber = null;
   }
 
-  moveBeforeDOMNode(node: Node | null, parent?: HTMLElement): void {
-    this.bdom!.moveBeforeDOMNode(node, parent);
+  moveBeforeDOMNode(node: Node | null): void {
+    this.bdom!.moveBeforeDOMNode(node);
   }
 
   moveBeforeVNode(other: ComponentNode | null, afterNode: Node | null) {
