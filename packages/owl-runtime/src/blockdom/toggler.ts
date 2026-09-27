@@ -12,18 +12,16 @@ import type { VNode } from "./index";
 const txt = globalThis.document?.createTextNode("")!;
 
 class VToggler {
-  key: string;
+  // not `key`: a toggler in a keyed list gets its list key written there
+  kind: string;
   child: VNode;
 
-  parentEl?: HTMLElement | undefined;
-
-  constructor(key: string, child: VNode) {
-    this.key = key;
+  constructor(kind: string, child: VNode) {
+    this.kind = kind;
     this.child = child;
   }
 
   mount(parent: HTMLElement, afterNode: Node | null) {
-    this.parentEl = parent;
     this.child.mount(parent, afterNode);
   }
 
@@ -41,18 +39,23 @@ class VToggler {
     }
     let child1 = this.child;
     let child2 = other.child;
-    if (this.key === other.key) {
+    if (this.kind === other.kind) {
       child1.patch(child2, withBeforeRemove);
     } else {
       const firstNode = child1.firstNode()!;
-      firstNode.parentElement!.insertBefore(txt, firstNode);
+      // a ShadowRoot parent is a node, not an element
+      const parent = firstNode.parentNode as HTMLElement;
+      parent.insertBefore(txt, firstNode);
       if (withBeforeRemove) {
         child1.beforeRemove();
       }
+      // remove before mounting: a ref the new child sets must not be cleared by
+      // the old child's removal
       child1.remove();
-      child2.mount(this.parentEl!, txt);
+      child2.mount(parent, txt);
+      parent.removeChild(txt);
       this.child = child2;
-      this.key = other.key;
+      this.kind = other.kind;
     }
   }
 
@@ -73,6 +76,6 @@ class VToggler {
   }
 }
 
-export function toggler(key: string, child: VNode): VNode<VToggler> {
-  return new VToggler(key, child);
+export function toggler(kind: string, child: VNode): VNode<VToggler> {
+  return new VToggler(kind, child);
 }

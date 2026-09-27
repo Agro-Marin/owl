@@ -1,5 +1,38 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`list of components > a keyed item switching between text and markup, or between tags 1`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { prepareList, safeOutput, withKey } = helpers;
+  
+  let block5 = tag => createBlock(\`<\${tag || 't'}>x</\${tag || 't'}>\`);
+  
+  return function template(ctx, node, key = "") {
+    const ctx1 = ctx;
+    const [k_block2, v_block2, l_block2, c_block2] = prepareList(ctx['this'].items());;
+    for (let i1 = 0; i1 < l_block2; i1++) {
+      let ctx = Object.create(ctx1);
+      ctx[\`item\`] = k_block2[i1];
+      const key1 = ctx['item'].id;
+      c_block2[i1] = withKey(safeOutput(ctx['item'].content), key1);
+    }
+    const b2 = list(c_block2);
+    const ctx2 = ctx;
+    const [k_block4, v_block4, l_block4, c_block4] = prepareList(ctx['this'].items());;
+    for (let i1 = 0; i1 < l_block4; i1++) {
+      let ctx = Object.create(ctx2);
+      ctx[\`item\`] = k_block4[i1];
+      const key1 = ctx['item'].id;
+      const tag1 = ctx['item'].tag;
+      c_block4[i1] = withKey(toggler(tag1, block5(tag1)()), key1);
+    }
+    const b4 = list(c_block4);
+    return multi([b2, b4]);
+  }
+}"
+`;
+
 exports[`list of components > components in a node in a t-foreach  1`] = `
 "function anonymous(app, bdom, helpers
 ) {

@@ -1,4 +1,4 @@
-import { Component, mount, onMounted, props, proxy, xml } from "../../src";
+import { Component, markup, mount, onMounted, props, proxy, signal, xml } from "../../src";
 import {
   makeTestFixture,
   nextTick,
@@ -18,6 +18,20 @@ beforeEach(() => {
 });
 
 describe("list of components", () => {
+  test("a keyed item switching between text and markup, or between tags", async () => {
+    class Parent extends Component {
+      static template = xml`
+        <t t-foreach="this.items()" t-as="item" t-key="item.id"><t t-out="item.content"/></t>
+        <t t-foreach="this.items()" t-as="item" t-key="item.id"><t t-tag="item.tag">x</t></t>`;
+      items = signal<any[]>([{ id: 1, content: "plain", tag: "p" }]);
+    }
+    const parent = await mount(Parent, fixture);
+    expect(fixture.innerHTML).toBe("plain<p>x</p>");
+    parent.items.set([{ id: 1, content: markup("<b>bold</b>"), tag: "span" }]);
+    await nextTick();
+    expect(fixture.innerHTML).toBe("<b>bold</b><span>x</span>");
+  });
+
   test("simple list", async () => {
     class Child extends Component {
       static template = xml`<span><t t-out="this.props.value"/></span>`;

@@ -1,4 +1,4 @@
-import { createBlock, mount, patch, text, toggler } from "../../src/blockdom";
+import { createBlock, list, mount, patch, text, toggler } from "../../src/blockdom";
 import { makeTestFixture } from "./helpers";
 
 //------------------------------------------------------------------------------
@@ -110,5 +110,31 @@ describe("togglers", () => {
     expect(fixture.innerHTML).toBe("<p></p>");
 
     expect(steps).toEqual(["beforeRemove"]);
+  });
+
+  test("a toggler keyed in a list still switches when its kind changes", async () => {
+    const p = createBlock("<p>p</p>");
+    const keyed = (vnode: any, key: string) => Object.assign(vnode, { key });
+    const tree = list([keyed(toggler("text", text("plain")), "k1")]);
+    mount(tree, fixture);
+    expect(fixture.innerHTML).toBe("plain");
+    patch(tree, list([keyed(toggler("block", p()), "k1")]));
+    expect(fixture.innerHTML).toBe("<p>p</p>");
+  });
+
+  test("switching leaves no anchor node behind", async () => {
+    const tree = toggler("a", createBlock("<p>a</p>")());
+    mount(tree, fixture);
+    patch(tree, toggler("b", createBlock("<span>b</span>")()));
+    expect(fixture.innerHTML).toBe("<span>b</span>");
+    expect(fixture.childNodes.length).toBe(1);
+  });
+
+  test("switching directly under a shadow root", async () => {
+    const shadow = fixture.attachShadow({ mode: "open" });
+    const tree = toggler("a", createBlock("<p>a</p>")());
+    mount(tree, shadow as any);
+    patch(tree, toggler("b", createBlock("<span>b</span>")()));
+    expect(shadow.innerHTML).toBe("<span>b</span>");
   });
 });
