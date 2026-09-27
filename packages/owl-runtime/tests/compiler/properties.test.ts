@@ -211,3 +211,17 @@ test("readonly and readOnly are both interpreted as the readOnly property", () =
     expect(input.readOnly).toBe(false);
   }
 });
+
+test("t-attf-value on input and textarea is set as a property", () => {
+  for (const template of [`<input t-attf-value="{{v}}"/>`, `<textarea t-attf-value="{{v}}"/>`]) {
+    const bnode1 = renderToBdom(template, { v: "zucchini" });
+    const fixture = makeTestFixture();
+    mount(bnode1, fixture);
+    const elm = fixture.firstChild as HTMLInputElement;
+    expect(elm.value).toBe("zucchini");
+
+    elm.value = "tomato";
+    patch(bnode1, renderToBdom(template, { v: "potato" }));
+    expect(elm.value).toBe("potato");
+  }
+});

@@ -582,15 +582,10 @@ export class CodeGenerator {
 
     for (let key in ast.attrs) {
       let expr, attrName;
-      if (key.startsWith("t-attf")) {
-        expr = interpolate(ast.attrs[key]);
-        const idx = block!.insertData(expr, "attr");
-
-        attrName = key.slice(7);
-        attrs["block-attribute-" + idx] = attrName;
-      } else if (key.startsWith("t-att")) {
-        attrName = key === "t-att" ? null : key.slice(6);
-        expr = compileExpr(ast.attrs[key]);
+      if (key.startsWith("t-att")) {
+        const isFormat = key.startsWith("t-attf");
+        attrName = isFormat ? key.slice(7) : key === "t-att" ? null : key.slice(6);
+        expr = isFormat ? interpolate(ast.attrs[key]) : compileExpr(ast.attrs[key]);
         if (attrName && isProp(ast.tag, attrName)) {
           if (attrName === "readonly") {
             // the property has a different name than the attribute

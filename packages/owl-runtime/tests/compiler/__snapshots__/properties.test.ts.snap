@@ -208,6 +208,34 @@ exports[`select with t-att-value 1`] = `
 }"
 `;
 
+exports[`t-attf-value on input and textarea is set as a property 1`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  
+  let block1 = createBlock(\`<input block-property-0="value"/>\`);
+  
+  return function template(ctx, node, key = "") {
+    let prop1 = new String(((ctx['v'])) === 0 ? 0 : (((ctx['v'])) || ""));
+    return block1([prop1]);
+  }
+}"
+`;
+
+exports[`t-attf-value on input and textarea is set as a property 2`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  
+  let block1 = createBlock(\`<textarea block-property-0="value"/>\`);
+  
+  return function template(ctx, node, key = "") {
+    let prop1 = new String(((ctx['v'])) === 0 ? 0 : (((ctx['v'])) || ""));
+    return block1([prop1]);
+  }
+}"
+`;
+
 exports[`textarea with t-att-value 1`] = `
 "function anonymous(app, bdom, helpers
 ) {
