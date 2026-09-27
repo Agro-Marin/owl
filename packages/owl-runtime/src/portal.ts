@@ -20,7 +20,14 @@ export class Portal extends Component {
 
   props = props({
     slots: t.object(["default"]),
-    target: t.or([t.string(), t.signal(t.instanceOf(HTMLElement)), t.instanceOf(HTMLElement)]),
+    target: t
+      .or([
+        t.string(),
+        t.signal(t.instanceOf(HTMLElement)),
+        t.instanceOf(HTMLElement),
+        t.literal(null),
+      ])
+      .optional(),
   });
 
   setup() {

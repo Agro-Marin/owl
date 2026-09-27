@@ -547,3 +547,25 @@ test("an error an outer onError rethrows reaches the app as rethrown", async () 
   root.show.set(true);
   expect((await appError).message).toBe("wrapped: boom");
 });
+
+test("a null or undefined target mounts nothing, also in dev mode", async () => {
+  const target = makeOutside("portal-target-nullable");
+  target.dataset.testPortal = "1";
+  class Parent extends Component {
+    static components = { Portal };
+    static template = xml`<Portal target="this.target()"><p>content</p></Portal>`;
+    target = signal<HTMLElement | null | undefined>(null);
+  }
+  const parent = await mount(Parent, fixture, { test: true });
+  await nextTick();
+  expect(target.innerHTML).toBe("");
+
+  parent.target.set(undefined);
+  await nextTick();
+  expect(target.innerHTML).toBe("");
+
+  parent.target.set(target);
+  await nextTick();
+  await nextTick();
+  expect(target.innerHTML).toBe("<p>content</p>");
+});
