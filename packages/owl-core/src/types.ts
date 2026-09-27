@@ -319,11 +319,12 @@ function customValidator<T>(
   errorMessage: string = "value does not match custom validation"
 ): Type<StripBrands<T>> {
   return makeType(function validateCustom(context: ValidationContext) {
-    context.validate(type);
-    if (!context.isValid) {
+    const typeIssues: ValidationIssue[] = [];
+    context.withIssues(typeIssues).validate(type);
+    if (typeIssues.length) {
+      context.mergeIssues(typeIssues);
       return;
     }
-
     if (!validator(context.value)) {
       context.addIssue({ message: errorMessage });
     }
@@ -542,16 +543,28 @@ function tuple<const T extends unknown[]>(types: T): Type<StripBrandsAll<T>> {
 
 function union<T extends unknown[]>(types: T): Type<StripBrands<T[number]>> {
   return makeType(function validateUnion(context: ValidationContext) {
-    let firstIssueIndex = 0;
+    // Every member is tried: one failing inside the value (a key, an item)
+    // does not rule out a later one. When all fail, the member that got
+    // deepest into the value explains the failure best.
     const subIssues: ValidationIssue[] = [];
+    let deepestIssues: ValidationIssue[] | null = null;
+    let deepest = 0;
     for (const type of types) {
-      const subContext = context.withIssues(subIssues);
+      const memberIssues: ValidationIssue[] = [];
+      const subContext = context.withIssues(memberIssues);
       subContext.validate(type);
-      if (subIssues.length === firstIssueIndex || subContext.issueDepth > 0) {
-        context.mergeIssues(subIssues.slice(firstIssueIndex));
+      if (!memberIssues.length) {
         return;
       }
-      firstIssueIndex = subIssues.length;
+      if (subContext.issueDepth > deepest) {
+        deepest = subContext.issueDepth;
+        deepestIssues = memberIssues;
+      }
+      subIssues.push(...memberIssues);
+    }
+    if (deepestIssues) {
+      context.mergeIssues(deepestIssues);
+      return;
     }
     context.addIssue({
       message: "value does not match union type",

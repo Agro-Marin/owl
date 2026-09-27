@@ -9,7 +9,6 @@ export interface ValidationIssue {
 
 export interface ValidationContext {
   addIssue(issue: ValidationIssue): void;
-  isValid: boolean;
   issueDepth: number;
   mergeIssues(issues: ValidationIssue[]): void;
   path: PropertyKey[];
@@ -65,9 +64,6 @@ function createContext(
     issueDepth: 0,
     path,
     value,
-    get isValid() {
-      return !issues.length;
-    },
     addIssue(issue) {
       issues.push({
         received: this.value,
@@ -79,9 +75,11 @@ function createContext(
       issues.push(...newIssues);
     },
     validate(type: any) {
+      // `issues` may already hold a sibling's issues: only this call's count
+      const before = issues.length;
       type(this);
-      if (!this.isValid && parent) {
-        parent.issueDepth = this.issueDepth + depthOffset;
+      if (issues.length > before && parent) {
+        parent.issueDepth = Math.max(parent.issueDepth, this.issueDepth + depthOffset);
       }
     },
     withIssues(issues) {

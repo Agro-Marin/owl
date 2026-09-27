@@ -999,6 +999,47 @@ test("assertType path is not hidden", () => {
 ]`);
 });
 
+describe("union members failing inside the value", () => {
+  test("a later member still accepts what an earlier one rejected deep inside", () => {
+    const kinds = t.or([t.object({ kind: t.literal("a") }), t.object({ kind: t.literal("b") })]);
+    expect(validateType({ kind: "b" }, kinds)).toEqual([]);
+    expect(validateType(["s"], t.or([t.array(t.number()), t.array(t.string())]))).toEqual([]);
+    const tuples = t.or([t.tuple([t.number(), t.number()]), t.tuple([t.number(), t.string()])]);
+    expect(validateType([1, "s"], tuples)).toEqual([]);
+  });
+
+  test("when every member fails, the deepest one is reported", () => {
+    const kinds = t.or([t.object({ kind: t.literal("a") }), t.object({ kind: t.literal("b") })]);
+    expect(validateType({ kind: "c" }, kinds)).toEqual([
+      { message: "value is not equal to 'a'", path: "kind", received: "c" },
+    ]);
+  });
+
+  test("the result does not depend on a shallow member failing first", () => {
+    const withX = t.object({ y: t.string(), x: t.number() });
+    const withoutX = t.object({ y: t.string() });
+    expect(validateType({ y: "s" }, t.or([withX, withoutX]))).toEqual([]);
+    expect(validateType({ y: "s" }, t.or([t.string(), withX, withoutX]))).toEqual([]);
+  });
+});
+
+describe("customValidator next to other issues", () => {
+  const long = t.customValidator(t.string(), (s) => s.length > 3, "too short");
+
+  test("inside a union after a failing member, it still rejects", () => {
+    expect(validateType("ab", long)).toHaveLength(1);
+    expect(validateType("ab", t.or([t.number(), long]))).toHaveLength(1);
+    expect(validateType("abcd", t.or([t.number(), long]))).toEqual([]);
+  });
+
+  test("it runs even when a sibling key already failed", () => {
+    expect(validateType({ a: 1, b: "ab" }, t.object({ a: t.string(), b: long }))).toEqual([
+      { message: "value is not a string", path: "a", received: 1 },
+      { message: "too short", path: "b", received: "ab" },
+    ]);
+  });
+});
+
 describe(".optional()", () => {
   test("validates the wrapped type, accepts undefined", () => {
     const type = t.number().optional(3);
