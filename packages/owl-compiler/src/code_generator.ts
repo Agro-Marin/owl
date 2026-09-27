@@ -611,7 +611,7 @@ export class CodeGenerator {
             attrs[`block-attribute-${idx}`] = attrName!;
           }
         }
-      } else if (this.translatableAttributes.includes(key)) {
+      } else if (ctx.translate && this.translatableAttributes.includes(key)) {
         const attrTranslationCtx = ast.attrsTranslationCtx?.[key] || ctx.translationCtx;
         attrs[key] = this.translateFn(ast.attrs[key], attrTranslationCtx);
       } else {
@@ -976,7 +976,7 @@ export class CodeGenerator {
     let { block } = ctx;
 
     const attrs: string[] = ast.attrs
-      ? this.formatPropObject(ast.attrs, ast.attrsTranslationCtx, ctx.translationCtx)
+      ? this.formatPropObject(ast.attrs, ast.attrsTranslationCtx, ctx)
       : [];
     const isDynamic = INTERP_REGEXP.test(ast.name);
     const subTemplate = isDynamic ? interpolate(ast.name) : toStringExpression(ast.name);
@@ -1106,11 +1106,13 @@ export class CodeGenerator {
     name: string,
     value: string,
     attrsTranslationCtx: { [name: string]: string } | null,
-    translationCtx: string
+    ctx: Context
   ): string {
     if (name.endsWith(".translate")) {
-      const attrTranslationCtx = attrsTranslationCtx?.[name] || translationCtx;
-      value = toStringExpression(this.translateFn(value, attrTranslationCtx));
+      const attrTranslationCtx = attrsTranslationCtx?.[name] || ctx.translationCtx;
+      value = toStringExpression(
+        ctx.translate ? this.translateFn(value, attrTranslationCtx) : value
+      );
     } else {
       value = compileExpr(value);
     }
@@ -1135,11 +1137,9 @@ export class CodeGenerator {
   formatPropObject(
     obj: { [prop: string]: any },
     attrsTranslationCtx: { [name: string]: string } | null,
-    translationCtx: string
+    ctx: Context
   ): string[] {
-    return Object.entries(obj).map(([k, v]) =>
-      this.formatProp(k, v, attrsTranslationCtx, translationCtx)
-    );
+    return Object.entries(obj).map(([k, v]) => this.formatProp(k, v, attrsTranslationCtx, ctx));
   }
 
   getPropString(props: string[], dynProps: string | null): string {
@@ -1173,7 +1173,7 @@ export class CodeGenerator {
 
       if (suffix) {
         // .alike, .bind, .translate — delegate to formatProp, no propList entry
-        props.push(this.formatProp(p, ast.props![p], ast.propsTranslationCtx, ctx.translationCtx));
+        props.push(this.formatProp(p, ast.props![p], ast.propsTranslationCtx, ctx));
         continue;
       }
 
@@ -1213,7 +1213,7 @@ export class CodeGenerator {
             ...this.formatPropObject(
               ast.slots[slotName].attrs!,
               ast.slots[slotName].attrsTranslationCtx,
-              ctx.translationCtx
+              ctx
             )
           );
         }
@@ -1320,9 +1320,7 @@ export class CodeGenerator {
     delete attrs["t-props"];
     const key = this.scopeKey(ctx, isMultiple);
 
-    const props = ast.attrs
-      ? this.formatPropObject(attrs, ast.attrsTranslationCtx, ctx.translationCtx)
-      : [];
+    const props = ast.attrs ? this.formatPropObject(attrs, ast.attrsTranslationCtx, ctx) : [];
     const scope = this.getPropString(props, dynProps);
     if (ast.defaultContent) {
       const name = this.compileInNewTarget("defaultContent", ast.defaultContent, ctx);
