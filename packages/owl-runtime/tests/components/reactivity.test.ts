@@ -361,6 +361,31 @@ test("a throwing effect does not freeze a component notified with it", async () 
   }
 });
 
+test("a child render writing a value before reading it does not re-render when its parent re-renders it", async () => {
+  let renders = 0;
+  class Child extends Component {
+    static template = xml`<div t-out="this.label()"/>`;
+    props = props();
+    cache = signal<any>(null);
+    label() {
+      renders++;
+      this.cache.set({ text: `n=${this.props.n}` });
+      return this.cache().text;
+    }
+  }
+  class Parent extends Component {
+    static template = xml`<Child n="this.n()"/>`;
+    static components = { Child };
+    n = signal(1);
+  }
+  const parent = await mount(Parent, fixture);
+  parent.n.set(2);
+  await nextTick();
+  await nextTick();
+  expect(fixture.innerHTML).toBe("<div>n=2</div>");
+  expect(renders).toBe(2);
+});
+
 describe("components and computed", () => {
   test("Child is not rerender when reactive is computed", async () => {
     const steps: string[] = [];

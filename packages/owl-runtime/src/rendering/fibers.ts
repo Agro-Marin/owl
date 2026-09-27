@@ -1,4 +1,4 @@
-import { ComputationState, OwlError, runTracked } from "@odoo/owl-core";
+import { ComputationState, OwlError, removeSources, runTracked } from "@odoo/owl-core";
 import { BDom, mount, type MountTarget } from "../blockdom";
 import type { ComponentNode } from "../component_node";
 import { STATUS } from "../status";
@@ -219,6 +219,11 @@ export class Fiber {
         });
         return;
       }
+      // A render is marked EXECUTED while it runs, so that writing a value it
+      // already read schedules a re-render. Its previous subscriptions must go
+      // first: kept, a write to a value the last render read but this one
+      // writes before reading would schedule a re-render on every render.
+      removeSources(node.signalComputation);
       node.signalComputation.state = ComputationState.EXECUTED;
       this.phase = FiberPhase.RENDERING;
       // the error is handled while the render is still the current
