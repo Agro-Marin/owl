@@ -44,6 +44,10 @@ export interface PropsFunction {
   static: typeof staticProp;
 }
 
+// bumped each time a view of the node declares defaults: a schema-less view's
+// key set includes the defaulted keys, whenever they were declared
+const defaultsVersions = new WeakMap<object, number>();
+
 function makeProps(type?: any): Props<{}> {
   const node = getComponentScope();
   const { app, componentName } = node;
@@ -62,6 +66,7 @@ function makeProps(type?: any): Props<{}> {
   }
   if (defaults) {
     node.defaultProps = Object.assign(node.defaultProps || {}, defaults);
+    defaultsVersions.set(node, (defaultsVersions.get(node) || 0) + 1);
   }
 
   // a schema-less view (a hook's) resolves the defaults the component declared
@@ -134,24 +139,41 @@ function makeProps(type?: any): Props<{}> {
 
   // a schema-less view has no fixed key set: a key gets its signal on first
   // read, present or not, so a reader of a key that appears or disappears is
-  // notified; the key set itself is read live, behind a version signal
-  let keyList = getKeys(node.props).join("\0");
+  // notified; the key set itself is read behind a version signal, and cached
+  // until the props or the declared defaults change
+  let keys = getKeys(node.props);
+  let keyLookup: Set<string> | null = null;
+  let keysDefaults = defaultsVersions.get(node) || 0;
   let version = 0;
   const keySet = signal(version);
+  const currentKeys = () => {
+    const defaultsVersion = defaultsVersions.get(node) || 0;
+    if (keysDefaults !== defaultsVersion) {
+      keys = getKeys(node.props);
+      keyLookup = null;
+      keysDefaults = defaultsVersion;
+    }
+    return keys;
+  };
   node.propsUpdated.push(() => {
     for (const key in signals) {
       signals[key].set(resolveValue(node.props, key));
     }
-    const nextKeyList = getKeys(node.props).join("\0");
-    if (nextKeyList !== keyList) {
-      keyList = nextKeyList;
+    const nextKeys = getKeys(node.props);
+    const previousKeys = currentKeys();
+    if (
+      nextKeys.length !== previousKeys.length ||
+      nextKeys.some((key, i) => key !== previousKeys[i])
+    ) {
+      keys = nextKeys;
+      keyLookup = null;
       keySet.set(++version);
     }
   });
   const read = (key: string) => (signals[key] ||= signal(resolveValue(node.props, key)))();
   const hasKey = (key: string) => {
     keySet();
-    return getKeys(node.props).includes(key);
+    return (keyLookup ||= new Set(currentKeys())).has(key);
   };
   return new Proxy(Object.create(null), {
     get(target, key) {
@@ -162,7 +184,7 @@ function makeProps(type?: any): Props<{}> {
     },
     ownKeys() {
       keySet();
-      return getKeys(node.props);
+      return currentKeys();
     },
     getOwnPropertyDescriptor(_target, key) {
       if (typeof key === "string" && hasKey(key)) {
