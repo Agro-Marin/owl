@@ -505,6 +505,20 @@ exports[`attributes > t-att-class and class should combine together 1`] = `
 }"
 `;
 
+exports[`attributes > t-att-class turning off a class also written statically keeps it 1`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  
+  let block1 = createBlock(\`<div class="btn" block-attribute-0="class"/>\`);
+  
+  return function template(ctx, node, key = "") {
+    let attr1 = {btn:ctx['primary'],'btn-primary':ctx['primary']};
+    return block1([attr1]);
+  }
+}"
+`;
+
 exports[`attributes > t-att-class with multiple classes 1`] = `
 "function anonymous(app, bdom, helpers
 ) {

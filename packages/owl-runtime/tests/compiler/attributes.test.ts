@@ -208,6 +208,16 @@ describe("attributes", () => {
     expect(result).toBe(`<div class="hello world"></div>`);
   });
 
+  test("t-att-class turning off a class also written statically keeps it", () => {
+    const template = `<div class="btn" t-att-class="{btn: primary, 'btn-primary': primary}"/>`;
+    const fixture = makeTestFixture();
+    const bnode1 = renderToBdom(template, { primary: true });
+    mount(bnode1, fixture);
+    expect(fixture.innerHTML).toBe(`<div class="btn btn-primary"></div>`);
+    patch(bnode1, renderToBdom(template, { primary: false }));
+    expect(fixture.innerHTML).toBe(`<div class="btn"></div>`);
+  });
+
   test("from variables set previously", () => {
     const template = `<div><t t-set="abc" t-value="'def'"/><span t-att-class="abc"/></div>`;
     const result = renderToString(template);

@@ -3,6 +3,7 @@ import {
   attrsSetter,
   attrsUpdater,
   createAttrUpdater,
+  makeSharedClassUpdaters,
   setClass,
   setStyle,
   updateClass,
@@ -122,6 +123,7 @@ interface DynamicInfo {
   name?: string;
   tag?: string;
   event?: string;
+  sharedClass?: ReturnType<typeof makeSharedClassUpdaters>;
 }
 
 interface IntermediateTree {
@@ -218,6 +220,16 @@ function buildTree(
             el.setAttribute(attrs[i].name, attrValue);
           }
         }
+        const classSources = info.filter(
+          (i) => i.type === "attributes" || (i.type === "attribute" && i.name === "class")
+        );
+        const staticClass = (el as Element).getAttribute("class")?.trim();
+        if (classSources.length > 1 || (classSources.length && staticClass)) {
+          const sharedClass = makeSharedClassUpdaters(staticClass ? staticClass.split(/\s+/) : []);
+          for (const source of classSources) {
+            source.sharedClass = sharedClass;
+          }
+        }
       }
 
       const tree: IntermediateTree = {
@@ -301,7 +313,7 @@ interface RefCollector {
 export type RefCallback = (el: HTMLElement | null, previousEl: HTMLElement | null) => void;
 
 export type Setter<T = any> = (this: T, value: any) => void;
-type Updater<T = any> = (this: T, value: any, oldVal: any) => void;
+export type Updater<T = any> = (this: T, value: any, oldVal: any) => void;
 
 interface Location {
   refIdx: number;
@@ -407,7 +419,9 @@ function updateCtx(ctx: BlockCtx, tree: IntermediateTree) {
         const refIdx = info.refIdx!;
         let updater: any;
         let setter: any;
-        if (info.name === "class") {
+        if (info.sharedClass) {
+          setter = updater = info.sharedClass.classUpdater;
+        } else if (info.name === "class") {
           setter = setClass;
           updater = updateClass;
         } else if (info.name === "style") {
@@ -425,14 +439,16 @@ function updateCtx(ctx: BlockCtx, tree: IntermediateTree) {
         });
         break;
       }
-      case "attributes":
+      case "attributes": {
+        const shared = info.sharedClass;
         ctx.locations.push({
           idx: info.idx,
           refIdx: info.refIdx!,
-          setData: attrsSetter,
-          updateData: attrsUpdater,
+          setData: shared ? shared.attrsSetter : attrsSetter,
+          updateData: shared ? shared.attrsUpdater : attrsUpdater,
         });
         break;
+      }
       case "handler": {
         const { setup, update } = createEventHandler(info.event!);
         ctx.locations.push({

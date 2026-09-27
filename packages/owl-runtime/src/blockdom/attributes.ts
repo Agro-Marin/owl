@@ -1,4 +1,4 @@
-import type { Setter } from "./block_compiler";
+import type { Setter, Updater } from "./block_compiler";
 
 let elemSetAttribute: typeof Element.prototype.setAttribute;
 let removeAttribute: typeof Element.prototype.removeAttribute;
@@ -48,9 +48,42 @@ function toAttrs(attrs: any): { [name: string]: any } {
   return !attrs ? NO_ATTRS : isArray(attrs) ? { [attrs[0]]: attrs[1] } : attrs;
 }
 
-function updateAttr(el: HTMLElement, name: string, val: any, oldVal: any) {
+type ClassUpdater = (this: HTMLElement, val: any, oldVal: any) => void;
+
+function makeAttrsUpdaters(updateClassFn: ClassUpdater): {
+  attrsSetter: Setter<HTMLElement>;
+  attrsUpdater: Updater<HTMLElement>;
+} {
+  function attrsUpdater(this: HTMLElement, attrs: any, oldAttrs: any) {
+    const next = toAttrs(attrs);
+    const prev = toAttrs(oldAttrs);
+    for (const name in prev) {
+      if (!(name in next)) {
+        updateAttr(this, name, undefined, prev[name], updateClassFn);
+      }
+    }
+    for (const name in next) {
+      const val = next[name];
+      if (val !== prev[name]) {
+        updateAttr(this, name, val, prev[name], updateClassFn);
+      }
+    }
+  }
+  function attrsSetter(this: HTMLElement, attrs: any) {
+    attrsUpdater.call(this, attrs, NO_ATTRS);
+  }
+  return { attrsSetter, attrsUpdater };
+}
+
+function updateAttr(
+  el: HTMLElement,
+  name: string,
+  val: any,
+  oldVal: any,
+  updateClassFn: ClassUpdater
+) {
   if (name === "class") {
-    updateClass.call(el, val, oldVal);
+    updateClassFn.call(el, val, oldVal);
   } else if (name === "style") {
     updateStyle.call(el, val, oldVal);
   } else {
@@ -58,25 +91,7 @@ function updateAttr(el: HTMLElement, name: string, val: any, oldVal: any) {
   }
 }
 
-export function attrsSetter(this: HTMLElement, attrs: any) {
-  attrsUpdater.call(this, attrs, NO_ATTRS);
-}
-
-export function attrsUpdater(this: HTMLElement, attrs: any, oldAttrs: any) {
-  const next = toAttrs(attrs);
-  const prev = toAttrs(oldAttrs);
-  for (const name in prev) {
-    if (!(name in next)) {
-      updateAttr(this, name, undefined, prev[name]);
-    }
-  }
-  for (const name in next) {
-    const val = next[name];
-    if (val !== prev[name]) {
-      updateAttr(this, name, val, prev[name]);
-    }
-  }
-}
+export const { attrsSetter, attrsUpdater } = makeAttrsUpdaters(updateClass);
 
 function toClassObj(expr: string | number | boolean | { [c: string]: any } | null | undefined) {
   // `cond and 'a'` yields false: no class, as a false t-att-x drops x (0 stays
@@ -235,6 +250,53 @@ export function updateClass(this: HTMLElement, val: any, oldVal: any) {
       tokenListAdd.call(this.classList, k);
     }
   }
+}
+
+// An element whose class several sources write (a static class plus t-att-class,
+// t-att-class plus t-att) counts the sources holding each class, so one source
+// dropping a class does not remove it from under another.
+const classCounts = new WeakMap<Element, Map<string, number>>();
+
+export function makeSharedClassUpdaters(staticClasses: string[]) {
+  function getCounts(el: HTMLElement): Map<string, number> {
+    let counts = classCounts.get(el);
+    if (!counts) {
+      counts = new Map();
+      for (const k of staticClasses) {
+        counts.set(k, 1);
+      }
+      classCounts.set(el, counts);
+    }
+    return counts;
+  }
+  function classUpdater(this: HTMLElement, val: any, oldVal: any) {
+    const prev = toClassObj(oldVal);
+    const next = toClassObj(val);
+    const classList = this.classList;
+    let counts: Map<string, number> | undefined;
+    for (const k in prev) {
+      if (!(k in next)) {
+        counts ||= getCounts(this);
+        const count = counts.get(k)! - 1;
+        if (count) {
+          counts.set(k, count);
+        } else {
+          counts.delete(k);
+          tokenListRemove.call(classList, k);
+        }
+      }
+    }
+    for (const k in next) {
+      if (!(k in prev)) {
+        counts ||= getCounts(this);
+        counts.set(k, (counts.get(k) || 0) + 1);
+        tokenListAdd.call(classList, k);
+      } else if (next[k] !== prev[k]) {
+        tokenListAdd.call(classList, k);
+      }
+    }
+  }
+  return { classUpdater, ...makeAttrsUpdaters(classUpdater) };
 }
 
 // ---------------------------------------------------------------------------

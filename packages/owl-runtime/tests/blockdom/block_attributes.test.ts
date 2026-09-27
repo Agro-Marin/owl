@@ -220,6 +220,42 @@ test("a false class value adds no class", async () => {
   expect(div.className).toBe("");
 });
 
+describe("a class written by several sources", () => {
+  test("a dynamic class never removes a static one", async () => {
+    const block = createBlock('<div class="btn" block-attribute-0="class"></div>');
+    const tree = block([{ btn: true, "btn-primary": true }]);
+    mount(tree, fixture);
+    expect(fixture.innerHTML).toBe(`<div class="btn btn-primary"></div>`);
+    patch(tree, block([{ btn: false, "btn-primary": false }]));
+    expect(fixture.innerHTML).toBe(`<div class="btn"></div>`);
+  });
+
+  test("t-att never removes a static class", async () => {
+    const block = createBlock('<div class="btn" block-attributes="0"></div>');
+    const tree = block([{ class: "btn active" }]);
+    mount(tree, fixture);
+    patch(tree, block([{}]));
+    expect(fixture.innerHTML).toBe(`<div class="btn"></div>`);
+  });
+
+  test("t-att and t-att-class keep a class either still writes", async () => {
+    const block = createBlock('<div block-attributes="0" block-attribute-1="class"></div>');
+    const tree = block([{ class: "a b" }, "b c"]);
+    mount(tree, fixture);
+    const div = fixture.firstChild as HTMLElement;
+    expect(div.className).toBe("a b c");
+
+    patch(tree, block([{ class: "a" }, "b c"]));
+    expect(div.className).toBe("a b c");
+
+    patch(tree, block([{}, "c"]));
+    expect(div.className).toBe("c");
+
+    patch(tree, block([{ class: "c" }, ""]));
+    expect(div.className).toBe("c");
+  });
+});
+
 describe("style", () => {
   test("removing a longhand re-applies the shorthand before it", async () => {
     const block = createBlock('<div block-attribute-0="style"></div>');
