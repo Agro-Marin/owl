@@ -48,6 +48,7 @@ Here is a list of everything exported by the Owl library.
 
 - [`Scope`](scope.md): lifetime handle for components and plugins
 - [`getScope`](scope.md#getscope-scope-null): return the current scope, or `null` if none is active
+- [`isAbortError`](scope.md#isaborterrorerror-unknown-boolean): tell a scope cancellation from a real failure
 
 ## Plugins
 

@@ -1,6 +1,7 @@
 import {
   App,
   Component,
+  isAbortError,
   onWillDestroy,
   onWillStart,
   plugin,
@@ -314,4 +315,24 @@ describe("plugin scope", () => {
     app.destroy();
     expect(pluginSignal!.aborted).toBe(true);
   });
+});
+
+test("isAbortError recognizes the rejection of a guarded await in a destroyed scope", async () => {
+  const load = makeDeferred<number>();
+  let rejection: unknown;
+  class Root extends Component {
+    static template = xml`<div/>`;
+    setup() {
+      useScope()
+        .run(() => load)
+        .catch((e) => (rejection = e));
+    }
+  }
+  const app = new App();
+  await app.createRoot(Root).mount(fixture);
+  app.destroy();
+  load.resolve(1);
+  await nextTick();
+  expect(isAbortError(rejection)).toBe(true);
+  expect(isAbortError(new Error("boom"))).toBe(false);
 });

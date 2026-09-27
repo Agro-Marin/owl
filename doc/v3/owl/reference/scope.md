@@ -163,6 +163,21 @@ the abort signal. See [Running Code in a Captured Scope](#running-code-in-a-capt
 for the full behavior of `scope.run` (argument forwarding, the up-front throw
 on a dead scope, and synchronous callbacks).
 
+Outside a hook runner, where nothing swallows the rejection for you,
+`isAbortError(error)` tells a cancellation from a real failure:
+
+```js
+import { isAbortError } from "@odoo/owl";
+
+scope
+  .run(() => loadRecord(id))
+  .catch((error) => {
+    if (!isAbortError(error)) {
+      throw error;
+    }
+  });
+```
+
 If you need the same pattern against an `AbortSignal` that doesn't come from
 a scope (e.g. `AbortSignal.timeout(5000)`), `signal.throwIfAborted()` between
 awaits is the idiomatic way to do it — a few lines of plain code and no
@@ -269,6 +284,11 @@ component's or plugin's `setup()`.
 
 Returns the scope currently on top of the stack, or `null` if no scope is
 active. Reach for this only when the absence of a scope is meaningful.
+
+### `isAbortError(error: unknown): boolean`
+
+True for an error named `AbortError`: the rejection of a guarded `scope.run`,
+an aborted `fetch`, or `abortSignal.throwIfAborted()`.
 
 ### `Scope`
 
