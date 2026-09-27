@@ -225,3 +225,13 @@ test("t-attf-value on input and textarea is set as a property", () => {
     expect(elm.value).toBe("potato");
   }
 });
+
+test("t-att-value on input evaluates its expression once", () => {
+  let calls = 0;
+  const f = () => {
+    calls++;
+    return "a";
+  };
+  expect(renderToString(`<input t-att-value="f()"/>`, { f })).toBe("<input>");
+  expect(calls).toBe(1);
+});

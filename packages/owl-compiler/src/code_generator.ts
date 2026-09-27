@@ -593,8 +593,10 @@ export class CodeGenerator {
           }
           // we force a new string or new boolean to bypass the equality check in blockdom when patching same value
           if (attrName === "value") {
+            const valueId = generateId("v");
+            this.define(valueId, expr);
             // When the expression is falsy (except 0), fall back to an empty string
-            expr = `new String((${expr}) === 0 ? 0 : ((${expr}) || ""))`;
+            expr = `new String(${valueId} === 0 ? 0 : ${valueId} || "")`;
           } else {
             expr = `new Boolean(${expr})`;
           }

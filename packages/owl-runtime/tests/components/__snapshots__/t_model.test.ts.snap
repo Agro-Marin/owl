@@ -613,7 +613,8 @@ exports[`t-model directive > t-model with radio button group in t-foreach 1`] = 
       let ctx = Object.create(ctx1);
       ctx[\`opt\`] = k_block2[i1];
       const key1 = ctx['opt'];
-      let prop1 = new String((ctx['opt']) === 0 ? 0 : ((ctx['opt']) || ""));
+      const v1 = ctx['opt'];
+      let prop1 = new String(v1 === 0 ? 0 : v1 || "");
       let attr1 = ctx['opt'];
       const expr1 = modelExpr(ctx['this'].group);
       let prop2 = expr1() === ctx['opt'];

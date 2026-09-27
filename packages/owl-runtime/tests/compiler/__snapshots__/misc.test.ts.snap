@@ -263,7 +263,8 @@ exports[`misc > other complex template 1`] = `
       const b19 = list(c_block19);
       b18 = block18([], [b19]);
     }
-    let prop2 = new String((ctx['search'].value) === 0 ? 0 : ((ctx['search'].value) || ""));
+    const v1 = ctx['search'].value;
+    let prop2 = new String(v1 === 0 ? 0 : v1 || "");
     let hdlr4 = [hdlr_fn4, ctx];
     let hdlr5 = [hdlr_fn5, ctx];
     let ref1 = createRef(ctx['search_input'], node);

@@ -22,7 +22,8 @@ exports[`dynamic input value: falsy values 1`] = `
   let block1 = createBlock(\`<input block-property-0="value"/>\`);
   
   return function template(ctx, node, key = "") {
-    let prop1 = new String((0) === 0 ? 0 : ((0) || ""));
+    const v1 = 0;
+    let prop1 = new String(v1 === 0 ? 0 : v1 || "");
     return block1([prop1]);
   }
 }"
@@ -36,7 +37,8 @@ exports[`dynamic input value: falsy values 2`] = `
   let block1 = createBlock(\`<input block-property-0="value"/>\`);
   
   return function template(ctx, node, key = "") {
-    let prop1 = new String((false) === 0 ? 0 : ((false) || ""));
+    const v1 = false;
+    let prop1 = new String(v1 === 0 ? 0 : v1 || "");
     return block1([prop1]);
   }
 }"
@@ -50,7 +52,8 @@ exports[`dynamic input value: falsy values 3`] = `
   let block1 = createBlock(\`<input block-property-0="value"/>\`);
   
   return function template(ctx, node, key = "") {
-    let prop1 = new String((undefined) === 0 ? 0 : ((undefined) || ""));
+    const v1 = undefined;
+    let prop1 = new String(v1 === 0 ? 0 : v1 || "");
     return block1([prop1]);
   }
 }"
@@ -64,7 +67,8 @@ exports[`dynamic input value: falsy values 4`] = `
   let block1 = createBlock(\`<input block-property-0="value"/>\`);
   
   return function template(ctx, node, key = "") {
-    let prop1 = new String(('') === 0 ? 0 : (('') || ""));
+    const v1 = '';
+    let prop1 = new String(v1 === 0 ? 0 : v1 || "");
     return block1([prop1]);
   }
 }"
@@ -106,7 +110,8 @@ exports[`input with t-att-value (patching with same value 1`] = `
   let block1 = createBlock(\`<input block-property-0="value"/>\`);
   
   return function template(ctx, node, key = "") {
-    let prop1 = new String((ctx['v']) === 0 ? 0 : ((ctx['v']) || ""));
+    const v1 = ctx['v'];
+    let prop1 = new String(v1 === 0 ? 0 : v1 || "");
     return block1([prop1]);
   }
 }"
@@ -120,7 +125,8 @@ exports[`input with t-att-value 1`] = `
   let block1 = createBlock(\`<input block-property-0="value"/>\`);
   
   return function template(ctx, node, key = "") {
-    let prop1 = new String((ctx['v']) === 0 ? 0 : ((ctx['v']) || ""));
+    const v1 = ctx['v'];
+    let prop1 = new String(v1 === 0 ? 0 : v1 || "");
     return block1([prop1]);
   }
 }"
@@ -202,7 +208,23 @@ exports[`select with t-att-value 1`] = `
   let block1 = createBlock(\`<select block-property-0="value"><option value="potato">Potato</option><option value="tomato">Tomato</option><option value="onion">Onion</option></select>\`);
   
   return function template(ctx, node, key = "") {
-    let prop1 = new String((ctx['value']) === 0 ? 0 : ((ctx['value']) || ""));
+    const v1 = ctx['value'];
+    let prop1 = new String(v1 === 0 ? 0 : v1 || "");
+    return block1([prop1]);
+  }
+}"
+`;
+
+exports[`t-att-value on input evaluates its expression once 1`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  
+  let block1 = createBlock(\`<input block-property-0="value"/>\`);
+  
+  return function template(ctx, node, key = "") {
+    const v1 = ctx['f']();
+    let prop1 = new String(v1 === 0 ? 0 : v1 || "");
     return block1([prop1]);
   }
 }"
@@ -216,7 +238,8 @@ exports[`t-attf-value on input and textarea is set as a property 1`] = `
   let block1 = createBlock(\`<input block-property-0="value"/>\`);
   
   return function template(ctx, node, key = "") {
-    let prop1 = new String(((ctx['v'])) === 0 ? 0 : (((ctx['v'])) || ""));
+    const v1 = (ctx['v']);
+    let prop1 = new String(v1 === 0 ? 0 : v1 || "");
     return block1([prop1]);
   }
 }"
@@ -230,7 +253,8 @@ exports[`t-attf-value on input and textarea is set as a property 2`] = `
   let block1 = createBlock(\`<textarea block-property-0="value"/>\`);
   
   return function template(ctx, node, key = "") {
-    let prop1 = new String(((ctx['v'])) === 0 ? 0 : (((ctx['v'])) || ""));
+    const v1 = (ctx['v']);
+    let prop1 = new String(v1 === 0 ? 0 : v1 || "");
     return block1([prop1]);
   }
 }"
@@ -244,7 +268,8 @@ exports[`textarea with t-att-value 1`] = `
   let block1 = createBlock(\`<textarea block-property-0="value"/>\`);
   
   return function template(ctx, node, key = "") {
-    let prop1 = new String((ctx['v']) === 0 ? 0 : ((ctx['v']) || ""));
+    const v1 = ctx['v'];
+    let prop1 = new String(v1 === 0 ? 0 : v1 || "");
     return block1([prop1]);
   }
 }"
@@ -258,7 +283,8 @@ exports[`updating property with falsy value 1`] = `
   let block1 = createBlock(\`<input block-property-0="value"/>\`);
   
   return function template(ctx, node, key = "") {
-    let prop1 = new String((ctx['v']) === 0 ? 0 : ((ctx['v']) || ""));
+    const v1 = ctx['v'];
+    let prop1 = new String(v1 === 0 ? 0 : v1 || "");
     return block1([prop1]);
   }
 }"
