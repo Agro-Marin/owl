@@ -82,6 +82,29 @@ never receives the initial `undefined`.
 fetch resolving to an equal value does not notify. Note that there, the
 previous value _can_ be `undefined` when no `initial` is given.
 
+## Errors
+
+A getter that throws produces an error instead of a value. The computed keeps
+it until one of the values the getter read changes, rethrows it to every
+reader, and is tracked like a value: a reader that caught the error runs again
+once the getter recovers.
+
+```js
+const s = signal(-1);
+const root = computed(() => {
+  if (s() < 0) throw new Error("negative");
+  return Math.sqrt(s());
+});
+effect(() => {
+  try {
+    console.log(root());
+  } catch (e) {
+    console.log(e.message); // "negative"
+  }
+});
+s.set(4); // the effect runs again and logs 2
+```
+
 ## Async Computed Values
 
 > **Experimental.** `asyncComputed` is still shaking out; the exact API

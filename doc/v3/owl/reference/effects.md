@@ -94,6 +94,28 @@ being recreated, A is now dead and no longer reacts to `otherSignal` changes.
 If you need an inner effect with an independent lifetime, create it inside
 [`untrack`](#untrack) so it is not attached to the currently running effect.
 
+## Errors
+
+An effect that throws does not stop anything else. The other effects notified
+by the same change still run, and so do the components that render from it;
+the error surfaces once, as an unhandled promise rejection (or, for an
+`immediateEffect`, as an exception thrown from the write that triggered it,
+after the other immediate effects ran).
+
+The failed effect stays subscribed to what it read before throwing and runs
+again when one of those values changes:
+
+```js
+const items = signal([]);
+effect(() => {
+  console.log(items()[0].name); // throws while items is empty
+});
+items.set([{ name: "a" }]); // the effect runs again and logs "a"
+```
+
+An effect whose very first run throws is disposed before the error reaches
+the caller of `effect()`, which never received a function to dispose it with.
+
 ## useEffect
 
 In components, use the `useEffect` hook instead of raw `effect()`. It is

@@ -179,6 +179,9 @@ If you need deep reactivity, use [`proxy`](proxies.md) instead — it wraps nest
 objects recursively. Reach for a collection signal when shallow wrapping is
 enough and you want the explicit `.set(newValue)` replacement API.
 
+The two wrappings of one object are distinct: `proxy(obj)` is deep even when a
+collection signal already holds `obj`, and the signal stays shallow.
+
 ## Ref Signals
 
 `signal.ref()` creates a signal meant to receive a DOM element through the
