@@ -1,4 +1,4 @@
-import { Component, mount, props, proxy, xml } from "../../src";
+import { Component, mount, props, proxy, signal, xml } from "../../src";
 import { makeTestFixture, nextTick, render, snapshotEverything } from "../helpers";
 
 snapshotEverything();
@@ -130,5 +130,23 @@ describe("t-props", () => {
 
     const parent = await mount(Parent, fixture);
     expect(parent.childProps).not.toHaveProperty("d");
+  });
+
+  test("a key renamed while its value stays undefined updates the child", async () => {
+    class Child extends Component {
+      static template = xml`<span t-out="Object.keys(this.props).join(',')"/>`;
+      props = props();
+    }
+    class Parent extends Component {
+      static components = { Child };
+      static template = xml`<Child t-props="this.p()"/>`;
+      p = signal<Record<string, undefined>>({ a: undefined });
+    }
+    const parent = await mount(Parent, fixture);
+    expect(fixture.innerHTML).toBe("<span>a</span>");
+
+    parent.p.set({ b: undefined });
+    await nextTick();
+    expect(fixture.innerHTML).toBe("<span>b</span>");
   });
 });

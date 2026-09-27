@@ -250,7 +250,7 @@ function createComponent<P extends Record<string, any>>(
   } else if (hasDynamicPropList) {
     arePropsDifferent = function (props1: P, props2: P) {
       for (let k in props1) {
-        if (props1[k] !== props2[k]) {
+        if (props1[k] !== props2[k] || !(k in props2)) {
           return true;
         }
       }
