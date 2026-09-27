@@ -407,13 +407,23 @@ function makeIteratorObserver(
   target: any,
   shallow: boolean
 ) {
+  // an entry is a fresh [key, value] array nobody else holds: proxying it would
+  // only subscribe the reader to atoms no write can ever reach
+  const yieldsEntries =
+    methodName === "entries" || (methodName === Symbol.iterator && target instanceof Map);
   return function* () {
     onReadTargetKey(target, KEYCHANGES);
     const keys = target.keys();
     for (const item of target[methodName]()) {
       const key = keys.next().value;
       onReadTargetKey(target, key);
-      yield possiblyReactive(item, shallow);
+      if (shallow) {
+        yield item;
+      } else if (yieldsEntries) {
+        yield [possiblyReactive(item[0], false), possiblyReactive(item[1], false)];
+      } else {
+        yield possiblyReactive(item, false);
+      }
     }
   };
 }

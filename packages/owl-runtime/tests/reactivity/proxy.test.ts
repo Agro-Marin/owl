@@ -1293,6 +1293,25 @@ describe("Collections", () => {
   });
 
   describe("Map", () => {
+    test("iterating entries yields plain pairs whose contents are reactive", async () => {
+      const map = proxy(new Map([[{ id: 1 }, { v: 1 }]]));
+      const spy = vi.fn();
+      effect(() => {
+        for (const entry of map.entries()) {
+          expect(toRaw(entry)).toBe(entry);
+          spy(entry[1].v);
+        }
+        for (const [key, value] of map) {
+          expect(toRaw(key)).not.toBe(key);
+          spy(value.v);
+        }
+      });
+      expectSpy(spy, 2, [1]);
+      [...map.values()][0].v = 2;
+      await waitScheduler();
+      expectSpy(spy, 4, [2]);
+    });
+
     test("can make proxy Map", () => {
       const map = new Map();
       const obj = proxy(map);
