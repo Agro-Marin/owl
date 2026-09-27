@@ -176,7 +176,7 @@ export function proxifyTarget<T extends Target>(target: T, shallow: boolean): T 
   } else if (target instanceof WeakMap) {
     handler = collectionsProxyHandler(target as unknown as Collection, "WeakMap", shallow);
   } else {
-    handler = basicProxyHandler<T>(shallow);
+    handler = shallow ? shallowHandler : deepHandler;
   }
   const proxy = new Proxy(target, handler as ProxyHandler<T>) as Reactive<T>;
 
@@ -379,6 +379,10 @@ function basicProxyHandler<T extends Target>(shallow: boolean): ProxyHandler<T> 
     },
   } as ProxyHandler<T>;
 }
+// the traps only use the target they are given: one handler per flavor
+const deepHandler = basicProxyHandler(false);
+const shallowHandler = basicProxyHandler(true);
+
 /**
  * Creates a function that will observe the key that is passed to it when called
  * and delegates to the underlying method.
@@ -495,72 +499,64 @@ function makeClearNotifier(target: Map<any, any> | Set<any>) {
     }
   };
 }
+type MethodFactory = (target: any, shallow: boolean) => Function;
+
+const setMethods: [PropertyKey, MethodFactory][] = [
+  ["has", (target, shallow) => makeKeyObserver("has", target, shallow)],
+  ["add", (target) => delegateAndNotify("add", "has", target)],
+  ["delete", (target) => delegateAndNotify("delete", "has", target)],
+  ["keys", (target, shallow) => makeIteratorObserver("keys", target, shallow)],
+  ["values", (target, shallow) => makeIteratorObserver("values", target, shallow)],
+  ["entries", (target, shallow) => makeIteratorObserver("entries", target, shallow)],
+  [Symbol.iterator, (target, shallow) => makeIteratorObserver(Symbol.iterator, target, shallow)],
+  ["forEach", (target, shallow) => makeForEachObserver(target, shallow)],
+  ["clear", (target) => makeClearNotifier(target)],
+];
+const weakMapMethods: [PropertyKey, MethodFactory][] = [
+  ["has", (target, shallow) => makeKeyObserver("has", target, shallow)],
+  ["get", (target, shallow) => makeKeyObserver("get", target, shallow)],
+  ["set", (target) => delegateAndNotify("set", "get", target)],
+  ["delete", (target) => delegateAndNotify("delete", "has", target)],
+];
+
 /**
- * Maps raw type of an object to an object containing functions that can be used
- * to build an appropritate proxy handler for that raw type. Eg: when making a
- * proxy set, calling the has method should mark the key that is being
- * retrieved as observed, and calling the add or delete method should notify the
- * proxys that the key which is being added or deleted has been modified.
+ * The methods a collection proxy replaces, by raw type: reading one returns a
+ * version that observes (or notifies) the keys it touches. Eg: `has` on a proxy
+ * set observes the key it is asked about, `add` notifies it.
  */
-const rawTypeToFuncHandlers = {
-  Set: (target: any, shallow: boolean) => ({
-    has: makeKeyObserver("has", target, shallow),
-    add: delegateAndNotify("add", "has", target),
-    delete: delegateAndNotify("delete", "has", target),
-    keys: makeIteratorObserver("keys", target, shallow),
-    values: makeIteratorObserver("values", target, shallow),
-    entries: makeIteratorObserver("entries", target, shallow),
-    [Symbol.iterator]: makeIteratorObserver(Symbol.iterator, target, shallow),
-    forEach: makeForEachObserver(target, shallow),
-    clear: makeClearNotifier(target),
-    get size() {
-      onReadTargetKey(target, KEYCHANGES);
-      return target.size;
-    },
-  }),
-  Map: (target: any, shallow: boolean) => ({
-    has: makeKeyObserver("has", target, shallow),
-    get: makeKeyObserver("get", target, shallow),
-    set: delegateAndNotify("set", "get", target),
-    delete: delegateAndNotify("delete", "has", target),
-    keys: makeIteratorObserver("keys", target, shallow),
-    values: makeIteratorObserver("values", target, shallow),
-    entries: makeIteratorObserver("entries", target, shallow),
-    [Symbol.iterator]: makeIteratorObserver(Symbol.iterator, target, shallow),
-    forEach: makeForEachObserver(target, shallow),
-    clear: makeClearNotifier(target),
-    get size() {
-      onReadTargetKey(target, KEYCHANGES);
-      return target.size;
-    },
-  }),
-  WeakMap: (target: any, shallow: boolean) => ({
-    has: makeKeyObserver("has", target, shallow),
-    get: makeKeyObserver("get", target, shallow),
-    set: delegateAndNotify("set", "get", target),
-    delete: delegateAndNotify("delete", "has", target),
-  }),
+const methodFactories: Record<CollectionRawType, Map<PropertyKey, MethodFactory>> = {
+  Set: new Map(setMethods),
+  Map: new Map([...setMethods, ...weakMapMethods]),
+  WeakMap: new Map(weakMapMethods),
 };
+
 /**
- * Creates a proxy handler for collections (Set/Map/WeakMap)
- *
- * @param callback @see proxy
- * @param target @see proxy
- * @returns a proxy handler object
+ * Creates a proxy handler for collections (Set/Map/WeakMap). Its methods are
+ * built on first read and kept for the proxy: most proxies use a few of them.
  */
 function collectionsProxyHandler<T extends Collection>(
   target: T,
   targetRawType: CollectionRawType,
   shallow: boolean
 ): ProxyHandler<T> {
-  // TODO: if performance is an issue we can create the special handlers lazily when each
-  // property is read.
-  const specialHandlers = rawTypeToFuncHandlers[targetRawType](target, shallow);
-  return Object.assign(basicProxyHandler(shallow), {
+  const factories = methodFactories[targetRawType];
+  const hasSize = targetRawType !== "WeakMap";
+  const methods = new Map<PropertyKey, Function>();
+  return Object.assign(Object.create(shallow ? shallowHandler : deepHandler), {
     // FIXME: probably broken when part of prototype chain since we ignore the receiver
     get(target: any, key: PropertyKey) {
-      if (objectHasOwnProperty.call(specialHandlers, key)) {
-        return (specialHandlers as any)[key];
+      const factory = factories.get(key);
+      if (factory) {
+        let method = methods.get(key);
+        if (!method) {
+          method = factory(target, shallow);
+          methods.set(key, method);
+        }
+        return method;
+      }
+      if (key === "size" && hasSize) {
+        onReadTargetKey(target, KEYCHANGES);
+        return target.size;
       }
       onReadTargetKey(target, key);
       return possiblyReactive(target[key], shallow);
