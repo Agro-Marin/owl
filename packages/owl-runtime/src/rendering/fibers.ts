@@ -19,6 +19,13 @@ const MAX_RENDER_ITERATIONS = 1000;
 // DOM (the other bits hold the recycle count, see the renderState declaration).
 export const APPLIED_TO_DOM = 1;
 
+// Fiber.phase: a fiber whose render threw is RENDERED too, without a bdom
+export enum FiberPhase {
+  NEW,
+  RENDERING,
+  RENDERED,
+}
+
 export function makeChildFiber(node: ComponentNode, parent: Fiber): Fiber {
   let current = node.fiber;
   if (current) {
@@ -48,6 +55,7 @@ export function makeRootFiber(node: ComponentNode): Fiber {
     current.children = [];
     current.childrenMap = {};
     current.bdom = null;
+    current.phase = FiberPhase.NEW;
     if (fibersInError.has(current)) {
       fibersInError.delete(current);
       fibersInError.delete(root);
@@ -107,7 +115,7 @@ function cancelFibers(fibers: Fiber[]): number {
       node.cancel();
     }
     node.fiber = null;
-    if (fiber.bdom) {
+    if (fiber.phase !== FiberPhase.NEW) {
       // if fiber has been rendered, this means that the component props have
       // been updated. however, this fiber will not be patched to the dom, so
       // it could happen that the next render compare the current props with
@@ -145,6 +153,7 @@ export class Fiber {
   // fibers that are never recycled don't pay for a dedicated field.
   renderState = 0;
   deep: boolean = false;
+  phase: FiberPhase = FiberPhase.NEW;
   childrenMap: ComponentNode["children"] = {};
 
   constructor(node: ComponentNode, parent: Fiber | null) {
@@ -220,12 +229,13 @@ export class Fiber {
       removeSources(node.signalComputation);
       setComputation(node.signalComputation);
       node.signalComputation.state = ComputationState.EXECUTED;
+      this.phase = FiberPhase.RENDERING;
       try {
-        (this.bdom as any) = true;
         this.bdom = node.renderFn();
       } catch (e) {
         handleError({ node, error: e });
       } finally {
+        this.phase = FiberPhase.RENDERED;
         setComputation(c);
       }
       const newCounter = root.counter - 1;

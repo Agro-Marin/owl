@@ -16,7 +16,7 @@ import type { App } from "./app";
 import { BDom, RefCallback, VNode } from "./blockdom";
 import { Component, ComponentConstructor } from "./component";
 import { fibersInError, handleError } from "./rendering/error_handling";
-import { APPLIED_TO_DOM, Fiber, makeRootFiber, MountFiber } from "./rendering/fibers";
+import { APPLIED_TO_DOM, Fiber, FiberPhase, makeRootFiber, MountFiber } from "./rendering/fibers";
 import { STATUS } from "./status";
 
 // -----------------------------------------------------------------------------
@@ -131,13 +131,13 @@ export class ComponentNode extends Scope implements VNode<ComponentNode> {
       return;
     }
     let current = this.fiber;
-    if (current && (current.root!.locked || (current as any).bdom === true)) {
+    if (current && (current.root!.locked || current.phase === FiberPhase.RENDERING)) {
       await Promise.resolve();
       // situation may have changed after the microtask tick
       current = this.fiber;
     }
     if (current) {
-      if (!current.bdom && !fibersInError.has(current)) {
+      if (current.phase === FiberPhase.NEW && !fibersInError.has(current)) {
         if (deep) {
           // we want the render from this point on to be with deep=true
           current.deep = deep;
