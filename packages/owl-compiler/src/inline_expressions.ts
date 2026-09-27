@@ -66,6 +66,7 @@ interface Token {
   varName?: string;
   replace?: Function;
   isLocal?: boolean;
+  templateVars?: string[];
 }
 
 const STATIC_TOKEN_MAP: { [key: string]: TKind } = Object.assign(Object.create(null), {
@@ -263,6 +264,21 @@ const paddedValues = new Map([["in ", " in "]]);
 interface ProcessedExpr {
   expr: string;
   freeVariables: string[] | null;
+  variables: string[];
+}
+
+function collectVariables(tokens: Token[], start: number): string[] {
+  const vars = new Set<string>();
+  for (let i = start; i < tokens.length; i++) {
+    const t = tokens[i];
+    if (t.varName && !t.isLocal) {
+      vars.add(t.varName);
+    }
+    for (const v of t.templateVars || []) {
+      vars.add(v);
+    }
+  }
+  return [...vars];
 }
 
 /**
@@ -339,14 +355,18 @@ export function processExpr(expr: string, seededLocals?: Set<string>): Processed
       for (const scope of scopeStack) {
         for (const v of scope.vars) currentLocals.add(v);
       }
-      token.value = token.replace!((expr: any) => compileExpr(expr, currentLocals));
+      const templateVars: string[] = [];
+      token.value = token.replace!((expr: any) => {
+        const processed = processExpr(expr, currentLocals);
+        templateVars.push(...processed.variables);
+        return processed.expr;
+      });
+      token.templateVars = templateVars;
     }
 
     if (nextToken && nextToken.type === "OPERATOR" && nextToken.value === "=>") {
       const newScope = new Set<string>();
-      if (stack.length === 0) {
-        topLevelArrowIndex = i + 1;
-      }
+      let paramStart = i;
       if (token.type === "RIGHT_PAREN") {
         let j = i - 1;
         while (j > 0 && tokens[j].type !== "LEFT_PAREN") {
@@ -357,11 +377,15 @@ export function processExpr(expr: string, seededLocals?: Set<string>): Processed
           }
           j--;
         }
+        paramStart = j;
       } else {
         // Single param without parens (e => ...): token.value is still the
         // raw identifier here, before the isVar block below transforms it.
         // The isVar block will then see isLocal=true and prefix with _.
         newScope.add(token.value);
+      }
+      if (paramStart === 0) {
+        topLevelArrowIndex = i + 1;
       }
       // record current stack depth so we know when this scope expires
       scopeStack.push({ vars: newScope, depth: stack.length });
@@ -380,22 +404,13 @@ export function processExpr(expr: string, seededLocals?: Set<string>): Processed
     i++;
   }
 
-  // Collect free variables from arrow function body
-  let freeVariables: string[] | null = null;
-  if (topLevelArrowIndex !== -1) {
-    freeVariables = [];
-    const seen = new Set<string>();
-    for (let i = topLevelArrowIndex + 1; i < tokens.length; i++) {
-      const t = tokens[i];
-      if (t.varName && !t.isLocal && t.varName !== "this" && !seen.has(t.varName)) {
-        seen.add(t.varName);
-        freeVariables.push(t.varName);
-      }
-    }
-  }
+  const freeVariables =
+    topLevelArrowIndex === -1
+      ? null
+      : collectVariables(tokens, topLevelArrowIndex + 1).filter((v) => v !== "this");
 
   const compiled = tokens.map((t) => paddedValues.get(t.value) || t.value).join("");
-  return { expr: compiled, freeVariables };
+  return { expr: compiled, freeVariables, variables: collectVariables(tokens, 0) };
 }
 
 export function compileExpr(expr: string, seededLocals?: Set<string>): string {

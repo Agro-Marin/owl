@@ -196,6 +196,20 @@ describe("expression evaluation", () => {
     expect(freeVars("this.doSomething(item)")).toBeNull();
   });
 
+  test("processExpr: only a whole-expression arrow has free variables", () => {
+    const freeVars = (expr: string) => processExpr(expr).freeVariables;
+    expect(freeVars("this.state.flag ? () => 'A' : () => 'B'")).toBeNull();
+    expect(freeVars("n > 1 ? () => 'big' : () => 'small'")).toBeNull();
+    expect(freeVars("f(() => a)")).toBeNull();
+    expect(freeVars("x => y => x + y + z")).toEqual(["z"]);
+  });
+
+  test("processExpr: free variables inside template string interpolations", () => {
+    const freeVars = (expr: string) => processExpr(expr).freeVariables;
+    expect(freeVars("() => `hi ${name}`")).toEqual(["name"]);
+    expect(freeVars("(a) => `${a} and ${b}` + c")).toEqual(["b", "c"]);
+  });
+
   test("arrow functions: not yet supported", () => {
     expect(compileExpr("(e => e)(e)")).toBe("(_e=>_e)(ctx['e'])");
   });

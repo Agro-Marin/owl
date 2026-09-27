@@ -543,6 +543,33 @@ test("arrow function props auto-skip re-render when captured variables don't cha
   `);
 });
 
+test("an expression choosing between arrow functions is re-evaluated as a prop", async () => {
+  class Child extends Component {
+    static template = xml`<t t-out="this.props.cb()"/>`;
+    props = props();
+  }
+
+  const greet = '<Child cb="() => `hi ${name}`"/>';
+  class Parent extends Component {
+    static template = xml`
+      <Child cb="this.state.flag ? () => 'A' : () => 'B'"/>
+      <t t-set="n" t-value="this.state.n"/>
+      <Child cb="n > 1 ? () => 'big' : () => 'small'"/>
+      <t t-set="name" t-value="this.state.name"/>
+      ${greet}`;
+    static components = { Child };
+    state = proxy({ flag: true, n: 1, name: "bob" });
+  }
+
+  const parent = await mount(Parent, fixture);
+  expect(fixture.innerHTML).toBe("Asmallhi bob");
+  parent.state.flag = false;
+  parent.state.n = 2;
+  parent.state.name = "alice";
+  await nextTick();
+  expect(fixture.innerHTML).toBe("Bbighi alice");
+});
+
 test("arrow function props re-render when captured variable changes", async () => {
   class Todo extends Component {
     static template = xml`
