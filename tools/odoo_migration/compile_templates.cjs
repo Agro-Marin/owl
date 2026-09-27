@@ -2,8 +2,13 @@ const { JSDOM } = require(process.env.OWL + "/node_modules/jsdom");
 const dom = new JSDOM("<!doctype html><html><body></body></html>", { pretendToBeVisual: true });
 global.window = dom.window;
 for (const k of Object.getOwnPropertyNames(dom.window)) { if (!(k in global)) { try { global[k] = dom.window[k]; } catch {} } }
-const owl = require(process.env.OWL + "/dist/owl.cjs.js");
 const fs = require("fs");
+// a 3.0 monorepo checkout builds packages/owl/dist/owl.cjs, a 2.8 one dist/owl.cjs.js
+const build = ["/packages/owl/dist/owl.cjs", "/dist/owl.cjs.js"]
+  .map((path) => process.env.OWL + path)
+  .find((path) => fs.existsSync(path));
+const owl = require(build);
+console.log(`owl build: ${build}`);
 const files = fs.readFileSync(0, "utf8").split("\n").filter(Boolean);
 let total = 0, bad = 0;
 for (const file of files) {
