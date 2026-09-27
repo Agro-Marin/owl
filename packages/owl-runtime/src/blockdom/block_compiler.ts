@@ -121,7 +121,6 @@ interface DynamicInfo {
   type: "text" | "child" | "handler" | "attribute" | "attributes" | "property" | "ref";
   isOnlyChild?: boolean;
   name?: string;
-  tag?: string;
   event?: string;
   sharedClass?: ReturnType<typeof makeSharedClassUpdaters>;
 }
@@ -196,7 +195,6 @@ function buildTree(
               type: "attribute",
               idx,
               name: attrValue,
-              tag: tagName,
             });
           } else if (attrName.startsWith("block-property-")) {
             const idx = parseInt(attrName.slice(15), 10);
@@ -204,7 +202,6 @@ function buildTree(
               type: "property",
               idx,
               name: attrValue,
-              tag: tagName,
             });
           } else if (attrName === "block-attributes") {
             info.push({
@@ -307,7 +304,7 @@ function parentTree(tree: IntermediateTree): IntermediateTree | null {
 interface RefCollector {
   idx: number;
   prevIdx: number;
-  getVal: Function;
+  isFirstChild: boolean;
 }
 
 export type RefCallback = (el: HTMLElement | null, previousEl: HTMLElement | null) => void;
@@ -341,8 +338,7 @@ interface BlockCtx {
 
 function buildContext(tree: IntermediateTree, ctx?: BlockCtx, fromIdx?: number): BlockCtx {
   if (!ctx) {
-    const children = new Array(tree.info.filter((v) => v.type === "child").length);
-    ctx = { collectors: [], locations: [], children, cbRefs: [], refN: tree.refN };
+    ctx = { collectors: [], locations: [], children: [], cbRefs: [], refN: tree.refN };
     fromIdx = 0;
   }
   if (tree.refN) {
@@ -364,13 +360,13 @@ function buildContext(tree: IntermediateTree, ctx?: BlockCtx, fromIdx?: number):
     // right
     if (nextSibling) {
       const idx = fromIdx! + firstChild;
-      ctx.collectors.push({ idx, prevIdx: initialIdx, getVal: nodeGetNextSibling });
+      ctx.collectors.push({ idx, prevIdx: initialIdx, isFirstChild: false });
       buildContext(tree.nextSibling!, ctx, idx);
     }
 
     // left
     if (firstChild) {
-      ctx.collectors.push({ idx: fromIdx!, prevIdx: initialIdx, getVal: nodeGetFirstChild });
+      ctx.collectors.push({ idx: fromIdx!, prevIdx: initialIdx, isFirstChild: true });
       buildContext(tree.firstChild!, ctx, fromIdx!);
     }
   }
@@ -514,10 +510,7 @@ function createBlockClass(template: HTMLElement, ctx: BlockCtx): BlockClass {
   const GETTERS = [nodeGetNextSibling, nodeGetFirstChild];
   const colN = collectors.length;
   const colPacked: number[] = collectors.map(
-    (c) =>
-      (c.idx & 0x7fff) |
-      ((c.prevIdx & 0x7fff) << 15) |
-      ((c.getVal === nodeGetFirstChild ? 1 : 0) << 30)
+    (c) => (c.idx & 0x7fff) | ((c.prevIdx & 0x7fff) << 15) | ((c.isFirstChild ? 1 : 0) << 30)
   );
 
   // Bitpack children locations into uint32 array
