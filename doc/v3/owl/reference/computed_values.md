@@ -112,8 +112,9 @@ s.set(4); // the effect runs again and logs 2
 > change in future versions. Use with that caveat in mind.
 
 An `asyncComputed` is the asynchronous counterpart to `computed`. It runs a
-fetcher that returns a `Promise`, exposes the resolved value as a reactive
-read, and re-runs the fetcher whenever any of its tracked dependencies change:
+fetcher that returns a `Promise` (a plain value is taken as already resolved),
+exposes the resolved value as a reactive read, and re-runs the fetcher whenever
+any of its tracked dependencies change:
 
 ```js
 const userId = signal(1);

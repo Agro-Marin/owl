@@ -37,7 +37,7 @@ export interface AsyncComputed<T> {
  * @experimental The exact API is subject to change in future versions.
  */
 export function asyncComputed<T>(
-  fetcher: (ctx: AsyncComputedContext) => Promise<T>,
+  fetcher: (ctx: AsyncComputedContext) => T | Promise<T>,
   options: AsyncComputedOptions<T> = {}
 ): AsyncComputed<T> {
   const value = signal<T | undefined>(options.initial, { equals: options.equals });
@@ -97,7 +97,7 @@ export function asyncComputed<T>(
 
     let promise: Promise<T>;
     try {
-      promise = fetcher({ abortSignal: AbortSignal.any(abortSignals) });
+      promise = Promise.resolve(fetcher({ abortSignal: AbortSignal.any(abortSignals) }));
     } catch (e) {
       if (myRunId !== runId) return;
       if (isAbortError(e)) {

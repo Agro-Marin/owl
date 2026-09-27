@@ -297,6 +297,20 @@ test("synchronous throw inside fetcher populates error and clears loading", asyn
   a.dispose();
 });
 
+test("a fetcher returning a plain value resolves to it", async () => {
+  const n = signal(1);
+  const a = asyncComputed(() => n() * 10);
+  await flush();
+  expect(a()).toBe(10);
+  expect(a.error()).toBeNull();
+  expect(a.loading()).toBe(false);
+
+  n.set(2);
+  await flush();
+  expect(a()).toBe(20);
+  a.dispose();
+});
+
 test("reads after the first await are NOT tracked", async () => {
   const id = signal(1);
   const filter = signal("a");
