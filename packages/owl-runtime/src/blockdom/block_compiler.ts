@@ -294,6 +294,8 @@ interface RefCollector {
   getVal: Function;
 }
 
+export type RefCallback = (el: HTMLElement | null, previousEl: HTMLElement | null) => void;
+
 export type Setter<T = any> = (this: T, value: any) => void;
 type Updater<T = any> = (this: T, value: any, oldVal: any) => void;
 
@@ -442,7 +444,7 @@ function updateCtx(ctx: BlockCtx, tree: IntermediateTree) {
           idx: info.idx,
           refIdx: info.refIdx!,
           setData: NO_OP,
-          updateData: NO_OP,
+          updateData: updateRef,
         });
         ctx.cbRefs.push(info.idx);
         break;
@@ -674,6 +676,11 @@ function createBlockClass(template: HTMLElement, ctx: BlockCtx): BlockClass {
     };
   }
   return Block;
+}
+
+function updateRef(this: HTMLElement, fn: RefCallback, oldFn: RefCallback) {
+  oldFn(null, this);
+  fn(this, null);
 }
 
 function setText(this: Text, value: any) {

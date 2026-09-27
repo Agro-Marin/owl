@@ -13,7 +13,7 @@ import {
   useScope,
 } from "@odoo/owl-core";
 import type { App } from "./app";
-import { BDom, VNode } from "./blockdom";
+import { BDom, RefCallback, VNode } from "./blockdom";
 import { Component, ComponentConstructor } from "./component";
 import { fibersInError, handleError } from "./rendering/error_handling";
 import { APPLIED_TO_DOM, Fiber, makeRootFiber, MountFiber } from "./rendering/fibers";
@@ -53,6 +53,7 @@ export class ComponentNode extends Scope implements VNode<ComponentNode> {
   // after each patch and after this subtree is removed, to unset a ref pointing
   // at a bulk-removed element (slot host, enclosing t-if) — see sweepRefs.
   trackedRefs: Map<{ set(v: null): void }, { value: HTMLElement | null }> | null = null;
+  refCallbacks: WeakMap<object, RefCallback> | null = null;
 
   constructor(
     C: ComponentConstructor,
@@ -230,8 +231,8 @@ export class ComponentNode extends Scope implements VNode<ComponentNode> {
 
   /**
    * Unset any tracked t-ref whose element is no longer in the document, and stop
-   * tracking it (createRef re-registers it on the next render if the element
-   * comes back). `isConnected` is the discriminator: a ref the block's own
+   * tracking it (its ref callback re-registers it when it binds an element
+   * again). `isConnected` is the discriminator: a ref the block's own
    * remove() failed to clear (bulk removal) points at a detached element and is
    * cleared, while a ref a surviving sibling just took over (t-if/t-else with a
    * shared signal) points at a still-connected element and is left alone.
@@ -317,8 +318,8 @@ export class ComponentNode extends Scope implements VNode<ComponentNode> {
 
   /**
    * Register a t-ref signal bound to an element this component hosts, so its
-   * lifecycle can clear it (see sweepRefs / _destroy). Idempotent — re-tracking
-   * the same signal on each render just refreshes its atom.
+   * lifecycle can clear it (see sweepRefs / _destroy). Called each time the ref
+   * binds an element; idempotent.
    */
   trackRef(ref: { set(v: null): void }, atom: { value: HTMLElement | null }) {
     (this.trackedRefs ||= new Map()).set(ref, atom);

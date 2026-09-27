@@ -530,4 +530,63 @@ describe("refs", () => {
     expect(steps).toEqual(["change: ref=hello"]);
     expect(test.input()).toBeNull();
   });
+
+  test("changing the ref of an element moves the element to the new ref", async () => {
+    class Test extends Component {
+      static template = xml`<div t-ref="this.flag() ? this.r1 : this.r2"/>`;
+      flag = signal(true);
+      r1 = signal<HTMLElement | null>(null);
+      r2 = signal<HTMLElement | null>(null);
+    }
+    const test = await mount(Test, fixture);
+    const div = fixture.firstChild;
+    expect(test.r1()).toBe(div);
+    expect(test.r2()).toBeNull();
+
+    test.flag.set(false);
+    await nextTick();
+    expect(test.r1()).toBeNull();
+    expect(test.r2()).toBe(div);
+
+    test.flag.set(true);
+    await nextTick();
+    expect(test.r1()).toBe(div);
+    expect(test.r2()).toBeNull();
+  });
+
+  test("changing a set-like ref of an element moves the element to the new set", async () => {
+    class Test extends Component {
+      static template = xml`<div t-ref="this.flag() ? this.s1 : this.s2"/>`;
+      flag = signal(true);
+      s1 = new Set<HTMLElement>();
+      s2 = new Set<HTMLElement>();
+    }
+    const test = await mount(Test, fixture);
+    const div = fixture.firstChild as HTMLElement;
+    expect([...test.s1]).toEqual([div]);
+
+    test.flag.set(false);
+    await nextTick();
+    expect([...test.s1]).toEqual([]);
+    expect([...test.s2]).toEqual([div]);
+  });
+
+  test("an unchanged ref is not rebound on each render", async () => {
+    const steps: string[] = [];
+    class Test extends Component {
+      static template = xml`<div t-ref="this.refs" t-att-title="this.title()"/>`;
+      title = signal("a");
+      refs = {
+        add: () => steps.push("add"),
+        delete: () => steps.push("delete"),
+      };
+    }
+    const test = await mount(Test, fixture);
+    test.title.set("b");
+    await nextTick();
+    test.title.set("c");
+    await nextTick();
+    expect(fixture.innerHTML).toBe('<div title="c"></div>');
+    expect(steps).toEqual(["add"]);
+  });
 });

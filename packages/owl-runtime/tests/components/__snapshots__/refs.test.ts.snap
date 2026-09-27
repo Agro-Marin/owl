@@ -20,6 +20,22 @@ exports[`refs > a listener firing during the removal still sees its ref 1`] = `
 }"
 `;
 
+exports[`refs > an unchanged ref is not rebound on each render 1`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { createRef } = helpers;
+  
+  let block1 = createBlock(\`<div block-attribute-0="title" block-ref="1"/>\`);
+  
+  return function template(ctx, node, key = "") {
+    let attr1 = ctx['this'].title();
+    let ref1 = createRef(ctx['this'].refs, node);
+    return block1([attr1, ref1]);
+  }
+}"
+`;
+
 exports[`refs > basic use 1`] = `
 "function anonymous(app, bdom, helpers
 ) {
@@ -45,6 +61,36 @@ exports[`refs > basic use with signal.ref 1`] = `
   
   return function template(ctx, node, key = "") {
     let ref1 = createRef(ctx['this'].input, node);
+    return block1([ref1]);
+  }
+}"
+`;
+
+exports[`refs > changing a set-like ref of an element moves the element to the new set 1`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { createRef } = helpers;
+  
+  let block1 = createBlock(\`<div block-ref="0"/>\`);
+  
+  return function template(ctx, node, key = "") {
+    let ref1 = createRef(ctx['this'].flag()?ctx['this'].s1:ctx['this'].s2, node);
+    return block1([ref1]);
+  }
+}"
+`;
+
+exports[`refs > changing the ref of an element moves the element to the new ref 1`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { createRef } = helpers;
+  
+  let block1 = createBlock(\`<div block-ref="0"/>\`);
+  
+  return function template(ctx, node, key = "") {
+    let ref1 = createRef(ctx['this'].flag()?ctx['this'].r1:ctx['this'].r2, node);
     return block1([ref1]);
   }
 }"

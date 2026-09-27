@@ -2,6 +2,7 @@ export { config } from "./config";
 
 export { toggler } from "./toggler";
 export { createBlock } from "./block_compiler";
+export type { RefCallback } from "./block_compiler";
 export { list } from "./list";
 export { multi } from "./multi";
 export { text } from "./text";

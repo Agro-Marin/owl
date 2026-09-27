@@ -68,3 +68,19 @@ test("callback ref in callback ref with same block", async () => {
   expect(fixture.innerHTML).toBe("<p>parent<p>child</p></p>");
   expect(["<p>child</p>", "<p>parent<p>child</p></p>"]).toBeLogged();
 });
+
+test("changing the ref callback unbinds the old one and binds the new one", async () => {
+  const block = createBlock('<div><span block-ref="0">hey</span></div>');
+  const ref1 = (el: any, prev: any) => logStep(`ref1 ${el?.tagName} ${prev?.tagName}`);
+  const ref2 = (el: any, prev: any) => logStep(`ref2 ${el?.tagName} ${prev?.tagName}`);
+
+  const tree = block([ref1]);
+  mount(tree, fixture);
+  expect(["ref1 SPAN undefined"]).toBeLogged();
+
+  patch(tree, block([ref2]));
+  expect(["ref1 undefined SPAN", "ref2 SPAN undefined"]).toBeLogged();
+
+  remove(tree);
+  expect(["ref2 undefined SPAN"]).toBeLogged();
+});

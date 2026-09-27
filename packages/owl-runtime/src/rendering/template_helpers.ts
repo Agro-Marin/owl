@@ -10,7 +10,7 @@ import {
   Signal,
 } from "@odoo/owl-core";
 import { App } from "../app";
-import { BDom, createCatcher, multi, text, toggler } from "../blockdom";
+import { BDom, createCatcher, multi, RefCallback, text, toggler } from "../blockdom";
 import { html } from "../blockdom/index";
 import { Component } from "../component";
 import { ComponentNode } from "../component_node";
@@ -150,7 +150,18 @@ function createRef(ref: any, node: ComponentNode) {
   if (!ref) {
     throw new OwlError(`Ref is undefined or null`);
   }
+  // one callback per ref and host: an unchanged ref keeps its identity across
+  // renders, so the block patch skips it instead of unbinding and rebinding it
+  const callbacks = (node.refCallbacks ||= new WeakMap());
+  let callback = callbacks.get(ref);
+  if (!callback) {
+    callback = makeRefCallback(ref, node);
+    callbacks.set(ref, callback);
+  }
+  return callback;
+}
 
+function makeRefCallback(ref: any, node: ComponentNode): RefCallback {
   let add: (el: HTMLElement) => void;
   let remove: (el: HTMLElement) => void;
 
@@ -158,25 +169,29 @@ function createRef(ref: any, node: ComponentNode) {
     add = ref.add.bind(ref);
     remove = ref.delete.bind(ref);
   } else if (ref.set) {
-    add = ref.set.bind(ref);
     // A sibling slot in the same patch may have already taken ownership of the
     // signal (e.g. t-if/t-else swap with a shared ref). In that case the new
     // element is mounted before this branch's remove runs, so only clear the
     // ref if it still points to the element we're unbinding.
     const atom = (ref as any)[atomSymbol];
-    remove = atom
-      ? (prevEl: HTMLElement) => {
-          if (atom.value === prevEl) ref.set(null);
-        }
-      : () => ref.set(null);
-    // The block-ref callback above only fires when this block's own remove() is
-    // called. When an enclosing block is removed in bulk (e.g. a slot host),
-    // the callback is skipped and the signal would keep pointing at a detached
-    // element. Track the ref on its host component, which clears it on unmount
-    // and sweeps detached refs after each patch. `node` is the host even for
-    // forwarded slot content (createRef sees the innermost host via callSlot).
     if (atom) {
-      node.trackRef(ref, atom);
+      // The block-ref callback only fires when this block's own remove() is
+      // called. When an enclosing block is removed in bulk (e.g. a slot host),
+      // the callback is skipped and the signal would keep pointing at a
+      // detached element. Track the ref on its host component, which clears it
+      // on unmount and sweeps detached refs after each patch. `node` is the
+      // host even for forwarded slot content (createRef sees the innermost
+      // host via callSlot).
+      add = (el: HTMLElement) => {
+        ref.set(el);
+        node.trackRef(ref, atom);
+      };
+      remove = (prevEl: HTMLElement) => {
+        if (atom.value === prevEl) ref.set(null);
+      };
+    } else {
+      add = ref.set.bind(ref);
+      remove = () => ref.set(null);
     }
   } else {
     throw new OwlError(
