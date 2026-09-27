@@ -5,9 +5,6 @@
   ],
   "compilerOptions": {
     "outDir": "dist",
-    "declarationDir": "dist/types",
-    "paths": {
-      "@odoo/owl-core": ["../owl-core/src/index"]
-    }
+    "declarationDir": "dist/types"
   }
 }

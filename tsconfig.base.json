@@ -21,6 +21,13 @@
     "types": [
       "node"
     ],
+    // sibling packages are typed from their sources: their dist/types exist
+    // only after build:types
+    "paths": {
+      "@odoo/owl-core": ["./packages/owl-core/src/index"],
+      "@odoo/owl-compiler": ["./packages/owl-compiler/src/index"],
+      "@odoo/owl-runtime": ["./packages/owl-runtime/src/index"]
+    },
     "esModuleInterop": true,
     "resolveJsonModule": true,
                                                                 // Emit options
