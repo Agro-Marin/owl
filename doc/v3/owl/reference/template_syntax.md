@@ -356,6 +356,11 @@ template:
 will be rendered as `<div><span>content</span></div>` if the `tag` context key
 is set to `div`.
 
+A falsy value keeps the tag written in the template.
+Any other value must be a tag name: one holding whitespace, a quote, `<`, `>`,
+`/`, `=`, `&` or a backtick throws `Invalid tag name`, since it would otherwise
+be parsed as markup (an attribute, another element).
+
 ### Loops
 
 QWeb has an iteration directive `t-foreach` which take an expression returning the
