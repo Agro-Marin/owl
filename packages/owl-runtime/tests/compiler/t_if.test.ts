@@ -231,4 +231,11 @@ describe("t-if", () => {
     bdom.patch(bdom2, true);
     expect(fixture.innerHTML).toBe("<div></div>");
   });
+
+  test("t-if as only child of a node leaves a single child in the node", () => {
+    const fixture = makeTestFixture();
+    mount(renderToBdom(`<div><t t-if="c"><t t-out="x"/></t></div>`, { c: true, x: "a" }), fixture);
+    expect(fixture.innerHTML).toBe("<div>a</div>");
+    expect(fixture.firstChild!.childNodes.length).toBe(1);
+  });
 });

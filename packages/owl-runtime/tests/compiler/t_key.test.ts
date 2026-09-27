@@ -1,4 +1,10 @@
-import { renderToString, renderToBdom, snapshotEverything, makeTestFixture } from "../helpers";
+import {
+  renderToString,
+  renderToBdom,
+  snapshotEverything,
+  makeTestFixture,
+  TestContext,
+} from "../helpers";
 import { mount, patch } from "../../src/blockdom/index";
 
 snapshotEverything();
@@ -68,5 +74,22 @@ describe("t-key", () => {
     const template = `<p t-key="key" t-out="text"/>`;
 
     expect(renderToString(template, { key: "1", text: "abc" })).toBe("<p>abc</p>");
+  });
+
+  test("t-key on a t inside a node keeps its content", () => {
+    expect(renderToString(`<div><t t-key="k">hello</t></div>`, { k: 1 })).toBe("<div>hello</div>");
+    expect(
+      renderToString(`<div><t t-key="k"><t t-if="c">yes</t></t></div>`, { k: 1, c: true })
+    ).toBe("<div>yes</div>");
+    expect(renderToString(`<div><t t-key="k"><b/><i/></t></div>`, { k: 1 })).toBe(
+      "<div><b></b><i></i></div>"
+    );
+  });
+
+  test("t-call under a t-key inside a node keeps its content", () => {
+    const context = new TestContext();
+    context.addTemplate("sub", `<span>sub</span>`);
+    context.addTemplate("main", `<div><t t-key="k"><t t-call="sub"/></t></div>`);
+    expect(context.renderToString("main", { k: 1 })).toBe("<div><span>sub</span></div>");
   });
 });

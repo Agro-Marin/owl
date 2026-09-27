@@ -2326,7 +2326,7 @@ exports[`two renderings initiated between willPatch and patched 1`] = `
   let { createComponent } = helpers;
   const comp1 = createComponent(app, \`Panel\`, true, false, false, ["val"]);
   
-  let block1 = createBlock(\`<div><block-child-0/><block-child-0/></div>\`);
+  let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
   return function template(ctx, node, key = "") {
     let b2;

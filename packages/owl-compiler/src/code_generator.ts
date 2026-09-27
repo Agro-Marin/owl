@@ -382,8 +382,8 @@ export class CodeGenerator {
     this.addLine(`const ${varName} = ${expr};`);
   }
 
-  insertAnchor(block: BlockDescription, index: number = block.children.length) {
-    const tag = `block-child-${index}`;
+  insertAnchor(block: BlockDescription) {
+    const tag = `block-child-${block.children.length}`;
     const anchor = xmlDoc.createElement(tag);
     block.insert(anchor);
   }
@@ -400,6 +400,9 @@ export class CodeGenerator {
       block.isRoot = true;
     }
     if (parentBlock) {
+      if (parentBlock.type === "block") {
+        this.insertAnchor(parentBlock);
+      }
       parentBlock.children.push(block);
       if (parentBlock.type === "list") {
         block.parentVar = `c_block${parentBlock.id}`;
@@ -561,9 +564,6 @@ export class CodeGenerator {
     const isNewBlock = !block || forceNewBlock || ast.dynamicTag !== null || ast.ns;
     let codeIdx = this.target.code.length;
     if (isNewBlock) {
-      if ((ast.dynamicTag || ctx.tKeyExpr || ast.ns) && ctx.block) {
-        this.insertAnchor(ctx.block!);
-      }
       block = this.createBlock(block, "block", ctx);
       this.blocks.push(block);
       if (ast.dynamicTag) {
@@ -763,9 +763,6 @@ export class CodeGenerator {
 
   compileTOut(ast: ASTTOut, ctx: Context): string {
     let { block } = ctx;
-    if (block) {
-      this.insertAnchor(block);
-    }
     block = this.createBlock(block, "html", ctx);
     let blockStr;
     if (ast.expr === "0") {
@@ -787,12 +784,7 @@ export class CodeGenerator {
 
   compileTIfBranch(content: AST, block: BlockDescription, ctx: Context) {
     this.target.indentLevel++;
-    let childN = block.children.length;
     this.compileAST(content, createContext(ctx, { block, index: ctx.index }));
-    if (block.children.length > childN) {
-      // we have some content => need to insert an anchor at correct index
-      this.insertAnchor(block!, childN);
-    }
     this.target.indentLevel--;
   }
 
@@ -844,9 +836,6 @@ export class CodeGenerator {
 
   compileTForeach(ast: ASTTForEach, ctx: Context): string {
     let { block } = ctx;
-    if (block) {
-      this.insertAnchor(block);
-    }
     block = this.createBlock(block, "list", ctx);
     this.target.loopLevel++;
     const loopVar = `i${this.target.loopLevel}`;
@@ -973,16 +962,13 @@ export class CodeGenerator {
   }
 
   compileTCall(ast: ASTTCall, ctx: Context): string {
-    let { block, forceNewBlock } = ctx;
+    let { block } = ctx;
 
     const attrs: string[] = ast.attrs
       ? this.formatPropObject(ast.attrs, ast.attrsTranslationCtx, ctx.translationCtx)
       : [];
     const isDynamic = INTERP_REGEXP.test(ast.name);
     const subTemplate = isDynamic ? interpolate(ast.name) : toStringExpression(ast.name);
-    if (block && !forceNewBlock) {
-      this.insertAnchor(block);
-    }
     block = this.createBlock(block, "multi", ctx);
     if (ast.body) {
       const name = this.compileInNewTarget("callBody", ast.body, ctx);
@@ -1018,12 +1004,7 @@ export class CodeGenerator {
   }
 
   compileTCallBlock(ast: ASTTCallBlock, ctx: Context): string {
-    let { block, forceNewBlock } = ctx;
-    if (block) {
-      if (!forceNewBlock) {
-        this.insertAnchor(block);
-      }
-    }
+    let { block } = ctx;
     block = this.createBlock(block, "multi", ctx);
     this.insertBlock(compileExpr(ast.name), block, { ...ctx, forceNewBlock: !block });
     return block.varName;
@@ -1259,11 +1240,6 @@ export class CodeGenerator {
       expr = `\`${ast.name}\``;
     }
 
-    if (block && (ctx.forceNewBlock === false || ctx.tKeyExpr)) {
-      // todo: check the forcenewblock condition
-      this.insertAnchor(block);
-    }
-
     let keyArg = this.scopeKey(ctx, true);
     let id = generateId("comp");
     this.helpers.add("createComponent");
@@ -1354,9 +1330,6 @@ export class CodeGenerator {
       blockString = this.wrapWithEventCatcher(blockString, ast.on);
     }
 
-    if (block) {
-      this.insertAnchor(block);
-    }
     block = this.createBlock(block, "multi", ctx);
     this.insertBlock(blockString, block, { ...ctx, forceNewBlock: false });
     return block.varName;

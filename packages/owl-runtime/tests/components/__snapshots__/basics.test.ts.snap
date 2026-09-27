@@ -968,7 +968,7 @@ exports[`basics > t-key on a component with t-if, and a sibling component 1`] = 
   const comp1 = createComponent(app, \`Child\`, true, false, false, []);
   const comp2 = createComponent(app, \`Child\`, true, false, false, []);
   
-  let block1 = createBlock(\`<div><block-child-0/><block-child-0/><block-child-1/></div>\`);
+  let block1 = createBlock(\`<div><block-child-0/><block-child-1/></div>\`);
   
   return function template(ctx, node, key = "") {
     let b2, b3;

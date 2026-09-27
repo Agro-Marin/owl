@@ -486,7 +486,7 @@ exports[`can catch errors > can catch an error in a component render function 2`
   let { text, createBlock, list, multi, html, toggler } = bdom;
   let { callSlot } = helpers;
   
-  let block1 = createBlock(\`<div><block-child-0/><block-child-1/><block-child-1/></div>\`);
+  let block1 = createBlock(\`<div><block-child-0/><block-child-1/></div>\`);
   
   return function template(ctx, node, key = "") {
     let b2, b3;
@@ -587,7 +587,7 @@ exports[`can catch errors > can catch an error in the constructor call of a comp
   let { text, createBlock, list, multi, html, toggler } = bdom;
   let { callSlot } = helpers;
   
-  let block1 = createBlock(\`<div><block-child-0/><block-child-1/><block-child-1/></div>\`);
+  let block1 = createBlock(\`<div><block-child-0/><block-child-1/></div>\`);
   
   return function template(ctx, node, key = "") {
     let b2, b3;
@@ -631,7 +631,7 @@ exports[`can catch errors > can catch an error in the constructor call of a comp
   let { text, createBlock, list, multi, html, toggler } = bdom;
   let { callSlot } = helpers;
   
-  let block1 = createBlock(\`<div><block-child-0/><block-child-1/><block-child-1/></div>\`);
+  let block1 = createBlock(\`<div><block-child-0/><block-child-1/></div>\`);
   
   return function template(ctx, node, key = "") {
     let b2, b3;
@@ -711,7 +711,7 @@ exports[`can catch errors > can catch an error in the initial call of a componen
   let { text, createBlock, list, multi, html, toggler } = bdom;
   let { callSlot } = helpers;
   
-  let block1 = createBlock(\`<div><block-child-0/><block-child-1/><block-child-1/></div>\`);
+  let block1 = createBlock(\`<div><block-child-0/><block-child-1/></div>\`);
   
   return function template(ctx, node, key = "") {
     let b2, b3;
@@ -770,7 +770,7 @@ exports[`can catch errors > can catch an error in the initial call of a componen
   let { text, createBlock, list, multi, html, toggler } = bdom;
   let { callSlot } = helpers;
   
-  let block1 = createBlock(\`<div><block-child-0/><block-child-1/><block-child-1/></div>\`);
+  let block1 = createBlock(\`<div><block-child-0/><block-child-1/></div>\`);
   
   return function template(ctx, node, key = "") {
     let b2, b3;
@@ -923,7 +923,7 @@ exports[`can catch errors > can catch an error in the mounted call 2`] = `
   let { text, createBlock, list, multi, html, toggler } = bdom;
   let { callSlot } = helpers;
   
-  let block1 = createBlock(\`<div><block-child-0/><block-child-1/><block-child-1/></div>\`);
+  let block1 = createBlock(\`<div><block-child-0/><block-child-1/></div>\`);
   
   return function template(ctx, node, key = "") {
     let b2, b3;
@@ -978,7 +978,7 @@ exports[`can catch errors > can catch an error in the willPatch call 2`] = `
   let { text, createBlock, list, multi, html, toggler } = bdom;
   let { callSlot } = helpers;
   
-  let block1 = createBlock(\`<div><block-child-0/><block-child-1/><block-child-1/></div>\`);
+  let block1 = createBlock(\`<div><block-child-0/><block-child-1/></div>\`);
   
   return function template(ctx, node, key = "") {
     let b2, b3;
@@ -1034,7 +1034,7 @@ exports[`can catch errors > can catch an error in the willStart call 2`] = `
   let { text, createBlock, list, multi, html, toggler } = bdom;
   let { callSlot } = helpers;
   
-  let block1 = createBlock(\`<div><block-child-0/><block-child-1/><block-child-1/></div>\`);
+  let block1 = createBlock(\`<div><block-child-0/><block-child-1/></div>\`);
   
   return function template(ctx, node, key = "") {
     let b2, b3;
@@ -1091,7 +1091,7 @@ exports[`can catch errors > can catch an error origination from a child's willSt
   let { text, createBlock, list, multi, html, toggler } = bdom;
   let { callSlot } = helpers;
   
-  let block1 = createBlock(\`<div><block-child-0/><block-child-1/><block-child-1/></div>\`);
+  let block1 = createBlock(\`<div><block-child-0/><block-child-1/></div>\`);
   
   return function template(ctx, node, key = "") {
     let b2, b3;
@@ -1368,7 +1368,7 @@ exports[`can catch errors > error in mounted on a component with a sibling (prop
   let { text, createBlock, list, multi, html, toggler } = bdom;
   let { callSlot } = helpers;
   
-  let block1 = createBlock(\`<div><block-child-0/><block-child-1/><block-child-1/></div>\`);
+  let block1 = createBlock(\`<div><block-child-0/><block-child-1/></div>\`);
   
   return function template(ctx, node, key = "") {
     let b2, b3;
@@ -1547,7 +1547,7 @@ exports[`can catch errors > onError in class inheritance is called if rethrown 2
   let { text, createBlock, list, multi, html, toggler } = bdom;
   let { safeOutput } = helpers;
   
-  let block1 = createBlock(\`<div><block-child-0/><block-child-0/><block-child-1/><block-child-1/></div>\`);
+  let block1 = createBlock(\`<div><block-child-0/><block-child-1/></div>\`);
   
   return function template(ctx, node, key = "") {
     let b2, b3;
@@ -1580,7 +1580,7 @@ exports[`can catch errors > onError in class inheritance is not called if no ret
   let { text, createBlock, list, multi, html, toggler } = bdom;
   let { safeOutput } = helpers;
   
-  let block1 = createBlock(\`<div><block-child-0/><block-child-0/><block-child-1/><block-child-1/></div>\`);
+  let block1 = createBlock(\`<div><block-child-0/><block-child-1/></div>\`);
   
   return function template(ctx, node, key = "") {
     let b2, b3;
@@ -1676,7 +1676,7 @@ exports[`errors and promises > a rendering error will reject the render promise 
   let { text, createBlock, list, multi, html, toggler } = bdom;
   let { safeOutput } = helpers;
   
-  let block1 = createBlock(\`<div><block-child-0/><block-child-0/></div>\`);
+  let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
   return function template(ctx, node, key = "") {
     let b2;
