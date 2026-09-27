@@ -314,3 +314,10 @@ describe("useApp", () => {
     expect(() => app.destroy()).not.toThrow();
   });
 });
+
+test("a test app loads its templates with the dev-mode checks", () => {
+  const templates = `<templates><t t-name="dup">a</t><t t-name="dup">b</t></templates>`;
+  expect(() => new App({ test: true, templates })).toThrow(
+    "Template dup already defined with different content"
+  );
+});

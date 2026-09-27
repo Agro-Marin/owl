@@ -106,7 +106,7 @@ export class App extends TemplateSet {
   destroyed = false;
 
   constructor(config: AppConfig = {}) {
-    super(config);
+    super(config.test ? { ...config, dev: true } : config);
     this.name = config.name || "";
     apps.add(this);
     this.pluginManager = new PluginManager(this, { config: config.config });
@@ -116,9 +116,6 @@ export class App extends TemplateSet {
       // No plugins provided: nothing to await, mark as MOUNTED so mount()
       // takes the sync fast path.
       this.pluginManager.status = STATUS.MOUNTED;
-    }
-    if (config.test) {
-      this.dev = true;
     }
     if (this.dev && !config.test && !hasBeenLogged) {
       console.info(`Owl is running in 'dev' mode.`);

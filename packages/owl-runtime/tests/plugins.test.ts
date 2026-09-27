@@ -430,6 +430,16 @@ describe("basic features", () => {
     app.destroy();
   });
 
+  test("plugins given to a test app validate their config as in dev mode", () => {
+    class PluginA extends Plugin {
+      x = config("x", t.number());
+    }
+
+    expect(() => new App({ test: true, plugins: [PluginA], config: { x: "str" } })).toThrow(
+      "Config does not match the type"
+    );
+  });
+
   test("config default can be declared in the type (.optional(value))", async () => {
     const steps: string[] = [];
 
