@@ -194,3 +194,20 @@ test("a patched catcher calls the handler of the latest render", async () => {
   (fixture.firstChild as HTMLElement).click();
   expect(calls).toEqual(["native 2", "synthetic 2"]);
 });
+
+test("the synthetic document listener carries a marker a test harness can recognize", async () => {
+  const added: any[] = [];
+  const add = document.addEventListener;
+  document.addEventListener = function (this: Document, ...args: any[]) {
+    added.push(args[1]);
+    return (add as any).apply(this, args);
+  } as any;
+  try {
+    const block = createBlock('<p block-handler-0="dblclick.synthetic">x</p>');
+    mount(block([[() => {}, {}]]), fixture);
+  } finally {
+    document.addEventListener = add;
+  }
+  expect(added.length).toBe(1);
+  expect(added[0][Symbol.for("owl.syntheticListener")]).toBe(true);
+});

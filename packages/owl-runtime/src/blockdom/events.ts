@@ -114,6 +114,8 @@ function nativeToSyntheticEvent(eventKey: string, capture: boolean, event: Event
   }
 }
 
+export const SYNTHETIC_LISTENER = Symbol.for("owl.syntheticListener");
+
 const CONFIGURED_SYNTHETIC_EVENTS: { [event: string]: boolean } = {};
 
 function setupSyntheticEvent(
@@ -125,9 +127,10 @@ function setupSyntheticEvent(
   if (CONFIGURED_SYNTHETIC_EVENTS[eventKey]) {
     return;
   }
-  document.addEventListener(evName, (event) => nativeToSyntheticEvent(eventKey, capture, event), {
-    capture,
-    passive,
-  });
+  const listener = (event: Event) => nativeToSyntheticEvent(eventKey, capture, event);
+  // registered once for the page's lifetime: a harness that removes the
+  // listeners a test left behind must recognize this one and keep it
+  (listener as any)[SYNTHETIC_LISTENER] = true;
+  document.addEventListener(evName, listener, { capture, passive });
   CONFIGURED_SYNTHETIC_EVENTS[eventKey] = true;
 }
