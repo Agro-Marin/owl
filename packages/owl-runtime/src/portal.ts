@@ -26,7 +26,7 @@ export class Portal extends Component {
   setup() {
     const portalNode = this.__owl__;
     const app = portalNode.app;
-    const slots = this.props.slots;
+    const portalProps = this.props;
     let root: ReturnType<typeof app.createRoot> | null = null;
     let mountedTarget: HTMLElement | null = null;
 
@@ -41,7 +41,11 @@ export class Portal extends Component {
     const mountInto = (target: HTMLElement, position?: "first-child") => {
       tearDown();
       root = app.createRoot(PortalContent, {
-        props: { slots },
+        props: {
+          get slots() {
+            return portalProps.slots;
+          },
+        },
         // Forward the plugin chain from this Portal (createRoot defaults
         // sub-roots to the app-level plugin manager) so `providePlugins`
         // contributions from ancestors are visible inside the portaled content.

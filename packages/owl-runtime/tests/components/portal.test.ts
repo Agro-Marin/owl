@@ -493,3 +493,24 @@ test("a target changed after a mount-time lookup leaves no content in the old ta
   expect(other.innerHTML).toBe("<p>content</p>");
   expect(fixture.querySelector("#made-by-render")!.innerHTML).toBe("");
 });
+
+test("portaled content sees the slot scope of the latest render", async () => {
+  const target = makeOutside("pb-target");
+  target.dataset.testPortal = "1";
+  class Parent extends Component {
+    static components = { Portal };
+    static template = xml`
+      <t t-foreach="this.items()" t-as="item" t-key="item.id">
+        <Portal target="'#pb-target'"><span t-out="item.name"/></Portal>
+      </t>`;
+    items = signal([{ id: 1, name: "a" }]);
+  }
+  const parent = await mount(Parent, fixture);
+  await nextTick();
+  expect(target.innerHTML).toBe("<span>a</span>");
+
+  parent.items.set([{ id: 1, name: "b" }]);
+  await nextTick();
+  await nextTick();
+  expect(target.innerHTML).toBe("<span>b</span>");
+});

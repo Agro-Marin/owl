@@ -43,8 +43,13 @@ export class Suspense extends Component {
     const suspenseNode = this.__owl__;
     // A sub-root renders the default slot independently of the enclosing
     // MountFiber — its willStart fires in parallel with the outer tree.
+    const suspenseProps = this.props;
     const root = suspenseNode.app.createRoot(SuspenseHost, {
-      props: { slots: this.props.slots },
+      props: {
+        get slots() {
+          return suspenseProps.slots;
+        },
+      },
       // Thread the plugin manager so `providePlugins` contributions from
       // ancestors are visible inside the default slot. (createRoot defaults
       // sub-roots to the app-level plugin manager; override here.) Destroy

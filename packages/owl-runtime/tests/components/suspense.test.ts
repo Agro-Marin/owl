@@ -1,4 +1,14 @@
-import { App, Component, onError, onMounted, onWillStart, Suspense, xml } from "../../src";
+import {
+  App,
+  Component,
+  mount,
+  onError,
+  onMounted,
+  onWillStart,
+  signal,
+  Suspense,
+  xml,
+} from "../../src";
 import { makeDeferred, makeTestFixture, nextTick } from "../helpers";
 
 let fixture: HTMLElement;
@@ -377,4 +387,26 @@ test("fallback slot is optional", async () => {
   await app.createRoot(Root).mount(fixture);
   expect(fixture.innerHTML).toContain("<span>ok</span>");
   app.destroy();
+});
+
+test("content sees the slot scope of the latest render", async () => {
+  class Parent extends Component {
+    static components = { Suspense };
+    static template = xml`
+      <div>
+        <t t-foreach="this.items()" t-as="item" t-key="item.id">
+          <t t-set="label" t-value="item.name + '!'"/>
+          <Suspense><span t-out="item.name"/><i t-out="label"/></Suspense>
+        </t>
+      </div>`;
+    items = signal([{ id: 1, name: "a" }]);
+  }
+  const parent = await mount(Parent, fixture);
+  await nextTick();
+  expect(fixture.innerHTML).toBe("<div><span>a</span><i>a!</i></div>");
+
+  parent.items.set([{ id: 1, name: "b" }]);
+  await nextTick();
+  await nextTick();
+  expect(fixture.innerHTML).toBe("<div><span>b</span><i>b!</i></div>");
 });
