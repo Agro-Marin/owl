@@ -238,4 +238,10 @@ describe("t-if", () => {
     expect(fixture.innerHTML).toBe("<div>a</div>");
     expect(fixture.firstChild!.childNodes.length).toBe(1);
   });
+
+  test("an empty t-elif still stops the t-else", () => {
+    const template = `<t t-if="a">A</t><t t-elif="b"/><t t-else="">C</t>`;
+    expect(renderToString(template, { a: false, b: true })).toBe("");
+    expect(renderToString(template, { a: false, b: false })).toBe("C");
+  });
 });

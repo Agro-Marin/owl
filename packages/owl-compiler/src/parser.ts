@@ -636,13 +636,11 @@ function parseTIf(node: Element, ctx: ParsingContext): AST | null {
   while (nextElement && nextElement.hasAttribute("t-elif")) {
     const condition = nextElement.getAttribute("t-elif");
     nextElement.removeAttribute("t-elif");
-    const tElif = parseNode(nextElement, ctx);
+    const tElif = parseNode(nextElement, ctx) || { type: ASTType.Text, value: "" };
     const next = nextElement.nextElementSibling;
     nextElement.remove();
     nextElement = next;
-    if (tElif) {
-      tElifs.push({ condition, content: tElif });
-    }
+    tElifs.push({ condition, content: tElif });
   }
 
   // t-else
