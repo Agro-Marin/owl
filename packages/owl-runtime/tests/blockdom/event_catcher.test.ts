@@ -1,6 +1,7 @@
 import { config, createBlock, createCatcher, mount, patch } from "../../src/blockdom";
 import { makeTestFixture } from "./helpers";
 import { mainEventHandler } from "../../src/event_handling";
+import { EventModifier } from "@odoo/owl-core";
 
 //------------------------------------------------------------------------------
 // Setup and helpers
@@ -132,7 +133,7 @@ test("a native handler fires inside nested shadow roots", async () => {
 test("an empty handler on a catcher only applies its modifiers", async () => {
   const catcher = createCatcher({ click: 0 });
   const block = createBlock("<button>b</button>");
-  const handler = ["stop", , {}];
+  const handler = [null, {}, EventModifier.STOP];
   mount(catcher(block(), [handler]), fixture);
   let reachedBody = 0;
   const errors: string[] = [];
@@ -165,7 +166,10 @@ test("modifiers apply only to events from inside the catcher", async () => {
   const parent = createBlock("<div><button>b</button><block-child-0/></div>");
   const inner = createBlock("<span>c</span>");
   let n = 0;
-  mount(parent([], [catcher(inner(), [["stop", "prevent", () => n++, {}]])]), fixture);
+  mount(
+    parent([], [catcher(inner(), [[() => n++, {}, EventModifier.STOP | EventModifier.PREVENT]])]),
+    fixture
+  );
   let reachedBody = 0;
   const onBody = () => reachedBody++;
   document.body.addEventListener("click", onBody);

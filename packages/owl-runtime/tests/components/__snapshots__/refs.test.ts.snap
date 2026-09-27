@@ -619,7 +619,7 @@ exports[`refs > set-like ref drops the elements of an enclosing block removed in
     let b2;
     if (ctx['this'].show()) {
       const ctx1 = ctx;
-      const [k_block3, v_block3, l_block3, c_block3] = prepareList([1,2]);;
+      const [k_block3, v_block3, l_block3, c_block3] = prepareList([1,2]);
       for (let i1 = 0; i1 < l_block3; i1++) {
         let ctx = Object.create(ctx1);
         ctx[\`i\`] = k_block3[i1];
@@ -646,7 +646,7 @@ exports[`refs > set-like ref drops the items of a list cleared in bulk 1`] = `
   
   return function template(ctx, node, key = "") {
     const ctx1 = ctx;
-    const [k_block2, v_block2, l_block2, c_block2] = prepareList(ctx['this'].items());;
+    const [k_block2, v_block2, l_block2, c_block2] = prepareList(ctx['this'].items());
     for (let i1 = 0; i1 < l_block2; i1++) {
       let ctx = Object.create(ctx1);
       ctx[\`i\`] = k_block2[i1];

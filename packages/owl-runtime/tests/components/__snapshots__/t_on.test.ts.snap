@@ -307,7 +307,7 @@ exports[`t-on > t-on on components, with 'prevent' modifier 1`] = `
   const catcher1 = createCatcher({"click.prevent":0});
   
   return function template(ctx, node, key = "") {
-    const hdlr1 = ["prevent", hdlr_fn1, ctx];
+    const hdlr1 = [hdlr_fn1, ctx, 8];
     return catcher1(comp1({value: ctx['this'].state.value}, key + \`__1\`, node, this, null), [hdlr1]);
   }
 }"
@@ -424,7 +424,7 @@ exports[`t-on > t-on on slot, with 'prevent' modifier 2`] = `
   const catcher1 = createCatcher({"click.prevent":0});
   
   return function template(ctx, node, key = "") {
-    const hdlr1 = ["prevent", hdlr_fn1, ctx];
+    const hdlr1 = [hdlr_fn1, ctx, 8];
     return catcher1(callSlot(ctx, node, key, 'default', false, {}), [hdlr1]);
   }
 }"
@@ -566,7 +566,7 @@ exports[`t-on > t-on.stop on a component does not stop a click on its sibling 1`
   let block1 = createBlock(\`<div><button>b</button><block-child-0/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const hdlr1 = ["stop", hdlr_fn1, ctx];
+    const hdlr1 = [hdlr_fn1, ctx, 16];
     const b2 = catcher1(comp1({}, key + \`__1\`, node, this, null), [hdlr1]);
     return block1([], [b2]);
   }

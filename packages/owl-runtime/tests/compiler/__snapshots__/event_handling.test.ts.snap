@@ -291,7 +291,7 @@ exports[`t-on > t-on modifiers (native listener) > t-on with .capture modifier 1
   let block1 = createBlock(\`<div block-handler-0="click.capture"><button block-handler-1="click">Button</button></div>\`);
   
   return function template(ctx, node, key = "") {
-    let hdlr1 = ["capture", hdlr_fn1, ctx];
+    let hdlr1 = [hdlr_fn1, ctx];
     let hdlr2 = [hdlr_fn2, ctx];
     return block1([hdlr1, hdlr2]);
   }
@@ -308,7 +308,7 @@ exports[`t-on > t-on modifiers (native listener) > t-on with .passive and .captu
   let block1 = createBlock(\`<div block-handler-0="click.passive.capture"><button>Button</button></div>\`);
   
   return function template(ctx, node, key = "") {
-    let hdlr1 = ["passive","capture", hdlr_fn1, ctx];
+    let hdlr1 = [hdlr_fn1, ctx];
     return block1([hdlr1]);
   }
 }"
@@ -324,7 +324,7 @@ exports[`t-on > t-on modifiers (native listener) > t-on with .passive modifier 1
   let block1 = createBlock(\`<button block-handler-0="click.passive">Button</button>\`);
   
   return function template(ctx, node, key = "") {
-    let hdlr1 = ["passive", hdlr_fn1, ctx];
+    let hdlr1 = [hdlr_fn1, ctx];
     return block1([hdlr1]);
   }
 }"
@@ -338,7 +338,7 @@ exports[`t-on > t-on modifiers (native listener) > t-on with empty handler (only
   let block1 = createBlock(\`<div><button block-handler-0="click.prevent">Button</button></div>\`);
   
   return function template(ctx, node, key = "") {
-    let hdlr1 = ["prevent", , ctx];
+    let hdlr1 = [null, ctx, 8];
     return block1([hdlr1]);
   }
 }"
@@ -354,7 +354,7 @@ exports[`t-on > t-on modifiers (native listener) > t-on with prevent and self mo
   let block1 = createBlock(\`<div><button block-handler-0="click.prevent.self"><span>Button</span></button></div>\`);
   
   return function template(ctx, node, key = "") {
-    let hdlr1 = ["prevent","self", hdlr_fn1, ctx];
+    let hdlr1 = [hdlr_fn1, ctx, 5];
     return block1([hdlr1]);
   }
 }"
@@ -372,9 +372,9 @@ exports[`t-on > t-on modifiers (native listener) > t-on with prevent and/or stop
   let block1 = createBlock(\`<div><button block-handler-0="click.prevent">Button 1</button><button block-handler-1="click.stop">Button 2</button><button block-handler-2="click.prevent.stop">Button 3</button></div>\`);
   
   return function template(ctx, node, key = "") {
-    let hdlr1 = ["prevent", hdlr_fn1, ctx];
-    let hdlr2 = ["stop", hdlr_fn2, ctx];
-    let hdlr3 = ["prevent","stop", hdlr_fn3, ctx];
+    let hdlr1 = [hdlr_fn1, ctx, 8];
+    let hdlr2 = [hdlr_fn2, ctx, 16];
+    let hdlr3 = [hdlr_fn3, ctx, 24];
     return block1([hdlr1, hdlr2, hdlr3]);
   }
 }"
@@ -397,7 +397,7 @@ exports[`t-on > t-on modifiers (native listener) > t-on with prevent modifier in
       let ctx = Object.create(ctx1);
       ctx[\`project\`] = k_block2[i1];
       const key1 = ctx['project'];
-      let hdlr1 = ["prevent", hdlr_fn1, ctx];
+      let hdlr1 = [hdlr_fn1, ctx, 8];
       const b4 = safeOutput(ctx['project'].name);
       c_block2[i1] = withKey(block3([hdlr1], [b4]), key1);
     }
@@ -417,7 +417,7 @@ exports[`t-on > t-on modifiers (native listener) > t-on with self and prevent mo
   let block1 = createBlock(\`<div><button block-handler-0="click.self.prevent"><span>Button</span></button></div>\`);
   
   return function template(ctx, node, key = "") {
-    let hdlr1 = ["self","prevent", hdlr_fn1, ctx];
+    let hdlr1 = [hdlr_fn1, ctx, 12];
     return block1([hdlr1]);
   }
 }"
@@ -435,7 +435,7 @@ exports[`t-on > t-on modifiers (native listener) > t-on with self modifier 1`] =
   
   return function template(ctx, node, key = "") {
     let hdlr1 = [hdlr_fn1, ctx];
-    let hdlr2 = ["self", hdlr_fn2, ctx];
+    let hdlr2 = [hdlr_fn2, ctx, 4];
     return block1([hdlr1, hdlr2]);
   }
 }"
@@ -452,8 +452,8 @@ exports[`t-on > t-on modifiers (synthetic listener) > basic support for syntheti
   let block1 = createBlock(\`<div block-handler-0="click.synthetic"><button block-handler-1="click.synthetic">Button</button></div>\`);
   
   return function template(ctx, node, key = "") {
-    let hdlr1 = ["synthetic", hdlr_fn1, ctx];
-    let hdlr2 = ["synthetic", hdlr_fn2, ctx];
+    let hdlr1 = [hdlr_fn1, ctx];
+    let hdlr2 = [hdlr_fn2, ctx];
     return block1([hdlr1, hdlr2]);
   }
 }"

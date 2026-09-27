@@ -1,4 +1,4 @@
-import { OwlError } from "@odoo/owl-core";
+import { EventModifier, OwlError } from "@odoo/owl-core";
 import { compileExpr, interpolate, isInterpolated, processExpr } from "./inline_expressions";
 import {
   AST,
@@ -525,23 +525,27 @@ export class CodeGenerator {
   }
 
   generateHandlerCode(rawEvent: string, handler: string): string {
-    const modifiers = rawEvent
-      .split(".")
-      .slice(1)
-      .map((m) => {
-        if (!MODS.has(m)) {
-          throw new OwlError(`Unknown event modifier: '${m}'`);
-        }
-        return `"${m}"`;
-      });
-    let modifiersCode = "";
-    if (modifiers.length) {
-      modifiersCode = `${modifiers.join(",")}, `;
-    }
+    const modifiers = rawEvent.split(".").slice(1);
+    const selfIndex = modifiers.indexOf("self");
+    let mask = 0;
+    modifiers.forEach((m, i) => {
+      if (!MODS.has(m)) {
+        throw new OwlError(`Unknown event modifier: '${m}'`);
+      }
+      const beforeSelf = i < selfIndex;
+      if (m === "self") {
+        mask |= EventModifier.SELF;
+      } else if (m === "prevent") {
+        mask |= beforeSelf ? EventModifier.PREVENT_ANY : EventModifier.PREVENT;
+      } else if (m === "stop") {
+        mask |= beforeSelf ? EventModifier.STOP_ANY : EventModifier.STOP;
+      }
+    });
+    const modifiersCode = mask ? `, ${mask}` : "";
 
     const compiled = compileExpr(handler);
     if (!compiled.trim()) {
-      return `[${modifiersCode}, ctx]`;
+      return `[null, ctx${modifiersCode}]`;
     }
 
     let hoistedExpr: string;
@@ -562,7 +566,7 @@ export class CodeGenerator {
 
     const id = this.generateId("hdlr_fn");
     this.staticDefs.push({ id, expr: hoistedExpr });
-    return `[${modifiersCode}${id}, ctx]`;
+    return `[${id}, ctx${modifiersCode}]`;
   }
 
   compileTDomNode(ast: ASTDomNode, ctx: Context): string {

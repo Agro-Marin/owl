@@ -1,14 +1,3 @@
-// Handler data is `[...modifiers, handler, context]`: the number of leading
-// modifier strings is the index of the handler slot.
-export function countModifiers(data: any[]): number {
-  let count = 0;
-  let item;
-  while ((item = data[count]) && typeof item === "string") {
-    count++;
-  }
-  return count;
-}
-
 export const config = {
   // whether or not blockdom should normalize DOM whenever a block is created.
   // Normalizing dom mean removing empty text nodes (or containing only spaces)
@@ -21,8 +10,7 @@ export const config = {
     if (typeof data === "function") {
       data(ev);
     } else if (Array.isArray(data)) {
-      const index = countModifiers(data);
-      data[index](data[index + 1], ev);
+      data[0](data[1], ev);
     }
     return false;
   },
