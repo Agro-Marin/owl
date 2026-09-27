@@ -12,7 +12,7 @@ import {
   signal,
   xml,
 } from "../../src";
-import { makeDeferred, makeTestFixture, nextTick } from "../helpers";
+import { makeDeferred, makeTestFixture, nextAppError, nextTick } from "../helpers";
 
 let fixture: HTMLElement;
 
@@ -513,4 +513,37 @@ test("portaled content sees the slot scope of the latest render", async () => {
   await nextTick();
   await nextTick();
   expect(target.innerHTML).toBe("<span>b</span>");
+});
+
+test("an error an outer onError rethrows reaches the app as rethrown", async () => {
+  const target = makeOutside("portal-target-rethrow");
+  target.dataset.testPortal = "1";
+
+  class Broken extends Component {
+    static template = xml`<span>ok</span>`;
+    setup() {
+      onWillStart(async () => {
+        throw new Error("boom");
+      });
+    }
+  }
+
+  class Root extends Component {
+    static components = { Portal, Broken };
+    static template = xml`
+      <t t-if="this.show()"><Portal target="this.target"><Broken/></Portal></t>`;
+    target = target;
+    show = signal(false);
+    setup() {
+      onError((e) => {
+        throw new Error("wrapped: " + e.message);
+      });
+    }
+  }
+
+  const app = new App();
+  const root = await app.createRoot(Root).mount(fixture);
+  const appError = nextAppError(app);
+  root.show.set(true);
+  expect((await appError).message).toBe("wrapped: boom");
 });

@@ -185,9 +185,9 @@ export class App extends TemplateSet {
         handlers = [];
         nodeErrorHandlers.set(node, handlers);
       }
-      handlers.unshift((_, finalize) => {
-        const finalError = finalize();
-        reject(finalError);
+      handlers.unshift((error, finalize) => {
+        finalize();
+        reject(error);
       });
 
       const ready = new Promise<void>((res) => {

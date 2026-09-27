@@ -349,6 +349,26 @@ function(app, bdom, helpers) {
 });
 
 describe("errors and promises", () => {
+  test("the mount promise rejects with the error an onError handler rethrew", async () => {
+    class Child extends Component {
+      static template = xml`<div/>`;
+      setup() {
+        throw new Error("original");
+      }
+    }
+    class Root extends Component {
+      static components = { Child };
+      static template = xml`<Child/>`;
+      setup() {
+        onError((e) => {
+          throw new Error("wrapped: " + e.message);
+        });
+      }
+    }
+
+    await expect(mount(Root, fixture)).rejects.toThrow("wrapped: original");
+  });
+
   test("a rendering error will reject the mount promise", async () => {
     // we do not catch error in willPatch anymore
     class Root extends Component {

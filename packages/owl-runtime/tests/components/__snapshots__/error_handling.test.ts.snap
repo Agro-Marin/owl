@@ -1785,6 +1785,32 @@ exports[`errors and promises > errors thrown from async hooks propagate through 
 }"
 `;
 
+exports[`errors and promises > the mount promise rejects with the error an onError handler rethrew 1`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { createComponent } = helpers;
+  const comp1 = createComponent(app, \`Child\`, true, false, false, []);
+  
+  return function template(ctx, node, key = "") {
+    return comp1({}, key + \`__1\`, node, this, null);
+  }
+}"
+`;
+
+exports[`errors and promises > the mount promise rejects with the error an onError handler rethrew 2`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  
+  let block1 = createBlock(\`<div/>\`);
+  
+  return function template(ctx, node, key = "") {
+    return block1();
+  }
+}"
+`;
+
 exports[`errors in onWillUpdateProps > async error in onWillUpdateProps is caught by child's own onError 1`] = `
 "function anonymous(app, bdom, helpers
 ) {

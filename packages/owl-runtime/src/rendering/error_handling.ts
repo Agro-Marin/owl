@@ -49,17 +49,18 @@ export function forwardErrorToParent(boundary: ComponentNode) {
     if (boundary.app.destroyed) {
       throw error;
     }
-    const { handled } = invokeErrorHandlers(boundary, error, finalize, false);
-    if (!handled) {
-      boundary.app._handleError(finalize());
+    const result = invokeErrorHandlers(boundary, error, finalize, false);
+    if (!result.handled) {
+      finalize();
+      boundary.app._handleError(result.error);
     }
   };
 }
 
 type ErrorParams = { error: any } & ({ node: ComponentNode } | { fiber: Fiber });
 export function handleError(params: ErrorParams) {
-  let { error } = params;
-  let node: ComponentNode | null = "node" in params ? params.node : params.fiber.node;
+  const { error } = params;
+  const node: ComponentNode | null = "node" in params ? params.node : params.fiber.node;
   const fiber = "fiber" in params ? params.fiber : node!.fiber;
   const app = node!.app;
 
@@ -88,12 +89,11 @@ export function handleError(params: ErrorParams) {
     } catch {
       // mute all errors here because we are in a corrupted state anyway
     }
-    return error;
   };
 
   const result = invokeErrorHandlers(node, error, finalize, true);
   if (!result.handled) {
-    error = result.error;
-    app._handleError(finalize());
+    finalize();
+    app._handleError(result.error);
   }
 }
