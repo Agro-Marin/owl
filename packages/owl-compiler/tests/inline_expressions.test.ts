@@ -154,6 +154,35 @@ describe("expression evaluation", () => {
     expect(compileExpr("a and b")).toBe("ctx['a']&&ctx['b']");
   });
 
+  test("keyword operators keep their spacing", () => {
+    expect(compileExpr("x instanceof Array")).toBe("ctx['x'] instanceof Array");
+    expect(compileExpr("void 0")).toBe("void 0");
+    expect(compileExpr("typeof(x)")).toBe("typeof (ctx['x'])");
+    expect(compileExpr("a in(b)")).toBe("ctx['a'] in (ctx['b'])");
+    expect(compileExpr("index + newValue + typeofX")).toBe(
+      "ctx['index']+ctx['newValue']+ctx['typeofX']"
+    );
+  });
+
+  test("word replacement does not apply to properties", () => {
+    expect(compileExpr("o.lt")).toBe("ctx['o'].lt");
+    expect(compileExpr("o.and(o.or)")).toBe("ctx['o'].and(ctx['o'].or)");
+    expect(compileExpr("a.gte and b")).toBe("ctx['a'].gte&&ctx['b']");
+    expect(compileExpr("o.in + o.typeof + o.new")).toBe("ctx['o'].in+ctx['o'].typeof+ctx['o'].new");
+  });
+
+  test("numeric literals", () => {
+    expect(compileExpr("1e3")).toBe("1e3");
+    expect(compileExpr("1.5e-3 + 2E+2")).toBe("1.5e-3+2E+2");
+    expect(compileExpr("0x1F + 0b10 + 0o17")).toBe("0x1F+0b10+0o17");
+    expect(compileExpr("1_000 + 10n")).toBe("1_000+10n");
+  });
+
+  test("unicode identifiers", () => {
+    expect(compileExpr("año + 1")).toBe("ctx['año']+1");
+    expect(compileExpr("état.ça")).toBe("ctx['état'].ça");
+  });
+
   test("function calls", () => {
     expect(compileExpr("a()")).toBe("ctx['a']()");
     expect(compileExpr("a(1)")).toBe("ctx['a'](1)");
@@ -246,6 +275,12 @@ describe("expression evaluation", () => {
     expect(compileExpr("{a}")).toBe("{a:ctx['a']}");
     expect(compileExpr("{a,b}")).toBe("{a:ctx['a'],b:ctx['b']}");
     expect(compileExpr("{a,b:3,c}")).toBe("{a:ctx['a'],b:3,c:ctx['c']}");
+  });
+
+  test("template string interpolations with braces", () => {
+    expect(compileExpr("`${f({x})}`")).toBe("`${ctx['f']({x:ctx['x']})}`");
+    expect(compileExpr("`${ {a: b}.a } and ${'}'}`")).toBe("`${{a:ctx['b']}.a} and ${'}'}`");
+    expect(compileExpr("`\\${a}`")).toBe("`\\${a}`");
   });
 
   test("template strings", () => {

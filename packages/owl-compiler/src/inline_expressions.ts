@@ -116,45 +116,75 @@ let tokenizeString: Tokenizer = function (expr) {
     return {
       type: "TEMPLATE_STRING",
       value: s,
-      replace(replacer: any) {
-        return s.replace(/\$\{(.*?)\}/g, (match, group) => {
-          return "${" + replacer(group) + "}";
-        });
+      replace(replacer: (expr: string) => string) {
+        return replaceInterpolations(s, replacer);
       },
     };
   }
   return { type: "VALUE", value: s };
 };
 
-let tokenizeNumber: Tokenizer = function (expr) {
-  let s = expr[0];
-  if (s && s.match(/[0-9]/)) {
-    let i = 1;
-    while (expr[i] && expr[i].match(/[0-9]|\./)) {
-      s += expr[i];
-      i++;
+function replaceInterpolations(template: string, replacer: (expr: string) => string): string {
+  let result = "";
+  let i = 0;
+  while (i < template.length) {
+    if (template[i] === "\\") {
+      result += template.slice(i, i + 2);
+      i += 2;
+    } else if (template.startsWith("${", i)) {
+      const end = findClosingBrace(template, i + 2);
+      result += "${" + replacer(template.slice(i + 2, end)) + "}";
+      i = end + 1;
+    } else {
+      result += template[i++];
     }
-    return { type: "VALUE", value: s };
-  } else {
-    return false;
   }
+  return result;
+}
+
+function findClosingBrace(str: string, start: number): number {
+  let depth = 0;
+  for (let i = start; i < str.length; i++) {
+    const char = str[i];
+    if (char === "'" || char === '"') {
+      for (i++; i < str.length && str[i] !== char; i++) {
+        if (str[i] === "\\") {
+          i++;
+        }
+      }
+    } else if (char === "{") {
+      depth++;
+    } else if (char === "}") {
+      if (!depth) {
+        return i;
+      }
+      depth--;
+    }
+  }
+  throw new OwlError("Invalid expression");
+}
+
+const NUMBER_RE =
+  /^(?:0[xX][\da-fA-F_]+|0[bB][01_]+|0[oO][0-7_]+|\d[\d_]*(?:\.[\d_]*)?(?:[eE][+-]?\d[\d_]*)?)n?/;
+
+let tokenizeNumber: Tokenizer = function (expr) {
+  const match = NUMBER_RE.exec(expr);
+  return match ? { type: "VALUE", value: match[0] } : false;
 };
 
+const SYMBOL_RE = /^[\p{ID_Start}_$][\p{ID_Continue}$\u200C\u200D]*/u;
+const IDENTIFIER_CHAR_RE = /[\p{ID_Continue}$\u200C\u200D]/u;
+
 let tokenizeSymbol: Tokenizer = function (expr) {
-  let s = expr[0];
-  if (s && s.match(/[a-zA-Z_\$]/)) {
-    let i = 1;
-    while (expr[i] && expr[i].match(/[\w\$]/)) {
-      s += expr[i];
-      i++;
-    }
-    if (s in WORD_REPLACEMENT) {
-      return { type: "OPERATOR", value: WORD_REPLACEMENT[s], size: s.length };
-    }
-    return { type: "SYMBOL", value: s };
-  } else {
+  const match = SYMBOL_RE.exec(expr);
+  if (!match) {
     return false;
   }
+  const s = match[0];
+  if (s in WORD_REPLACEMENT) {
+    return { type: "OPERATOR", value: WORD_REPLACEMENT[s], size: s.length };
+  }
+  return { type: "SYMBOL", value: s };
 };
 
 const tokenizeStatic: Tokenizer = function (expr) {
@@ -165,9 +195,22 @@ const tokenizeStatic: Tokenizer = function (expr) {
   return false;
 };
 
+const tokenizeProperty: Tokenizer = function (expr) {
+  const match = SYMBOL_RE.exec(expr);
+  return match ? { type: "SYMBOL", value: match[0] } : false;
+};
+
 const tokenizeOperator: Tokenizer = function (expr) {
   for (let op of OPERATORS) {
-    if (expr.startsWith(op)) {
+    if (op.endsWith(" ")) {
+      const word = op.slice(0, -1);
+      const next = expr[word.length] || "";
+      if (expr.startsWith(word) && !IDENTIFIER_CHAR_RE.test(next)) {
+        return next === " "
+          ? { type: "OPERATOR", value: op }
+          : { type: "OPERATOR", value: op, size: word.length };
+      }
+    } else if (expr.startsWith(op)) {
       return { type: "OPERATOR", value: op };
     }
   }
@@ -181,6 +224,7 @@ const TOKENIZERS = [
   tokenizeSymbol,
   tokenizeStatic,
 ];
+const PROPERTY_TOKENIZERS = [tokenizeProperty, ...TOKENIZERS];
 
 /**
  * Convert a javascript expression (as a string) into a list of tokens. For
@@ -203,7 +247,8 @@ export function tokenize(expr: string): Token[] {
     while (token) {
       current = current.trim();
       if (current) {
-        for (let tokenizer of TOKENIZERS) {
+        const isProperty = result[result.length - 1]?.value === ".";
+        for (let tokenizer of isProperty ? PROPERTY_TOKENIZERS : TOKENIZERS) {
           token = tokenizer(current);
           if (token) {
             result.push(token);
@@ -259,7 +304,11 @@ const isRightSeparator = (token: Token) =>
  * the list of variables so it does not get replaced by a lookup in the context
  */
 // Leading spaces are trimmed during tokenization, so they need to be added back for some values
-const paddedValues = new Map([["in ", " in "]]);
+const paddedValues = new Map([
+  ["in ", " in "],
+  ["instanceof", " instanceof "],
+  ["void", "void "],
+]);
 
 interface ProcessedExpr {
   expr: string;
