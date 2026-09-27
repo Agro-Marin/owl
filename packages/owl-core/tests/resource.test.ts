@@ -1,5 +1,9 @@
-import { effect, Plugin, PluginManager, Resource, types as t } from "../src";
+import { effect, Plugin, PluginManager, Resource, Scope, types as t } from "../src";
 import { waitScheduler } from "./helpers";
+
+const rethrow = (e: unknown) => {
+  throw e;
+};
 
 test("can add and get values", () => {
   const resource = new Resource();
@@ -160,6 +164,34 @@ test("do not bind signals on clear", async () => {
   expect(steps.splice(0)).toEqual([]);
 });
 
+test("a resource created in a scope keeps updating after the scope is destroyed", async () => {
+  const scope = new Scope({});
+  const resource = scope.run(() => new Resource<number>());
+  const seen: number[][] = [];
+  effect(() => {
+    seen.push(resource.items().slice());
+  });
+  resource.add(1);
+  await waitScheduler();
+  scope.finalize(rethrow);
+  resource.add(2);
+  await waitScheduler();
+  expect(seen).toEqual([[], [1], [1, 2]]);
+});
+
+test("reading items does not reorder the stored entries", async () => {
+  const resource = new Resource<string>();
+  resource.add("b").add("a", { sequence: 10 });
+  let runs = 0;
+  effect(() => {
+    resource.has("b");
+    runs++;
+  });
+  expect(resource.items()).toEqual(["a", "b"]);
+  await waitScheduler();
+  expect(runs).toBe(1);
+});
+
 describe("use()", () => {
   test("throws when called outside a component/plugin context", () => {
     const resource = new Resource<string>();
@@ -249,6 +281,20 @@ describe("use()", () => {
     expect(shared.items()).toEqual(["a"]);
 
     parent.destroy();
+    expect(shared.items()).toEqual([]);
+  });
+
+  test("an item used by two scopes stays until both are destroyed", () => {
+    const shared = new Resource<string>();
+    const app = {};
+    const a = new Scope(app);
+    const b = new Scope(app);
+    a.run(() => shared.use("x"));
+    b.run(() => shared.use("x"));
+    expect(shared.items()).toEqual(["x", "x"]);
+    a.finalize(rethrow);
+    expect(shared.items()).toEqual(["x"]);
+    b.finalize(rethrow);
     expect(shared.items()).toEqual([]);
   });
 });

@@ -18,9 +18,11 @@ interface RegistryAddOptions extends ResourceAddOptions {
 
 // T is the validation type; entries carry the value type it describes.
 type Item<T> = StripBrands<T>;
+type Entry<T> = [sequence: number, value: Item<T>, order: number];
 
 export class Registry<T> {
-  private _map = signal.Object<Record<string, [number, Item<T>]>>(Object.create(null));
+  private _map = signal.Object<Record<string, Entry<T>>>(Object.create(null));
+  private _order = 0;
   private _name: string;
   private _validation?: T;
 
@@ -29,14 +31,19 @@ export class Registry<T> {
     this._validation = options.validation;
   }
 
-  entries: ReactiveValue<[string, Item<T>][]> = computed(() => {
-    const entries: [string, Item<T>][] = Object.entries(this._map())
-      .sort((el1, el2) => el1[1][0] - el2[1][0])
-      .map(([str, elem]) => [str, elem[1]]);
-    return entries;
-  });
+  entries: ReactiveValue<[string, Item<T>][]> = computed(
+    () => {
+      const entries: [string, Item<T>][] = Object.entries(this._map())
+        .sort((el1, el2) => el1[1][0] - el2[1][0] || el1[1][2] - el2[1][2])
+        .map(([str, elem]) => [str, elem[1]]);
+      return entries;
+    },
+    { detached: true }
+  );
 
-  items: ReactiveValue<Item<T>[]> = computed(() => this.entries().map((e) => e[1]));
+  items: ReactiveValue<Item<T>[]> = computed(() => this.entries().map((e) => e[1]), {
+    detached: true,
+  });
 
   addById<U extends { id: string } & Item<T>>(
     item: U,
@@ -49,6 +56,11 @@ export class Registry<T> {
   }
 
   add(key: string, value: Item<T>, options: RegistryAddOptions = {}): Registry<T> {
+    this._add(key, value, options);
+    return this;
+  }
+
+  private _add(key: string, value: Item<T>, options: RegistryAddOptions): Entry<T> {
     if (!options.force && untrack(() => key in this._map())) {
       throw new OwlError(
         `Key "${key}" is already registered (registry '${this._name}'). Use { force: true } to overwrite.`
@@ -58,10 +70,13 @@ export class Registry<T> {
       const info = this._name ? ` (registry '${this._name}', key: '${key}')` : ` (key: '${key}')`;
       assertType(value, this._validation, `Registry entry does not match the type${info}`);
     }
-    untrack(() => {
-      this._map()[key] = [options.sequence ?? 50, value];
+    return untrack(() => {
+      const map = this._map();
+      const order = key in map ? map[key][2] : this._order++;
+      const entry: Entry<T> = [options.sequence ?? 50, value, order];
+      map[key] = entry;
+      return entry;
     });
-    return this;
   }
 
   get(key: string, defaultValue?: Item<T>): Item<T> {
@@ -89,9 +104,9 @@ export class Registry<T> {
 
   use(key: string, value: Item<T>, options: RegistryAddOptions = {}): Registry<T> {
     const scope = useScope();
-    this.add(key, value, options);
+    const entry = this._add(key, value, options);
     scope.onDestroy(() => {
-      if (untrack(() => this._map()[key]?.[1]) === value) {
+      if (untrack(() => this._map()[key]) === entry) {
         this.delete(key);
       }
     });

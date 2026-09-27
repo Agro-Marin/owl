@@ -1,5 +1,9 @@
-import { effect, Plugin, PluginManager, Registry, types as t } from "../src";
+import { effect, Plugin, PluginManager, Registry, Scope, types as t } from "../src";
 import { waitScheduler } from "./helpers";
+
+const rethrow = (e: unknown) => {
+  throw e;
+};
 
 describe("registry", () => {
   test("can set and get values", () => {
@@ -234,6 +238,40 @@ describe("registry", () => {
     expect(steps.splice(0)).toEqual([]);
   });
 
+  test("a registry created in a scope keeps updating after the scope is destroyed", async () => {
+    const scope = new Scope({});
+    const registry = scope.run(() => new Registry<number>());
+    const seen: number[][] = [];
+    effect(() => {
+      seen.push(registry.items().slice());
+    });
+    registry.add("a", 1);
+    await waitScheduler();
+    scope.finalize(rethrow);
+    registry.add("b", 2);
+    await waitScheduler();
+    expect(seen).toEqual([[], [1], [1, 2]]);
+  });
+
+  test("entries with the same sequence keep their insertion order", () => {
+    const registry = new Registry<string>();
+    registry.add("b", "b").add("1", "1").add("a", "a");
+    expect(registry.items()).toEqual(["b", "1", "a"]);
+  });
+
+  test("a forced overwrite keeps the key's place among equal sequences", () => {
+    const registry = new Registry<string>();
+    registry.add("a", "a").add("b", "b").add("c", "c");
+    registry.add("a", "A", { force: true });
+    expect(registry.entries()).toEqual([
+      ["a", "A"],
+      ["b", "b"],
+      ["c", "c"],
+    ]);
+    registry.delete("a").add("a", "a2");
+    expect(registry.items()).toEqual(["b", "c", "a2"]);
+  });
+
   describe("use()", () => {
     test("throws when called outside a component/plugin context", () => {
       const registry = new Registry<string>();
@@ -379,6 +417,19 @@ describe("registry", () => {
       expect(shared.get("k")).toBe("from-B");
 
       mB.destroy();
+      expect(shared.has("k")).toBe(false);
+    });
+
+    test("a scope that overwrote with the same value removes only its own entry", () => {
+      const shared = new Registry<string>();
+      const app = {};
+      const a = new Scope(app);
+      const b = new Scope(app);
+      a.run(() => shared.use("k", "v"));
+      b.run(() => shared.use("k", "v", { force: true }));
+      a.finalize(rethrow);
+      expect(shared.get("k")).toBe("v");
+      b.finalize(rethrow);
       expect(shared.has("k")).toBe(false);
     });
 

@@ -16,9 +16,10 @@ export interface ResourceAddOptions {
 
 // T is the validation type; items carry the value type it describes.
 type Item<T> = StripBrands<T>;
+type Entry<T> = [sequence: number, item: Item<T>];
 
 export class Resource<T> {
-  private _items = signal.Array<[number, Item<T>]>([]);
+  private _items = signal.Array<Entry<T>>([]);
   private _name?: string;
   private _validation?: T;
 
@@ -27,21 +28,28 @@ export class Resource<T> {
     this._validation = options.validation;
   }
 
-  items: ReactiveValue<Item<T>[]> = computed(() => {
-    return this._items()
-      .sort((el1, el2) => el1[0] - el2[0])
-      .map((elem) => elem[1]);
-  });
+  items: ReactiveValue<Item<T>[]> = computed(
+    () => {
+      return [...this._items()].sort((el1, el2) => el1[0] - el2[0]).map((elem) => elem[1]);
+    },
+    { detached: true }
+  );
 
   add(item: Item<T>, options: ResourceAddOptions = {}): Resource<T> {
+    this._add(item, options);
+    return this;
+  }
+
+  private _add(item: Item<T>, options: ResourceAddOptions): Entry<T> {
     if (this._validation) {
       const info = this._name ? ` (resource '${this._name}')` : "";
       assertType(item, this._validation, `Resource item does not match the type${info}`);
     }
+    const entry: Entry<T> = [options.sequence ?? 50, item];
     untrack(() => {
-      this._items().push([options.sequence ?? 50, item]);
+      this._items().push(entry);
     });
-    return this;
+    return entry;
   }
 
   delete(item: Item<T>): Resource<T> {
@@ -60,8 +68,10 @@ export class Resource<T> {
 
   use(item: Item<T>, options: ResourceAddOptions = {}): Resource<T> {
     const scope = useScope();
-    this.add(item, options);
-    scope.onDestroy(() => this.delete(item));
+    const entry = this._add(item, options);
+    scope.onDestroy(() => {
+      this._items.set(untrack(this._items).filter((e) => e !== entry));
+    });
     return this;
   }
 }
