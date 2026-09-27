@@ -275,7 +275,6 @@ export class RootFiber extends Fiber {
 
       // Step 4: calling all mounted lifecycle hooks
       while ((current = mountedFibers.pop())) {
-        current = current;
         if (current.renderState & APPLIED_TO_DOM) {
           for (let cb of current.node.mounted) {
             cb();
@@ -286,7 +285,6 @@ export class RootFiber extends Fiber {
       // Step 5: calling all patched hooks
       let patchedFibers = this.patched;
       while ((current = patchedFibers.pop())) {
-        current = current;
         if (current.renderState & APPLIED_TO_DOM) {
           for (let cb of current.node.patched) {
             cb();

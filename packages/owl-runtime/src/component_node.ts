@@ -9,6 +9,7 @@ import {
   Scope,
   scopeStack,
   setComputation,
+  untrack,
   useScope,
 } from "@odoo/owl-core";
 import type { App } from "./app";
@@ -108,17 +109,9 @@ export class ComponentNode extends Scope implements VNode<ComponentNode> {
       fiber.root!.mounted.push(fiber);
     }
     const component = this.component;
-    let prev = getCurrentComputation();
-    setComputation(undefined);
     try {
-      let promises = this.willStart.map((f) => f.call(component));
-      setComputation(prev);
-      await Promise.all(promises!);
+      await Promise.all(untrack(() => this.willStart.map((f) => f.call(component))));
     } catch (e) {
-      // Do NOT setComputation(prev) here: we are in a fresh microtask
-      // post-await, and `prev` is a snapshot from a sync chunk that ended
-      // long ago. Pinning currentComputation to it would leak the captured
-      // (possibly already-dead) parent signalComputation forever.
       if (isAbortError(e) && this.status > STATUS.MOUNTED) {
         return;
       }
