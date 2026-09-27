@@ -185,6 +185,7 @@ function createContext(parentCtx: Context, params?: Partial<Context>): Context {
       tKeyExpr: null,
       nameSpace: parentCtx.nameSpace,
       tModelSelectedExpr: parentCtx.tModelSelectedExpr,
+      inPreTag: parentCtx.inPreTag,
     },
     params
   );

@@ -45,4 +45,11 @@ describe("white space handling", () => {
       "<div><pre>SomeText</pre></div>"
     );
   });
+
+  test("whitespace in pre tags is kept under t-if and t-foreach", () => {
+    expect(renderToString(`<pre><t t-if="true">a   b</t></pre>`)).toBe("<pre>a   b</pre>");
+    expect(renderToString(`<pre><t t-foreach="[1]" t-as="i" t-key="i">a   b</t></pre>`)).toBe(
+      "<pre>a   b</pre>"
+    );
+  });
 });
