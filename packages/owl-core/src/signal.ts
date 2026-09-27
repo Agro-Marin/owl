@@ -78,7 +78,7 @@ function signalArray<T>(): Signal<T[]>;
 function signalArray<T>(initialValue: T[], options?: { equals?: Equals<T[]> }): Signal<T[]>;
 function signalArray<T>(initialValue: NoInfer<T>[], options: SignalOptions<T[], T>): Signal<T[]>;
 function signalArray<T>(initialValue: T[] = [], options: SignalOptions<T[], T> = {}): Signal<T[]> {
-  return buildSignal<T[]>(initialValue, (atom) => proxifyTarget(atom.value, atom), options.equals);
+  return buildSignal<T[]>(initialValue, (atom) => proxifyTarget(atom.value, true), options.equals);
 }
 
 function signalObject<T extends Record<PropertyKey, any>>(): Signal<T>;
@@ -94,7 +94,7 @@ function signalObject<T extends Record<PropertyKey, any>>(
   initialValue: T = {} as T,
   options: SignalOptions<T> = {}
 ): Signal<T> {
-  return buildSignal<T>(initialValue, (atom) => proxifyTarget(atom.value, atom), options.equals);
+  return buildSignal<T>(initialValue, (atom) => proxifyTarget(atom.value, true), options.equals);
 }
 
 interface MapSignalOptions<K, V> {
@@ -120,7 +120,7 @@ function signalMap<K, V>(
 ): Signal<Map<K, V>> {
   return buildSignal<Map<K, V>>(
     initialValue,
-    (atom) => proxifyTarget(atom.value, atom),
+    (atom) => proxifyTarget(atom.value, true),
     options.equals
   );
 }
@@ -137,7 +137,7 @@ function signalSet<T>(
 ): Signal<Set<T>> {
   return buildSignal<Set<T>>(
     initialValue,
-    (atom) => proxifyTarget(atom.value, atom),
+    (atom) => proxifyTarget(atom.value, true),
     options.equals
   );
 }

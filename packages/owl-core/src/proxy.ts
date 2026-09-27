@@ -46,8 +46,8 @@ function canBeMadeReactive(value: any): boolean {
  * @param value the value make proxy
  * @returns a proxy for the given object when possible, the original otherwise
  */
-function possiblyReactive(val: any, atom: Atom | null) {
-  return !atom && canBeMadeReactive(val) ? proxy(val) : val;
+function possiblyReactive(val: any, shallow: boolean) {
+  return !shallow && canBeMadeReactive(val) ? proxy(val) : val;
 }
 
 const skipped = new WeakSet<Target>();
@@ -145,9 +145,13 @@ function onWriteDroppedIndices(target: Target, newLength: number): void {
 
 // Maps proxy objects to the underlying target
 const targets = new WeakMap<Reactive<Target>, Target>();
-const proxyCache = new WeakMap<Target, Reactive<Target>>();
+// A shallow proxy (the value of a collection signal) does not wrap what it
+// holds, a deep one (proxy()) does: one target may have both, and neither
+// may be handed out for the other.
+const deepProxies = new WeakMap<Target, Reactive<Target>>();
+const shallowProxies = new WeakMap<Target, Reactive<Target>>();
 
-export function proxifyTarget<T extends Target>(target: T, atom: Atom | null): T {
+export function proxifyTarget<T extends Target>(target: T, shallow: boolean): T {
   if (!canBeMadeReactive(target)) {
     throw new OwlError(`Cannot make the given value reactive`);
   }
@@ -158,24 +162,25 @@ export function proxifyTarget<T extends Target>(target: T, atom: Atom | null): T
     // target is reactive, create a reactive on the underlying object instead
     return target;
   }
-  const reactive = proxyCache.get(target)!;
+  const cache = shallow ? shallowProxies : deepProxies;
+  const reactive = cache.get(target)!;
   if (reactive) {
     return reactive as T;
   }
 
   let handler: ProxyHandler<any>;
   if (target instanceof Map) {
-    handler = collectionsProxyHandler(target as unknown as Collection, "Map", atom);
+    handler = collectionsProxyHandler(target as unknown as Collection, "Map", shallow);
   } else if (target instanceof Set) {
-    handler = collectionsProxyHandler(target as unknown as Collection, "Set", atom);
+    handler = collectionsProxyHandler(target as unknown as Collection, "Set", shallow);
   } else if (target instanceof WeakMap) {
-    handler = collectionsProxyHandler(target as unknown as Collection, "WeakMap", atom);
+    handler = collectionsProxyHandler(target as unknown as Collection, "WeakMap", shallow);
   } else {
-    handler = basicProxyHandler<T>(atom);
+    handler = basicProxyHandler<T>(shallow);
   }
   const proxy = new Proxy(target, handler as ProxyHandler<T>) as Reactive<T>;
 
-  proxyCache.set(target, proxy);
+  cache.set(target, proxy);
   targets.set(proxy, target);
 
   return proxy;
@@ -202,7 +207,7 @@ export function proxifyTarget<T extends Target>(target: T, atom: Atom | null): T
  * @returns a proxy that tracks reads/writes against `target`
  */
 export function proxy<T extends Target>(target: T): T {
-  return proxifyTarget(target, null);
+  return proxifyTarget(target, false);
 }
 
 /**
@@ -310,13 +315,13 @@ function isIterator(value: any): value is Iterator<any> {
  * @param callback @see proxy
  * @returns a proxy handler object
  */
-function basicProxyHandler<T extends Target>(atom: Atom | null): ProxyHandler<T> {
+function basicProxyHandler<T extends Target>(shallow: boolean): ProxyHandler<T> {
   return {
     get(target, key, receiver) {
       onReadTargetKey(target, key);
       const value = Reflect.get(target, key, receiver);
       // Fast path: signal-based proxies and primitive values don't need wrapping
-      if (atom || typeof value !== "object" || value === null) {
+      if (shallow || typeof value !== "object" || value === null) {
         return value;
       }
       if (!canBeMadeReactive(value)) {
@@ -327,7 +332,7 @@ function basicProxyHandler<T extends Target>(atom: Atom | null): ProxyHandler<T>
       if (desc && !desc.writable && !desc.configurable) {
         return value;
       }
-      return proxifyTarget(value, null);
+      return proxifyTarget(value, false);
     },
     set(target, key, value, receiver) {
       const hadKey = objectHasOwnProperty.call(target, key);
@@ -353,10 +358,12 @@ function basicProxyHandler<T extends Target>(atom: Atom | null): ProxyHandler<T>
       return ret;
     },
     deleteProperty(target, key) {
+      const hadKey = objectHasOwnProperty.call(target, key);
       const ret = Reflect.deleteProperty(target, key);
-      // TODO: only notify when something was actually deleted
-      onWriteTargetKey(target, KEYCHANGES);
-      onWriteTargetKey(target, key);
+      if (hadKey && ret) {
+        onWriteTargetKey(target, KEYCHANGES);
+        onWriteTargetKey(target, key);
+      }
       return ret;
     },
     ownKeys(target) {
@@ -380,11 +387,11 @@ function basicProxyHandler<T extends Target>(atom: Atom | null): ProxyHandler<T>
  * @param target @see proxy
  * @param callback @see proxy
  */
-function makeKeyObserver(methodName: "has" | "get", target: any, atom: Atom | null) {
+function makeKeyObserver(methodName: "has" | "get", target: any, shallow: boolean) {
   return (key: any) => {
     key = toRaw(key);
     onReadTargetKey(target, key);
-    return possiblyReactive(target[methodName](key), atom);
+    return possiblyReactive(target[methodName](key), shallow);
   };
 }
 /**
@@ -398,7 +405,7 @@ function makeKeyObserver(methodName: "has" | "get", target: any, atom: Atom | nu
 function makeIteratorObserver(
   methodName: "keys" | "values" | "entries" | typeof Symbol.iterator,
   target: any,
-  atom: Atom | null
+  shallow: boolean
 ) {
   return function* () {
     onReadTargetKey(target, KEYCHANGES);
@@ -406,7 +413,7 @@ function makeIteratorObserver(
     for (const item of target[methodName]()) {
       const key = keys.next().value;
       onReadTargetKey(target, key);
-      yield possiblyReactive(item, atom);
+      yield possiblyReactive(item, shallow);
     }
   };
 }
@@ -418,16 +425,16 @@ function makeIteratorObserver(
  * @param target @see proxy
  * @param callback @see proxy
  */
-function makeForEachObserver(target: any, atom: Atom | null) {
+function makeForEachObserver(target: any, shallow: boolean) {
   return function forEach(forEachCb: (val: any, key: any, target: any) => void, thisArg: any) {
     onReadTargetKey(target, KEYCHANGES);
     target.forEach(function (val: any, key: any, targetObj: any) {
       onReadTargetKey(target, key);
       forEachCb.call(
         thisArg,
-        possiblyReactive(val, atom),
-        possiblyReactive(key, atom),
-        possiblyReactive(targetObj, atom)
+        possiblyReactive(val, shallow),
+        possiblyReactive(key, shallow),
+        possiblyReactive(targetObj, shallow)
       );
     }, thisArg);
   };
@@ -486,40 +493,40 @@ function makeClearNotifier(target: Map<any, any> | Set<any>) {
  * proxys that the key which is being added or deleted has been modified.
  */
 const rawTypeToFuncHandlers = {
-  Set: (target: any, atom: Atom | null) => ({
-    has: makeKeyObserver("has", target, atom),
+  Set: (target: any, shallow: boolean) => ({
+    has: makeKeyObserver("has", target, shallow),
     add: delegateAndNotify("add", "has", target),
     delete: delegateAndNotify("delete", "has", target),
-    keys: makeIteratorObserver("keys", target, atom),
-    values: makeIteratorObserver("values", target, atom),
-    entries: makeIteratorObserver("entries", target, atom),
-    [Symbol.iterator]: makeIteratorObserver(Symbol.iterator, target, atom),
-    forEach: makeForEachObserver(target, atom),
+    keys: makeIteratorObserver("keys", target, shallow),
+    values: makeIteratorObserver("values", target, shallow),
+    entries: makeIteratorObserver("entries", target, shallow),
+    [Symbol.iterator]: makeIteratorObserver(Symbol.iterator, target, shallow),
+    forEach: makeForEachObserver(target, shallow),
     clear: makeClearNotifier(target),
     get size() {
       onReadTargetKey(target, KEYCHANGES);
       return target.size;
     },
   }),
-  Map: (target: any, atom: Atom | null) => ({
-    has: makeKeyObserver("has", target, atom),
-    get: makeKeyObserver("get", target, atom),
+  Map: (target: any, shallow: boolean) => ({
+    has: makeKeyObserver("has", target, shallow),
+    get: makeKeyObserver("get", target, shallow),
     set: delegateAndNotify("set", "get", target),
     delete: delegateAndNotify("delete", "has", target),
-    keys: makeIteratorObserver("keys", target, atom),
-    values: makeIteratorObserver("values", target, atom),
-    entries: makeIteratorObserver("entries", target, atom),
-    [Symbol.iterator]: makeIteratorObserver(Symbol.iterator, target, atom),
-    forEach: makeForEachObserver(target, atom),
+    keys: makeIteratorObserver("keys", target, shallow),
+    values: makeIteratorObserver("values", target, shallow),
+    entries: makeIteratorObserver("entries", target, shallow),
+    [Symbol.iterator]: makeIteratorObserver(Symbol.iterator, target, shallow),
+    forEach: makeForEachObserver(target, shallow),
     clear: makeClearNotifier(target),
     get size() {
       onReadTargetKey(target, KEYCHANGES);
       return target.size;
     },
   }),
-  WeakMap: (target: any, atom: Atom | null) => ({
-    has: makeKeyObserver("has", target, atom),
-    get: makeKeyObserver("get", target, atom),
+  WeakMap: (target: any, shallow: boolean) => ({
+    has: makeKeyObserver("has", target, shallow),
+    get: makeKeyObserver("get", target, shallow),
     set: delegateAndNotify("set", "get", target),
     delete: delegateAndNotify("delete", "has", target),
   }),
@@ -534,19 +541,19 @@ const rawTypeToFuncHandlers = {
 function collectionsProxyHandler<T extends Collection>(
   target: T,
   targetRawType: CollectionRawType,
-  atom: Atom | null
+  shallow: boolean
 ): ProxyHandler<T> {
   // TODO: if performance is an issue we can create the special handlers lazily when each
   // property is read.
-  const specialHandlers = rawTypeToFuncHandlers[targetRawType](target, atom);
-  return Object.assign(basicProxyHandler(atom), {
+  const specialHandlers = rawTypeToFuncHandlers[targetRawType](target, shallow);
+  return Object.assign(basicProxyHandler(shallow), {
     // FIXME: probably broken when part of prototype chain since we ignore the receiver
     get(target: any, key: PropertyKey) {
       if (objectHasOwnProperty.call(specialHandlers, key)) {
         return (specialHandlers as any)[key];
       }
       onReadTargetKey(target, key);
-      return possiblyReactive(target[key], atom);
+      return possiblyReactive(target[key], shallow);
     },
   }) as ProxyHandler<T>;
 }

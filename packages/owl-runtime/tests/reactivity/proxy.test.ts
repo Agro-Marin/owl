@@ -1,6 +1,17 @@
 import { vi, type Mock } from "vitest";
-import { Component, mount, onWillStart, onWillUpdateProps, xml } from "../../src";
-import { effect, markRaw, props, proxy, toRaw } from "../../src";
+import {
+  Component,
+  effect,
+  markRaw,
+  mount,
+  onWillStart,
+  onWillUpdateProps,
+  props,
+  proxy,
+  signal,
+  toRaw,
+  xml,
+} from "../../src";
 
 import {
   makeDeferred,
@@ -1713,6 +1724,44 @@ describe("markRaw", () => {
     expectSpy(spy, 2, [2]);
     expect(r.obj1).toBe(obj1);
     expect(r.obj2).not.toBe(obj2);
+  });
+});
+
+describe("proxy flavors", () => {
+  test("proxy() of an object a collection signal holds is still deep", async () => {
+    const obj = { inner: { x: 1 } };
+    const sig = signal.Object(obj);
+    const p = proxy(obj);
+    const spy = vi.fn();
+    effect(() => spy(p.inner.x));
+    p.inner.x = 2;
+    await waitScheduler();
+    expectSpy(spy, 2, [2]);
+    expect(sig().inner).toBe(obj.inner);
+  });
+
+  test("a collection signal of an already proxied object is still shallow", () => {
+    const obj = { inner: { x: 1 } };
+    const p = proxy(obj);
+    const sig = signal.Object(obj);
+    expect(sig().inner).toBe(obj.inner);
+    expect(p.inner).not.toBe(obj.inner);
+    expect(toRaw(sig())).toBe(obj);
+    expect(toRaw(p)).toBe(obj);
+  });
+});
+
+describe("delete", () => {
+  test("deleting a missing key notifies nobody", async () => {
+    const p = proxy({ a: 1 } as Record<string, number>);
+    const spy = vi.fn();
+    effect(() => spy(Object.keys(p).length, p.b));
+    delete p.b;
+    await waitScheduler();
+    expectSpy(spy, 1, [1, undefined]);
+    delete p.a;
+    await waitScheduler();
+    expectSpy(spy, 2, [0, undefined]);
   });
 });
 
