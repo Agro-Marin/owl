@@ -470,3 +470,26 @@ test("a portal created by the render that replaces its target goes to the new ta
   await nextTick();
   expect(fixture.querySelector(".second .target")!.innerHTML).toBe("<p>content</p>");
 });
+
+test("a target changed after a mount-time lookup leaves no content in the old target", async () => {
+  const other = makeOutside("portal-other-target");
+  other.dataset.testPortal = "1";
+  class Parent extends Component {
+    static components = { Portal };
+    static template = xml`
+      <div>
+        <div id="made-by-render"/>
+        <Portal target="this.sel()"><p>content</p></Portal>
+      </div>`;
+    sel = signal("#made-by-render");
+  }
+  const parent = await mount(Parent, fixture);
+  await nextTick();
+  expect(fixture.querySelector("#made-by-render")!.innerHTML).toBe("<p>content</p>");
+
+  parent.sel.set("#portal-other-target");
+  await nextTick();
+  await nextTick();
+  expect(other.innerHTML).toBe("<p>content</p>");
+  expect(fixture.querySelector("#made-by-render")!.innerHTML).toBe("");
+});

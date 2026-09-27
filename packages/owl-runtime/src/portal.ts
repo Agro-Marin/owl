@@ -39,6 +39,7 @@ export class Portal extends Component {
     };
 
     const mountInto = (target: HTMLElement, position?: "first-child") => {
+      tearDown();
       root = app.createRoot(PortalContent, {
         props: { slots },
         // Forward the plugin chain from this Portal (createRoot defaults
