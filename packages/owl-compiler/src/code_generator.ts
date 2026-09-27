@@ -887,6 +887,11 @@ export class CodeGenerator {
     this.target.indentLevel--;
     this.target.loopLevel--;
     this.target.loopCtxVars.pop();
+    for (const [name, level] of this.target.tSetVars) {
+      if (level > this.target.loopLevel) {
+        this.target.tSetVars.delete(name);
+      }
+    }
     this.addLine(`}`);
     if (!block) {
       return null;

@@ -345,4 +345,11 @@ describe("t-set", () => {
   test("template made only of t-set renders nothing", () => {
     expect(renderToString(`<t t-set="a" t-value="1"/><t t-set="b" t-value="2"/>`)).toBe("");
   });
+
+  test("a t-set in an ended loop does not change scoping in a later loop", () => {
+    const body = `<t t-foreach="[1, 2]" t-as="j" t-key="j"><t t-foreach="[7]" t-as="k" t-key="k"><t t-set="x" t-value="k"/>k</t>[<t t-out="x"/>]</t>`;
+    const prefix = `<t t-foreach="[0]" t-as="i" t-key="i"><t t-set="x" t-value="i"/>i</t>`;
+    expect(renderToString(body)).toBe("k[]k[]");
+    expect(renderToString(prefix + body)).toBe("ik[]k[]");
+  });
 });
