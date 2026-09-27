@@ -460,4 +460,29 @@ describe("miscellaneous operations", () => {
     patch(tree, list([4, 3, 2, 1, 5, 0].map(n)));
     expect(fixture.innerHTML).toBe("432150");
   });
+
+  test("object keys are matched by identity: [A,B,C,D] => [C,A,D,B]", () => {
+    const [a, b, c, d] = ["A", "B", "C", "D"].map((name) => ({ name }));
+    const items = (keys: { name: string }[]) => keys.map((k) => kSpan(k.name, k));
+    const tree = list(items([a, b, c, d]));
+    mount(tree, fixture);
+    const spans = [...fixture.children];
+    expect(fixture.textContent).toBe("ABCD");
+
+    patch(tree, list(items([c, a, d, b])));
+    expect(fixture.textContent).toBe("CADB");
+    expect([...fixture.children]).toEqual([spans[2], spans[0], spans[3], spans[1]]);
+  });
+
+  test("keys that stringify alike stay distinct: [9,1,'1',0] => ['1',8,1,7]", () => {
+    const tree = list([kSpan("n9", 9), kSpan("n1", 1), kSpan("s1", "1"), kSpan("n0", 0)]);
+    mount(tree, fixture);
+    const [, n1, s1] = [...fixture.children];
+
+    patch(tree, list([kSpan("s1", "1"), kSpan("n8", 8), kSpan("n1", 1), kSpan("n7", 7)]));
+    expect(fixture.textContent).toBe("s1n8n1n7");
+    const children = [...fixture.children];
+    expect(children[0]).toBe(s1);
+    expect(children[2]).toBe(n1);
+  });
 });

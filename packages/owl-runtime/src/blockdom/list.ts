@@ -110,7 +110,7 @@ class VList {
     let endVn1 = ch1[endIdx1];
     let endVn2 = ch2[endIdx2];
 
-    let mapping: any = undefined;
+    let mapping: Map<any, number> | undefined = undefined;
 
     while (startIdx1 <= endIdx1 && startIdx2 <= endIdx2) {
       // -------------------------------------------------------------------
@@ -167,7 +167,7 @@ class VList {
       }
       // -------------------------------------------------------------------
       mapping = mapping || createMapping(ch1, startIdx1, endIdx1);
-      let idxInOld = mapping[startKey2];
+      let idxInOld = mapping.get(startKey2);
       if (idxInOld === undefined) {
         cMount.call(startVn2, parent, cFirstNode.call(startVn1) || null);
       } else {
@@ -248,10 +248,10 @@ export function list(children: VNode[]): VNode<VList> {
   return new VList(children);
 }
 
-function createMapping(ch1: any[], startIdx1: number, endIdx2: number): { [key: string]: any } {
-  let mapping: any = {};
-  for (let i = startIdx1; i <= endIdx2; i++) {
-    mapping[ch1[i].key] = i;
+function createMapping(ch1: VNode[], startIdx1: number, endIdx1: number): Map<any, number> {
+  const mapping = new Map<any, number>();
+  for (let i = startIdx1; i <= endIdx1; i++) {
+    mapping.set(ch1[i].key, i);
   }
   return mapping;
 }
