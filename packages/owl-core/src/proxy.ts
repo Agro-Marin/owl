@@ -72,13 +72,23 @@ export function toRaw<T extends Target, U extends Reactive<T>>(value: U | T): T 
   return targets.has(value) ? (targets.get(value) as T) : value;
 }
 
-const targetToKeysToAtomItem = new WeakMap<Target, Map<PropertyKey, Atom>>();
+type KeyAtoms = WeakMap<Target, Map<PropertyKey, Atom>>;
 
-function getTargetKeyAtom(target: Target, key: PropertyKey): Atom {
-  let keyToAtomItem: Map<PropertyKey, Atom> = targetToKeysToAtomItem.get(target)!;
+// a key's value, read by a get
+const targetToKeysToAtomItem: KeyAtoms = new WeakMap();
+// a key's presence, read by `in` / has(): notified when the key appears or
+// disappears, not when its value changes
+const targetToKeysToPresenceAtom: KeyAtoms = new WeakMap();
+
+function getTargetKeyAtom(
+  target: Target,
+  key: PropertyKey,
+  atoms: KeyAtoms = targetToKeysToAtomItem
+): Atom {
+  let keyToAtomItem: Map<PropertyKey, Atom> = atoms.get(target)!;
   if (!keyToAtomItem) {
     keyToAtomItem = new Map();
-    targetToKeysToAtomItem.set(target, keyToAtomItem);
+    atoms.set(target, keyToAtomItem);
   }
   let atom = keyToAtomItem.get(key)!;
   if (!atom) {
@@ -112,8 +122,12 @@ function onReadTargetKey(target: Target, key: PropertyKey): void {
  * @param key the key that changed (or Symbol `KEYCHANGES` if a key was created
  *   or deleted)
  */
-function onWriteTargetKey(target: Target, key: PropertyKey): void {
-  const keyToAtomItem = targetToKeysToAtomItem.get(target)!;
+function onWriteTargetKey(
+  target: Target,
+  key: PropertyKey,
+  atoms: KeyAtoms = targetToKeysToAtomItem
+): void {
+  const keyToAtomItem = atoms.get(target)!;
   if (!keyToAtomItem) {
     return;
   }
@@ -121,6 +135,16 @@ function onWriteTargetKey(target: Target, key: PropertyKey): void {
     return;
   }
   onWriteAtom(keyToAtomItem.get(key)!);
+}
+
+function onReadKeyPresence(target: Target, key: PropertyKey): void {
+  onReadAtom(getTargetKeyAtom(target, key, targetToKeysToPresenceAtom));
+}
+
+// a key appeared or disappeared: the key list, the key's presence, its value
+function onWriteKeyPresence(target: Target, key: PropertyKey): void {
+  onWriteTargetKey(target, KEYCHANGES);
+  onWriteTargetKey(target, key, targetToKeysToPresenceAtom);
 }
 
 /**
@@ -131,15 +155,15 @@ function onWriteTargetKey(target: Target, key: PropertyKey): void {
  * @param newLength the length after the write
  */
 function onWriteDroppedIndices(target: Target, newLength: number): void {
-  const keyToAtomItem = targetToKeysToAtomItem.get(target)!;
-  if (!keyToAtomItem) {
-    return;
-  }
-  const droppedKeys = [...keyToAtomItem.keys()].filter(
-    (key) => typeof key === "string" && Number(key) >= newLength && String(Number(key)) === key
-  );
-  for (const key of droppedKeys) {
-    onWriteTargetKey(target, key);
+  const isDropped = (key: PropertyKey) =>
+    typeof key === "string" && Number(key) >= newLength && String(Number(key)) === key;
+  for (const atoms of [targetToKeysToAtomItem, targetToKeysToPresenceAtom]) {
+    const keyToAtomItem = atoms.get(target);
+    if (keyToAtomItem) {
+      for (const key of [...keyToAtomItem.keys()].filter(isDropped)) {
+        onWriteTargetKey(target, key, atoms);
+      }
+    }
   }
 }
 
@@ -341,7 +365,7 @@ function basicProxyHandler<T extends Target>(shallow: boolean): ProxyHandler<T> 
       const keyCreated = !hadKey && objectHasOwnProperty.call(target, key);
       const valueChanged = originalValue !== Reflect.get(target, key, receiver);
       if (keyCreated) {
-        onWriteTargetKey(target, KEYCHANGES);
+        onWriteKeyPresence(target, key);
       }
       if (key === "length" && Array.isArray(target)) {
         // While Array length may trigger the set trap, it's not actually set by this
@@ -361,7 +385,7 @@ function basicProxyHandler<T extends Target>(shallow: boolean): ProxyHandler<T> 
       const hadKey = objectHasOwnProperty.call(target, key);
       const ret = Reflect.deleteProperty(target, key);
       if (hadKey && ret) {
-        onWriteTargetKey(target, KEYCHANGES);
+        onWriteKeyPresence(target, key);
         onWriteTargetKey(target, key);
       }
       return ret;
@@ -371,10 +395,7 @@ function basicProxyHandler<T extends Target>(shallow: boolean): ProxyHandler<T> 
       return Reflect.ownKeys(target);
     },
     has(target, key) {
-      // TODO: this observes all key changes instead of only the presence of the argument key
-      // observing the key itself would observe value changes instead of presence changes
-      // so we may need a finer grained system to distinguish observing value vs presence.
-      onReadTargetKey(target, KEYCHANGES);
+      onReadKeyPresence(target, key);
       return Reflect.has(target, key);
     },
   } as ProxyHandler<T>;
@@ -394,7 +415,11 @@ const shallowHandler = basicProxyHandler(true);
 function makeKeyObserver(methodName: "has" | "get", target: any, shallow: boolean) {
   return (key: any) => {
     key = toRaw(key);
-    onReadTargetKey(target, key);
+    if (methodName === "has") {
+      onReadKeyPresence(target, key);
+    } else {
+      onReadTargetKey(target, key);
+    }
     return possiblyReactive(target[methodName](key), shallow);
   };
 }
@@ -475,7 +500,7 @@ function delegateAndNotify(
     const ret = target[setterName](key, value);
     const hasKey = target.has(key);
     if (hadKey !== hasKey) {
-      onWriteTargetKey(target, KEYCHANGES);
+      onWriteKeyPresence(target, key);
     }
     if (originalValue !== target[getterName](key)) {
       onWriteTargetKey(target, key);
@@ -495,6 +520,7 @@ function makeClearNotifier(target: Map<any, any> | Set<any>) {
     target.clear();
     onWriteTargetKey(target, KEYCHANGES);
     for (const key of allKeys) {
+      onWriteTargetKey(target, key, targetToKeysToPresenceAtom);
       onWriteTargetKey(target, key);
     }
   };

@@ -1770,6 +1770,53 @@ describe("proxy flavors", () => {
   });
 });
 
+describe("key presence", () => {
+  test("`in` is notified by its own key appearing or disappearing, not by others", async () => {
+    const p = proxy({} as Record<string, any>);
+    const spy = vi.fn();
+    effect(() => spy("a" in p));
+    p.b = 1;
+    await waitScheduler();
+    expectSpy(spy, 1, [false]);
+    p.a = undefined;
+    await waitScheduler();
+    expectSpy(spy, 2, [true]);
+    p.a = 2;
+    await waitScheduler();
+    expectSpy(spy, 2, [true]);
+    delete p.a;
+    await waitScheduler();
+    expectSpy(spy, 3, [false]);
+  });
+
+  test("`in` on an index is notified when a shorter length drops it", async () => {
+    const arr = proxy([1, 2, 3]);
+    const spy = vi.fn();
+    effect(() => spy(2 in arr));
+    arr.length = 1;
+    await waitScheduler();
+    expectSpy(spy, 2, [false]);
+  });
+
+  test("Map has() ignores a value change of the key it asked about", async () => {
+    const map = proxy(new Map([["a", 1]]));
+    const spy = vi.fn();
+    effect(() => spy(map.has("a")));
+    map.set("a", 2);
+    await waitScheduler();
+    expectSpy(spy, 1, [true]);
+    map.delete("a");
+    await waitScheduler();
+    expectSpy(spy, 2, [false]);
+    map.set("a", undefined as any);
+    await waitScheduler();
+    expectSpy(spy, 3, [true]);
+    map.clear();
+    await waitScheduler();
+    expectSpy(spy, 4, [false]);
+  });
+});
+
 describe("delete", () => {
   test("deleting a missing key notifies nobody", async () => {
     const p = proxy({ a: 1 } as Record<string, number>);
