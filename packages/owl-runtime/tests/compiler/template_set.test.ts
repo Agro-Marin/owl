@@ -137,3 +137,31 @@ describe("loading templates", () => {
     expect(result).toBe("<div>Hello World!</div>");
   });
 });
+
+describe("template cache", () => {
+  test("a template that throws while being set up throws again on the next lookup", () => {
+    const context = new TestContext();
+    let setups = 0;
+    context.addTemplate("fn", (() => {
+      setups++;
+      throw new Error("setup failed");
+    }) as any);
+    for (let i = 0; i < 2; i++) {
+      expect(() => context.getTemplate("fn")).toThrow("setup failed");
+    }
+    expect(setups).toBe(2);
+  });
+
+  test("templates can be named after Object.prototype members", () => {
+    for (const dev of [false, true]) {
+      const context = new TestContext({ dev });
+      context.addTemplate("constructor", `<div>c</div>`);
+      context.addTemplate("toString", `<div>s</div>`);
+      expect(context.renderToString("constructor")).toBe("<div>c</div>");
+      expect(context.renderToString("toString")).toBe("<div>s</div>");
+    }
+    expect(() => new TestContext().getTemplate("hasOwnProperty")).toThrow(
+      'Missing template: "hasOwnProperty"'
+    );
+  });
+});

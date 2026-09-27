@@ -22,7 +22,7 @@ export class TemplateSet {
   }
   dev: boolean;
   rawTemplates: typeof globalTemplates = Object.create(globalTemplates);
-  templates: { [name: string]: Template } = {};
+  templates: { [name: string]: Template } = Object.create(null);
   getRawTemplate?: (s: string) => Element | Function | string | void;
   translateFn?: (s: string, translationCtx: string) => string;
   translatableAttributes?: string[];
@@ -96,8 +96,12 @@ export class TemplateSet {
       this.templates[cacheKey] = function (context, parent) {
         return templates[cacheKey].call(this, context, parent);
       };
-      const template = templateFn(this, bdom, this.runtimeUtils);
-      this.templates[cacheKey] = template;
+      try {
+        this.templates[cacheKey] = templateFn(this, bdom, this.runtimeUtils);
+      } catch (e) {
+        delete this.templates[cacheKey];
+        throw e;
+      }
     }
     return this.templates[cacheKey];
   }
@@ -116,7 +120,8 @@ export class TemplateSet {
 // -----------------------------------------------------------------------------
 //  xml tag helper
 // -----------------------------------------------------------------------------
-export const globalTemplates: { [key: string]: string | Element | TemplateFunction } = {};
+export const globalTemplates: { [key: string]: string | Element | TemplateFunction } =
+  Object.create(null);
 
 export function xml(...args: Parameters<typeof String.raw>) {
   const name = `__template__${xml.nextId++}`;
