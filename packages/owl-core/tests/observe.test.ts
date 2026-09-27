@@ -1,4 +1,4 @@
-import { effect, observe, proxy, toRaw } from "../src";
+import { computed, effect, observe, proxy, toRaw } from "../src";
 import { waitScheduler } from "./helpers";
 
 describe("observe", () => {
@@ -140,6 +140,34 @@ describe("observe", () => {
     expect(state.double).toBe(2);
     proxy(toRaw(state)).value = 2;
     expect(calls).toBe(1);
+  });
+
+  test("a computed read through the view notifies without being recomputed inside the write", () => {
+    const order = proxy({ lines: [] as { method?: { cash: boolean } }[] });
+    let recomputes = 0;
+    const hasCash = computed(
+      () => {
+        recomputes++;
+        return order.lines.some((line) => line.method!.cash);
+      },
+      { detached: true }
+    );
+    class OrderView {
+      get hasCash() {
+        return hasCash();
+      }
+    }
+    let calls = 0;
+    const view = observe(new OrderView(), () => calls++);
+    expect(view.hasCash).toBe(false);
+    expect(recomputes).toBe(1);
+    // a line is pushed before its method is set, as a record is built field by
+    // field: recomputing here would read `undefined.cash`
+    order.lines.push({});
+    expect(calls).toBe(1);
+    expect(recomputes).toBe(1);
+    order.lines[0].method = { cash: true };
+    expect(hasCash()).toBe(true);
   });
 
   test("a view of a view observes the same target, for its own callback", () => {

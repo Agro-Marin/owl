@@ -228,6 +228,7 @@ export function observe<T extends Target>(target: T, callback: () => void): T {
     ComputationState.EXECUTED,
     true
   );
+  computation.notifiesWithoutRecompute = true;
   const views = new WeakMap<Target, any>();
   const read = <R>(fn: () => R): R => withObserver(computation, fn);
   const wrap = (value: any): any =>

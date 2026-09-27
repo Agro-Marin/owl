@@ -63,6 +63,10 @@ export interface ComputationAtom<T = any> extends Atom<T> {
   sources: Set<Atom>;
   state: ComputationState;
   immediate?: boolean;
+  // observe()'s contract (OWL 2's reactive callback): a derived source that
+  // may have changed notifies without being recomputed, since recomputing it
+  // inside a write reads records that write has not finished
+  notifiesWithoutRecompute?: boolean;
 }
 
 export const atomSymbol = Symbol("Atom");
@@ -267,7 +271,9 @@ function markDownstream(computation: ComputationAtom) {
       if (observer.state) {
         continue;
       }
-      observer.state = ComputationState.PENDING;
+      observer.state = observer.notifiesWithoutRecompute
+        ? ComputationState.STALE
+        : ComputationState.PENDING;
       if (observer.isDerived) {
         stack.push(observer);
       } else if (observer.immediate) {
