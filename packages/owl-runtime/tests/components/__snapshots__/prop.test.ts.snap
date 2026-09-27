@@ -1,5 +1,32 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`a props.static default is validated against its type in dev mode 1`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { createComponent } = helpers;
+  const comp1 = createComponent(app, \`Child\`, true, false, false, []);
+  
+  return function template(ctx, node, key = "") {
+    const props1 = {};
+    return comp1(props1, key + \`__1\`, node, this, null);
+  }
+}"
+`;
+
+exports[`a props.static default is validated against its type in dev mode 2`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  
+  let block1 = createBlock(\`<span/>\`);
+  
+  return function template(ctx, node, key = "") {
+    return block1();
+  }
+}"
+`;
+
 exports[`basics > can be mixed with props() 1`] = `
 "function anonymous(app, bdom, helpers
 ) {

@@ -313,3 +313,17 @@ test("throws if called outside a component scope", () => {
   expect(error).toBeDefined();
   expect(error.message).toMatch("No active scope");
 });
+
+test("a props.static default is validated against its type in dev mode", async () => {
+  class Child extends Component {
+    static template = xml`<span/>`;
+    mode = props.static("mode", t.number().optional("not a number" as any));
+  }
+  class Parent extends Component {
+    static template = xml`<Child/>`;
+    static components = { Child };
+  }
+  await expect(mount(Parent, fixture, { test: true })).rejects.toThrow(
+    "Invalid default value for prop 'mode' in 'Child'"
+  );
+});

@@ -16,10 +16,19 @@ export function staticProp(key: string, type?: any): any {
   const node = getComponentScope();
   const defaultFactory = getDefault(type);
   const propValue = node.props[key];
+  const usesDefault = propValue === undefined && !!defaultFactory;
+  const value = usesDefault
+    ? defaultFactory!()
+    : propValue === undefined
+      ? node.defaultProps?.[key]
+      : propValue;
 
   if (node.app.dev) {
-    if (type !== undefined && (!defaultFactory || propValue !== undefined)) {
-      assertType(propValue, type, `Invalid prop '${key}' in '${node.componentName}'`);
+    if (type !== undefined) {
+      const message = usesDefault
+        ? `Invalid default value for prop '${key}' in '${node.componentName}'`
+        : `Invalid prop '${key}' in '${node.componentName}'`;
+      assertType(usesDefault ? value : propValue, type, message);
     }
     node.willUpdateProps.push((nextProps: Record<string, any>) => {
       const current = node.props[key] === undefined ? node.defaultProps?.[key] : node.props[key];
@@ -33,8 +42,5 @@ export function staticProp(key: string, type?: any): any {
     });
   }
 
-  if (propValue === undefined) {
-    return defaultFactory ? defaultFactory() : node.defaultProps?.[key];
-  }
-  return propValue;
+  return value;
 }
