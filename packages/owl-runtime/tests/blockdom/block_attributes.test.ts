@@ -176,3 +176,65 @@ test("block-class attributes (array syntax) with preexisting class attribute", a
   patch(tree, block([["class", "buzzard"]]));
   expect(fixture.innerHTML).toBe(`<div class="owl buzzard"></div>`);
 });
+
+describe("block-attributes changing form", () => {
+  test("from nothing to an object and back", async () => {
+    const block = createBlock('<div block-attributes="0"></div>');
+    const tree = block([null]);
+    mount(tree, fixture);
+    patch(tree, block([{ a: "1" }]));
+    expect(fixture.innerHTML).toBe(`<div a="1"></div>`);
+    patch(tree, block([undefined]));
+    expect(fixture.innerHTML).toBe(`<div></div>`);
+  });
+
+  test("a pair changing name keeps the static class", async () => {
+    const block = createBlock('<div class="static" block-attributes="0"></div>');
+    const tree = block([["class", "dyn"]]);
+    mount(tree, fixture);
+    expect(fixture.innerHTML).toBe(`<div class="static dyn"></div>`);
+    patch(tree, block([["id", "x"]]));
+    expect(fixture.innerHTML).toBe(`<div class="static" id="x"></div>`);
+    patch(tree, block([["class", "dyn"]]));
+    expect(fixture.innerHTML).toBe(`<div class="static dyn"></div>`);
+  });
+
+  test("a pair becoming a style object", async () => {
+    const block = createBlock('<div block-attributes="0"></div>');
+    const tree = block([["id", "x"]]);
+    mount(tree, fixture);
+    patch(tree, block([["style", { color: "red" }]]));
+    expect(fixture.innerHTML).toBe(`<div style="color: red;"></div>`);
+  });
+});
+
+test("a false class value adds no class", async () => {
+  const block = createBlock('<div block-attribute-0="class"></div>');
+  const tree = block([false]);
+  mount(tree, fixture);
+  const div = fixture.firstChild as HTMLElement;
+  expect(div.className).toBe("");
+  patch(tree, block(["a"]));
+  expect(div.className).toBe("a");
+  patch(tree, block([false]));
+  expect(div.className).toBe("");
+});
+
+describe("style", () => {
+  test("removing a longhand re-applies the shorthand before it", async () => {
+    const block = createBlock('<div block-attribute-0="style"></div>');
+    const tree = block(["margin: 1px; margin-top: 5px"]);
+    mount(tree, fixture);
+    const div = fixture.firstChild as HTMLElement;
+    expect(div.style.marginTop).toBe("5px");
+    patch(tree, block(["margin: 1px"]));
+    expect(div.style.marginTop).toBe("1px");
+  });
+
+  test("a custom property keeps its case", async () => {
+    const block = createBlock('<div block-attribute-0="style"></div>');
+    mount(block([{ "--mainColor": "red" }]), fixture);
+    const div = fixture.firstChild as HTMLElement;
+    expect(div.style.getPropertyValue("--mainColor")).toBe("red");
+  });
+});

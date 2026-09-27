@@ -41,75 +41,49 @@ export function createAttrUpdater(attr: string): Setter<HTMLElement> {
   };
 }
 
-export function attrsSetter(this: HTMLElement, attrs: any) {
-  if (isArray(attrs)) {
-    if (attrs[0] === "class") {
-      setClass.call(this, attrs[1]);
-    } else if (attrs[0] === "style") {
-      setStyle.call(this, attrs[1]);
-    } else {
-      setAttribute.call(this, attrs[0], attrs[1]);
-    }
+const NO_ATTRS = Object.freeze({});
+
+// t-att takes an object, a [name, value] pair, or nothing at all
+function toAttrs(attrs: any): { [name: string]: any } {
+  return !attrs ? NO_ATTRS : isArray(attrs) ? { [attrs[0]]: attrs[1] } : attrs;
+}
+
+function updateAttr(el: HTMLElement, name: string, val: any, oldVal: any) {
+  if (name === "class") {
+    updateClass.call(el, val, oldVal);
+  } else if (name === "style") {
+    updateStyle.call(el, val, oldVal);
   } else {
-    for (let k in attrs) {
-      if (k === "class") {
-        setClass.call(this, attrs[k]);
-      } else if (k === "style") {
-        setStyle.call(this, attrs[k]);
-      } else {
-        setAttribute.call(this, k, attrs[k]);
-      }
-    }
+    setAttribute.call(el, name, val);
   }
+}
+
+export function attrsSetter(this: HTMLElement, attrs: any) {
+  attrsUpdater.call(this, attrs, NO_ATTRS);
 }
 
 export function attrsUpdater(this: HTMLElement, attrs: any, oldAttrs: any) {
-  if (isArray(attrs)) {
-    const name = attrs[0];
-    const val = attrs[1];
-    if (name === oldAttrs[0]) {
-      if (val === oldAttrs[1]) {
-        return;
-      }
-      if (name === "class") {
-        updateClass.call(this, val, oldAttrs[1]);
-      } else if (name === "style") {
-        updateStyle.call(this, val, oldAttrs[1]);
-      } else {
-        setAttribute.call(this, name, val);
-      }
-    } else {
-      removeAttribute.call(this, oldAttrs[0]);
-      setAttribute.call(this, name, val);
+  const next = toAttrs(attrs);
+  const prev = toAttrs(oldAttrs);
+  for (const name in prev) {
+    if (!(name in next)) {
+      updateAttr(this, name, undefined, prev[name]);
     }
-  } else {
-    for (let k in oldAttrs) {
-      if (!(k in attrs)) {
-        if (k === "class") {
-          updateClass.call(this, "", oldAttrs[k]);
-        } else if (k === "style") {
-          updateStyle.call(this, "", oldAttrs[k]);
-        } else {
-          removeAttribute.call(this, k);
-        }
-      }
-    }
-    for (let k in attrs) {
-      const val = attrs[k];
-      if (val !== oldAttrs[k]) {
-        if (k === "class") {
-          updateClass.call(this, val, oldAttrs[k]);
-        } else if (k === "style") {
-          updateStyle.call(this, val, oldAttrs[k]);
-        } else {
-          setAttribute.call(this, k, val);
-        }
-      }
+  }
+  for (const name in next) {
+    const val = next[name];
+    if (val !== prev[name]) {
+      updateAttr(this, name, val, prev[name]);
     }
   }
 }
 
-function toClassObj(expr: string | number | { [c: string]: any }) {
+function toClassObj(expr: string | number | boolean | { [c: string]: any } | null | undefined) {
+  // `cond and 'a'` yields false: no class, as a false t-att-x drops x (0 stays
+  // a class, as QWeb renders it)
+  if (expr === false || expr === null || expr === undefined) {
+    return {};
+  }
   const result: { [c: string]: any } = {};
   switch (typeof expr) {
     case "string":
@@ -142,10 +116,6 @@ function toClassObj(expr: string | number | { [c: string]: any }) {
       }
       return result;
 
-    case "undefined":
-      return {};
-    case "number":
-      return { [expr as number]: true };
     default:
       return { [expr as any]: true };
   }
@@ -155,13 +125,16 @@ function toClassObj(expr: string | number | { [c: string]: any }) {
 // Style
 // ---------------------------------------------------------------------------
 
-const CSS_PROP_CACHE: { [key: string]: string } = {};
+const CSS_PROP_CACHE: { [key: string]: string } = Object.create(null);
 
 function toKebabCase(prop: string): string {
   if (prop in CSS_PROP_CACHE) {
     return CSS_PROP_CACHE[prop];
   }
-  const result = prop.replace(/[A-Z]/g, (m) => "-" + m.toLowerCase());
+  // custom properties are case-sensitive: `--mainColor` is not `--main-color`
+  const result = prop.startsWith("--")
+    ? prop
+    : prop.replace(/[A-Z]/g, (m) => "-" + m.toLowerCase());
   CSS_PROP_CACHE[prop] = result;
   return result;
 }
@@ -243,15 +216,15 @@ function toStyleObj(expr: string | { [prop: string]: any }): { [prop: string]: s
 // ---------------------------------------------------------------------------
 
 export function setClass(this: HTMLElement, val: any) {
-  val = val === "" ? {} : toClassObj(val);
+  val = toClassObj(val);
   for (let k in val) {
     tokenListAdd.call(this.classList, k);
   }
 }
 
 export function updateClass(this: HTMLElement, val: any, oldVal: any) {
-  oldVal = oldVal === "" ? {} : toClassObj(oldVal);
-  val = val === "" ? {} : toClassObj(val);
+  oldVal = toClassObj(oldVal);
+  val = toClassObj(val);
   for (let k in oldVal) {
     if (!(k in val)) {
       tokenListRemove.call(this.classList, k);
@@ -280,16 +253,19 @@ export function updateStyle(this: HTMLElement, val: any, oldVal: any) {
   oldVal = oldVal === "" ? {} : toStyleObj(oldVal);
   val = val === "" ? {} : toStyleObj(val);
   const style = this.style;
-  for (let prop in oldVal) {
-    if (!(prop in val)) {
-      style.removeProperty(prop);
-    }
-  }
   // Properties are applied in declaration order. Re-setting a shorthand (e.g.
   // `background`, `margin`) resets the longhands it covers, so once any property
   // has been re-applied we must also re-apply every following property, even if
   // its value is unchanged, otherwise an earlier shorthand silently clobbers it.
+  // Removing a longhand clears what an unchanged shorthand had set for it, so a
+  // removal re-applies everything too.
   let changed = false;
+  for (let prop in oldVal) {
+    if (!(prop in val)) {
+      style.removeProperty(prop);
+      changed = true;
+    }
+  }
   for (let prop in val) {
     if (changed || val[prop] !== oldVal[prop]) {
       setStyleProp(style, prop, val[prop]);
