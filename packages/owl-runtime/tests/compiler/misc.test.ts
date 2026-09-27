@@ -5,6 +5,9 @@ import {
   TestContext,
   trim,
 } from "../helpers";
+import { compile } from "@odoo/owl-compiler";
+import { blockDom } from "../../src";
+import { helpers } from "../../src/rendering/template_helpers";
 
 snapshotEverything();
 
@@ -278,4 +281,19 @@ test("an arrow parameter does not shadow a variable after the arrow body", () =>
   expect(renderToString(`<t t-out="f(e => e, e)"/>`, { e: 5, f: (g: any, x: any) => g(x) })).toBe(
     "5"
   );
+});
+
+test("a template compiled while another is being generated leaves its names alone", () => {
+  const translateFn = (s: string) => {
+    compile(`<div><p>inner</p><p t-out="x"/></div>`, { hasGlobalValues: false });
+    return s;
+  };
+  const fn = compile(`<div><b t-out="x"/><b t-out="y"/><i>word</i><u t-out="z"/></div>`, {
+    hasGlobalValues: false,
+    translateFn,
+  });
+  const fixture = document.createElement("div");
+  const render = (fn as any)({}, blockDom, helpers);
+  blockDom.mount(render.call({}, { x: 1, y: 2, z: 3, __owl__: {} }, {}), fixture);
+  expect(fixture.innerHTML).toBe("<div><b>1</b><b>2</b><i>word</i><u>3</u></div>");
 });

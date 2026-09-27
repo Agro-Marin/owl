@@ -49,13 +49,6 @@ if (typeof document !== "undefined") {
 
 const MODS = new Set(["stop", "capture", "prevent", "self", "synthetic", "passive"]);
 
-let nextDataIds: { [key: string]: number } = {};
-
-function generateId(prefix: string = "") {
-  nextDataIds[prefix] = (nextDataIds[prefix] || 0) + 1;
-  return prefix + nextDataIds[prefix];
-}
-
 function isProp(tag: string, key: string): boolean {
   switch (tag) {
     case "input":
@@ -93,8 +86,6 @@ function toStringExpression(str: string) {
 // -----------------------------------------------------------------------------
 
 class BlockDescription {
-  static nextBlockId = 1;
-
   varName: string;
   blockName: string;
   dynamicTagName: string | null = null;
@@ -109,9 +100,16 @@ class BlockDescription {
   type: BlockType;
   parentVar: string = "";
   id: number;
+  generateId: (prefix?: string) => string;
 
-  constructor(target: CodeTarget, type: BlockType) {
-    this.id = BlockDescription.nextBlockId++;
+  constructor(
+    id: number,
+    target: CodeTarget,
+    type: BlockType,
+    generateId: (prefix?: string) => string
+  ) {
+    this.id = id;
+    this.generateId = generateId;
     this.varName = "b" + this.id;
     this.blockName = "block" + this.id;
     this.target = target;
@@ -119,7 +117,7 @@ class BlockDescription {
   }
 
   insertData(str: string, prefix: string = "d"): number {
-    const id = generateId(prefix);
+    const id = this.generateId(prefix);
     this.target.addLine(`let ${id} = ${str};`);
     return this.data.push(id) - 1;
   }
@@ -267,6 +265,15 @@ export class CodeGenerator {
   staticDefs: { id: string; expr: string }[] = [];
   slotNames: Set<String | Symbol> = new Set();
   helpers: Set<string> = new Set();
+  // per generator, so that generating a template (a translateFn may compile
+  // another) never shifts the names of the one in progress
+  nextBlockId = 1;
+  nextDataIds: { [prefix: string]: number } = {};
+  generateId = (prefix: string = "") => {
+    const n = (this.nextDataIds[prefix] || 0) + 1;
+    this.nextDataIds[prefix] = n;
+    return prefix + n;
+  };
   constructor(ast: AST, options: CodeGenOptions) {
     this.translateFn = options.translateFn || ((s: string) => s);
     if (options.translatableAttributes) {
@@ -298,8 +305,6 @@ export class CodeGenerator {
   generateCode(): string {
     const ast = this.ast;
     this.isDebug = ast.type === ASTType.TDebug;
-    BlockDescription.nextBlockId = 1;
-    nextDataIds = {};
     this.compileAST(ast, {
       block: null,
       index: 0,
@@ -362,7 +367,7 @@ export class CodeGenerator {
   }
 
   compileInNewTarget(prefix: string, ast: AST, ctx: Context, on?: EventHandlers | null): string {
-    const name = generateId(prefix);
+    const name = this.generateId(prefix);
     const initialTarget = this.target;
     const target = new CodeTarget(name, on);
     this.targets.push(target);
@@ -392,7 +397,7 @@ export class CodeGenerator {
     ctx: Context
   ): BlockDescription {
     const hasRoot = this.target.hasRoot;
-    const block = new BlockDescription(this.target, type);
+    const block = new BlockDescription(this.nextBlockId++, this.target, type, this.generateId);
     if (!hasRoot) {
       this.target.hasRoot = true;
       block.isRoot = true;
@@ -555,7 +560,7 @@ export class CodeGenerator {
       hoistedExpr = `(ctx, ev) => callHandler(${compiled}, ctx, ev)`;
     }
 
-    const id = generateId("hdlr_fn");
+    const id = this.generateId("hdlr_fn");
     this.staticDefs.push({ id, expr: hoistedExpr });
     return `[${modifiersCode}${id}, ctx]`;
   }
@@ -568,7 +573,7 @@ export class CodeGenerator {
       block = this.createBlock(block, "block", ctx);
       this.blocks.push(block);
       if (ast.dynamicTag) {
-        const tagExpr = generateId("tag");
+        const tagExpr = this.generateId("tag");
         this.helpers.add("checkTagName");
         this.define(tagExpr, `checkTagName(${compileExpr(ast.dynamicTag)})`);
         block.dynamicTagName = tagExpr;
@@ -590,7 +595,7 @@ export class CodeGenerator {
           }
           // we force a new string or new boolean to bypass the equality check in blockdom when patching same value
           if (attrName === "value") {
-            const valueId = generateId("v");
+            const valueId = this.generateId("v");
             this.define(valueId, expr);
             // When the expression is falsy (except 0), fall back to an empty string
             expr = `new String(${valueId} === 0 ? 0 : ${valueId} || "")`;
@@ -643,7 +648,7 @@ export class CodeGenerator {
         readExpr = expression;
         writeExpr = (value) => `${expression} = ${value}`;
       } else {
-        const exprId = generateId("expr");
+        const exprId = this.generateId("expr");
         const expression = compileExpr(expr);
         this.helpers.add("modelExpr");
         this.define(exprId, `modelExpr(${expression})`);
@@ -667,7 +672,7 @@ export class CodeGenerator {
         idx = block!.insertData(`${readExpr} === ${targetExpr}`, "prop");
         attrs[`block-property-${idx}`] = specialInitTargetAttr;
       } else if (hasDynamicChildren) {
-        const bValueId = generateId("bValue");
+        const bValueId = this.generateId("bValue");
         tModelSelectedExpr = `${bValueId}`;
         this.define(tModelSelectedExpr, readExpr);
       } else {
@@ -823,10 +828,10 @@ export class CodeGenerator {
 
   compileTForeach(ast: ASTTForEach, ctx: Context): string | null {
     const block = ast.hasNoRepresentation ? null : this.createBlock(ctx.block, "list", ctx);
-    const id = block ? block.id : generateId("_");
+    const id = block ? block.id : this.generateId("_");
     this.target.loopLevel++;
     const loopVar = `i${this.target.loopLevel}`;
-    const ctxVar = generateId("ctx");
+    const ctxVar = this.generateId("ctx");
     this.addLine(`const ${ctxVar} = ctx;`);
     this.target.loopCtxVars.push(ctxVar);
     const vals = `v_block${id}`;
@@ -884,7 +889,7 @@ export class CodeGenerator {
   }
 
   compileTKey(ast: ASTTKey, ctx: Context): string | null {
-    const tKeyExpr = generateId("tKey_");
+    const tKeyExpr = this.generateId("tKey_");
     this.define(tKeyExpr, compileExpr(ast.expr));
     ctx = createContext(ctx, {
       tKeyExpr,
@@ -958,7 +963,7 @@ export class CodeGenerator {
     block = this.createBlock(block, "multi", ctx);
     if (ast.body) {
       const name = this.compileInNewTarget("callBody", ast.body, ctx);
-      const zeroStr = generateId("lazyBlock");
+      const zeroStr = this.generateId("lazyBlock");
       this.define(zeroStr, `${name}.bind(this, ctx)`);
       this.helpers.add("zero");
       attrs.push(`[zero]: ${zeroStr}`);
@@ -967,7 +972,7 @@ export class CodeGenerator {
     let ctxExpr: string;
     const ctxString = `{${attrs.join(", ")}}`;
     if (ast.context) {
-      const dynCtxVar = generateId("ctx");
+      const dynCtxVar = this.generateId("ctx");
       this.addLine(`const ${dynCtxVar} = ${compileExpr(ast.context)};`);
       // the context is the called template's `this`, and its keys are also its
       // variables: Odoo's arch templates read `record`, `__comp__`... by name
@@ -1053,7 +1058,7 @@ export class CodeGenerator {
   }
 
   scopeKey(ctx: Context, unique: boolean = false): string {
-    let suffix = unique ? generateId("__") : "";
+    let suffix = unique ? this.generateId("__") : "";
     for (let i = 1; i <= this.target.loopLevel; i++) {
       suffix += `__\${key${i}}`;
     }
@@ -1062,7 +1067,7 @@ export class CodeGenerator {
   }
 
   generateSignalCacheKey() {
-    const parts = [generateId("__sig_")];
+    const parts = [this.generateId("__sig_")];
     for (let i = 0; i < this.target.loopLevel; i++) {
       parts.push(`\${key${i + 1}}`);
     }
@@ -1210,7 +1215,7 @@ export class CodeGenerator {
 
     let propVar: string;
     if ((slotDef && (ast.dynamicProps || hasSlotsProp)) || this.dev) {
-      propVar = generateId("props");
+      propVar = this.generateId("props");
       this.define(propVar!, propString);
       propString = propVar!;
     }
@@ -1223,14 +1228,14 @@ export class CodeGenerator {
     // cmap key
     let expr: string;
     if (ast.isDynamic) {
-      expr = generateId("Comp");
+      expr = this.generateId("Comp");
       this.define(expr, compileExpr(ast.name));
     } else {
       expr = `\`${ast.name}\``;
     }
 
     let keyArg = this.scopeKey(ctx, true);
-    let id = generateId("comp");
+    let id = this.generateId("comp");
     this.helpers.add("createComponent");
     this.staticDefs.push({
       id,
@@ -1263,11 +1268,11 @@ export class CodeGenerator {
 
   wrapWithEventCatcher(expr: string, on: EventHandlers): string {
     this.helpers.add("createCatcher");
-    let name = generateId("catcher");
+    let name = this.generateId("catcher");
     let spec: any = {};
     let handlers: any[] = [];
     for (let ev in on) {
-      let handlerId = generateId("hdlr");
+      let handlerId = this.generateId("hdlr");
       let idx = handlers.push(handlerId) - 1;
       spec[ev] = idx;
       const handler = this.generateHandlerCode(ev, on[ev]);
@@ -1305,7 +1310,7 @@ export class CodeGenerator {
       blockString = `callSlot(ctx, node, ${key}, ${slotName}, ${dynamic}, ${scope}, ${name}.bind(this))`;
     } else {
       if (dynamic) {
-        let name = generateId("slot");
+        let name = this.generateId("slot");
         this.define(name, slotName);
         blockString = `toggler(${name}, callSlot(ctx, node, ${key}, ${name}, ${dynamic}, ${scope}))`;
       } else {
