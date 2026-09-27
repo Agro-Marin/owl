@@ -440,6 +440,9 @@ export class CodeGenerator {
   }
 
   translate(str: string, translationCtx: string): string {
+    if (!str.trim()) {
+      return str;
+    }
     const match = translationRE.exec(str) as any;
     return match[1] + this.translateFn(match[2], translationCtx) + match[3];
   }

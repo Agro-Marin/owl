@@ -376,3 +376,16 @@ exports[`translation support > translation works, even if initial string has inn
   }
 }"
 `;
+
+exports[`translation support > whitespace-only text is not sent to translateFn 1`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  
+  let block1 = createBlock(\`<div><b>mot</b> <i>mot</i></div>\`);
+  
+  return function template(ctx, node, key = "") {
+    return block1();
+  }
+}"
+`;

@@ -216,6 +216,21 @@ describe("translation support", () => {
     await mount(SomeComponent, fixture);
     expect(fixture.outerHTML).toBe("<div><div><div></div><div></div></div></div>");
   });
+  test("whitespace-only text is not sent to translateFn", async () => {
+    class SomeComponent extends Component {
+      static template = xml`<div><b>word</b> <i>word</i></div>`;
+    }
+    const seen: string[] = [];
+    await mount(SomeComponent, fixture, {
+      translateFn: (expr: string) => {
+        seen.push(expr);
+        return expr === "word" ? "mot" : expr;
+      },
+    });
+    expect(fixture.innerHTML).toBe("<div><b>mot</b> <i>mot</i></div>");
+    expect(seen).toEqual(["word", "word"]);
+  });
+
   test("does not translate attributes and .translate props if disabled", async () => {
     class Child extends Component {
       static template = xml`<i t-out="this.props.text"/>`;
