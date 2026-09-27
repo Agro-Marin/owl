@@ -1,3 +1,5 @@
+import { OwlError } from "@odoo/owl-core";
+import { parseXML } from "../src/parse_xml";
 import { ASTType, ForEachNoFlag, parse } from "../src/parser";
 import { getConsoleOutput } from "./helpers";
 
@@ -2160,5 +2162,14 @@ describe("qweb parser", () => {
       model: null,
       ns: null,
     });
+  });
+});
+
+describe("parseXML", () => {
+  test("invalid xml throws an OwlError pointing at the reported column", () => {
+    expect(() => parseXML("<a/>\nx")).toThrow(OwlError);
+    expect(() => parseXML("<a><b></a>")).toThrow(
+      "The error might be located at xml line 1 column 10\n<a><b></a>\n---------^"
+    );
   });
 });

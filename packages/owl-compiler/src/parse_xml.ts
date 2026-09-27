@@ -22,11 +22,11 @@ export function parseXML(xml: string): XMLDocument {
         const line = xml.split("\n")[lineNumber - 1];
         const secondMatch = re.exec(parsererrorText);
         if (line && secondMatch) {
-          const columnIndex = Number(secondMatch[0]) - 1;
-          if (line[columnIndex]) {
+          const column = Number(secondMatch[0]);
+          if (column >= 1 && column <= line.length) {
             msg +=
-              `\nThe error might be located at xml line ${lineNumber} column ${columnIndex}\n` +
-              `${line}\n${"-".repeat(columnIndex - 1)}^`;
+              `\nThe error might be located at xml line ${lineNumber} column ${column}\n` +
+              `${line}\n${"-".repeat(column - 1)}^`;
           }
         }
       }
