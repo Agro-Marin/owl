@@ -608,6 +608,42 @@ describe("t-model directive", () => {
     expect(fixture.querySelector("select")!.value).toEqual("b");
   });
 
+  test("t-model with quotes in static option values", async () => {
+    class Test extends Component {
+      static template = xml`
+        <select t-model="this.model">
+          <option t-att-value="'a'">A</option>
+          <option value='say "hi"'>B</option>
+          <option value="it's">C</option>
+        </select>`;
+      model = signal('say "hi"');
+    }
+
+    await mount(Test, fixture);
+    expect(fixture.querySelector("select")!.value).toEqual('say "hi"');
+  });
+
+  test("t-model on radios with quotes in the value, or a t-attf-value", async () => {
+    class Test extends Component {
+      static template = xml`
+        <div>
+          <input type="radio" value="it's" t-model="this.choice"/>
+          <input type="radio" t-attf-value="{{this.prefix}}-b" t-model="this.choice"/>
+        </div>`;
+      choice = signal("x-b");
+      prefix = "x";
+    }
+
+    const test = await mount(Test, fixture);
+    const [first, second] = fixture.querySelectorAll("input");
+    expect(first.checked).toBe(false);
+    expect(second.checked).toBe(true);
+    test.choice.set("it's");
+    await nextTick();
+    expect(first.checked).toBe(true);
+    expect(second.checked).toBe(false);
+  });
+
   test("t-model with dynamic values on select options -- 2", async () => {
     class Test extends Component {
       static template = xml`

@@ -615,7 +615,7 @@ export class CodeGenerator {
         const attrTranslationCtx = ast.attrsTranslationCtx?.[key] || ctx.translationCtx;
         attrs[key] = this.translateFn(ast.attrs[key], attrTranslationCtx);
       } else {
-        expr = `"${ast.attrs[key]}"`;
+        expr = JSON.stringify(ast.attrs[key]);
         attrName = key;
         attrs[key] = ast.attrs[key];
       }
@@ -657,12 +657,15 @@ export class CodeGenerator {
 
       let idx: number;
       if (specialInitTargetAttr) {
-        let targetExpr = targetAttr in attrs && `'${attrs[targetAttr]}'`;
+        let targetExpr = targetAttr in attrs && JSON.stringify(attrs[targetAttr]);
         if (!targetExpr && ast.attrs) {
           // look at the dynamic attribute counterpart
           const dynamicTgExpr = ast.attrs[`t-att-${targetAttr}`];
+          const formatTgExpr = ast.attrs[`t-attf-${targetAttr}`];
           if (dynamicTgExpr) {
             targetExpr = compileExpr(dynamicTgExpr);
+          } else if (formatTgExpr) {
+            targetExpr = interpolate(formatTgExpr);
           }
         }
         idx = block!.insertData(`${readExpr} === ${targetExpr}`, "prop");
