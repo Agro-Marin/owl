@@ -1798,13 +1798,6 @@ describe("qweb parser", () => {
     });
   });
 
-  test("t-ref on a <t> node throws", async () => {
-    const error = "Directive 't-ref' can only be used on DOM nodes (used on a <t>)";
-    expect(() => parse(`<t t-out="x" t-ref="r"/>`)).toThrow(error);
-    expect(() => parse(`<t t-ref="r">text</t>`)).toThrow(error);
-    expect(() => parse(`<t t-if="c" t-ref="r"><div/></t>`)).toThrow(error);
-  });
-
   // ---------------------------------------------------------------------------
   // t-call-block
   // ---------------------------------------------------------------------------

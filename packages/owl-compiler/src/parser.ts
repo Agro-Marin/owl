@@ -264,18 +264,9 @@ function parseNode(node: Node, ctx: ParsingContext): AST | null {
 // <t /> tag
 // -----------------------------------------------------------------------------
 
-function tRefError(node: Element): OwlError {
-  return new OwlError(
-    `Directive 't-ref' can only be used on DOM nodes (used on a <${node.tagName}>)`
-  );
-}
-
 function parseTNode(node: Element, ctx: ParsingContext): AST | null {
   if (node.tagName !== "t") {
     return null;
-  }
-  if (node.hasAttribute("t-ref")) {
-    throw tRefError(node);
   }
   return parseChildNodes(node, ctx);
 }
@@ -495,9 +486,6 @@ function parseTOutNode(node: Element, ctx: ParsingContext): AST | null {
   const ref = node.getAttribute("t-ref");
   node.removeAttribute("t-ref");
   const ast = parseNode(node, ctx);
-  if (ref && ast?.type !== ASTType.DomNode) {
-    throw tRefError(node);
-  }
   if (!ast) {
     return tOut;
   }
