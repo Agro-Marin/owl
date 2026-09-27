@@ -11,7 +11,7 @@ exports[`Cascading renders after microtaskTick 1`] = `
     const b2 = comp1({}, key + \`__1\`, node, this, null);
     const b3 = text(\` _ \`);
     const ctx1 = ctx;
-    const [k_block4, v_block4, l_block4, c_block4] = prepareList(ctx['this'].state);;
+    const [k_block4, v_block4, l_block4, c_block4] = prepareList(ctx['this'].state);
     for (let i1 = 0; i1 < l_block4; i1++) {
       let ctx = Object.create(ctx1);
       ctx[\`elem\`] = k_block4[i1];
@@ -33,7 +33,7 @@ exports[`Cascading renders after microtaskTick 2`] = `
   
   return function template(ctx, node, key = "") {
     const ctx1 = ctx;
-    const [k_block1, v_block1, l_block1, c_block1] = prepareList(ctx['this'].state);;
+    const [k_block1, v_block1, l_block1, c_block1] = prepareList(ctx['this'].state);
     for (let i1 = 0; i1 < l_block1; i1++) {
       let ctx = Object.create(ctx1);
       ctx[\`elem\`] = k_block1[i1];
@@ -2226,7 +2226,7 @@ exports[`t-foreach with dynamic async component 1`] = `
   
   return function template(ctx, node, key = "") {
     const ctx1 = ctx;
-    const [k_block1, v_block1, l_block1, c_block1] = prepareList(ctx['this'].list);;
+    const [k_block1, v_block1, l_block1, c_block1] = prepareList(ctx['this'].list);
     for (let i1 = 0; i1 < l_block1; i1++) {
       let ctx = Object.create(ctx1);
       ctx[\`arr\`] = k_block1[i1];

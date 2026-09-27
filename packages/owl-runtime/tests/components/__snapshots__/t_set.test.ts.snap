@@ -204,13 +204,13 @@ exports[`t-set > t-set body with a component, output in nested loops 1`] = `
   
   return function template(ctx, node, key = "") {
     const ctx1 = ctx;
-    const [k_block2, v_block2, l_block2, c_block2] = prepareList([1,2]);;
+    const [k_block2, v_block2, l_block2, c_block2] = prepareList([1,2]);
     for (let i1 = 0; i1 < l_block2; i1++) {
       let ctx = Object.create(ctx1);
       ctx[\`r\`] = k_block2[i1];
       const key1 = ctx['r'];
       const ctx2 = ctx;
-      const [k_block4, v_block4, l_block4, c_block4] = prepareList(['a']);;
+      const [k_block4, v_block4, l_block4, c_block4] = prepareList(['a']);
       for (let i2 = 0; i2 < l_block4; i2++) {
         let ctx = Object.create(ctx2);
         ctx[\`c\`] = k_block4[i2];

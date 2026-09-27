@@ -101,7 +101,7 @@ exports[`render loop detection > wide re-render under an uncommitted root is not
   
   return function template(ctx, node, key = "") {
     const ctx1 = ctx;
-    const [k_block2, v_block2, l_block2, c_block2] = prepareList(ctx['this'].ids);;
+    const [k_block2, v_block2, l_block2, c_block2] = prepareList(ctx['this'].ids);
     const keys2 = new Set();
     for (let i1 = 0; i1 < l_block2; i1++) {
       let ctx = Object.create(ctx1);

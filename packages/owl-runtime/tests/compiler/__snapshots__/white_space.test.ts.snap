@@ -109,7 +109,7 @@ exports[`white space handling > whitespace in pre tags is kept under t-if and t-
   
   return function template(ctx, node, key = "") {
     const ctx1 = ctx;
-    const [k_block2, v_block2, l_block2, c_block2] = prepareList([1]);;
+    const [k_block2, v_block2, l_block2, c_block2] = prepareList([1]);
     for (let i1 = 0; i1 < l_block2; i1++) {
       let ctx = Object.create(ctx1);
       ctx[\`i\`] = k_block2[i1];

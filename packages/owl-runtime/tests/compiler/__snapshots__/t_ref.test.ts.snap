@@ -99,7 +99,7 @@ exports[`t-ref > refs in a loop 1`] = `
   
   return function template(ctx, node, key = "") {
     const ctx1 = ctx;
-    const [k_block2, v_block2, l_block2, c_block2] = prepareList(ctx['items']);;
+    const [k_block2, v_block2, l_block2, c_block2] = prepareList(ctx['items']);
     for (let i1 = 0; i1 < l_block2; i1++) {
       let ctx = Object.create(ctx1);
       ctx[\`item\`] = k_block2[i1];

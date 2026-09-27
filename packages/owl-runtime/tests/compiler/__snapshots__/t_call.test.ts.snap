@@ -459,7 +459,7 @@ exports[`t-call (template calling) > recursive template, part 2 2`] = `
   return function template(ctx, node, key = "") {
     const b2 = safeOutput(ctx['node'].val);
     const ctx1 = ctx;
-    const [k_block3, v_block3, l_block3, c_block3] = prepareList(ctx['node'].children||[]);;
+    const [k_block3, v_block3, l_block3, c_block3] = prepareList(ctx['node'].children||[]);
     for (let i1 = 0; i1 < l_block3; i1++) {
       let ctx = Object.create(ctx1);
       ctx[\`subtree\`] = k_block3[i1];
@@ -502,7 +502,7 @@ exports[`t-call (template calling) > recursive template, part 3 2`] = `
   return function template(ctx, node, key = "") {
     const b2 = safeOutput(ctx['node'].val);
     const ctx1 = ctx;
-    const [k_block3, v_block3, l_block3, c_block3] = prepareList(ctx['node'].children||[]);;
+    const [k_block3, v_block3, l_block3, c_block3] = prepareList(ctx['node'].children||[]);
     for (let i1 = 0; i1 < l_block3; i1++) {
       let ctx = Object.create(ctx1);
       ctx[\`subtree\`] = k_block3[i1];
@@ -548,7 +548,7 @@ exports[`t-call (template calling) > recursive template, part 4: with t-set recu
     const b2 = safeOutput(ctx['node'].val);
     const b3 = safeOutput(ctx['recursive_idx']);
     const ctx1 = ctx;
-    const [k_block4, v_block4, l_block4, c_block4] = prepareList(ctx['node'].children||[]);;
+    const [k_block4, v_block4, l_block4, c_block4] = prepareList(ctx['node'].children||[]);
     for (let i1 = 0; i1 < l_block4; i1++) {
       let ctx = Object.create(ctx1);
       ctx[\`subtree\`] = k_block4[i1];
@@ -573,7 +573,7 @@ exports[`t-call (template calling) > root t-call with body: t-foreach 1`] = `
   
   function callBody1(ctx, node, key = "") {
     const ctx1 = ctx;
-    const [k_block2, v_block2, l_block2, c_block2] = prepareList([1]);;
+    const [k_block2, v_block2, l_block2, c_block2] = prepareList([1]);
     for (let i1 = 0; i1 < l_block2; i1++) {
       let ctx = Object.create(ctx1);
       ctx[\`i\`] = k_block2[i1];
@@ -1031,7 +1031,7 @@ exports[`t-call (template calling) > t-call with t-set inside and outside 1`] = 
   
   return function template(ctx, node, key = "") {
     const ctx1 = ctx;
-    const [k_block2, v_block2, l_block2, c_block2] = prepareList(ctx['list']);;
+    const [k_block2, v_block2, l_block2, c_block2] = prepareList(ctx['list']);
     for (let i1 = 0; i1 < l_block2; i1++) {
       let ctx = Object.create(ctx1);
       ctx[\`v\`] = k_block2[i1];
@@ -1091,7 +1091,7 @@ exports[`t-call (template calling) > t-call with t-set inside and outside. 2 2`]
   
   return function template(ctx, node, key = "") {
     const ctx1 = ctx;
-    const [k_block2, v_block2, l_block2, c_block2] = prepareList(ctx['list']);;
+    const [k_block2, v_block2, l_block2, c_block2] = prepareList(ctx['list']);
     for (let i1 = 0; i1 < l_block2; i1++) {
       let ctx = Object.create(ctx1);
       ctx[\`v\`] = k_block2[i1];
@@ -1262,6 +1262,48 @@ exports[`t-call (template calling) > t-out inside t-call, with t-set outside 2`]
   return function template(ctx, node, key = "") {
     const b2 = safeOutput(ctx['v']);
     return block1([], [b2]);
+  }
+}"
+`;
+
+exports[`t-call (template calling) > two dynamic t-calls in a row are both dynamic 1`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { callTemplate } = helpers;
+  
+  let block1 = createBlock(\`<div><block-child-0/><block-child-1/></div>\`);
+  
+  return function template(ctx, node, key = "") {
+    const b2 = callTemplate((ctx['a']), this, app, ctx, node, key + \`__1\`);
+    const b3 = callTemplate((ctx['b']), this, app, ctx, node, key + \`__2\`);
+    return block1([], [b2, b3]);
+  }
+}"
+`;
+
+exports[`t-call (template calling) > two dynamic t-calls in a row are both dynamic 2`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  
+  let block1 = createBlock(\`<foo/>\`);
+  
+  return function template(ctx, node, key = "") {
+    return block1();
+  }
+}"
+`;
+
+exports[`t-call (template calling) > two dynamic t-calls in a row are both dynamic 3`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  
+  let block1 = createBlock(\`<bar/>\`);
+  
+  return function template(ctx, node, key = "") {
+    return block1();
   }
 }"
 `;

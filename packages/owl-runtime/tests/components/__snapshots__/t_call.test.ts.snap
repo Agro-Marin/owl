@@ -457,7 +457,7 @@ exports[`t-call > t-call in t-foreach and children component 1`] = `
   
   return function template(ctx, node, key = "") {
     const ctx1 = ctx;
-    const [k_block2, v_block2, l_block2, c_block2] = prepareList(['a','b','c']);;
+    const [k_block2, v_block2, l_block2, c_block2] = prepareList(['a','b','c']);
     for (let i1 = 0; i1 < l_block2; i1++) {
       let ctx = Object.create(ctx1);
       ctx[\`val\`] = k_block2[i1];

@@ -67,7 +67,7 @@ exports[`computed with equals in components > a recompute with a shallow-equal r
   return function template(ctx, node, key = "") {
     const b2 = safeOutput(ctx['this'].track());
     const ctx1 = ctx;
-    const [k_block3, v_block3, l_block3, c_block3] = prepareList(ctx['this'].visible());;
+    const [k_block3, v_block3, l_block3, c_block3] = prepareList(ctx['this'].visible());
     for (let i1 = 0; i1 < l_block3; i1++) {
       let ctx = Object.create(ctx1);
       ctx[\`todo\`] = k_block3[i1];
@@ -92,7 +92,7 @@ exports[`reactive cleanup on component destruction > benchmark-like scenario: si
   
   return function template(ctx, node, key = "") {
     const ctx1 = ctx;
-    const [k_block2, v_block2, l_block2, c_block2] = prepareList(ctx['this'].rows());;
+    const [k_block2, v_block2, l_block2, c_block2] = prepareList(ctx['this'].rows());
     for (let i1 = 0; i1 < l_block2; i1++) {
       let ctx = Object.create(ctx1);
       ctx[\`row\`] = k_block2[i1];
@@ -167,7 +167,7 @@ exports[`reactive cleanup on component destruction > destroying multiple childre
   
   return function template(ctx, node, key = "") {
     const ctx1 = ctx;
-    const [k_block2, v_block2, l_block2, c_block2] = prepareList(ctx['this'].rows());;
+    const [k_block2, v_block2, l_block2, c_block2] = prepareList(ctx['this'].rows());
     for (let i1 = 0; i1 < l_block2; i1++) {
       let ctx = Object.create(ctx1);
       ctx[\`row\`] = k_block2[i1];

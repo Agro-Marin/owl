@@ -13,7 +13,7 @@ exports[`components in t-out > simple list 1`] = `
   
   return function template(ctx, node, key = "") {
     const ctx1 = ctx;
-    const [k_block1, v_block1, l_block1, c_block1] = prepareList([1,2]);;
+    const [k_block1, v_block1, l_block1, c_block1] = prepareList([1,2]);
     for (let i1 = 0; i1 < l_block1; i1++) {
       let ctx = Object.create(ctx1);
       ctx[\`n\`] = k_block1[i1];

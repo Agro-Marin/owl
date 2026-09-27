@@ -104,7 +104,7 @@ export interface ASTTForEach extends BaseAST {
   elem: string;
   body: AST;
   noFlags: number;
-  key: string | null;
+  key: string;
 }
 
 export interface ASTTKey extends BaseAST {

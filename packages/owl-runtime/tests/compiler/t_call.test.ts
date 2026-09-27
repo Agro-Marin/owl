@@ -485,6 +485,16 @@ describe("t-call (template calling)", () => {
     expect(context.renderToString("main", { template: "bar", val: "quux" })).toBe(expected2);
   });
 
+  test("two dynamic t-calls in a row are both dynamic", () => {
+    const context = new TestContext();
+    context.addTemplate("foo", `<foo/>`);
+    context.addTemplate("bar", `<bar/>`);
+    context.addTemplate("main", `<div><t t-call="{{a}}"/><t t-call="{{b}}"/></div>`);
+    expect(context.renderToString("main", { a: "foo", b: "bar" })).toBe(
+      "<div><foo></foo><bar></bar></div>"
+    );
+  });
+
   test("t-call-context", () => {
     const context = new TestContext();
     context.addTemplate("sub", `<span><t t-out="this.value"/></span>`);

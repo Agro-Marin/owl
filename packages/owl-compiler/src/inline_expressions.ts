@@ -27,10 +27,11 @@ import { OwlError } from "@odoo/owl-core";
 // Misc types, constants and helpers
 //------------------------------------------------------------------------------
 
-const RESERVED_WORDS =
+const RESERVED_WORDS = new Set(
   "true,false,NaN,null,undefined,debugger,console,window,in,instanceof,new,function,return,eval,void,Math,RegExp,Array,Object,Date,__globals__".split(
     ","
-  );
+  )
+);
 
 const WORD_REPLACEMENT: { [key: string]: string } = Object.assign(Object.create(null), {
   and: "&&",
@@ -405,7 +406,7 @@ export function processExpr(expr: string, seededLocals?: Set<string>): Processed
         break;
     }
 
-    let isVar = token.type === "SYMBOL" && !RESERVED_WORDS.includes(token.value);
+    let isVar = token.type === "SYMBOL" && !RESERVED_WORDS.has(token.value);
     if (isVar) {
       if (prevToken) {
         // normalize missing tokens: {a} should be equivalent to {a:a}
@@ -495,7 +496,12 @@ export function compileExpr(expr: string, seededLocals?: Set<string>): string {
   return processExpr(expr, seededLocals).expr;
 }
 
-export const INTERP_REGEXP = /\{\{.*?\}\}|\#\{.*?\}/g;
+const INTERP_REGEXP = /\{\{.*?\}\}|\#\{.*?\}/g;
+const HAS_INTERP_REGEXP = /\{\{.*?\}\}|\#\{.*?\}/;
+
+export function isInterpolated(s: string): boolean {
+  return HAS_INTERP_REGEXP.test(s);
+}
 
 function replaceDynamicParts(s: string, replacer: (s: string) => string) {
   let matches = s.match(INTERP_REGEXP);

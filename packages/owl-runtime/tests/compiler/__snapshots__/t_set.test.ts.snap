@@ -8,13 +8,13 @@ exports[`t-set > a t-set in an ended loop does not change scoping in a later loo
   
   return function template(ctx, node, key = "") {
     const ctx1 = ctx;
-    const [k_block1, v_block1, l_block1, c_block1] = prepareList([1,2]);;
+    const [k_block1, v_block1, l_block1, c_block1] = prepareList([1,2]);
     for (let i1 = 0; i1 < l_block1; i1++) {
       let ctx = Object.create(ctx1);
       ctx[\`j\`] = k_block1[i1];
       const key1 = ctx['j'];
       const ctx2 = ctx;
-      const [k_block3, v_block3, l_block3, c_block3] = prepareList([7]);;
+      const [k_block3, v_block3, l_block3, c_block3] = prepareList([7]);
       for (let i2 = 0; i2 < l_block3; i2++) {
         let ctx = Object.create(ctx2);
         ctx[\`k\`] = k_block3[i2];
@@ -41,7 +41,7 @@ exports[`t-set > a t-set in an ended loop does not change scoping in a later loo
   
   return function template(ctx, node, key = "") {
     const ctx1 = ctx;
-    const [k_block2, v_block2, l_block2, c_block2] = prepareList([0]);;
+    const [k_block2, v_block2, l_block2, c_block2] = prepareList([0]);
     for (let i1 = 0; i1 < l_block2; i1++) {
       let ctx = Object.create(ctx1);
       ctx[\`i\`] = k_block2[i1];
@@ -51,13 +51,13 @@ exports[`t-set > a t-set in an ended loop does not change scoping in a later loo
     }
     const b2 = list(c_block2);
     const ctx2 = ctx;
-    const [k_block4, v_block4, l_block4, c_block4] = prepareList([1,2]);;
+    const [k_block4, v_block4, l_block4, c_block4] = prepareList([1,2]);
     for (let i1 = 0; i1 < l_block4; i1++) {
       let ctx = Object.create(ctx2);
       ctx[\`j\`] = k_block4[i1];
       const key1 = ctx['j'];
       const ctx3 = ctx;
-      const [k_block6, v_block6, l_block6, c_block6] = prepareList([7]);;
+      const [k_block6, v_block6, l_block6, c_block6] = prepareList([7]);
       for (let i2 = 0; i2 < l_block6; i2++) {
         let ctx = Object.create(ctx3);
         ctx[\`k\`] = k_block6[i2];
@@ -526,7 +526,7 @@ exports[`t-set > t-set outside modified in t-foreach 1`] = `
     ctx = Object.create(ctx);
     ctx["iter"] = 0;
     const ctx1 = ctx;
-    const [k_block2, v_block2, l_block2, c_block2] = prepareList(['a','b']);;
+    const [k_block2, v_block2, l_block2, c_block2] = prepareList(['a','b']);
     for (let i1 = 0; i1 < l_block2; i1++) {
       let ctx = Object.create(ctx1);
       ctx[\`val\`] = k_block2[i1];
@@ -555,7 +555,7 @@ exports[`t-set > t-set outside modified in t-foreach increment-after operator 1`
     ctx = Object.create(ctx);
     ctx["iter"] = 0;
     const ctx1 = ctx;
-    const [k_block2, v_block2, l_block2, c_block2] = prepareList(['a','b']);;
+    const [k_block2, v_block2, l_block2, c_block2] = prepareList(['a','b']);
     for (let i1 = 0; i1 < l_block2; i1++) {
       let ctx = Object.create(ctx1);
       ctx[\`val\`] = k_block2[i1];
@@ -584,7 +584,7 @@ exports[`t-set > t-set outside modified in t-foreach increment-before operator 1
     ctx = Object.create(ctx);
     ctx["iter"] = 0;
     const ctx1 = ctx;
-    const [k_block2, v_block2, l_block2, c_block2] = prepareList(['a','b']);;
+    const [k_block2, v_block2, l_block2, c_block2] = prepareList(['a','b']);
     for (let i1 = 0; i1 < l_block2; i1++) {
       let ctx = Object.create(ctx1);
       ctx[\`val\`] = k_block2[i1];
@@ -613,7 +613,7 @@ exports[`t-set > t-set should reuse variable if possible 1`] = `
     ctx = Object.create(ctx);
     ctx["v"] = 1;
     const ctx1 = ctx;
-    const [k_block2, v_block2, l_block2, c_block2] = prepareList(ctx['list']);;
+    const [k_block2, v_block2, l_block2, c_block2] = prepareList(ctx['list']);
     for (let i1 = 0; i1 < l_block2; i1++) {
       let ctx = Object.create(ctx1);
       ctx[\`elem\`] = k_block2[i1];

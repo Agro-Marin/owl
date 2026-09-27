@@ -592,7 +592,7 @@ exports[`refs > resource can be used for multi ref 1`] = `
   
   return function template(ctx, node, key = "") {
     const ctx1 = ctx;
-    const [k_block1, v_block1, l_block1, c_block1] = prepareList(ctx['this'].items());;
+    const [k_block1, v_block1, l_block1, c_block1] = prepareList(ctx['this'].items());
     for (let i1 = 0; i1 < l_block1; i1++) {
       let ctx = Object.create(ctx1);
       ctx[\`item\`] = k_block1[i1];
