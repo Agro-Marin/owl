@@ -279,6 +279,24 @@ describe("dev mode", () => {
     // no error: the raw prop stayed undefined, so the static-prop check passes
     expect(fixture.innerHTML).toBe("<div>fallback</div>");
   });
+  test("a key another view defaults does not trigger the static-prop error on re-render", async () => {
+    class Child extends Component {
+      static template = xml`<span t-out="this.props.n"/><i t-out="this.mode"/>`;
+      props = props({ n: t.number(), mode: t.string().optional("a") });
+      mode = props.static("mode");
+    }
+    class Parent extends Component {
+      static template = xml`<Child n="this.n()"/>`;
+      static components = { Child };
+      n = signal(0);
+    }
+
+    const parent = await mount(Parent, fixture, { dev: true });
+    expect(fixture.innerHTML).toBe("<span>0</span><i>a</i>");
+    parent.n.set(1);
+    await nextTick();
+    expect(fixture.innerHTML).toBe("<span>1</span><i>a</i>");
+  });
 });
 
 // -----------------------------------------------------------------------------

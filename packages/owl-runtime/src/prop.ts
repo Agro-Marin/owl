@@ -22,7 +22,8 @@ export function staticProp(key: string, type?: any): any {
       assertType(propValue, type, `Invalid prop '${key}' in '${node.componentName}'`);
     }
     node.willUpdateProps.push((nextProps: Record<string, any>) => {
-      if (nextProps[key] !== node.props[key]) {
+      const current = node.props[key] === undefined ? node.defaultProps?.[key] : node.props[key];
+      if (nextProps[key] !== current) {
         throw new OwlError(
           `Prop '${key}' changed in component '${node.componentName}'. ` +
             `Props declared with \`props.static()\` are static and should not change. ` +
@@ -32,5 +33,8 @@ export function staticProp(key: string, type?: any): any {
     });
   }
 
-  return propValue === undefined && defaultFactory ? defaultFactory() : propValue;
+  if (propValue === undefined) {
+    return defaultFactory ? defaultFactory() : node.defaultProps?.[key];
+  }
+  return propValue;
 }
