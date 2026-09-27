@@ -1,5 +1,5 @@
 import { vi, type Mock } from "vitest";
-import { proxy, computed, shallowEqual, signal } from "../src";
+import { proxy, computed, effect, shallowEqual, signal } from "../src";
 import { PluginManager } from "../src/plugin_manager";
 import {
   atomSymbol,
@@ -237,6 +237,57 @@ describe("throwing compute", () => {
     const witnessAtom = (witness as any)[atomSymbol] as ComputationAtom;
     expect(witnessAtom.observers.size).toBe(0);
     expect(brokenAtom.sources.size).toBe(0);
+  });
+
+  test("a reader that caught the error runs again once the getter recovers", async () => {
+    const s = signal(-1);
+    const c = computed(() => {
+      if (s() < 0) {
+        throw new Error("negative");
+      }
+      return s();
+    });
+    const seen: unknown[] = [];
+    effect(() => {
+      try {
+        seen.push(c());
+      } catch {
+        seen.push("error");
+      }
+    });
+    s.set(5);
+    await waitScheduler();
+    expect(seen).toEqual(["error", 5]);
+  });
+
+  test("the error is kept until a source changes, and going in and out of it notifies", async () => {
+    const s = signal(1);
+    let runs = 0;
+    const c = computed(() => {
+      runs++;
+      if (s() < 0) {
+        throw new Error("negative");
+      }
+      return s();
+    });
+    const seen: unknown[] = [];
+    effect(() => {
+      try {
+        seen.push(c());
+      } catch {
+        seen.push("error");
+      }
+    });
+    s.set(-1);
+    await waitScheduler();
+    expect(() => c()).toThrow("negative");
+    expect(() => c()).toThrow("negative");
+    expect(runs).toBe(2);
+    s.set(3);
+    await waitScheduler();
+    s.set(4);
+    await waitScheduler();
+    expect(seen).toEqual([1, "error", 3, 4]);
   });
 });
 

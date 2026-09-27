@@ -142,23 +142,44 @@ export function onWriteAtom(atom: Atom) {
       pendingDisposals.add(ctx);
     }
   }
+  let errors: unknown[] | null = null;
   if (immediateObservers.length) {
     const toRun = immediateObservers;
     immediateObservers = [];
-    for (const ctx of toRun) {
-      updateComputation(ctx);
-    }
+    errors = updateEach(toRun);
   }
   batchProcessEffects();
+  rethrow(errors);
+}
+
+// Runs every computation even when one throws: a computation left behind is not
+// EXECUTED, so no later write would ever queue it again.
+function updateEach(computations: ComputationAtom[]): unknown[] | null {
+  let errors: unknown[] | null = null;
+  for (let i = 0; i < computations.length; i++) {
+    try {
+      updateComputation(computations[i]);
+    } catch (error) {
+      (errors ||= []).push(error);
+    }
+  }
+  return errors;
+}
+
+function rethrow(errors: unknown[] | null) {
+  if (errors) {
+    for (let i = 1; i < errors.length; i++) {
+      Promise.reject(errors[i]);
+    }
+    throw errors[0];
+  }
 }
 
 const batchProcessEffects = batched(processEffects);
 function processEffects() {
   const pending = observers;
   observers = [];
-  for (let i = 0; i < pending.length; i++) {
-    updateComputation(pending[i]);
-  }
+  const errors = updateEach(pending);
   if (pendingDisposals.size !== 0) {
     const candidates = pendingDisposals;
     pendingDisposals = new Set();
@@ -172,6 +193,7 @@ function processEffects() {
       }
     }
   }
+  rethrow(errors);
 }
 
 export function getCurrentComputation() {
@@ -219,11 +241,11 @@ export function updateComputation(computation: ComputationAtom) {
   currentObserver = undefined;
   try {
     computation.value = computation.compute();
-    computation.state = ComputationState.EXECUTED;
   } finally {
-    // Restore the previous tracking pointer even if compute() threw, so a
-    // subsequent atom read does not silently attach itself as a source of
-    // the failed computation.
+    // A computation that threw stays subscribed to what it read before the
+    // throw, and runs again when one of those changes. Restore the tracking
+    // pointer too, so a later read does not attach to the failed computation.
+    computation.state = ComputationState.EXECUTED;
     currentComputation = previousComputation;
     currentObserver = previousObserver;
   }

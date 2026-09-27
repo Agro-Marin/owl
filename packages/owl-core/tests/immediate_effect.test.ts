@@ -202,4 +202,27 @@ describe("immediateEffect", () => {
       expectSpy(spy2, 2, { args: [20] });
     });
   });
+
+  test("a throwing immediate effect reaches the writer after every other effect ran", async () => {
+    const s = signal(0);
+    const log: string[] = [];
+    immediateEffect(() => {
+      if (s() === 1) {
+        throw new Error("boom");
+      }
+      log.push(`a${s()}`);
+    });
+    immediateEffect(() => {
+      log.push(`b${s()}`);
+    });
+    effect(() => {
+      log.push(`c${s()}`);
+    });
+    expect(() => s.set(1)).toThrow("boom");
+    expect(log).toEqual(["a0", "b0", "c0", "b1"]);
+    await waitScheduler();
+    expect(log).toEqual(["a0", "b0", "c0", "b1", "c1"]);
+    s.set(2);
+    expect(log).toEqual(["a0", "b0", "c0", "b1", "c1", "a2", "b2"]);
+  });
 });

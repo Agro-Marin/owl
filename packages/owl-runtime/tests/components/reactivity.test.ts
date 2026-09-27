@@ -1,6 +1,7 @@
 import {
   Component,
   computed,
+  effect,
   mount,
   onPatched,
   onWillPatch,
@@ -330,6 +331,34 @@ describe("reactivity in lifecycle", () => {
     expect(fixture.innerHTML).toBe("child:bv=1:a=1parent:a=1:b=1");
     expect(childRenderCount).toBe(3);
   });
+});
+
+test("a throwing effect does not freeze a component notified with it", async () => {
+  const s = signal(0);
+  const errors: string[] = [];
+  const onRejection = (e: unknown) => errors.push(String(e));
+  process.on("unhandledRejection", onRejection);
+  try {
+    effect(() => {
+      if (s() === 1) {
+        throw new Error("boom");
+      }
+    });
+    class Counter extends Component {
+      static template = xml`<div t-out="this.s()"/>`;
+      s = s;
+    }
+    await mount(Counter, fixture);
+    s.set(1);
+    await nextTick();
+    expect(fixture.innerHTML).toBe("<div>1</div>");
+    s.set(2);
+    await nextTick();
+    expect(fixture.innerHTML).toBe("<div>2</div>");
+    expect(errors).toEqual(["Error: boom"]);
+  } finally {
+    process.off("unhandledRejection", onRejection);
+  }
 });
 
 describe("components and computed", () => {

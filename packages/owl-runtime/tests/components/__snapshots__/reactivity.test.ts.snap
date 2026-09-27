@@ -1,5 +1,20 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`a throwing effect does not freeze a component notified with it 1`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { safeOutput } = helpers;
+  
+  let block1 = createBlock(\`<div><block-child-0/></div>\`);
+  
+  return function template(ctx, node, key = "") {
+    const b2 = safeOutput(ctx['this'].s());
+    return block1([], [b2]);
+  }
+}"
+`;
+
 exports[`components and computed > Child is not rerender when reactive is computed 1`] = `
 "function anonymous(app, bdom, helpers
 ) {

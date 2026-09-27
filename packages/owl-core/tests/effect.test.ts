@@ -1,4 +1,4 @@
-import { computed, effect, proxy, signal, untrack } from "../src";
+import { atomSymbol, computed, effect, proxy, signal, untrack } from "../src";
 import { expectSpy, nextMicroTick } from "./helpers";
 
 async function waitScheduler() {
@@ -65,11 +65,11 @@ describe("effect", () => {
     expectSpy(spy, 2, { args: [2] });
   });
 
-  test("an effect that throws during flush is not re-run on a follow-up microtask", async () => {
-    // The effect's body has no guard, so its only source is `uppercase`.
-    // When list goes to [], the eager source walk in updateComputation
-    // recomputes `uppercase` (its single source changed), which throws
-    // before the effect body runs — so `runs` stays at 1.
+  test("an effect that throws during flush runs once per change, and again after recovering", async () => {
+    // `uppercase` throws once `list` is empty. The throw is cached by the
+    // computed and rethrown to its reader: the effect body runs, reads it and
+    // throws. It is not re-run on a follow-up microtask (the old queue bug), but
+    // it stays subscribed to what it read, so it runs again when `list` changes.
     //
     // The throw propagates through batched()'s .then() chain as an unhandled
     // rejection. We use a named error class so vitest.config.ts'
@@ -87,18 +87,62 @@ describe("effect", () => {
     });
 
     let runs = 0;
+    let seen: string | undefined;
     effect(() => {
       runs++;
-      uppercase();
+      seen = uppercase();
     });
     expect(runs).toBe(1);
 
     list.set([]);
     for (let i = 0; i < 5; i++) await Promise.resolve();
-    // The eager source walk throws inside uppercase.compute(); the effect
-    // body never runs, so the counter stays at the initial 1. The earlier
-    // bug (queue not cleared on throw) would have produced 3.
-    expect(runs).toBe(1);
+    expect(runs).toBe(2);
+    expect(seen).toBe("A");
+
+    list.set(["b"]);
+    for (let i = 0; i < 5; i++) await Promise.resolve();
+    expect(runs).toBe(3);
+    expect(seen).toBe("B");
+  });
+
+  test("a throwing effect does not stop the other effects of its batch", async () => {
+    class IntentionalTestError extends Error {
+      override name = "IntentionalTestError";
+    }
+    const s = signal(0);
+    const log: string[] = [];
+    effect(() => {
+      if (s() === 1) {
+        throw new IntentionalTestError("boom");
+      }
+      log.push(`a${s()}`);
+    });
+    effect(() => {
+      log.push(`b${s()}`);
+    });
+    s.set(1);
+    await waitScheduler();
+    expect(log).toEqual(["a0", "b0", "b1"]);
+    s.set(2);
+    await waitScheduler();
+    expect(log).toEqual(["a0", "b0", "b1", "a2", "b2"]);
+  });
+
+  test("an effect whose first run throws is disposed", () => {
+    const s = signal(0);
+    const cleanup = vi.fn();
+    const outer = effect(() => {
+      expect(() =>
+        effect(() => {
+          s();
+          throw new Error("first run");
+        })
+      ).toThrow("first run");
+      return cleanup;
+    });
+    expect((s as any)[atomSymbol].observers.size).toBe(0);
+    outer();
+    expect(cleanup).toHaveBeenCalledTimes(1);
   });
 
   test("eager source walk short-circuits once we know we have to re-run", async () => {
