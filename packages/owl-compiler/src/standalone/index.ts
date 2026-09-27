@@ -8,7 +8,7 @@ import { readdir, readFile, stat } from "fs/promises";
 import path from "path";
 import "./setup_jsdom";
 // Compiler imports must be made after setting up jsdom in the global namespace
-import { compile } from "..";
+import { compile, parseXML } from "..";
 
 // -----------------------------------------------------------------------------
 // helpers
@@ -61,17 +61,22 @@ export async function compileTemplates(paths: string[]) {
     const fileName = files[i];
     const fileContent = xmlStrings[i];
     process.stdout.write(`.`);
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(fileContent, "text/xml");
+    let doc: XMLDocument;
+    try {
+      doc = parseXML(fileContent);
+    } catch (e) {
+      errors.push({ name: null, fileName, e });
+      continue;
+    }
     for (const template of doc.querySelectorAll("[t-name]")) {
-      const name = template.getAttribute("t-name");
+      const name = template.getAttribute("t-name")!;
       if (template.hasAttribute("owl")) {
         template.removeAttribute("owl");
       }
-      const fnName = slugify(name!);
+      const fnName = `template_${slugify(name)}`;
       try {
         const fn = compile(template).toString().replace("anonymous", fnName);
-        templates.push(`"${name}": ${fn},\n`);
+        templates.push(`${JSON.stringify(name)}: ${fn},\n`);
       } catch (e) {
         errors.push({ name, fileName, e });
       }
@@ -80,7 +85,11 @@ export async function compileTemplates(paths: string[]) {
   process.stdout.write(`\n`);
 
   for (let { name, fileName, e } of errors) {
-    console.warn(`Error while compiling '${name}' (in file ${fileName})`);
+    console.warn(
+      name === null
+        ? `Error while parsing ${fileName}`
+        : `Error while compiling '${name}' (in file ${fileName})`
+    );
     console.error(e);
   }
   console.log(`${templates.length} templates compiled`);
