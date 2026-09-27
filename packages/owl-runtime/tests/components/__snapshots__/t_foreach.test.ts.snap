@@ -4,7 +4,7 @@ exports[`list of components > a keyed item switching between text and markup, or
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { prepareList, safeOutput, withKey } = helpers;
+  let { prepareList, safeOutput, withKey, checkTagName } = helpers;
   
   let block5 = tag => createBlock(\`<\${tag || 't'}>x</\${tag || 't'}>\`);
   
@@ -24,7 +24,7 @@ exports[`list of components > a keyed item switching between text and markup, or
       let ctx = Object.create(ctx2);
       ctx[\`item\`] = k_block4[i1];
       const key1 = ctx['item'].id;
-      const tag1 = ctx['item'].tag;
+      const tag1 = checkTagName(ctx['item'].tag);
       c_block4[i1] = withKey(toggler(tag1, block5(tag1)()), key1);
     }
     const b4 = list(c_block4);

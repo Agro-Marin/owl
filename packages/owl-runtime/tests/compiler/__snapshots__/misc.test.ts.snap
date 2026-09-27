@@ -315,3 +315,16 @@ exports[`misc > other complex template 1`] = `
   }
 }"
 `;
+
+exports[`static text and attributes keep every \${ as text 1`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  
+  let block1 = createBlock(\`<div title="\\\${a}\\\${b}">\\\${a} and \\\${b}</div>\`);
+  
+  return function template(ctx, node, key = "") {
+    return block1();
+  }
+}"
+`;

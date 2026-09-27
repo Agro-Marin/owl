@@ -264,3 +264,9 @@ describe("misc", () => {
       </div>`);
   });
 });
+
+test("static text and attributes keep every ${ as text", () => {
+  expect(renderToString("<div title='${a}${b}'>${a} and ${b}</div>")).toBe(
+    '<div title="${a}${b}">${a} and ${b}</div>'
+  );
+});

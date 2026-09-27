@@ -15,6 +15,14 @@ describe("t-call (template calling)", () => {
     expect(context.renderToString("caller")).toBe("<div><span>ok</span></div>");
   });
 
+  test("a static name is a string, whatever it contains", () => {
+    const context = new TestContext();
+    context.addTemplate("a`b\\c", `<span>ok</span>`);
+    context.addTemplate("caller", `<div><t t-call="a\`b\\c"/></div>`);
+
+    expect(context.renderToString("caller")).toBe("<div><span>ok</span></div>");
+  });
+
   test("basic caller, no parent node", () => {
     const context = new TestContext();
     context.addTemplate("_basic-callee", `<span>ok</span>`);

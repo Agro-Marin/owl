@@ -66,4 +66,19 @@ describe("qweb t-tag", () => {
     patch(bdom, renderToBdom(template, { tag: "gnap" }));
     expect(fixture.innerHTML).toBe("<gnap></gnap>");
   });
+
+  test("a tag name that would open an attribute is rejected", () => {
+    const template = `<t t-tag="tag">x</t>`;
+    expect(() => renderToString(template, { tag: 'img src="x" onerror="1"' })).toThrow(
+      "Invalid tag name"
+    );
+    expect(() => renderToString(template, { tag: "p>" })).toThrow("Invalid tag name");
+    expect(renderToString(template, { tag: "my-el" })).toBe("<my-el>x</my-el>");
+  });
+
+  test("a hyphenated default tag is replaced whole", () => {
+    const template = `<my-el t-tag="tag">x</my-el>`;
+    expect(renderToString(template, { tag: "section" })).toBe("<section>x</section>");
+    expect(renderToString(template, { tag: "" })).toBe("<my-el>x</my-el>");
+  });
 });

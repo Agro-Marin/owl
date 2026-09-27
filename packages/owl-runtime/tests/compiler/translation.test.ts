@@ -10,6 +10,21 @@ beforeEach(() => {
 });
 
 describe("translation support", () => {
+  test("a translation is text, however many ${ it holds", async () => {
+    (globalThis as any).__translated = 0;
+    class SomeComponent extends Component {
+      static template = xml`<div title="word">word</div>`;
+    }
+    const injected = "${a} ${(globalThis.__translated = 1)}";
+    await mount(SomeComponent, fixture, {
+      translateFn: (expr: string) => (expr === "word" ? injected : expr),
+    });
+    expect((globalThis as any).__translated).toBe(0);
+    expect(fixture.innerHTML).toBe(
+      '<div title="${a} ${(globalThis.__translated = 1)}">${a} ${(globalThis.__translated = 1)}</div>'
+    );
+  });
+
   test("can translate node content", async () => {
     class SomeComponent extends Component {
       static template = xml`<div>word</div>`;

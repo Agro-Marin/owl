@@ -139,6 +139,19 @@ exports[`translation context > translation of text in context 1`] = `
 }"
 `;
 
+exports[`translation support > a translation is text, however many \${ it holds 1`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  
+  let block1 = createBlock(\`<div title="\\\${a} \\\${(globalThis.__translated = 1)}">\\\${a} \\\${(globalThis.__translated = 1)}</div>\`);
+  
+  return function template(ctx, node, key = "") {
+    return block1();
+  }
+}"
+`;
+
 exports[`translation support > body of t-sets are translated 1`] = `
 "function anonymous(app, bdom, helpers
 ) {

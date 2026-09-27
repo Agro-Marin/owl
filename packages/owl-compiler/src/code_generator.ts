@@ -85,7 +85,7 @@ function isProp(tag: string, key: string): boolean {
  * sigils into the string if required
  */
 function toStringExpression(str: string) {
-  return `\`${str.replace(/\\/g, "\\\\").replace(/`/g, "\\`").replace(/\$\{/, "\\${")}\``;
+  return `\`${str.replace(/\\/g, "\\\\").replace(/`/g, "\\`").replace(/\$\{/g, "\\${")}\``;
 }
 
 // -----------------------------------------------------------------------------
@@ -328,8 +328,13 @@ export class CodeGenerator {
         if (block.dom) {
           let xmlString = toStringExpression(block.asXmlString());
           if (block.dynamicTagName) {
-            xmlString = xmlString.replace(/^`<\w+/, `\`<\${tag || '${block.dom.nodeName}'}`);
-            xmlString = xmlString.replace(/\w+>`$/, `\${tag || '${block.dom.nodeName}'}>\``);
+            const name = block.dom.nodeName;
+            const tag = `\${tag || '${name}'}`;
+            const close = `</${name}>\``;
+            xmlString = `\`<${tag}` + xmlString.slice(`\`<${name}`.length);
+            if (xmlString.endsWith(close)) {
+              xmlString = xmlString.slice(0, -close.length) + `</${tag}>\``;
+            }
             mainCode.push(`let ${block.blockName} = tag => createBlock(${xmlString});`);
           } else {
             mainCode.push(`let ${block.blockName} = createBlock(${xmlString});`);
@@ -563,7 +568,8 @@ export class CodeGenerator {
       this.blocks.push(block);
       if (ast.dynamicTag) {
         const tagExpr = generateId("tag");
-        this.define(tagExpr, compileExpr(ast.dynamicTag));
+        this.helpers.add("checkTagName");
+        this.define(tagExpr, `checkTagName(${compileExpr(ast.dynamicTag)})`);
         block.dynamicTagName = tagExpr;
       }
     }
@@ -976,7 +982,7 @@ export class CodeGenerator {
       ? this.formatPropObject(ast.attrs, ast.attrsTranslationCtx, ctx.translationCtx)
       : [];
     const isDynamic = INTERP_REGEXP.test(ast.name);
-    const subTemplate = isDynamic ? interpolate(ast.name) : "`" + ast.name + "`";
+    const subTemplate = isDynamic ? interpolate(ast.name) : toStringExpression(ast.name);
     if (block && !forceNewBlock) {
       this.insertAnchor(block);
     }

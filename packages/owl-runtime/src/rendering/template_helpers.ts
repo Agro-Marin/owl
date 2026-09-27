@@ -381,8 +381,20 @@ function callTemplate(
   return toggler(subTemplate, template.call(owner, ctx, parent, key + subTemplate));
 }
 
+// A t-tag value is spliced into block markup: anything that could close the
+// tag or open an attribute would be parsed as markup.
+const INVALID_TAG_NAME = /[\s"'<>\/=&`]/;
+
+function checkTagName(tag: unknown): unknown {
+  if (tag && (typeof tag !== "string" || INVALID_TAG_NAME.test(tag))) {
+    throw new OwlError(`Invalid tag name: '${tag}'`);
+  }
+  return tag;
+}
+
 export const helpers = {
   withDefault,
+  checkTagName,
   zero: Symbol("zero"),
   callSlot,
   withKey,
