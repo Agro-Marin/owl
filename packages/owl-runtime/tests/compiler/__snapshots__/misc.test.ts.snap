@@ -170,9 +170,12 @@ exports[`misc > global 3`] = `
   
   let block1 = createBlock(\`<span><block-child-0/></span>\`);
   
+  function defaultContent1(ctx, node, key = "") {
+    return text(\`foo default\`);
+  }
+  
   return function template(ctx, node, key = "") {
-    const b3 = text(\`foo default\`);
-    const b2 = safeOutput(ctx['foo'], b3);
+    const b2 = safeOutput(ctx['foo'], () => defaultContent1.call(this, ctx, node, key));
     return block1([], [b2]);
   }
 }"
@@ -186,9 +189,12 @@ exports[`misc > global 4`] = `
   
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
+  function defaultContent1(ctx, node, key = "") {
+    return text(\`toto default\`);
+  }
+  
   return function template(ctx, node, key = "") {
-    const b3 = text(\`toto default\`);
-    const b2 = safeOutput(ctx['toto'], b3);
+    const b2 = safeOutput(ctx['toto'], () => defaultContent1.call(this, ctx, node, key));
     return block1([], [b2]);
   }
 }"

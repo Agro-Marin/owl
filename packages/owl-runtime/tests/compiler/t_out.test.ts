@@ -122,6 +122,22 @@ describe("t-out", () => {
     expect(renderToString(template)).toBe("<span><div>nope</div></span>");
   });
 
+  test("t-out default body that does not start with a block", () => {
+    const template = `<div t-out="x"><t t-set="y"><b>1</b></t><span>default</span></div>`;
+    expect(renderToString(template)).toBe("<div><span>default</span></div>");
+    expect(renderToString(template, { x: "value" })).toBe("<div>value</div>");
+  });
+
+  test("t-out default body is only rendered when used", () => {
+    let calls = 0;
+    const f = () => ++calls;
+    const template = `<div t-out="x"><span t-out="f()"/></div>`;
+    expect(renderToString(template, { x: "value", f })).toBe("<div>value</div>");
+    expect(calls).toBe(0);
+    expect(renderToString(template, { f })).toBe("<div><span>1</span></div>");
+    expect(calls).toBe(1);
+  });
+
   test("multiple calls to t-out", () => {
     const context = new TestContext();
     const sub = `

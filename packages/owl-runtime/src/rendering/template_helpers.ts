@@ -117,9 +117,9 @@ class LazyValue {
 /*
  * Safely outputs `value` as a block depending on the nature of `value`
  */
-export function safeOutput(value: any, defaultValue?: any): ReturnType<typeof toggler> {
+export function safeOutput(value: any, defaultContent?: () => BDom): ReturnType<typeof toggler> {
   if (value === undefined || value === null) {
-    return defaultValue ? toggler("default", defaultValue) : toggler("undefined", text(""));
+    return defaultContent ? toggler("default", defaultContent()) : toggler("undefined", text(""));
   }
   let safeKey;
   let block;

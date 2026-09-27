@@ -770,12 +770,11 @@ export class CodeGenerator {
     if (ast.expr === "0") {
       blockStr = this.compileZero(ctx);
     } else if (ast.body) {
-      let bodyValue = null;
-      bodyValue = BlockDescription.nextBlockId;
-      const subCtx = createContext(ctx);
-      this.compileAST({ type: ASTType.Multi, content: ast.body }, subCtx);
+      const bodyAst: AST = { type: ASTType.Multi, content: ast.body };
+      const name = this.compileInNewTarget("defaultContent", bodyAst, ctx);
+      const key = this.scopeKey(ctx);
       this.helpers.add("safeOutput");
-      blockStr = `safeOutput(${compileExpr(ast.expr)}, b${bodyValue})`;
+      blockStr = `safeOutput(${compileExpr(ast.expr)}, () => ${name}.call(this, ctx, node, ${key}))`;
     } else {
       this.helpers.add("safeOutput");
       blockStr = `safeOutput(${compileExpr(ast.expr)})`;
