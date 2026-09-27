@@ -172,6 +172,28 @@ describe("basic features", () => {
     );
   });
 
+  test("a plugin whose setup throws is not left registered", () => {
+    let fail = true;
+    class A extends Plugin {
+      value = "";
+      setup() {
+        if (fail) {
+          throw new Error("setup failed");
+        }
+        this.value = "ready";
+      }
+    }
+
+    const manager = new PluginManager(new App());
+    expect(() => manager.startPlugins([A])).toThrow("setup failed");
+    expect(manager.getPlugin(A)).toBe(null);
+
+    fail = false;
+    manager.startPlugins([A]);
+    expect(manager.getPlugin(A)!.value).toBe("ready");
+    manager.destroy();
+  });
+
   test("destroy order is reverse of setup order", () => {
     const steps: string[] = [];
 
@@ -1092,6 +1114,32 @@ describe("plugin sequence", () => {
     expect(manager.getPlugin(Feature)).toBe(null);
     expect(manager.status).not.toBe(STATUS.MOUNTED);
     manager.destroy();
+  });
+
+  test("a later batch does not start once the manager is destroyed", async () => {
+    const rpc = makeDeferred<void>();
+    const steps: string[] = [];
+
+    class A extends Plugin {
+      static sequence = 10;
+      setup() {
+        onWillStart(() => rpc);
+      }
+    }
+    class B extends Plugin {
+      setup() {
+        steps.push("B setup");
+        onWillDestroy(() => steps.push("B destroy"));
+      }
+    }
+
+    const manager = new PluginManager(new App());
+    manager.startPlugins([A, B]);
+    manager.destroy();
+    rpc.resolve();
+    await manager.ready;
+    expect(steps).toEqual([]);
+    expect(manager.getPlugin(B)).toBe(null);
   });
 
   test("status flips to MOUNTED only after the last batch", async () => {

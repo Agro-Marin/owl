@@ -126,7 +126,12 @@ export class PluginManager extends Scope {
 
     const plugin = new pluginConstructor(this);
     this.plugins[pluginConstructor.id] = plugin;
-    plugin.setup();
+    try {
+      plugin.setup();
+    } catch (e) {
+      delete this.plugins[pluginConstructor.id];
+      throw e;
+    }
     return plugin as InstanceType<T>;
   }
 
@@ -161,6 +166,9 @@ export class PluginManager extends Scope {
     // Instantiate one batch synchronously (its own scopeStack push/pop, never
     // spanning an await) and return its pending willStart promise, if any.
     const startBatch = (batch: PluginConstructor[]): Promise<unknown> | null => {
+      if (this.status >= STATUS.DESTROYED) {
+        return null;
+      }
       scopeStack.push(this);
       try {
         for (const ctor of batch) {
