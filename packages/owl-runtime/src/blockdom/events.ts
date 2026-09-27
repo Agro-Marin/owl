@@ -1,4 +1,3 @@
-import { inOwnerDocument } from "../utils";
 import { config } from "./config";
 
 type EventHandlerSetter = (this: HTMLElement, data: any) => void;
@@ -34,7 +33,8 @@ function createElementHandler(
 
   function listener(ev: Event) {
     const currentTarget = ev.currentTarget as HTMLElement;
-    if (!currentTarget || !inOwnerDocument(currentTarget)) return;
+    // isConnected crosses any number of shadow roots
+    if (!currentTarget || !currentTarget.isConnected) return;
     const data = (currentTarget as any)[eventKey];
     if (!data) return;
     config.mainEventHandler(data, ev, currentTarget);
@@ -66,9 +66,13 @@ function createSyntheticHandler(
   capture: boolean = false,
   passive: boolean = false
 ): EventHandlerCreator {
+  // one document listener per key: a passive one cannot serve preventDefault
   let eventKey = `__event__synthetic_${evName}`;
   if (capture) {
     eventKey = `${eventKey}_capture`;
+  }
+  if (passive) {
+    eventKey = `${eventKey}_passive`;
   }
   setupSyntheticEvent(evName, eventKey, capture, passive);
   const currentId = nextSyntheticEventId++;
@@ -79,23 +83,34 @@ function createSyntheticHandler(
   }
 
   function remove(this: HTMLElement) {
-    delete (this as any)[eventKey];
+    // other handlers (a sibling component's catcher) may share this element
+    delete (this as any)[eventKey]?.[currentId];
   }
 
   return { setup, update: setup, remove };
 }
 
-function nativeToSyntheticEvent(eventKey: string, event: Event) {
-  let dom = event.target;
-  while (dom !== null) {
-    const _data = (dom as any)[eventKey];
-    if (_data) {
-      for (const data of Object.values(_data)) {
-        const stopped = config.mainEventHandler(data, event, dom);
-        if (stopped) return;
+// Replays the propagation over the path fixed at dispatch time, as the browser
+// does for native listeners: in phase order (outermost first when capturing),
+// through open shadow roots, past a node a handler removed, and stopping where
+// a handler stopped propagation.
+function nativeToSyntheticEvent(eventKey: string, capture: boolean, event: Event) {
+  const path = event.composedPath();
+  const last = path.length - 1;
+  for (let i = 0; i <= last; i++) {
+    const node = path[capture ? last - i : i] as any;
+    const handlers = node[eventKey];
+    if (!handlers || !node.isConnected) {
+      continue;
+    }
+    for (const id in handlers) {
+      if (config.mainEventHandler(handlers[id], event, node)) {
+        return;
       }
     }
-    dom = (dom as any).parentNode;
+    if (event.cancelBubble) {
+      return;
+    }
   }
 }
 
@@ -110,7 +125,7 @@ function setupSyntheticEvent(
   if (CONFIGURED_SYNTHETIC_EVENTS[eventKey]) {
     return;
   }
-  document.addEventListener(evName, (event) => nativeToSyntheticEvent(eventKey, event), {
+  document.addEventListener(evName, (event) => nativeToSyntheticEvent(eventKey, capture, event), {
     capture,
     passive,
   });

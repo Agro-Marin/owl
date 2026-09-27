@@ -40,6 +40,10 @@ export function createCatcher(eventsSpec: EventsSpec): Catcher {
         let handler = this.handlerData[i];
         // handler = [...mods, fn, comp], so we need to replace second to last elem
         let idx = handler.length - 2;
+        if (!(idx in handler)) {
+          // an empty handler (`t-on-click.stop=""`) has only modifiers
+          continue;
+        }
         let origFn = handler[idx];
         const self = this;
         handler[idx] = function (ctx: any, ev: any) {

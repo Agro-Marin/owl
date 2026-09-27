@@ -1,4 +1,4 @@
-import { batched, EventBus, htmlEscape, markup } from "../src/utils";
+import { batched, EventBus, htmlEscape, markup, validateTarget } from "../src/utils";
 import { nextMicroTick } from "./helpers";
 
 describe("event bus behaviour", () => {
@@ -161,4 +161,17 @@ describe("markup", () => {
       expect(html.toString()).toBe("&lt;p&gt;test&lt;/p&gt;");
     });
   });
+});
+
+test("validateTarget accepts a shadow root inside an iframe", () => {
+  const iframe = document.createElement("iframe");
+  document.body.appendChild(iframe);
+  try {
+    const host = iframe.contentDocument!.createElement("div");
+    iframe.contentDocument!.body.appendChild(host);
+    const shadow = host.attachShadow({ mode: "open" });
+    expect(() => validateTarget(shadow)).not.toThrow();
+  } finally {
+    iframe.remove();
+  }
 });

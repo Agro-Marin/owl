@@ -1,18 +1,17 @@
-import { filterOutModifiersFromData } from "./blockdom/config";
+import { countModifiers } from "./blockdom/config";
 import { STATUS } from "./status";
 import { OwlError, setCurrentEvent } from "@odoo/owl-core";
 
 export const mainEventHandler = (data: any, ev: Event, currentTarget?: EventTarget | null) => {
   // lets `useListener` skip an event older than the listener
   setCurrentEvent(ev);
-  const { data: _data, modifiers } = filterOutModifiersFromData(data);
-  data = _data;
+  const handlerIndex = countModifiers(data);
   let stopped = false;
-  if (modifiers.length) {
+  if (handlerIndex) {
     let selfMode = false;
     const isSelf = ev.target === currentTarget;
-    for (const mod of modifiers) {
-      switch (mod) {
+    for (let i = 0; i < handlerIndex; i++) {
+      switch (data[i]) {
         case "self":
           selfMode = true;
           if (isSelf) {
@@ -30,17 +29,19 @@ export const mainEventHandler = (data: any, ev: Event, currentTarget?: EventTarg
       }
     }
   }
-  // If handler is empty, the array slot 0 will also be empty, and data will not have the property 0
-  // We check this rather than data[0] being truthy (or typeof function) so that it crashes
-  // as expected when there is a handler expression that evaluates to a falsy value
-  if (Object.hasOwnProperty.call(data, 0)) {
-    const handler = data[0];
+  // If handler is empty, its slot is a hole: data does not have the property.
+  // We check this rather than the slot being truthy (or typeof function) so
+  // that it crashes as expected when a handler expression evaluates to a falsy
+  // value
+  if (Object.hasOwnProperty.call(data, handlerIndex)) {
+    const handler = data[handlerIndex];
     if (typeof handler !== "function") {
       throw new OwlError(`Invalid handler (expected a function, received: '${handler}')`);
     }
-    let node = data[1] ? data[1].__owl__ : null;
+    const context = data[handlerIndex + 1];
+    let node = context ? context.__owl__ : null;
     if (node ? node.status === STATUS.MOUNTED : true) {
-      handler(data[1], ev);
+      handler(context, ev);
     }
   }
   return stopped;

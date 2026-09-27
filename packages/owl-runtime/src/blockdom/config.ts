@@ -1,11 +1,12 @@
-export function filterOutModifiersFromData(dataList: any[]): { modifiers: string[]; data: any[] } {
-  dataList = dataList.slice();
-  const modifiers = [];
-  let elm;
-  while ((elm = dataList[0]) && typeof elm === "string") {
-    modifiers.push(dataList.shift());
+// Handler data is `[...modifiers, handler, context]`: the number of leading
+// modifier strings is the index of the handler slot.
+export function countModifiers(data: any[]): number {
+  let count = 0;
+  let item;
+  while ((item = data[count]) && typeof item === "string") {
+    count++;
   }
-  return { modifiers, data: dataList };
+  return count;
 }
 
 export const config = {
@@ -20,8 +21,8 @@ export const config = {
     if (typeof data === "function") {
       data(ev);
     } else if (Array.isArray(data)) {
-      data = filterOutModifiersFromData(data).data;
-      data[0](data[1], ev);
+      const index = countModifiers(data);
+      data[index](data[index + 1], ev);
     }
     return false;
   },
