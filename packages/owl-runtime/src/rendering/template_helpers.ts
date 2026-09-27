@@ -1,13 +1,12 @@
 import {
   atomSymbol,
   computed,
-  getCurrentComputation,
   markRaw,
   OwlError,
   ReactiveValue,
-  setComputation,
   signal,
   Signal,
+  untrack,
 } from "@odoo/owl-core";
 import { App } from "../app";
 import { BDom, createCatcher, multi, RefCallback, text, toggler } from "../blockdom";
@@ -317,15 +316,14 @@ function createComponent<P extends Record<string, any>>(
             }
           }
           const component = node.component;
-          const prev = getCurrentComputation();
-          setComputation(undefined);
-          for (const f of hooks) {
-            const r = f.call(component, nextProps);
-            if (r && typeof r.then === "function") {
-              (promises ||= []).push(r);
+          untrack(() => {
+            for (const f of hooks) {
+              const r = f.call(component, nextProps);
+              if (r && typeof r.then === "function") {
+                (promises ||= []).push(r);
+              }
             }
-          }
-          setComputation(prev);
+          });
         }
         if (promises) {
           const p = promises.length === 1 ? promises[0] : Promise.all(promises);

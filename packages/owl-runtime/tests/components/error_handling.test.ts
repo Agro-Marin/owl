@@ -220,6 +220,35 @@ describe("basics", () => {
     expect(getCurrentComputation()).toBeUndefined();
   });
 
+  test("a willUpdateProps hook throwing synchronously restores the parent's computation", async () => {
+    const seen: any[] = [];
+    class Child extends Component {
+      static template = xml`<div t-out="this.props.n"/>`;
+      props = props();
+      setup() {
+        onWillUpdateProps(() => {
+          throw new Error("boom");
+        });
+      }
+    }
+    class Parent extends Component {
+      static template = xml`<t t-if="!this.state.failed"><Child n="this.state.n"/></t>`;
+      static components = { Child };
+      state = proxy({ n: 1, failed: false });
+      setup() {
+        onError(() => {
+          seen.push(getCurrentComputation() === this.__owl__.signalComputation);
+          this.state.failed = true;
+        });
+      }
+    }
+    const parent = await mount(Parent, fixture);
+    parent.state.n = 2;
+    await nextTick();
+    expect(seen).toEqual([true]);
+    expect(fixture.innerHTML).toBe("");
+  });
+
   test("display a nice error if the root component template fails to compile", async () => {
     // This is a special case: mount throws synchronously and we don't have any
     // node which can handle the error, hence the different structure of this test
