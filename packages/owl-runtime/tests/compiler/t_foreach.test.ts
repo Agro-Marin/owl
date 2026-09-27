@@ -294,6 +294,14 @@ describe("t-foreach", () => {
     };
     expect(renderToString(template, ctx)).toBe("<span>a</span><span>b</span>");
   });
+
+  test("t-foreach whose body is only t-set renders nothing", () => {
+    const body = `<t t-foreach="[1, 2, 3]" t-as="n" t-key="n"><t t-set="total" t-value="total + n"/></t>`;
+    expect(renderToString(`<t t-set="total" t-value="0"/>${body}<t t-out="total"/>`)).toBe("6");
+    expect(
+      renderToString(`<div><t t-set="total" t-value="0"/>${body}<t t-out="total"/></div>`)
+    ).toBe("<div>6</div>");
+  });
 });
 
 test("t-foreach with loops and multiple t-set", () => {

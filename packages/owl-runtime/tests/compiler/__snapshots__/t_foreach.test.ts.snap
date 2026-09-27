@@ -531,6 +531,53 @@ exports[`t-foreach > t-foreach in t-foreach 1`] = `
 }"
 `;
 
+exports[`t-foreach > t-foreach whose body is only t-set renders nothing 1`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { prepareList, safeOutput } = helpers;
+  
+  return function template(ctx, node, key = "") {
+    ctx = Object.create(ctx);
+    ctx["total"] = 0;
+    const ctx1 = ctx;
+    const [k_block_1, v_block_1, l_block_1] = prepareList([1,2,3]);;
+    for (let i1 = 0; i1 < l_block_1; i1++) {
+      let ctx = Object.create(ctx1);
+      ctx[\`n\`] = k_block_1[i1];
+      const key1 = ctx['n'];
+      ctx1["total"] = ctx['total']+ctx['n'];
+    }
+    return safeOutput(ctx['total']);
+  }
+}"
+`;
+
+exports[`t-foreach > t-foreach whose body is only t-set renders nothing 2`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { prepareList, safeOutput } = helpers;
+  
+  let block1 = createBlock(\`<div><block-child-0/></div>\`);
+  
+  return function template(ctx, node, key = "") {
+    ctx = Object.create(ctx);
+    ctx["total"] = 0;
+    const ctx1 = ctx;
+    const [k_block_1, v_block_1, l_block_1] = prepareList([1,2,3]);;
+    for (let i1 = 0; i1 < l_block_1; i1++) {
+      let ctx = Object.create(ctx1);
+      ctx[\`n\`] = k_block_1[i1];
+      const key1 = ctx['n'];
+      ctx1["total"] = ctx['total']+ctx['n'];
+    }
+    const b2 = safeOutput(ctx['total']);
+    return block1([], [b2]);
+  }
+}"
+`;
+
 exports[`t-foreach > t-foreach with t-if inside (no external node) 1`] = `
 "function anonymous(app, bdom, helpers
 ) {

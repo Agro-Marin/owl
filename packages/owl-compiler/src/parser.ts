@@ -525,7 +525,7 @@ function parseTForEach(node: Element, ctx: ParsingContext): AST | null {
   if (hasNoTCall && !html.includes(`${elem}_index`)) noFlags |= ForEachNoFlag.Index;
   if (hasNoTCall && !html.includes(`${elem}_value`)) noFlags |= ForEachNoFlag.Value;
 
-  return {
+  const ast: ASTTForEach = {
     type: ASTType.TForEach,
     collection,
     elem,
@@ -533,6 +533,10 @@ function parseTForEach(node: Element, ctx: ParsingContext): AST | null {
     key,
     noFlags,
   };
+  if (body.hasNoRepresentation) {
+    ast.hasNoRepresentation = true;
+  }
+  return ast;
 }
 
 function parseTKey(node: Element, ctx: ParsingContext): AST | null {

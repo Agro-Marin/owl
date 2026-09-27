@@ -838,23 +838,23 @@ export class CodeGenerator {
     return block.varName;
   }
 
-  compileTForeach(ast: ASTTForEach, ctx: Context): string {
-    let { block } = ctx;
-    block = this.createBlock(block, "list", ctx);
+  compileTForeach(ast: ASTTForEach, ctx: Context): string | null {
+    const block = ast.hasNoRepresentation ? null : this.createBlock(ctx.block, "list", ctx);
+    const id = block ? block.id : generateId("_");
     this.target.loopLevel++;
     const loopVar = `i${this.target.loopLevel}`;
     const ctxVar = generateId("ctx");
     this.addLine(`const ${ctxVar} = ctx;`);
     this.target.loopCtxVars.push(ctxVar);
-    const vals = `v_block${block.id}`;
-    const keys = `k_block${block.id}`;
-    const l = `l_block${block.id}`;
-    const c = `c_block${block.id}`;
+    const vals = `v_block${id}`;
+    const keys = `k_block${id}`;
+    const l = `l_block${id}`;
+    const lists = block ? [keys, vals, l, `c_block${id}`] : [keys, vals, l];
     this.helpers.add("prepareList");
-    this.define(`[${keys}, ${vals}, ${l}, ${c}]`, `prepareList(${compileExpr(ast.collection)});`);
+    this.define(`[${lists.join(", ")}]`, `prepareList(${compileExpr(ast.collection)});`);
     // Throw errors on duplicate keys in dev mode
     if (this.dev) {
-      this.define(`keys${block.id}`, `new Set()`);
+      this.define(`keys${id}`, `new Set()`);
     }
     this.addLine(`for (let ${loopVar} = 0; ${loopVar} < ${l}; ${loopVar}++) {`);
     this.target.indentLevel++;
@@ -877,9 +877,9 @@ export class CodeGenerator {
       // Throw error on duplicate keys in dev mode
       this.helpers.add("OwlError");
       this.addLine(
-        `if (keys${block.id}.has(String(key${this.target.loopLevel}))) { throw new OwlError(\`Got duplicate key in t-foreach: \${key${this.target.loopLevel}}\`)}`
+        `if (keys${id}.has(String(key${this.target.loopLevel}))) { throw new OwlError(\`Got duplicate key in t-foreach: \${key${this.target.loopLevel}}\`)}`
       );
-      this.addLine(`keys${block.id}.add(String(key${this.target.loopLevel}));`);
+      this.addLine(`keys${id}.add(String(key${this.target.loopLevel}));`);
     }
 
     const subCtx = createContext(ctx, { block, index: loopVar });
@@ -888,6 +888,9 @@ export class CodeGenerator {
     this.target.loopLevel--;
     this.target.loopCtxVars.pop();
     this.addLine(`}`);
+    if (!block) {
+      return null;
+    }
     this.insertBlock("l", block, ctx);
     return block.varName;
   }
