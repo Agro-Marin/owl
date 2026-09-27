@@ -1,5 +1,29 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`an arrow parameter does not shadow a variable after the arrow body 1`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { safeOutput } = helpers;
+  
+  return function template(ctx, node, key = "") {
+    return safeOutput(ctx['f']({a:(_v)=>_v,b:ctx['v']}));
+  }
+}"
+`;
+
+exports[`an arrow parameter does not shadow a variable after the arrow body 2`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { safeOutput } = helpers;
+  
+  return function template(ctx, node, key = "") {
+    return safeOutput(ctx['f'](_e=>_e,ctx['e']));
+  }
+}"
+`;
+
 exports[`misc > complex template 1`] = `
 "function anonymous(app, bdom, helpers
 ) {

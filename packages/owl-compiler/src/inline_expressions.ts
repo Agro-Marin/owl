@@ -287,12 +287,12 @@ function collectVariables(tokens: Token[], start: number): string[] {
  */
 export function processExpr(expr: string, seededLocals?: Set<string>): ProcessedExpr {
   // scope entries carry the stack depth at which they were created
-  const scopeStack: { vars: Set<string>; depth: number }[] = [];
+  const scopeStack: { vars: Set<string>; depth: number; ternaries: number }[] = [];
 
   // Seed outer locals
   // depth: -Infinity so this scope never gets popped
   if (seededLocals?.size) {
-    scopeStack.push({ vars: seededLocals, depth: -Infinity });
+    scopeStack.push({ vars: seededLocals, depth: -Infinity, ternaries: 0 });
   }
 
   const tokens = tokenize(expr);
@@ -302,6 +302,11 @@ export function processExpr(expr: string, seededLocals?: Set<string>): Processed
 
   function isLocal(name: string) {
     return scopeStack.some((s) => s.vars.has(name));
+  }
+
+  function innermostScopeAtDepth() {
+    const scope = scopeStack[scopeStack.length - 1];
+    return scope && scope.depth === stack.length ? scope : null;
   }
 
   while (i < tokens.length) {
@@ -323,6 +328,30 @@ export function processExpr(expr: string, seededLocals?: Set<string>): Processed
         // Pop arrow scopes whose body has ended (stack dropped below creation depth)
         while (scopeStack.length > 0 && stack.length < scopeStack[scopeStack.length - 1].depth) {
           scopeStack.pop();
+        }
+        break;
+      case "COMMA":
+        while (innermostScopeAtDepth()) {
+          scopeStack.pop();
+        }
+        break;
+      case "COLON": {
+        let scope;
+        while ((scope = innermostScopeAtDepth())) {
+          if (scope.ternaries) {
+            scope.ternaries--;
+            break;
+          }
+          scopeStack.pop();
+        }
+        break;
+      }
+      case "OPERATOR":
+        if (token.value === "?") {
+          const scope = innermostScopeAtDepth();
+          if (scope) {
+            scope.ternaries++;
+          }
         }
         break;
     }
@@ -388,7 +417,7 @@ export function processExpr(expr: string, seededLocals?: Set<string>): Processed
         topLevelArrowIndex = i + 1;
       }
       // record current stack depth so we know when this scope expires
-      scopeStack.push({ vars: newScope, depth: stack.length });
+      scopeStack.push({ vars: newScope, depth: stack.length, ternaries: 0 });
     }
 
     if (isVar) {

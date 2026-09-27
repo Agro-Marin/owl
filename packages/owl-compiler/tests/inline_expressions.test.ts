@@ -210,6 +210,17 @@ describe("expression evaluation", () => {
     expect(freeVars("(a) => `${a} and ${b}` + c")).toEqual(["b", "c"]);
   });
 
+  test("arrow function parameters go out of scope where the body ends", () => {
+    expect(compileExpr("f({a: (v) => v, b: v})")).toBe("ctx['f']({a:(_v)=>_v,b:ctx['v']})");
+    expect(compileExpr("f(e => e, e)")).toBe("ctx['f'](_e=>_e,ctx['e'])");
+    expect(compileExpr("c ? x => x : x")).toBe("ctx['c']?_x=>_x:ctx['x']");
+    expect(compileExpr("c ? x => y => x + y : x + y")).toBe(
+      "ctx['c']?_x=>_y=>_x+_y:ctx['x']+ctx['y']"
+    );
+    expect(compileExpr("f(x => x ? x : 0, x)")).toBe("ctx['f'](_x=>_x?_x:0,ctx['x'])");
+    expect(compileExpr("f(x => ({a: x, b: x}), x)")).toBe("ctx['f'](_x=>({a:_x,b:_x}),ctx['x'])");
+  });
+
   test("arrow functions: not yet supported", () => {
     expect(compileExpr("(e => e)(e)")).toBe("(_e=>_e)(ctx['e'])");
   });

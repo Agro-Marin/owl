@@ -270,3 +270,12 @@ test("static text and attributes keep every ${ as text", () => {
     '<div title="${a}${b}">${a} and ${b}</div>'
   );
 });
+
+test("an arrow parameter does not shadow a variable after the arrow body", () => {
+  expect(renderToString(`<t t-out="f({a: (v) => v, b: v})"/>`, { v: 3, f: (o: any) => o.b })).toBe(
+    "3"
+  );
+  expect(renderToString(`<t t-out="f(e => e, e)"/>`, { e: 5, f: (g: any, x: any) => g(x) })).toBe(
+    "5"
+  );
+});
