@@ -340,6 +340,63 @@ exports[`t-set > t-set body is evaluated immediately 1`] = `
 }"
 `;
 
+exports[`t-set > t-set body of only a comment 1`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  
+  let block1 = createBlock(\`<span>ok</span>\`);
+  
+  return function template(ctx, node, key = "") {
+    ctx = Object.create(ctx);
+    ctx["x"] = null;
+    return block1();
+  }
+}"
+`;
+
+exports[`t-set > t-set body of only a comment 2`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { safeOutput } = helpers;
+  
+  return function template(ctx, node, key = "") {
+    ctx = Object.create(ctx);
+    ctx["x"] = 1;
+    return safeOutput(ctx['x']);
+  }
+}"
+`;
+
+exports[`t-set > t-set body of text with entities is a string 1`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { safeOutput } = helpers;
+  
+  return function template(ctx, node, key = "") {
+    ctx = Object.create(ctx);
+    ctx["v"] = \`a > b\`;
+    return safeOutput(ctx['v'].length);
+  }
+}"
+`;
+
+exports[`t-set > t-set body of text with entities is a string 2`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { safeOutput } = helpers;
+  
+  return function template(ctx, node, key = "") {
+    ctx = Object.create(ctx);
+    ctx["v"] = \`a b\`;
+    return safeOutput(ctx['v']);
+  }
+}"
+`;
+
 exports[`t-set > t-set can't alter from within callee 1`] = `
 "function anonymous(app, bdom, helpers
 ) {

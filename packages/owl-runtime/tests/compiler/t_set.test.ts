@@ -352,4 +352,14 @@ describe("t-set", () => {
     expect(renderToString(body)).toBe("k[]k[]");
     expect(renderToString(prefix + body)).toBe("ik[]k[]");
   });
+
+  test("t-set body of only a comment", () => {
+    expect(renderToString(`<t t-set="x"><!-- c --></t><span>ok</span>`)).toBe("<span>ok</span>");
+    expect(renderToString(`<t t-set="x" t-value="1"><!-- c --></t><t t-out="x"/>`)).toBe("1");
+  });
+
+  test("t-set body of text with entities is a string", () => {
+    expect(renderToString(`<t t-set="v">a &gt; b</t><t t-out="v.length"/>`)).toBe("5");
+    expect(renderToString(`<t t-set="v">a <!-- c -->b</t><t t-out="v"/>`)).toBe("a b");
+  });
 });

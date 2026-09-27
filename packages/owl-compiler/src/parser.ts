@@ -670,10 +670,16 @@ function parseTSetNode(node: Element, ctx: ParsingContext): AST | null {
   }
   const name = node.getAttribute("t-set")!;
   const value = node.getAttribute("t-value") || null;
-  const defaultValue = node.innerHTML === node.textContent ? node.textContent || null : null;
+  const isText = [...node.childNodes].every(
+    (n) => n.nodeType === Node.TEXT_NODE || n.nodeType === Node.COMMENT_NODE
+  );
+  let defaultValue: string | null = null;
   let body: AST[] | null = null;
-  if (node.textContent !== node.innerHTML) {
-    body = parseChildren(node, ctx);
+  if (isText) {
+    defaultValue = node.textContent || null;
+  } else {
+    const content = parseChildren(node, ctx);
+    body = content.length ? content : null;
   }
   return { type: ASTType.TSet, name, value, defaultValue, body, hasNoRepresentation: true };
 }
