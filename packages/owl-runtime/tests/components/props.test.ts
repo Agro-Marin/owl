@@ -1,5 +1,6 @@
 import {
   Component,
+  computed,
   effect,
   mount,
   onWillUpdateProps,
@@ -1032,5 +1033,87 @@ describe("reactive props (issue #1908)", () => {
     await nextTick();
     expect(seen).toEqual([{ next: 2, current: 1 }]);
     expect(fixture.innerHTML).toBe("<span>2</span>");
+  });
+});
+
+describe("schema-less view key set", () => {
+  test("a computed over a key that disappears sees undefined", async () => {
+    class Child extends Component {
+      static template = xml`<span t-out="this.c()"/>`;
+      props = props();
+      c = computed(() => String(this.props.foo));
+    }
+    class Parent extends Component {
+      static components = { Child };
+      static template = xml`<Child t-props="this.p()"/>`;
+      p = signal<any>({ foo: 1 });
+    }
+    const parent = await mount(Parent, fixture);
+    expect(fixture.innerHTML).toBe("<span>1</span>");
+
+    parent.p.set({});
+    await nextTick();
+    expect(fixture.innerHTML).toBe("<span>undefined</span>");
+  });
+
+  test("a computed over a key read before it existed sees it appear", async () => {
+    class Child extends Component {
+      static template = xml`<span t-out="this.c()"/>`;
+      props = props();
+      c = computed(() => `${String(this.props.foo)}:${"foo" in this.props}`);
+    }
+    class Parent extends Component {
+      static components = { Child };
+      static template = xml`<Child t-props="this.p()"/>`;
+      p = signal<any>({});
+    }
+    const parent = await mount(Parent, fixture);
+    expect(fixture.innerHTML).toBe("<span>undefined:false</span>");
+
+    parent.p.set({ foo: 2 });
+    await nextTick();
+    expect(fixture.innerHTML).toBe("<span>2:true</span>");
+
+    parent.p.set({});
+    await nextTick();
+    expect(fixture.innerHTML).toBe("<span>undefined:false</span>");
+  });
+
+  test("a computed over the key list follows keys added and removed", async () => {
+    class Child extends Component {
+      static template = xml`<span t-out="this.c()"/>`;
+      props = props();
+      c = computed(() => Object.keys(this.props).join(","));
+    }
+    class Parent extends Component {
+      static components = { Child };
+      static template = xml`<Child t-props="this.p()"/>`;
+      p = signal<any>({ a: 1 });
+    }
+    const parent = await mount(Parent, fixture);
+    expect(fixture.innerHTML).toBe("<span>a</span>");
+
+    parent.p.set({ a: 1, b: 2 });
+    await nextTick();
+    expect(fixture.innerHTML).toBe("<span>a,b</span>");
+
+    parent.p.set({ b: 2 });
+    await nextTick();
+    expect(fixture.innerHTML).toBe("<span>b</span>");
+  });
+
+  test("a view created before the schema view resolves its defaults", async () => {
+    let hookView: any;
+    class Child extends Component {
+      static template = xml`<span t-out="this.props.w"/>`;
+      hv = (hookView = props());
+      props = props({ w: t.number().optional(400) });
+    }
+    await mount(Child, fixture);
+    expect(fixture.innerHTML).toBe("<span>400</span>");
+    expect(hookView.w).toBe(400);
+    expect("w" in hookView).toBe(true);
+    expect(Object.keys(hookView)).toEqual(["w"]);
+    expect({ ...hookView }).toEqual({ w: 400 });
   });
 });

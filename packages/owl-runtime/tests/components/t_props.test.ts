@@ -116,7 +116,9 @@ describe("t-props", () => {
       props = props();
       setup() {
         expect(this.props).toEqual({ a: 1, b: 2 });
-        this.props.d = 5;
+        expect(() => {
+          this.props.d = 5;
+        }).toThrow(TypeError);
       }
     }
     class Parent extends Component {

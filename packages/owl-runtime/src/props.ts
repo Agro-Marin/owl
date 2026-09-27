@@ -74,32 +74,23 @@ function makeProps(type?: any): Props<{}> {
   }
 
   const signals: Record<string, Signal<any>> = Object.create(null);
-  const result = Object.create(null);
-  function defineProp(key: string) {
-    signals[key] = signal(resolveValue(node.props, key));
-    Reflect.defineProperty(result, key, {
-      enumerable: true,
-      configurable: true,
-      get: signals[key],
-    });
-  }
-
-  function defineProps(keys: string[]) {
-    for (const key of keys) {
-      defineProp(key);
-    }
-  }
-
-  function updateSignals(keys: string[]) {
-    for (const key of keys) {
-      signals[key].set(resolveValue(node.props, key));
-    }
-  }
 
   if (type) {
     const keys: string[] = Array.isArray(type) ? type : Object.keys(type);
-    defineProps(keys);
-    node.propsUpdated.push(() => updateSignals(keys));
+    const result = Object.create(null);
+    for (const key of keys) {
+      signals[key] = signal(resolveValue(node.props, key));
+      Reflect.defineProperty(result, key, {
+        enumerable: true,
+        configurable: true,
+        get: signals[key],
+      });
+    }
+    node.propsUpdated.push(() => {
+      for (const key of keys) {
+        signals[key].set(resolveValue(node.props, key));
+      }
+    });
 
     if (app.dev) {
       if (defaults) {
@@ -122,44 +113,66 @@ function makeProps(type?: any): Props<{}> {
         assertType(np, validation, `Invalid component props (${componentName})`);
       });
     }
-  } else {
-    const getKeys = (props: Record<string, any>) => {
-      const keys: string[] = [];
-      for (const k in props) {
-        if (k.charCodeAt(0) !== 1) {
-          keys.push(k);
-        }
-      }
-      for (const k in node.defaultProps) {
-        if (!(k in props)) {
-          keys.push(k);
-        }
-      }
-      return keys;
-    };
-
-    let keys = getKeys(node.props);
-    defineProps(keys);
-    node.propsUpdated.push(() => {
-      const nextKeys = getKeys(node.props);
-      const nextKeySet = new Set(nextKeys);
-      for (const key of keys) {
-        if (!nextKeySet.has(key)) {
-          Reflect.deleteProperty(result, key);
-          delete signals[key];
-        }
-      }
-      for (const key of nextKeys) {
-        if (!(key in signals)) {
-          defineProp(key);
-        }
-      }
-      updateSignals(nextKeys);
-      keys = nextKeys;
-    });
+    return result;
   }
 
-  return result;
+  const getKeys = (props: Record<string, any>) => {
+    const keys: string[] = [];
+    for (const k in props) {
+      if (k.charCodeAt(0) !== 1) {
+        keys.push(k);
+      }
+    }
+    for (const k in node.defaultProps) {
+      if (!(k in props)) {
+        keys.push(k);
+      }
+    }
+    return keys;
+  };
+
+  // a schema-less view has no fixed key set: a key gets its signal on first
+  // read, present or not, so a reader of a key that appears or disappears is
+  // notified; the key set itself is read live, behind a version signal
+  let keyList = getKeys(node.props).join("\0");
+  let version = 0;
+  const keySet = signal(version);
+  node.propsUpdated.push(() => {
+    for (const key in signals) {
+      signals[key].set(resolveValue(node.props, key));
+    }
+    const nextKeyList = getKeys(node.props).join("\0");
+    if (nextKeyList !== keyList) {
+      keyList = nextKeyList;
+      keySet.set(++version);
+    }
+  });
+  const read = (key: string) => (signals[key] ||= signal(resolveValue(node.props, key)))();
+  const hasKey = (key: string) => {
+    keySet();
+    return getKeys(node.props).includes(key);
+  };
+  return new Proxy(Object.create(null), {
+    get(target, key) {
+      return typeof key === "string" ? read(key) : Reflect.get(target, key);
+    },
+    has(target, key) {
+      return typeof key === "string" ? hasKey(key) : Reflect.has(target, key);
+    },
+    ownKeys() {
+      keySet();
+      return getKeys(node.props);
+    },
+    getOwnPropertyDescriptor(_target, key) {
+      if (typeof key === "string" && hasKey(key)) {
+        return { value: read(key), enumerable: true, configurable: true, writable: false };
+      }
+      return undefined;
+    },
+    set: () => false,
+    defineProperty: () => false,
+    deleteProperty: () => false,
+  });
 }
 
 export const useProps = Object.assign(makeProps, { static: staticProp }) as PropsFunction;
