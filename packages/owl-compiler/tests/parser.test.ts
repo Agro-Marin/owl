@@ -1077,6 +1077,15 @@ describe("qweb parser", () => {
     );
   });
 
+  test("misspelled t-att directives throw", async () => {
+    expect(() => parse(`<div t-attr-title="x"/>`)).toThrow(
+      "Unknown QWeb directive: 't-attr-title'"
+    );
+    expect(() => parse(`<div t-attf="x"/>`)).toThrow("Unknown QWeb directive: 't-attf'");
+    expect(() => parse(`<div t-att-="x"/>`)).toThrow("Unknown QWeb directive: 't-att-'");
+    expect(() => parse(`<div t-attf-="x"/>`)).toThrow("Unknown QWeb directive: 't-attf-'");
+  });
+
   test("t-on without event", async () => {
     expect(() => parse(`<button t-on="add">Click</button>`)).toThrow(
       "Missing event name with t-on directive"

@@ -361,6 +361,8 @@ function parseTDebugLog(node: Element, ctx: ParsingContext): AST | null {
 // -----------------------------------------------------------------------------
 const ROOT_SVG_TAGS = new Set(["svg", "g", "path"]);
 
+const ATT_DIRECTIVE_RE = /^t-att(f?-.+)?$/;
+
 function parseDOMNode(node: Element, ctx: ParsingContext): AST | null {
   const { tagName } = node;
   const dynamicTag = node.getAttribute("t-tag");
@@ -435,7 +437,7 @@ function parseDOMNode(node: Element, ctx: ParsingContext): AST | null {
       attrsTranslationCtx = attrsTranslationCtx || {};
       attrsTranslationCtx[attrName] = value;
     } else if (attr !== "t-name") {
-      if (attr.startsWith("t-") && !attr.startsWith("t-att")) {
+      if (attr.startsWith("t-") && !ATT_DIRECTIVE_RE.test(attr)) {
         throw new OwlError(`Unknown QWeb directive: '${attr}'`);
       }
       const tModel = ctx.tModelInfo;
