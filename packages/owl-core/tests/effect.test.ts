@@ -25,6 +25,25 @@ describe("effect", () => {
     expectSpy(spy, 2, { args: [2] });
   });
 
+  test("a key first read outside any computation is observed by the effect that reads it later", async () => {
+    const state = proxy<{ a: number; b?: number }>({ a: 1 });
+    // unobserved reads: a value, a presence, the key list
+    expect(state.a).toBe(1);
+    expect("b" in state).toBe(false);
+    expect(Object.keys(state)).toEqual(["a"]);
+    state.a = 2;
+
+    const spy = vi.fn();
+    effect(() => spy(state.a, "b" in state, Object.keys(state).length));
+    expectSpy(spy, 1, { args: [2, false, 1] });
+    state.a = 3;
+    await waitScheduler();
+    expectSpy(spy, 2, { args: [3, false, 1] });
+    state.b = 1;
+    await waitScheduler();
+    expectSpy(spy, 3, { args: [3, true, 2] });
+  });
+
   test("effect should unsubscribe previous dependencies", async () => {
     const state = proxy({ a: 1, b: 10, c: 100 });
     const spy = vi.fn();

@@ -105,6 +105,13 @@ export function createComputation(
 // addition to the current computation, which keeps tracking as usual.
 let currentObserver: ComputationAtom | undefined;
 
+// Whether a read has anything to subscribe. Outside a computation and an
+// observe() view it has not: the caller need not find, let alone create, the
+// atom it would have subscribed to.
+export function isObserving(): boolean {
+  return currentComputation !== undefined || currentObserver !== undefined;
+}
+
 export function onReadAtom(atom: Atom) {
   if (currentComputation) {
     currentComputation.sources.add(atom);

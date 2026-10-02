@@ -1,5 +1,6 @@
 import { OwlError } from "./owl_error";
 import {
+  isObserving,
   onReadAtom,
   onWriteAtom,
   Atom,
@@ -110,7 +111,11 @@ function getTargetKeyAtom(
  *  or deletion)
  */
 function onReadTargetKey(target: Target, key: PropertyKey): void {
-  onReadAtom(getTargetKeyAtom(target, key));
+  // a read nobody observes subscribes nothing, and creates no atom for its
+  // key: a model building its records outside any render reads thousands
+  if (isObserving()) {
+    onReadAtom(getTargetKeyAtom(target, key));
+  }
 }
 
 /**
@@ -138,7 +143,9 @@ function onWriteTargetKey(
 }
 
 function onReadKeyPresence(target: Target, key: PropertyKey): void {
-  onReadAtom(getTargetKeyAtom(target, key, targetToKeysToPresenceAtom));
+  if (isObserving()) {
+    onReadAtom(getTargetKeyAtom(target, key, targetToKeysToPresenceAtom));
+  }
 }
 
 // a key appeared or disappeared: the key list, the key's presence, its value
