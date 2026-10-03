@@ -703,7 +703,11 @@ exports[`t-call (template calling) > root t-call with body: t-out with default 1
   let { safeOutput, zero, callTemplate } = helpers;
   
   function callBody1(ctx, node, key = "") {
-    return safeOutput(ctx['nothing'], key + \`__1\`);
+    return safeOutput(ctx['nothing'], key + \`__1\`, () => defaultContent1.call(this, ctx, node, key + \`__1\`));
+  }
+  
+  function defaultContent1(ctx, node, key = "") {
+    return text(\`default\`);
   }
   
   return function template(ctx, node, key = "") {

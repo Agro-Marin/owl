@@ -1482,6 +1482,21 @@ describe("qweb parser", () => {
     expect(() => parse(`<MyComponent><div t-set-slot="name">foo</div></MyComponent>`)).toThrow();
   });
 
+  test("t-call and t-call-slot reject a directive they would turn into a variable", async () => {
+    expect(() => parse(`<t t-call="sub" t-ref="r"/>`)).toThrow(
+      "Unsupported directive 't-ref' on a t-call node"
+    );
+    expect(() => parse(`<t t-call="sub" t-on-click="f"/>`)).toThrow(
+      "Unsupported directive 't-on-click' on a t-call node"
+    );
+    expect(() => parse(`<t t-call-slot="s" t-ref="r"/>`)).toThrow(
+      "Unsupported directive 't-ref' on a t-call-slot node"
+    );
+    expect(() => parse(`<t t-call-block="b" t-ref="r"/>`)).toThrow(
+      "Unsupported directive 't-ref' on a t-call-block node"
+    );
+  });
+
   test("a named slot under a directive inside a component throws", async () => {
     expect(() =>
       parse(`<MyComponent><t t-if="cond"><t t-set-slot="a">foo</t></t></MyComponent>`)

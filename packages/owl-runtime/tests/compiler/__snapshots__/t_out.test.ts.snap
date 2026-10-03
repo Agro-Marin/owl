@@ -15,6 +15,41 @@ exports[`t-esc is deprecated > should warn 1`] = `
 }"
 `;
 
+exports[`t-esc is deprecated > t-esc on a component is its default slot, as t-out is 1`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { safeOutput, markRaw, createComponent } = helpers;
+  const comp1 = createComponent(app, \`Child\`, true, true, false, []);
+  
+  let block1 = createBlock(\`<div><block-child-0/></div>\`);
+  
+  function slot1(ctx, node, key = "") {
+    return safeOutput('hi', key + \`__1\`);
+  }
+  
+  return function template(ctx, node, key = "") {
+    const b3 = comp1({slots: markRaw({'default': {__render: slot1.bind(this), __ctx: ctx}})}, key + \`__2\`, node, this, null);
+    return block1([], [b3]);
+  }
+}"
+`;
+
+exports[`t-esc is deprecated > t-esc on a component is its default slot, as t-out is 2`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { callSlot } = helpers;
+  
+  let block1 = createBlock(\`<b>[<block-child-0/>]</b>\`);
+  
+  return function template(ctx, node, key = "") {
+    const b2 = callSlot(ctx, node, key, 'default', false, {});
+    return block1([], [b2]);
+  }
+}"
+`;
+
 exports[`t-esc is deprecated > t-out is actually called in t-esc's place 1`] = `
 "function anonymous(app, bdom, helpers
 ) {
@@ -275,6 +310,28 @@ exports[`t-out > t-out markedup 1`] = `
 }"
 `;
 
+exports[`t-out > t-out on a <t> with a body, as a default 1`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { safeOutput } = helpers;
+  
+  let block1 = createBlock(\`<div><block-child-0/></div>\`);
+  let block5 = createBlock(\`<b>!</b>\`);
+  
+  function defaultContent1(ctx, node, key = "") {
+    const b4 = text(\`nope \`);
+    const b5 = block5();
+    return multi([b4, b5]);
+  }
+  
+  return function template(ctx, node, key = "") {
+    const b2 = safeOutput(ctx['var'], key + \`__1\`, () => defaultContent1.call(this, ctx, node, key + \`__1\`));
+    return block1([], [b2]);
+  }
+}"
+`;
+
 exports[`t-out > t-out on a node with a body, as a default 1`] = `
 "function anonymous(app, bdom, helpers
 ) {
@@ -468,8 +525,14 @@ exports[`t-out > t-out with just a t-set t-value in body 1`] = `
   let { text, createBlock, list, multi, html, toggler } = bdom;
   let { safeOutput } = helpers;
   
+  function defaultContent1(ctx, node, key = "") {
+    ctx = Object.create(ctx);
+    ctx["a"] = 1;
+  return text('');
+  }
+  
   return function template(ctx, node, key = "") {
-    return safeOutput(ctx['var'], key + \`__1\`);
+    return safeOutput(ctx['var'], key + \`__1\`, () => defaultContent1.call(this, ctx, node, key + \`__1\`));
   }
 }"
 `;

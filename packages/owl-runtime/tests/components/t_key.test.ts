@@ -286,6 +286,27 @@ describe("t-key", () => {
     await nextTick();
     expect(fixture.innerHTML).toBe("<b>2</b>");
   });
+
+  test("a t-key on the t-call node itself recreates it when the key changes", async () => {
+    let n = 0;
+    class Cell extends Component {
+      static template = xml`<b t-out="this.id"/>`;
+      id = ++n;
+    }
+    class Parent extends Component {
+      static template = xml`<t t-call="sub" t-key="this.state.k"/>`;
+      static components = { Cell };
+      state = proxy({ k: 1 });
+    }
+    const parent = await mount(Parent, fixture, {
+      templates: `<templates><t t-name="sub"><Cell/></t></templates>`,
+    });
+    expect(fixture.innerHTML).toBe("<b>1</b>");
+    parent.state.k = 2;
+    await nextTick();
+    expect(fixture.innerHTML).toBe("<b>2</b>");
+  });
+
   test("an object t-key on a component recreates it when it changes", async () => {
     let created = 0;
     class Child extends Component {

@@ -9,6 +9,7 @@ import {
 import { mount, patch } from "../../src/blockdom";
 import { createBlock } from "../../src/blockdom/index";
 import { markup } from "../../src/utils";
+import { Component, mount as mountComponent, xml } from "../../src";
 
 snapshotEverything();
 
@@ -105,6 +106,21 @@ describe("t-out", () => {
   test("t-out on a node with a body, as a default", () => {
     const template = `<span t-out="var">nope</span>`;
     expect(renderToString(template)).toBe("<span>nope</span>");
+  });
+
+  test("t-out on a <t> with a body, as a default", () => {
+    const template = `<div><t t-out="var">nope <b>!</b></t></div>`;
+    expect(renderToString(template)).toBe("<div>nope <b>!</b></div>");
+    expect(renderToString(template, { var: "yes" })).toBe("<div>yes</div>");
+  });
+
+  test("t-out cannot be combined with a directive it would drop", () => {
+    expect(() => renderToString(`<t t-out="x" t-call-slot="s"/>`)).toThrow(
+      "Unsupported directive 't-call-slot' on a <t> with t-out"
+    );
+    expect(() => renderToString(`<t t-out="x" t-set="y" t-value="1"/>`)).toThrow(
+      "Unsupported directive 't-set' on a <t> with t-out"
+    );
   });
 
   test("t-out with a <t/> in body", () => {
@@ -293,5 +309,19 @@ describe("t-esc is deprecated", () => {
     expect(getConsoleOutput()).toEqual([
       'warn:t-esc has been deprecated in favor of t-out. If the value to render is not wrapped by the "markup" function, it will be escaped',
     ]);
+  });
+
+  test("t-esc on a component is its default slot, as t-out is", async () => {
+    class Child extends Component {
+      static template = xml`<b>[<t t-call-slot="default"/>]</b>`;
+    }
+    class Parent extends Component {
+      static template = xml`<div><Child t-esc="'hi'"/></div>`;
+      static components = { Child };
+    }
+    const fixture = makeTestFixture();
+    await mountComponent(Parent, fixture);
+    expect(fixture.innerHTML).toBe("<div><b>[hi]</b></div>");
+    expect(getConsoleOutput().length).toBe(1);
   });
 });

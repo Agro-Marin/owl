@@ -248,9 +248,9 @@ function parseNode(node: Node, ctx: ParsingContext): AST | null {
     parseTIf(node, ctx) ||
     parseTTranslation(node, ctx) ||
     parseTTranslationContext(node, ctx) ||
+    parseTKey(node, ctx) ||
     parseTCall(node, ctx) ||
     parseTCallBlock(node, ctx) ||
-    parseTKey(node, ctx) ||
     parseTOutNode(node, ctx) ||
     parseTCallSlot(node, ctx) ||
     parseComponent(node, ctx) ||
@@ -263,6 +263,10 @@ function parseNode(node: Node, ctx: ParsingContext): AST | null {
 // -----------------------------------------------------------------------------
 // <t /> tag
 // -----------------------------------------------------------------------------
+
+function unsupportedDirectiveError(directive: string, where: string): OwlError {
+  return new OwlError(`Unsupported directive '${directive}' on ${where}`);
+}
 
 function tRefError(node: Element): OwlError {
   return new OwlError(
@@ -491,26 +495,31 @@ function parseTOutNode(node: Element, ctx: ParsingContext): AST | null {
   node.removeAttribute("t-out");
   node.removeAttribute("t-esc");
 
-  const tOut: AST = { type: ASTType.TOut, expr, body: null };
+  const tOut: ASTTOut = { type: ASTType.TOut, expr, body: null };
+  if (node.tagName === "t" && !node.hasAttribute("t-tag")) {
+    if (node.hasAttribute("t-ref")) {
+      throw tRefError(node);
+    }
+    const directive = node.getAttributeNames().find((a) => a.startsWith("t-") && a !== "t-name");
+    if (directive) {
+      throw unsupportedDirectiveError(directive, "a <t> with t-out");
+    }
+    const body = parseChildren(node, ctx);
+    tOut.body = body.length ? body : null;
+    return tOut;
+  }
   const ref = node.getAttribute("t-ref");
   node.removeAttribute("t-ref");
   const ast = parseNode(node, ctx);
-  if (ref && ast?.type !== ASTType.DomNode) {
-    throw tRefError(node);
+  if (ast?.type !== ASTType.DomNode) {
+    throw new OwlError(`t-out cannot be used on a <${node.tagName}> with this combination`);
   }
-  if (!ast) {
-    return tOut;
-  }
-  if (ast.type === ASTType.DomNode) {
-    tOut.body = ast.content.length ? ast.content : null;
-    return {
-      ...ast,
-      ref,
-      content: [tOut],
-    };
-  }
-
-  return tOut;
+  tOut.body = ast.content.length ? ast.content : null;
+  return {
+    ...ast,
+    ref,
+    content: [tOut],
+  };
 }
 
 // -----------------------------------------------------------------------------
@@ -607,6 +616,8 @@ function parseTCall(node: Element, ctx: ParsingContext): AST | null {
       const attrName = attributeName.slice(22);
       attrsTranslationCtx = attrsTranslationCtx || {};
       attrsTranslationCtx[attrName] = value;
+    } else if (attributeName.startsWith("t-")) {
+      throw unsupportedDirectiveError(attributeName, "a t-call node");
     } else {
       attrs = attrs || {};
       attrs[attributeName] = value;
@@ -633,6 +644,12 @@ function parseTCallBlock(node: Element, ctx: ParsingContext): AST | null {
     return null;
   }
   const name = node.getAttribute("t-call-block")!;
+  const directive = node
+    .getAttributeNames()
+    .find((a) => a.startsWith("t-") && a !== "t-call-block");
+  if (directive) {
+    throw unsupportedDirectiveError(directive, "a t-call-block node");
+  }
   return {
     type: ASTType.TCallBlock,
     name,
@@ -892,6 +909,8 @@ function parseTCallSlot(node: Element, ctx: ParsingContext): AST | null {
       const attrName = attributeName.slice(22);
       attrsTranslationCtx = attrsTranslationCtx || {};
       attrsTranslationCtx[attrName] = value;
+    } else if (attributeName.startsWith("t-") && attributeName !== "t-props") {
+      throw unsupportedDirectiveError(attributeName, "a t-call-slot node");
     } else {
       attrs = attrs || {};
       attrs[attributeName] = value;
@@ -1062,19 +1081,18 @@ function normalizeTIf(el: Element) {
  * @param el the element containing the tree that should be normalized
  */
 function normalizeTOut(el: Element) {
-  const elements = [...el.querySelectorAll(`[t-out]`)].filter(
+  const elements = [...el.querySelectorAll(`[t-out], [t-esc]`)].filter(
     (el) => el.tagName[0] === el.tagName[0].toUpperCase() || el.hasAttribute("t-component")
   );
   for (const el of elements) {
     if (el.childNodes.length) {
       throw new OwlError(`Cannot have t-out on a component that already has content`);
     }
-    const value = el.getAttribute("t-out");
-    el.removeAttribute("t-out");
+    const directive = el.hasAttribute("t-out") ? "t-out" : "t-esc";
+    const value = el.getAttribute(directive)!;
+    el.removeAttribute(directive);
     const t = el.ownerDocument.createElement("t");
-    if (value != null) {
-      t.setAttribute("t-out", value);
-    }
+    t.setAttribute(directive, value);
     el.appendChild(t);
   }
 }
