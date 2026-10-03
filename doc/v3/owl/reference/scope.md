@@ -147,7 +147,8 @@ onWillStart(async ({ abortSignal }) => {
 
 **Option 2 — `scope.run(fn)`**, a method on the scope that runs `fn` in the
 scope and, when `fn` returns a promise, guards the await so it rejects with
-`AbortError` if the scope dies while awaiting:
+`AbortError` if the scope dies while awaiting — also when the promise itself
+rejects after that, in which case its error is the `AbortError`'s `cause`:
 
 ```js
 onWillStart(async (scope) => {

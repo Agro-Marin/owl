@@ -27,6 +27,18 @@ import type { PluginManager } from "./plugin_manager";
 
 export const scopeStack: Scope[] = [];
 
+export type ScopeMark = [willStart: number, destroyCbs: number, computations: number];
+
+function runReversed(cbs: Array<() => void>, reportError: (e: unknown) => void): void {
+  for (let i = cbs.length - 1; i >= 0; i--) {
+    try {
+      cbs[i]();
+    } catch (e) {
+      reportError(e);
+    }
+  }
+}
+
 /**
  * Returns the active scope. Throws if no scope is active — use this inside
  * hooks and setup functions where the caller is expected to be in a scope.
@@ -45,8 +57,12 @@ export abstract class Scope {
   status: StatusValue = STATUS.NEW;
   computations: ComputationAtom[] = [];
   willStart: Array<() => any> = [];
+  // true while the scope runs the setup code whose onWillStart callbacks it
+  // will await; outside that window a callback would be queued and never run
+  collectingWillStart = false;
   private _controller: AbortController | null = null;
   private _destroyCbs: Array<() => void> | null = null;
+  private _finalizing = false;
 
   constructor(app: any) {
     this.app = app;
@@ -86,7 +102,15 @@ export abstract class Scope {
   }
 
   private async _guard<T>(p: Promise<T>): Promise<T> {
-    const result = await p;
+    let result: T;
+    try {
+      result = await p;
+    } catch (e) {
+      if (this.status > STATUS.MOUNTED) {
+        throw makeAbortError(e);
+      }
+      throw e;
+    }
     if (this.status > STATUS.MOUNTED) {
       throw makeAbortError();
     }
@@ -99,7 +123,7 @@ export abstract class Scope {
    * on first access.
    */
   get abortSignal(): AbortSignal {
-    if (this.status > STATUS.MOUNTED) {
+    if (this._finalizing || this.status > STATUS.MOUNTED) {
       if (!this._controller) {
         this._controller = new AbortController();
         this._controller.abort();
@@ -135,31 +159,47 @@ export abstract class Scope {
    * reverse registration order, disposes any computations attached to this
    * scope, and transitions status to DESTROYED. Callbacks run *before* the
    * status transition so they can still observe the pre-destroyed state
-   * (matching the prior onWillDestroy contract). Errors in callbacks are
-   * routed to `reportError`.
+   * (matching the prior onWillDestroy contract). A callback registered by
+   * another callback runs too, after the current round. Errors in callbacks
+   * are routed to `reportError`.
    */
   finalize(reportError: (e: unknown) => void): void {
-    if (this.status >= STATUS.DESTROYED) {
+    if (this._finalizing || this.status >= STATUS.DESTROYED) {
       return;
     }
-    if (this._controller && !this._controller.signal.aborted) {
-      this._controller.abort();
-    }
-    const cbs = this._destroyCbs;
-    if (cbs) {
+    this._finalizing = true;
+    this._controller?.abort();
+    let cbs;
+    while ((cbs = this._destroyCbs)) {
       this._destroyCbs = null;
-      for (let i = cbs.length - 1; i >= 0; i--) {
-        try {
-          cbs[i]();
-        } catch (e) {
-          reportError(e);
-        }
-      }
+      runReversed(cbs, reportError);
     }
-    for (const computation of this.computations) {
+    for (const computation of this.computations.splice(0)) {
       disposeComputation(computation);
     }
     this.status = STATUS.DESTROYED;
+  }
+
+  /**
+   * What the scope has registered so far, for `rollback`.
+   */
+  mark(): ScopeMark {
+    return [this.willStart.length, this._destroyCbs?.length ?? 0, this.computations.length];
+  }
+
+  /**
+   * Undoes what the scope registered since `mark`: drops the onWillStart
+   * callbacks, runs the onDestroy callbacks in reverse and disposes the
+   * computations. Used when a setup fails half way.
+   */
+  rollback(mark: ScopeMark, reportError: (e: unknown) => void): void {
+    this.willStart.length = mark[0];
+    if (this._destroyCbs) {
+      runReversed(this._destroyCbs.splice(mark[1]), reportError);
+    }
+    for (const computation of this.computations.splice(mark[2])) {
+      disposeComputation(computation);
+    }
   }
 
   /**
@@ -189,8 +229,8 @@ export function isAbortError(e: unknown): boolean {
   return typeof e === "object" && e !== null && (e as { name?: string }).name === "AbortError";
 }
 
-function makeAbortError(): Error {
-  const err = new Error("The operation was aborted");
+export function makeAbortError(cause?: unknown): Error {
+  const err = new Error("The operation was aborted", cause === undefined ? undefined : { cause });
   err.name = "AbortError";
   return err;
 }
