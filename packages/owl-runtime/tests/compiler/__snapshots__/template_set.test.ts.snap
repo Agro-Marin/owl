@@ -9,7 +9,7 @@ exports[`loading templates > addTemplates does not modify its xml document in pl
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['value'], key + \`__1\`);
+    const b2 = safeOutput(ctx['value'], key, "__1");
     return block1([], [b2]);
   }
 }"

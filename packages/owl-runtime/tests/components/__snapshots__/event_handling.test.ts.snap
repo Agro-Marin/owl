@@ -45,7 +45,7 @@ exports[`event handling > handler receive the event as argument 1`] = `
   return function template(ctx, node, key = "") {
     let hdlr1 = [hdlr_fn1, ctx];
     const b2 = comp1({}, key + \`__1\`, node, this, null);
-    const b3 = safeOutput(ctx['this'].state.value, key + \`__2\`);
+    const b3 = safeOutput(ctx['this'].state.value, key, "__2");
     return block1([hdlr1], [b2, b3]);
   }
 }"
@@ -151,7 +151,7 @@ exports[`event handling > support for callable expression in event handler 1`] =
   let block1 = createBlock(\`<div><block-child-0/><input type="text" block-handler-0="input"/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].state.value, key + \`__1\`);
+    const b2 = safeOutput(ctx['this'].state.value, key, "__1");
     let hdlr1 = [hdlr_fn1, ctx];
     return block1([hdlr1], [b2]);
   }

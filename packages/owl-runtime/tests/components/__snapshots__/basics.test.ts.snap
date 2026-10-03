@@ -152,7 +152,7 @@ exports[`basics > can be clicked on and updated 1`] = `
   let block1 = createBlock(\`<div><block-child-0/><button block-handler-0="click">Inc</button></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].state.counter, key + \`__1\`);
+    const b2 = safeOutput(ctx['this'].state.counter, key, "__1");
     let hdlr1 = [hdlr_fn1, ctx];
     return block1([hdlr1], [b2]);
   }
@@ -184,7 +184,7 @@ exports[`basics > can handle empty props 2`] = `
   let block1 = createBlock(\`<span><block-child-0/></span>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].props.val, key + \`__1\`);
+    const b2 = safeOutput(ctx['this'].props.val, key, "__1");
     return block1([], [b2]);
   }
 }"
@@ -211,7 +211,7 @@ exports[`basics > can inject values in tagged templates 2`] = `
   let block1 = createBlock(\`<span><block-child-0/></span>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].state.n, key + \`__1\`);
+    const b2 = safeOutput(ctx['this'].state.n, key, "__1");
     return block1([], [b2]);
   }
 }"
@@ -277,7 +277,7 @@ exports[`basics > can mount a simple component with props 1`] = `
   let block1 = createBlock(\`<span><block-child-0/></span>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].props.value, key + \`__1\`);
+    const b2 = safeOutput(ctx['this'].props.value, key, "__1");
     return block1([], [b2]);
   }
 }"
@@ -316,7 +316,7 @@ exports[`basics > child can be updated 2`] = `
   let { safeOutput } = helpers;
   
   return function template(ctx, node, key = "") {
-    return safeOutput(ctx['this'].props.value, key + \`__1\`);
+    return safeOutput(ctx['this'].props.value, key, "__1");
   }
 }"
 `;
@@ -330,7 +330,7 @@ exports[`basics > class component with dynamic text 1`] = `
   let block1 = createBlock(\`<span>My value: <block-child-0/></span>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].value, key + \`__1\`);
+    const b2 = safeOutput(ctx['this'].value, key, "__1");
     return block1([], [b2]);
   }
 }"
@@ -358,7 +358,7 @@ exports[`basics > class parent, class child component with props 2`] = `
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].props.value, key + \`__1\`);
+    const b2 = safeOutput(ctx['this'].props.value, key, "__1");
     return block1([], [b2]);
   }
 }"
@@ -430,7 +430,7 @@ exports[`basics > component with dynamic content can be updated 1`] = `
   let block1 = createBlock(\`<span><block-child-0/></span>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].value, key + \`__1\`);
+    const b2 = safeOutput(ctx['this'].value, key, "__1");
     return block1([], [b2]);
   }
 }"
@@ -458,7 +458,7 @@ exports[`basics > do not remove previously rendered dom if not necessary, variat
   let block1 = createBlock(\`<div><h1>h1</h1><span><block-child-0/></span></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].state.value, key + \`__1\`);
+    const b2 = safeOutput(ctx['this'].state.value, key, "__1");
     return block1([], [b2]);
   }
 }"
@@ -698,7 +698,7 @@ exports[`basics > rerendering a widget with a sub widget 2`] = `
   let block1 = createBlock(\`<div><block-child-0/><button block-handler-0="click">Inc</button></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].state.counter, key + \`__1\`);
+    const b2 = safeOutput(ctx['this'].state.counter, key, "__1");
     let hdlr1 = [hdlr_fn1, ctx];
     return block1([hdlr1], [b2]);
   }
@@ -734,7 +734,7 @@ exports[`basics > same t-keys in two different places 2`] = `
   let block1 = createBlock(\`<span><block-child-0/></span>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].props.blip, key + \`__1\`);
+    const b2 = safeOutput(ctx['this'].props.blip, key, "__1");
     return block1([], [b2]);
   }
 }"
@@ -749,7 +749,7 @@ exports[`basics > simple component with a dynamic text 1`] = `
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].value, key + \`__1\`);
+    const b2 = safeOutput(ctx['this'].value, key, "__1");
     return block1([], [b2]);
   }
 }"
@@ -764,7 +764,7 @@ exports[`basics > simple component, proxy 1`] = `
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].state.value, key + \`__1\`);
+    const b2 = safeOutput(ctx['this'].state.value, key, "__1");
     return block1([], [b2]);
   }
 }"
@@ -1010,7 +1010,7 @@ exports[`basics > text after a conditional component 1`] = `
     if (ctx['this'].state.hasChild) {
       b2 = comp1({}, key + \`__1\`, node, this, null);
     }
-    b3 = safeOutput(ctx['this'].state.text, key + \`__2\`);
+    b3 = safeOutput(ctx['this'].state.text, key, "__2");
     return block1([], [b2, b3]);
   }
 }"
@@ -1150,8 +1150,8 @@ exports[`basics > update props of component without concrete own node 3`] = `
   let block1 = createBlock(\`<div class="widget-subkey"><block-child-0/>__<block-child-1/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].props.key, key + \`__1\`);
-    const b3 = safeOutput(ctx['this'].props.subKey, key + \`__2\`);
+    const b2 = safeOutput(ctx['this'].props.key, key, "__1");
+    const b3 = safeOutput(ctx['this'].props.subKey, key, "__2");
     return block1([], [b2, b3]);
   }
 }"
@@ -1161,7 +1161,7 @@ exports[`basics > updating a component with t-foreach as root 1`] = `
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { prepareList, safeOutput, withKey, keyOf } = helpers;
+  let { prepareList, safeOutput, withKey } = helpers;
   
   return function template(ctx, node, key = "") {
     const ctx1 = ctx;
@@ -1170,8 +1170,7 @@ exports[`basics > updating a component with t-foreach as root 1`] = `
       let ctx = Object.create(ctx1);
       ctx["item"] = k_block1[i1];
       const key1 = ctx['item'];
-      const skey1 = keyOf(key1);
-      c_block1[i1] = withKey(safeOutput(ctx['item'], key + \`__1__\${skey1}\`), key1);
+      c_block1[i1] = withKey(safeOutput(ctx['item'], key, "__1", 1, key1), key1);
     }
     return list(c_block1);
   }
@@ -1362,7 +1361,7 @@ exports[`t-out in components > can render list of t-out  1`] = `
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { prepareList, safeOutput, withKey, keyOf } = helpers;
+  let { prepareList, safeOutput, withKey } = helpers;
   
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
@@ -1373,8 +1372,7 @@ exports[`t-out in components > can render list of t-out  1`] = `
       let ctx = Object.create(ctx1);
       ctx["item"] = k_block2[i1];
       const key1 = ctx['item'];
-      const skey1 = keyOf(key1);
-      c_block2[i1] = withKey(safeOutput(ctx['item'], key + \`__1__\${skey1}\`), key1);
+      c_block2[i1] = withKey(safeOutput(ctx['item'], key, "__1", 1, key1), key1);
     }
     const b2 = list(c_block2);
     return block1([], [b2]);
@@ -1389,8 +1387,8 @@ exports[`t-out in components > can switch the contents of two t-out repeatedly 1
   let { safeOutput } = helpers;
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].state.a, key + \`__1\`);
-    const b3 = safeOutput(ctx['this'].state.b, key + \`__2\`);
+    const b2 = safeOutput(ctx['this'].state.a, key, "__1");
+    const b3 = safeOutput(ctx['this'].state.b, key, "__2");
     return multi([b2, b3]);
   }
 }"
@@ -1403,7 +1401,7 @@ exports[`t-out in components > t-out and updating falsy values,  1`] = `
   let { safeOutput } = helpers;
   
   return function template(ctx, node, key = "") {
-    return safeOutput(ctx['this'].state.a, key + \`__1\`);
+    return safeOutput(ctx['this'].state.a, key, "__1");
   }
 }"
 `;
@@ -1417,7 +1415,7 @@ exports[`t-out in components > update properly on state changes 1`] = `
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].state.value, key + \`__1\`);
+    const b2 = safeOutput(ctx['this'].state.value, key, "__1");
     return block1([], [b2]);
   }
 }"

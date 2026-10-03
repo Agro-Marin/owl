@@ -20,7 +20,7 @@ exports[`slots > .translate slot props are translated 2`] = `
   let { safeOutput } = helpers;
   
   return function template(ctx, node, key = "") {
-    return safeOutput(ctx['this'].props.slots.default.message, key + \`__1\`);
+    return safeOutput(ctx['this'].props.slots.default.message, key, "__1");
   }
 }"
 `;
@@ -89,7 +89,7 @@ exports[`slots > a sub-template looping over a slot can be called twice 4`] = `
   let block1 = createBlock(\`<b><block-child-0/></b>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].id, key + \`__1\`);
+    const b2 = safeOutput(ctx['this'].id, key, "__1");
     return block1([], [b2]);
   }
 }"
@@ -151,11 +151,11 @@ exports[`slots > a t-set-slot carrying t-out or t-call keeps its slot attributes
   const comp1 = createComponent(app, \`Child\`, true, true, false, []);
   
   function slot1(ctx, node, key = "") {
-    return safeOutput(ctx['s'].v, key + \`__1\`);
+    return safeOutput(ctx['s'].v, key, "__1");
   }
   
   function slot2(ctx, node, key = "") {
-    return safeOutput(ctx['s'].v+'!', key + \`__2\`);
+    return safeOutput(ctx['s'].v+'!', key, "__2");
   }
   
   function slot3(ctx, node, key = "") {
@@ -163,7 +163,7 @@ exports[`slots > a t-set-slot carrying t-out or t-call keeps its slot attributes
   }
   
   function slot4(ctx, node, key = "") {
-    return safeOutput('D', key + \`__4\`);
+    return safeOutput('D', key, "__4");
   }
   
   return function template(ctx, node, key = "") {
@@ -199,7 +199,7 @@ exports[`slots > a t-set-slot carrying t-out or t-call keeps its slot attributes
   let block1 = createBlock(\`<u><block-child-0/></u>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['s'].v, key + \`__1\`);
+    const b2 = safeOutput(ctx['s'].v, key, "__1");
     return block1([], [b2]);
   }
 }"
@@ -307,7 +307,7 @@ exports[`slots > can define and call slots with bound params 2`] = `
   
   return function template(ctx, node, key = "") {
     const b2 = callSlot(ctx, node, key, "abc", false, {});
-    const b3 = safeOutput(ctx['this'].props.slots['abc'].getValue(), key + \`__1\`);
+    const b3 = safeOutput(ctx['this'].props.slots['abc'].getValue(), key, "__1");
     return multi([b2, b3]);
   }
 }"
@@ -348,9 +348,9 @@ exports[`slots > can define and call slots with params 2`] = `
   let block1 = createBlock(\`<div><block-child-0/><div><block-child-1/></div><block-child-2/><div><block-child-3/></div></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].props.slots['header'].param, key + \`__1\`);
+    const b2 = safeOutput(ctx['this'].props.slots['header'].param, key, "__1");
     const b3 = callSlot(ctx, node, key, "header", false, {});
-    const b4 = safeOutput(ctx['this'].props.slots['footer'].param, key + \`__2\`);
+    const b4 = safeOutput(ctx['this'].props.slots['footer'].param, key, "__2");
     const b5 = callSlot(ctx, node, key, "footer", false, {});
     return block1([], [b2, b3, b4, b5]);
   }
@@ -424,7 +424,7 @@ exports[`slots > can use .translate suffix on slot props 2`] = `
   let { safeOutput } = helpers;
   
   return function template(ctx, node, key = "") {
-    return safeOutput(ctx['this'].props.slots.default.message, key + \`__1\`);
+    return safeOutput(ctx['this'].props.slots.default.message, key, "__1");
   }
 }"
 `;
@@ -707,7 +707,7 @@ exports[`slots > default slot with params with - in it 1`] = `
   const comp1 = createComponent(app, \`Child\`, true, true, false, []);
   
   function slot1(ctx, node, key = "") {
-    return safeOutput(ctx['slotScope']['some-value'], key + \`__1\`);
+    return safeOutput(ctx['slotScope']['some-value'], key, "__1");
   }
   
   return function template(ctx, node, key = "") {
@@ -1151,7 +1151,7 @@ exports[`slots > mix of slots, t-call, t-call with body, and giving own props ch
   
   return function template(ctx, node, key = "") {
     const b2 = text(\`[sub2\`);
-    const b3 = safeOutput(ctx['v'], key + \`__1\`);
+    const b3 = safeOutput(ctx['v'], key, "__1");
     const b4 = text(\`]\`);
     return multi([b2, b3, b4]);
   }
@@ -1284,7 +1284,7 @@ exports[`slots > multiple slots containing components 3`] = `
   let block1 = createBlock(\`<span><block-child-0/></span>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].props.val, key + \`__1\`);
+    const b2 = safeOutput(ctx['this'].props.val, key, "__1");
     return block1([], [b2]);
   }
 }"
@@ -1306,7 +1306,7 @@ exports[`slots > named slot inside named slot in t-component 1`] = `
   }
   
   function slot2(ctx, node, key = "") {
-    return safeOutput(ctx['this'].value, key + \`__1\`);
+    return safeOutput(ctx['this'].value, key, "__1");
   }
   
   return function template(ctx, node, key = "") {
@@ -1340,7 +1340,7 @@ exports[`slots > named slot inside slot 1`] = `
   let block4 = createBlock(\`<p>B<block-child-0/></p>\`);
   
   function slot1(ctx, node, key = "") {
-    const b3 = safeOutput(ctx['this'].value, key + \`__1\`);
+    const b3 = safeOutput(ctx['this'].value, key, "__1");
     return block2([], [b3]);
   }
   
@@ -1349,7 +1349,7 @@ exports[`slots > named slot inside slot 1`] = `
   }
   
   function slot3(ctx, node, key = "") {
-    const b5 = safeOutput(ctx['this'].value, key + \`__2\`);
+    const b5 = safeOutput(ctx['this'].value, key, "__2");
     return block4([], [b5]);
   }
   
@@ -1389,7 +1389,7 @@ exports[`slots > named slot inside slot, part 3 1`] = `
   let block4 = createBlock(\`<p>B<block-child-0/></p>\`);
   
   function slot1(ctx, node, key = "") {
-    const b3 = safeOutput(ctx['this'].value, key + \`__1\`);
+    const b3 = safeOutput(ctx['this'].value, key, "__1");
     return block2([], [b3]);
   }
   
@@ -1398,7 +1398,7 @@ exports[`slots > named slot inside slot, part 3 1`] = `
   }
   
   function slot3(ctx, node, key = "") {
-    const b5 = safeOutput(ctx['this'].value, key + \`__2\`);
+    const b5 = safeOutput(ctx['this'].value, key, "__2");
     return block4([], [b5]);
   }
   
@@ -1473,7 +1473,7 @@ exports[`slots > named slots inside slot, again 1`] = `
   let block4 = createBlock(\`<p>B<block-child-0/></p>\`);
   
   function slot1(ctx, node, key = "") {
-    const b3 = safeOutput(ctx['this'].value, key + \`__1\`);
+    const b3 = safeOutput(ctx['this'].value, key, "__1");
     return block2([], [b3]);
   }
   
@@ -1482,7 +1482,7 @@ exports[`slots > named slots inside slot, again 1`] = `
   }
   
   function slot3(ctx, node, key = "") {
-    const b5 = safeOutput(ctx['this'].value, key + \`__2\`);
+    const b5 = safeOutput(ctx['this'].value, key, "__2");
     return block4([], [b5]);
   }
   
@@ -1646,7 +1646,7 @@ exports[`slots > nested slots: evaluation context and parented relationship 4`] 
   let block1 = createBlock(\`<span><block-child-0/></span>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].props.val, key + \`__1\`);
+    const b2 = safeOutput(ctx['this'].props.val, key, "__1");
     return block1([], [b2]);
   }
 }"
@@ -1758,7 +1758,7 @@ exports[`slots > simple default slot with params and bound function 1`] = `
   const comp1 = createComponent(app, \`Child\`, true, true, false, []);
   
   function slot1(ctx, node, key = "") {
-    return safeOutput(ctx['slotScope'].fn(), key + \`__1\`);
+    return safeOutput(ctx['slotScope'].fn(), key, "__1");
   }
   
   return function template(ctx, node, key = "") {
@@ -2008,7 +2008,7 @@ exports[`slots > slot and t-out 1`] = `
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
   function slot1(ctx, node, key = "") {
-    return safeOutput('toph', key + \`__1\`);
+    return safeOutput('toph', key, "__1");
   }
   
   return function template(ctx, node, key = "") {
@@ -2050,7 +2050,7 @@ exports[`slots > slot are properly rendered if inner props are changed 1`] = `
   
   return function template(ctx, node, key = "") {
     let hdlr1 = [hdlr_fn1, ctx];
-    const b2 = safeOutput(ctx['this'].state.val, key + \`__1\`);
+    const b2 = safeOutput(ctx['this'].state.val, key, "__1");
     const b4 = comp2({slots: markRaw({"default": {__render: slot1.bind(this), __ctx: ctx}})}, key + \`__3\`, node, this, null);
     return block1([hdlr1], [b2, b4]);
   }
@@ -2081,7 +2081,7 @@ exports[`slots > slot are properly rendered if inner props are changed 3`] = `
   let block1 = createBlock(\`<div> SC:<block-child-0/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].props.val, key + \`__1\`);
+    const b2 = safeOutput(ctx['this'].props.val, key, "__1");
     return block1([], [b2]);
   }
 }"
@@ -2149,7 +2149,7 @@ exports[`slots > slot called inside nested loops gets one component per outer it
   let block1 = createBlock(\`<b><block-child-0/></b>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].id, key + \`__1\`);
+    const b2 = safeOutput(ctx['this'].id, key, "__1");
     return block1([], [b2]);
   }
 }"
@@ -2198,7 +2198,7 @@ exports[`slots > slot content has different key from other content -- dynamic sl
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].props.parent, key + \`__1\`);
+    const b2 = safeOutput(ctx['this'].props.parent, key, "__1");
     return block1([], [b2]);
   }
 }"
@@ -2246,7 +2246,7 @@ exports[`slots > slot content has different key from other content -- static slo
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].props.parent, key + \`__1\`);
+    const b2 = safeOutput(ctx['this'].props.parent, key, "__1");
     return block1([], [b2]);
   }
 }"
@@ -2418,7 +2418,7 @@ exports[`slots > slot in t-foreach locations 2`] = `
       ctx["elem_index"] = i1;
       const key1 = ctx['elem_index'];
       const skey1 = keyOf(key1);
-      const b3 = safeOutput(ctx['elem'], key + \`__1__\${skey1}\`);
+      const b3 = safeOutput(ctx['elem'], key, "__1", 1, key1);
       const b4 = callSlot(ctx, node, key + \`__\${skey1}\`, "default", false, {});
       c_block1[i1] = withKey(block2([], [b3, b4]), key1);
     }
@@ -2584,7 +2584,7 @@ exports[`slots > slot under a t-key is recreated when the key changes 3`] = `
   let block1 = createBlock(\`<b><block-child-0/></b>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].id, key + \`__1\`);
+    const b2 = safeOutput(ctx['this'].id, key, "__1");
     return block1([], [b2]);
   }
 }"
@@ -2601,9 +2601,9 @@ exports[`slots > slot with slot scope and t-props 1`] = `
   let block4 = createBlock(\`<p><block-child-0/></p>\`);
   
   function slot1(ctx, node, key = "") {
-    const b3 = safeOutput(ctx['info'].a, key + \`__1\`);
+    const b3 = safeOutput(ctx['info'].a, key, "__1");
     const b2 = block2([], [b3]);
-    const b5 = safeOutput(ctx['info'].b, key + \`__2\`);
+    const b5 = safeOutput(ctx['info'].b, key, "__2");
     const b4 = block4([], [b5]);
     return multi([b2, b4]);
   }
@@ -2684,7 +2684,7 @@ exports[`slots > slots are properly bound to correct component 2`] = `
     ctx = Object.create(ctx);
     ctx["var"] = 1;
     let hdlr1 = [hdlr_fn1, ctx];
-    const b2 = safeOutput(ctx['this'].state.value, key + \`__1\`);
+    const b2 = safeOutput(ctx['this'].state.value, key, "__1");
     return block1([hdlr1], [b2]);
   }
   
@@ -2711,7 +2711,7 @@ exports[`slots > slots are rendered with proper context 1`] = `
   }
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].state.val, key + \`__1\`);
+    const b2 = safeOutput(ctx['this'].state.val, key, "__1");
     const b4 = comp1({slots: markRaw({"footer": {__render: slot1.bind(this), __ctx: ctx}})}, key + \`__2\`, node, this, null);
     return block1([], [b2, b4]);
   }
@@ -2745,7 +2745,7 @@ exports[`slots > slots are rendered with proper context, part 2 1`] = `
   
   function slot1(ctx, node, key = "") {
     const b5 = text(\`User \`);
-    const b6 = safeOutput(ctx['user'].name, key + \`__1\`);
+    const b6 = safeOutput(ctx['user'].name, key, "__1");
     return multi([b5, b6]);
   }
   
@@ -2793,7 +2793,7 @@ exports[`slots > slots are rendered with proper context, part 3 1`] = `
   let block3 = createBlock(\`<li><block-child-0/></li>\`);
   
   function slot1(ctx, node, key = "") {
-    return safeOutput(ctx['userdescr'], key + \`__1\`);
+    return safeOutput(ctx['userdescr'], key, "__1");
   }
   
   return function template(ctx, node, key = "") {
@@ -2840,7 +2840,7 @@ exports[`slots > slots are rendered with proper context, part 4 1`] = `
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
   function slot1(ctx, node, key = "") {
-    return safeOutput(ctx['userdescr'], key + \`__1\`);
+    return safeOutput(ctx['userdescr'], key, "__1");
   }
   
   return function template(ctx, node, key = "") {
@@ -2879,7 +2879,7 @@ exports[`slots > slots in slots, with vars 1`] = `
   let block2 = createBlock(\`<p>hey<block-child-0/></p>\`);
   
   function slot1(ctx, node, key = "") {
-    const b3 = safeOutput(ctx['test'], key + \`__1\`);
+    const b3 = safeOutput(ctx['test'], key, "__1");
     return block2([], [b3]);
   }
   
@@ -2937,7 +2937,7 @@ exports[`slots > slots in t-foreach and re-rendering 1`] = `
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
   function slot1(ctx, node, key = "") {
-    return safeOutput(ctx['n_index'], key + \`__1\`);
+    return safeOutput(ctx['n_index'], key, "__1");
   }
   
   return function template(ctx, node, key = "") {
@@ -2966,7 +2966,7 @@ exports[`slots > slots in t-foreach and re-rendering 2`] = `
   let block1 = createBlock(\`<span><block-child-0/><block-child-1/></span>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].state.val, key + \`__1\`);
+    const b2 = safeOutput(ctx['this'].state.val, key, "__1");
     const b3 = callSlot(ctx, node, key, "default", false, {});
     return block1([], [b2, b3]);
   }
@@ -2986,7 +2986,7 @@ exports[`slots > slots in t-foreach in t-foreach 1`] = `
   let block8 = createBlock(\`<li><block-child-0/></li>\`);
   
   function slot1(ctx, node, key = "") {
-    const b9 = safeOutput(ctx['node1'].value, key + \`__2\`);
+    const b9 = safeOutput(ctx['node1'].value, key, "__2");
     return block8([], [b9]);
   }
   
@@ -2998,7 +2998,7 @@ exports[`slots > slots in t-foreach in t-foreach 1`] = `
       ctx["node1"] = k_block2[i1];
       const key1 = ctx['node1'].key;
       const skey1 = keyOf(key1);
-      const b5 = safeOutput(ctx['node1'].value, key + \`__1__\${skey1}\`);
+      const b5 = safeOutput(ctx['node1'].value, key, "__1", 1, key1);
       const b4 = block4([], [b5]);
       const ctx2 = ctx;
       const [k_block7, v_block7, l_block7, c_block7] = prepareList(ctx['node1'].nodes);
@@ -3044,7 +3044,7 @@ exports[`slots > slots in t-foreach with t-set and re-rendering 1`] = `
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
   function slot1(ctx, node, key = "") {
-    return safeOutput(ctx['dummy'], key + \`__1\`);
+    return safeOutput(ctx['dummy'], key, "__1");
   }
   
   return function template(ctx, node, key = "") {
@@ -3074,7 +3074,7 @@ exports[`slots > slots in t-foreach with t-set and re-rendering 2`] = `
   let block1 = createBlock(\`<span><block-child-0/><block-child-1/></span>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].state.val, key + \`__1\`);
+    const b2 = safeOutput(ctx['this'].state.val, key, "__1");
     const b3 = callSlot(ctx, node, key, "default", false, {});
     return block1([], [b2, b3]);
   }
@@ -3177,7 +3177,7 @@ exports[`slots > t-out='0' inside nested loops gets one component per outer iter
   let block1 = createBlock(\`<b><block-child-0/></b>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].id, key + \`__1\`);
+    const b2 = safeOutput(ctx['this'].id, key, "__1");
     return block1([], [b2]);
   }
 }"
@@ -3195,7 +3195,7 @@ exports[`slots > t-set t-value in a slot 1`] = `
   function slot1(ctx, node, key = "") {
     ctx = Object.create(ctx);
     ctx["rainbow"] = 'dash';
-    return safeOutput(ctx['rainbow'], key + \`__1\`);
+    return safeOutput(ctx['rainbow'], key, "__1");
   }
   
   return function template(ctx, node, key = "") {
@@ -3257,7 +3257,7 @@ exports[`slots > t-slot in recursive templates 1`] = `
   const comp1 = createComponent(app, \`Wrapper\`, true, true, false, []);
   
   function slot1(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['name']||ctx['this'].name, key + \`__1\`);
+    const b2 = safeOutput(ctx['name']||ctx['this'].name, key, "__1");
     const ctx1 = ctx;
     const [k_block3, v_block3, l_block3, c_block3] = prepareList(ctx['items']||ctx['this'].items);
     for (let i1 = 0; i1 < l_block3; i1++) {
@@ -3271,7 +3271,7 @@ exports[`slots > t-slot in recursive templates 1`] = `
       const skey1 = keyOf(key1);
       let b5, b6;
       if (!ctx['item'].children.length) {
-        b5 = safeOutput(ctx['item'].name, key + \`__2__\${skey1}\`);
+        b5 = safeOutput(ctx['item'].name, key, "__2", 1, key1);
       } else {
         b6 = callTemplate(\`_test_recursive_template\`, this, app, Object.assign(Object.create(ctx), {name: ctx['item'].name, items: ctx['item'].children, [zero]: null}), node, key + \`__3__\${skey1}\`);
       }
@@ -3550,7 +3550,7 @@ exports[`slots > template can just return a slot 3`] = `
   let block1 = createBlock(\`<span><block-child-0/></span>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].props.value, key + \`__1\`);
+    const b2 = safeOutput(ctx['this'].props.value, key, "__1");
     return block1([], [b2]);
   }
 }"

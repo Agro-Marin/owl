@@ -157,7 +157,7 @@ exports[`a handled lifecycle error does not starve the other components > the on
   let block1 = createBlock(\`<a><block-child-0/></a>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].props.v, key + \`__1\`);
+    const b2 = safeOutput(ctx['this'].props.v, key, "__1");
     return block1([], [b2]);
   }
 }"
@@ -172,7 +172,7 @@ exports[`a handled lifecycle error does not starve the other components > the on
   let block1 = createBlock(\`<b><block-child-0/></b>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].props.v, key + \`__1\`);
+    const b2 = safeOutput(ctx['this'].props.v, key, "__1");
     return block1([], [b2]);
   }
 }"
@@ -213,7 +213,7 @@ exports[`basics > a sync re-render error deep in the tree is only wrapped once 3
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].props.flag&&ctx['this'].state.this.will.crash, key + \`__1\`);
+    const b2 = safeOutput(ctx['this'].props.flag&&ctx['this'].state.this.will.crash, key, "__1");
     return block1([], [b2]);
   }
 }"
@@ -245,7 +245,7 @@ exports[`basics > a willUpdateProps hook throwing synchronously restores the par
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].props.n, key + \`__1\`);
+    const b2 = safeOutput(ctx['this'].props.n, key, "__1");
     return block1([], [b2]);
   }
 }"
@@ -299,7 +299,7 @@ exports[`basics > currentComputation does not leak when an uncaught render error
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].props.flag&&ctx['this'].state.this.will.crash, key + \`__1\`);
+    const b2 = safeOutput(ctx['this'].props.flag&&ctx['this'].state.this.will.crash, key, "__1");
     return block1([], [b2]);
   }
 }"
@@ -399,7 +399,7 @@ exports[`basics > no component catching error lead to full app destruction 2`] =
   let block1 = createBlock(\`<div>hey<block-child-0/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].props.flag&&ctx['this'].state.this.will.crash, key + \`__1\`);
+    const b2 = safeOutput(ctx['this'].props.flag&&ctx['this'].state.this.will.crash, key, "__1");
     return block1([], [b2]);
   }
 }"
@@ -448,7 +448,7 @@ exports[`basics > render from above on error -- handler is not a Root or MountFi
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['a'].b.c, key + \`__1\`);
+    const b2 = safeOutput(ctx['a'].b.c, key, "__1");
     return block1([], [b2]);
   }
 }"
@@ -484,7 +484,7 @@ exports[`basics > simple catchError 2`] = `
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['a'].b.c, key + \`__1\`);
+    const b2 = safeOutput(ctx['a'].b.c, key, "__1");
     return block1([], [b2]);
   }
 }"
@@ -497,7 +497,7 @@ exports[`can catch errors > Errors thrown from user hooks surface as-is (async) 
   let { safeOutput } = helpers;
   
   return function template(ctx, node, key = "") {
-    return safeOutput(ctx['this'].state.value, key + \`__1\`);
+    return safeOutput(ctx['this'].state.value, key, "__1");
   }
 }"
 `;
@@ -509,7 +509,7 @@ exports[`can catch errors > Errors thrown from user hooks surface as-is (sync) 1
   let { safeOutput } = helpers;
   
   return function template(ctx, node, key = "") {
-    return safeOutput(ctx['this'].state.value, key + \`__1\`);
+    return safeOutput(ctx['this'].state.value, key, "__1");
   }
 }"
 `;
@@ -521,7 +521,7 @@ exports[`can catch errors > Errors thrown outside dev mode also surface as-is (a
   let { safeOutput } = helpers;
   
   return function template(ctx, node, key = "") {
-    return safeOutput(ctx['this'].state.value, key + \`__1\`);
+    return safeOutput(ctx['this'].state.value, key, "__1");
   }
 }"
 `;
@@ -533,7 +533,7 @@ exports[`can catch errors > Errors thrown outside dev mode also surface as-is (s
   let { safeOutput } = helpers;
   
   return function template(ctx, node, key = "") {
-    return safeOutput(ctx['this'].state.value, key + \`__1\`);
+    return safeOutput(ctx['this'].state.value, key, "__1");
   }
 }"
 `;
@@ -545,7 +545,7 @@ exports[`can catch errors > Thrown non-error values surface as-is (dev mode) 1`]
   let { safeOutput } = helpers;
   
   return function template(ctx, node, key = "") {
-    return safeOutput(ctx['this'].state.value, key + \`__1\`);
+    return safeOutput(ctx['this'].state.value, key, "__1");
   }
 }"
 `;
@@ -557,7 +557,7 @@ exports[`can catch errors > Thrown non-error values surface as-is (outside dev m
   let { safeOutput } = helpers;
   
   return function template(ctx, node, key = "") {
-    return safeOutput(ctx['this'].state.value, key + \`__1\`);
+    return safeOutput(ctx['this'].state.value, key, "__1");
   }
 }"
 `;
@@ -571,7 +571,7 @@ exports[`can catch errors > an error in onWillDestroy 1`] = `
   
   return function template(ctx, node, key = "") {
     let b2, b3;
-    b2 = safeOutput(ctx['this'].state.value, key + \`__1\`);
+    b2 = safeOutput(ctx['this'].state.value, key, "__1");
     if (ctx['this'].state.hasChild) {
       b3 = comp1({}, key + \`__2\`, node, this, null);
     }
@@ -602,7 +602,7 @@ exports[`can catch errors > an error in onWillDestroy, variation 1`] = `
   
   return function template(ctx, node, key = "") {
     let b2, b3;
-    b2 = safeOutput(ctx['this'].state.value, key + \`__1\`);
+    b2 = safeOutput(ctx['this'].state.value, key, "__1");
     if (ctx['this'].state.hasChild) {
       b3 = comp1({}, key + \`__2\`, node, this, null);
     }
@@ -633,7 +633,7 @@ exports[`can catch errors > an error in onWillUnmount still destroys the compone
   
   return function template(ctx, node, key = "") {
     let b2, b3;
-    b2 = safeOutput(ctx['this'].state.value, key + \`__1\`);
+    b2 = safeOutput(ctx['this'].state.value, key, "__1");
     if (ctx['this'].state.hasChild) {
       b3 = comp1({}, key + \`__2\`, node, this, null);
     }
@@ -651,7 +651,7 @@ exports[`can catch errors > an error in onWillUnmount still destroys the compone
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].s(), key + \`__1\`);
+    const b2 = safeOutput(ctx['this'].s(), key, "__1");
     return block1([], [b2]);
   }
 }"
@@ -664,7 +664,7 @@ exports[`can catch errors > calling a hook outside setup should crash 1`] = `
   let { safeOutput } = helpers;
   
   return function template(ctx, node, key = "") {
-    return safeOutput(ctx['this'].state.value, key + \`__1\`);
+    return safeOutput(ctx['this'].state.value, key, "__1");
   }
 }"
 `;
@@ -719,7 +719,7 @@ exports[`can catch errors > can catch an error in a component render function 3`
   let block1 = createBlock(\`<div>hey<block-child-0/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].props.flag&&ctx['this'].state.this.will.crash, key + \`__1\`);
+    const b2 = safeOutput(ctx['this'].props.flag&&ctx['this'].state.this.will.crash, key, "__1");
     return block1([], [b2]);
   }
 }"
@@ -944,7 +944,7 @@ exports[`can catch errors > can catch an error in the initial call of a componen
   let block1 = createBlock(\`<div>hey<block-child-0/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].state.this.will.crash, key + \`__1\`);
+    const b2 = safeOutput(ctx['this'].state.this.will.crash, key, "__1");
     return block1([], [b2]);
   }
 }"
@@ -1003,7 +1003,7 @@ exports[`can catch errors > can catch an error in the initial call of a componen
   let block1 = createBlock(\`<div>hey<block-child-0/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].state.this.will.crash, key + \`__1\`);
+    const b2 = safeOutput(ctx['this'].state.this.will.crash, key, "__1");
     return block1([], [b2]);
   }
 }"
@@ -1175,7 +1175,7 @@ exports[`can catch errors > can catch an error in the willPatch call 1`] = `
   }
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].state.message, key + \`__1\`);
+    const b2 = safeOutput(ctx['this'].state.message, key, "__1");
     const b4 = comp2({slots: markRaw({"default": {__render: slot1.bind(this), __ctx: ctx}})}, key + \`__3\`, node, this, null);
     return block1([], [b2, b4]);
   }
@@ -1211,7 +1211,7 @@ exports[`can catch errors > can catch an error in the willPatch call 3`] = `
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].props.message, key + \`__1\`);
+    const b2 = safeOutput(ctx['this'].props.message, key, "__1");
     return block1([], [b2]);
   }
 }"
@@ -1387,7 +1387,7 @@ exports[`can catch errors > catchError in catchError 3`] = `
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['a'].b.c, key + \`__1\`);
+    const b2 = safeOutput(ctx['a'].b.c, key, "__1");
     return block1([], [b2]);
   }
 }"
@@ -1534,7 +1534,7 @@ exports[`can catch errors > catching in child makes parent render 4`] = `
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput('Child '+ctx['this'].props.id, key + \`__1\`);
+    const b2 = safeOutput('Child '+ctx['this'].props.id, key, "__1");
     return block1([], [b2]);
   }
 }"
@@ -1764,9 +1764,9 @@ exports[`can catch errors > onError in class inheritance is called if rethrown 2
   return function template(ctx, node, key = "") {
     let b2, b3;
     if (!ctx['this'].state.error) {
-      b2 = safeOutput(ctx['this'].will.crash, key + \`__1\`);
+      b2 = safeOutput(ctx['this'].will.crash, key, "__1");
     } else {
-      b3 = safeOutput(ctx['this'].state.error, key + \`__2\`);
+      b3 = safeOutput(ctx['this'].state.error, key, "__2");
     }
     return block1([], [b2, b3]);
   }
@@ -1797,9 +1797,9 @@ exports[`can catch errors > onError in class inheritance is not called if no ret
   return function template(ctx, node, key = "") {
     let b2, b3;
     if (!ctx['this'].state.error) {
-      b2 = safeOutput(ctx['this'].will.crash, key + \`__1\`);
+      b2 = safeOutput(ctx['this'].will.crash, key, "__1");
     } else {
-      b3 = safeOutput(ctx['this'].state.error, key + \`__2\`);
+      b3 = safeOutput(ctx['this'].state.error, key, "__2");
     }
     return block1([], [b2, b3]);
   }
@@ -1831,7 +1831,7 @@ exports[`errors and promises > a rendering error in a sub component will reject 
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].will.crash, key + \`__1\`);
+    const b2 = safeOutput(ctx['this'].will.crash, key, "__1");
     return block1([], [b2]);
   }
 }"
@@ -1846,7 +1846,7 @@ exports[`errors and promises > a rendering error will reject the mount promise 1
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].will.crash, key + \`__1\`);
+    const b2 = safeOutput(ctx['this'].will.crash, key, "__1");
     return block1([], [b2]);
   }
 }"
@@ -1863,7 +1863,7 @@ exports[`errors and promises > a rendering error will reject the render promise 
   
   return function template(ctx, node, key = "") {
     const b2 = comp1({}, key + \`__1\`, node, this, null);
-    const b3 = safeOutput(ctx['x'].y, key + \`__2\`);
+    const b3 = safeOutput(ctx['x'].y, key, "__2");
     return block1([], [b2, b3]);
   }
 }"
@@ -1893,7 +1893,7 @@ exports[`errors and promises > a rendering error will reject the render promise 
   return function template(ctx, node, key = "") {
     let b2;
     if (ctx['this'].flag) {
-      b2 = safeOutput(ctx['this'].will.crash, key + \`__1\`);
+      b2 = safeOutput(ctx['this'].will.crash, key, "__1");
     }
     return block1([], [b2]);
   }
@@ -1935,7 +1935,7 @@ exports[`errors and promises > an error in patched call will reject the render p
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].val, key + \`__1\`);
+    const b2 = safeOutput(ctx['this'].val, key, "__1");
     return block1([], [b2]);
   }
 }"
@@ -1950,7 +1950,7 @@ exports[`errors and promises > an error in willPatch call will reject the render
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].val, key + \`__1\`);
+    const b2 = safeOutput(ctx['this'].val, key, "__1");
     return block1([], [b2]);
   }
 }"
@@ -1978,7 +1978,7 @@ exports[`errors and promises > errors in rerender 1`] = `
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].state.a.b, key + \`__1\`);
+    const b2 = safeOutput(ctx['this'].state.a.b, key, "__1");
     return block1([], [b2]);
   }
 }"
@@ -2033,7 +2033,7 @@ exports[`errors in a pending render pass > a component recovering from its own o
   let block1 = createBlock(\`<div><block-child-0/><block-child-1/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].state.value, key + \`__1\`);
+    const b2 = safeOutput(ctx['this'].state.value, key, "__1");
     const b3 = comp1({value: ctx['this'].state.value}, key + \`__2\`, node, this, null);
     return block1([], [b2, b3]);
   }
@@ -2053,7 +2053,7 @@ exports[`errors in a pending render pass > a component recovering from its own o
     if (ctx['this'].state.failed) {
       b2 = text(\`failed\`);
     } else {
-      b3 = safeOutput(ctx['this'].props.value, key + \`__1\`);
+      b3 = safeOutput(ctx['this'].props.value, key, "__1");
     }
     return block1([], [b2, b3]);
   }
@@ -2085,7 +2085,7 @@ exports[`errors in a pending render pass > a failed pass its handler does not re
   let block1 = createBlock(\`<span><block-child-0/></span>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].props.value.toFixed(), key + \`__1\`);
+    const b2 = safeOutput(ctx['this'].props.value.toFixed(), key, "__1");
     return block1([], [b2]);
   }
 }"
@@ -2118,7 +2118,7 @@ exports[`errors in a pending render pass > a pass failing in onWillUpdateProps o
   let block1 = createBlock(\`<a><block-child-0/></a>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].props.value, key + \`__1\`);
+    const b2 = safeOutput(ctx['this'].props.value, key, "__1");
     return block1([], [b2]);
   }
 }"
@@ -2133,7 +2133,7 @@ exports[`errors in a pending render pass > a pass failing in onWillUpdateProps o
   let block1 = createBlock(\`<b><block-child-0/></b>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].state.value, key + \`__1\`);
+    const b2 = safeOutput(ctx['this'].state.value, key, "__1");
     return block1([], [b2]);
   }
 }"
@@ -2150,7 +2150,7 @@ exports[`errors in a pending render pass > a pass with a failed render stays unc
   let block1 = createBlock(\`<div><block-child-0/><block-child-1/><block-child-2/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].state.count, key + \`__1\`);
+    const b2 = safeOutput(ctx['this'].state.count, key, "__1");
     const b3 = comp1({value: ctx['this'].state.value}, key + \`__2\`, node, this, null);
     const b4 = comp2({value: ctx['this'].state.value}, key + \`__3\`, node, this, null);
     return block1([], [b2, b3, b4]);
@@ -2171,7 +2171,7 @@ exports[`errors in a pending render pass > a pass with a failed render stays unc
     if (ctx['this'].state.failed) {
       b2 = text(\`failed\`);
     } else {
-      b3 = safeOutput(ctx['this'].props.value.toFixed(), key + \`__1\`);
+      b3 = safeOutput(ctx['this'].props.value.toFixed(), key, "__1");
     }
     return block1([], [b2, b3]);
   }
@@ -2187,7 +2187,7 @@ exports[`errors in a pending render pass > a pass with a failed render stays unc
   let block1 = createBlock(\`<b><block-child-0/></b>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].props.value.toFixed(), key + \`__1\`);
+    const b2 = safeOutput(ctx['this'].props.value.toFixed(), key, "__1");
     return block1([], [b2]);
   }
 }"
@@ -2225,7 +2225,7 @@ exports[`errors in a pending render pass > a render the handler of a failed rend
   let block1 = createBlock(\`<s><block-child-0/></s>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].props.value, key + \`__1\`);
+    const b2 = safeOutput(ctx['this'].props.value, key, "__1");
     return block1([], [b2]);
   }
 }"
@@ -2240,7 +2240,7 @@ exports[`errors in a pending render pass > a render the handler of a failed rend
   let block1 = createBlock(\`<c><block-child-0/></c>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].check(), key + \`__1\`);
+    const b2 = safeOutput(ctx['this'].check(), key, "__1");
     return block1([], [b2]);
   }
 }"
@@ -2255,7 +2255,7 @@ exports[`errors in a pending render pass > a render the handler of a failed rend
   let block1 = createBlock(\`<b><block-child-0/></b>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].read(), key + \`__1\`);
+    const b2 = safeOutput(ctx['this'].read(), key, "__1");
     return block1([], [b2]);
   }
 }"
@@ -2288,7 +2288,7 @@ exports[`errors in a pending render pass > a sibling's own render waiting on a p
   let block1 = createBlock(\`<a><block-child-0/></a>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].props.value, key + \`__1\`);
+    const b2 = safeOutput(ctx['this'].props.value, key, "__1");
     return block1([], [b2]);
   }
 }"
@@ -2303,7 +2303,7 @@ exports[`errors in a pending render pass > a sibling's own render waiting on a p
   let block1 = createBlock(\`<b><block-child-0/></b>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].state.value, key + \`__1\`);
+    const b2 = safeOutput(ctx['this'].state.value, key, "__1");
     return block1([], [b2]);
   }
 }"
@@ -2320,7 +2320,7 @@ exports[`errors in a pending render pass > an error in a child's own pass leaves
   let block1 = createBlock(\`<div><block-child-0/><block-child-1/><block-child-2/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].state.value, key + \`__1\`);
+    const b2 = safeOutput(ctx['this'].state.value, key, "__1");
     const b3 = comp1({}, key + \`__2\`, node, this, null);
     const b4 = comp2({value: ctx['this'].state.value}, key + \`__3\`, node, this, null);
     return block1([], [b2, b3, b4]);
@@ -2337,7 +2337,7 @@ exports[`errors in a pending render pass > an error in a child's own pass leaves
   let block1 = createBlock(\`<c><block-child-0/></c>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].state.value, key + \`__1\`);
+    const b2 = safeOutput(ctx['this'].state.value, key, "__1");
     return block1([], [b2]);
   }
 }"
@@ -2352,7 +2352,7 @@ exports[`errors in a pending render pass > an error in a child's own pass leaves
   let block1 = createBlock(\`<d><block-child-0/></d>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].props.value, key + \`__1\`);
+    const b2 = safeOutput(ctx['this'].props.value, key, "__1");
     return block1([], [b2]);
   }
 }"
@@ -2450,7 +2450,7 @@ exports[`errors of a destroyed component > an onWillStart rejecting after its co
   
   return function template(ctx, node, key = "") {
     let b2, b3;
-    b2 = safeOutput(ctx['this'].state.count, key + \`__1\`);
+    b2 = safeOutput(ctx['this'].state.count, key, "__1");
     if (ctx['this'].state.show) {
       b3 = comp1({}, key + \`__2\`, node, this, null);
     }
@@ -2483,7 +2483,7 @@ exports[`errors of a destroyed component > an onWillUpdateProps rejecting after 
   
   return function template(ctx, node, key = "") {
     let b2, b3;
-    b2 = safeOutput(ctx['this'].state.value, key + \`__1\`);
+    b2 = safeOutput(ctx['this'].state.value, key, "__1");
     if (ctx['this'].state.show) {
       b3 = comp1({value: ctx['this'].state.value}, key + \`__2\`, node, this, null);
     }
@@ -2501,7 +2501,7 @@ exports[`errors of a destroyed component > an onWillUpdateProps rejecting after 
   let block1 = createBlock(\`<span><block-child-0/></span>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].props.value, key + \`__1\`);
+    const b2 = safeOutput(ctx['this'].props.value, key, "__1");
     return block1([], [b2]);
   }
 }"

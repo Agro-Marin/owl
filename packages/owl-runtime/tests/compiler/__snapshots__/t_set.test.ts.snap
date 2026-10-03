@@ -4,7 +4,7 @@ exports[`t-set > a t-set body holding a component can be output in a loop 1`] = 
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { LazyValue, createComponent, prepareList, safeOutput, withKey, keyOf } = helpers;
+  let { LazyValue, createComponent, prepareList, safeOutput, withKey } = helpers;
   const comp1 = createComponent(app, \`Child\`, true, false, false, []);
   
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
@@ -22,8 +22,7 @@ exports[`t-set > a t-set body holding a component can be output in a loop 1`] = 
       let ctx = Object.create(ctx1);
       ctx["n"] = k_block3[i1];
       const key1 = ctx['n'];
-      const skey1 = keyOf(key1);
-      c_block3[i1] = withKey(safeOutput(ctx['v'], key + \`__2__\${skey1}\`), key1);
+      c_block3[i1] = withKey(safeOutput(ctx['v'], key, "__2", 1, key1), key1);
     }
     const b3 = list(c_block3);
     return block1([], [b3]);
@@ -60,8 +59,8 @@ exports[`t-set > a t-set body holding a component can be output twice 1`] = `
   return function template(ctx, node, key = "") {
     ctx = Object.create(ctx);
     ctx["v"] = new LazyValue(value1, ctx, this, node, key);
-    const b3 = safeOutput(ctx['v'], key + \`__2\`);
-    const b4 = safeOutput(ctx['v'], key + \`__3\`);
+    const b3 = safeOutput(ctx['v'], key, "__2");
+    const b4 = safeOutput(ctx['v'], key, "__3");
     return block1([], [b3, b4]);
   }
 }"
@@ -80,11 +79,94 @@ exports[`t-set > a t-set body holding a component can be output twice 2`] = `
 }"
 `;
 
+exports[`t-set > a t-set body holding a component keeps one component per site and iteration, nested loops included 1`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { LazyValue, createComponent, safeOutput, prepareList, withKey, keyOf } = helpers;
+  const comp1 = createComponent(app, \`Child\`, true, false, false, []);
+  
+  let block1 = createBlock(\`<div><block-child-0/><block-child-1/></div>\`);
+  
+  function value1(ctx, node, key = "") {
+    return comp1({}, key + \`__1\`, node, this, null);
+  }
+  
+  return function template(ctx, node, key = "") {
+    ctx = Object.create(ctx);
+    ctx["v"] = new LazyValue(value1, ctx, this, node, key);
+    const b3 = safeOutput(ctx['this'].state.n, key, "__2");
+    const ctx1 = ctx;
+    const [k_block4, v_block4, l_block4, c_block4] = prepareList([1,2]);
+    for (let i1 = 0; i1 < l_block4; i1++) {
+      let ctx = Object.create(ctx1);
+      ctx["a"] = k_block4[i1];
+      const key1 = ctx['a'];
+      const skey1 = keyOf(key1);
+      const ctx2 = ctx;
+      const [k_block6, v_block6, l_block6, c_block6] = prepareList(['x','y']);
+      for (let i2 = 0; i2 < l_block6; i2++) {
+        let ctx = Object.create(ctx2);
+        ctx["b"] = k_block6[i2];
+        const key2 = ctx['b'];
+        c_block6[i2] = withKey(safeOutput(ctx['v'], key, "__3", 2, key1, key2), key2);
+      }
+      const b6 = list(c_block6);
+      const ctx3 = ctx;
+      const [k_block8, v_block8, l_block8, c_block8] = prepareList([1]);
+      for (let i2 = 0; i2 < l_block8; i2++) {
+        let ctx = Object.create(ctx3);
+        ctx["c"] = k_block8[i2];
+        const key2 = ctx['c'];
+        const skey2 = keyOf(key2);
+        const ctx4 = ctx;
+        const [k_block9, v_block9, l_block9, c_block9] = prepareList([1]);
+        for (let i3 = 0; i3 < l_block9; i3++) {
+          let ctx = Object.create(ctx4);
+          ctx["d"] = k_block9[i3];
+          const key3 = ctx['d'];
+          const skey3 = keyOf(key3);
+          const ctx5 = ctx;
+          const [k_block10, v_block10, l_block10, c_block10] = prepareList([{},{}]);
+          for (let i4 = 0; i4 < l_block10; i4++) {
+            let ctx = Object.create(ctx5);
+            ctx["e"] = k_block10[i4];
+            ctx["e_index"] = i4;
+            const key4 = ctx['e_index'];
+            const skey4 = keyOf(key4);
+            c_block10[i4] = withKey(safeOutput(ctx['v'], key + \`__4__\${skey1}__\${skey2}__\${skey3}__\${skey4}\`, ""), key4);
+          }
+          c_block9[i3] = withKey(list(c_block10), key3);
+        }
+        c_block8[i2] = withKey(list(c_block9), key2);
+      }
+      const b8 = list(c_block8);
+      c_block4[i1] = withKey(multi([b6, b8]), key1);
+    }
+    const b4 = list(c_block4);
+    return block1([], [b3, b4]);
+  }
+}"
+`;
+
+exports[`t-set > a t-set body holding a component keeps one component per site and iteration, nested loops included 2`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  
+  let block1 = createBlock(\`<i>c</i>\`);
+  
+  return function template(ctx, node, key = "") {
+    return block1();
+  }
+}"
+`;
+
 exports[`t-set > a t-set in an ended loop does not change scoping in a later loop 1`] = `
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { prepareList, withKey, safeOutput, keyOf } = helpers;
+  let { prepareList, withKey, safeOutput } = helpers;
   
   return function template(ctx, node, key = "") {
     const ctx1 = ctx;
@@ -93,7 +175,6 @@ exports[`t-set > a t-set in an ended loop does not change scoping in a later loo
       let ctx = Object.create(ctx1);
       ctx["j"] = k_block1[i1];
       const key1 = ctx['j'];
-      const skey1 = keyOf(key1);
       const ctx2 = ctx;
       const [k_block3, v_block3, l_block3, c_block3] = prepareList([7]);
       for (let i2 = 0; i2 < l_block3; i2++) {
@@ -105,7 +186,7 @@ exports[`t-set > a t-set in an ended loop does not change scoping in a later loo
       }
       const b3 = list(c_block3);
       const b5 = text(\`[\`);
-      const b6 = safeOutput(ctx['x'], key + \`__1__\${skey1}\`);
+      const b6 = safeOutput(ctx['x'], key, "__1", 1, key1);
       const b7 = text(\`]\`);
       c_block1[i1] = withKey(multi([b3, b5, b6, b7]), key1);
     }
@@ -118,7 +199,7 @@ exports[`t-set > a t-set in an ended loop does not change scoping in a later loo
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { prepareList, withKey, safeOutput, keyOf } = helpers;
+  let { prepareList, withKey, safeOutput } = helpers;
   
   return function template(ctx, node, key = "") {
     const ctx1 = ctx;
@@ -137,7 +218,6 @@ exports[`t-set > a t-set in an ended loop does not change scoping in a later loo
       let ctx = Object.create(ctx2);
       ctx["j"] = k_block4[i1];
       const key1 = ctx['j'];
-      const skey1 = keyOf(key1);
       const ctx3 = ctx;
       const [k_block6, v_block6, l_block6, c_block6] = prepareList([7]);
       for (let i2 = 0; i2 < l_block6; i2++) {
@@ -149,7 +229,7 @@ exports[`t-set > a t-set in an ended loop does not change scoping in a later loo
       }
       const b6 = list(c_block6);
       const b8 = text(\`[\`);
-      const b9 = safeOutput(ctx['x'], key + \`__1__\${skey1}\`);
+      const b9 = safeOutput(ctx['x'], key, "__1", 1, key1);
       const b10 = text(\`]\`);
       c_block4[i1] = withKey(multi([b6, b8, b9, b10]), key1);
     }
@@ -172,9 +252,9 @@ exports[`t-set > a variable may be named await or async 1`] = `
     let b2, b3;
     ctx["await"] = ctx['v'];
     ctx["async"] = 2;
-    b2 = safeOutput(ctx['await'].x, key + \`__1\`);
+    b2 = safeOutput(ctx['await'].x, key, "__1");
     if (ctx['await'].x&&ctx['async']) {
-      b3 = safeOutput(ctx['async'], key + \`__2\`);
+      b3 = safeOutput(ctx['async'], key, "__2");
     }
     return block1([], [b2, b3]);
   }
@@ -190,7 +270,7 @@ exports[`t-set > body with backslash at top level 1`] = `
   return function template(ctx, node, key = "") {
     ctx = Object.create(ctx);
     ctx["value"] = \`\\\\\`;
-    return safeOutput(ctx['value'], key + \`__1\`);
+    return safeOutput(ctx['value'], key, "__1");
   }
 }"
 `;
@@ -204,7 +284,7 @@ exports[`t-set > body with backtick at top-level 1`] = `
   return function template(ctx, node, key = "") {
     ctx = Object.create(ctx);
     ctx["value"] = \`\\\`\`;
-    return safeOutput(ctx['value'], key + \`__1\`);
+    return safeOutput(ctx['value'], key, "__1");
   }
 }"
 `;
@@ -218,7 +298,7 @@ exports[`t-set > body with interpolation sigil at top level 1`] = `
   return function template(ctx, node, key = "") {
     ctx = Object.create(ctx);
     ctx["value"] = \`\\\${very cool}\`;
-    return safeOutput(ctx['value'], key + \`__1\`);
+    return safeOutput(ctx['value'], key, "__1");
   }
 }"
 `;
@@ -234,7 +314,7 @@ exports[`t-set > evaluate value expression 1`] = `
   return function template(ctx, node, key = "") {
     ctx = Object.create(ctx);
     ctx["value"] = 1+2;
-    const b2 = safeOutput(ctx['value'], key + \`__1\`);
+    const b2 = safeOutput(ctx['value'], key, "__1");
     return block1([], [b2]);
   }
 }"
@@ -251,7 +331,7 @@ exports[`t-set > evaluate value expression, part 2 1`] = `
   return function template(ctx, node, key = "") {
     ctx = Object.create(ctx);
     ctx["value"] = ctx['somevariable']+2;
-    const b2 = safeOutput(ctx['value'], key + \`__1\`);
+    const b2 = safeOutput(ctx['value'], key, "__1");
     return block1([], [b2]);
   }
 }"
@@ -266,7 +346,7 @@ exports[`t-set > set from attribute literal (no outside div) 1`] = `
   return function template(ctx, node, key = "") {
     ctx = Object.create(ctx);
     ctx["value"] = 'ok';
-    return safeOutput(ctx['value'], key + \`__1\`);
+    return safeOutput(ctx['value'], key, "__1");
   }
 }"
 `;
@@ -282,7 +362,7 @@ exports[`t-set > set from attribute literal 1`] = `
   return function template(ctx, node, key = "") {
     ctx = Object.create(ctx);
     ctx["value"] = 'ok';
-    const b2 = safeOutput(ctx['value'], key + \`__1\`);
+    const b2 = safeOutput(ctx['value'], key, "__1");
     return block1([], [b2]);
   }
 }"
@@ -299,7 +379,7 @@ exports[`t-set > set from attribute lookup 1`] = `
   return function template(ctx, node, key = "") {
     ctx = Object.create(ctx);
     ctx["stuff"] = ctx['value'];
-    const b2 = safeOutput(ctx['stuff'], key + \`__1\`);
+    const b2 = safeOutput(ctx['stuff'], key, "__1");
     return block1([], [b2]);
   }
 }"
@@ -324,7 +404,7 @@ exports[`t-set > set from body literal (with t-if/t-else 1`] = `
   return function template(ctx, node, key = "") {
     ctx = Object.create(ctx);
     ctx["value"] = new LazyValue(value1, ctx, this, node, key);
-    return safeOutput(ctx['value'], key + \`__1\`);
+    return safeOutput(ctx['value'], key, "__1");
   }
 }"
 `;
@@ -338,7 +418,7 @@ exports[`t-set > set from body literal 1`] = `
   return function template(ctx, node, key = "") {
     ctx = Object.create(ctx);
     ctx["value"] = \`ok\`;
-    return safeOutput(ctx['value'], key + \`__1\`);
+    return safeOutput(ctx['value'], key, "__1");
   }
 }"
 `;
@@ -352,13 +432,13 @@ exports[`t-set > set from body lookup 1`] = `
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
   function value1(ctx, node, key = "") {
-    return safeOutput(ctx['value'], key + \`__1\`);
+    return safeOutput(ctx['value'], key, "__1");
   }
   
   return function template(ctx, node, key = "") {
     ctx = Object.create(ctx);
     ctx["stuff"] = new LazyValue(value1, ctx, this, node, key);
-    const b3 = safeOutput(ctx['stuff'], key + \`__2\`);
+    const b3 = safeOutput(ctx['stuff'], key, "__2");
     return block1([], [b3]);
   }
 }"
@@ -375,7 +455,7 @@ exports[`t-set > set from empty body 1`] = `
   return function template(ctx, node, key = "") {
     ctx = Object.create(ctx);
     ctx["stuff"] = null;
-    const b2 = safeOutput(ctx['stuff'], key + \`__1\`);
+    const b2 = safeOutput(ctx['stuff'], key, "__1");
     return block1([], [b2]);
   }
 }"
@@ -429,7 +509,7 @@ exports[`t-set > t-set body is evaluated immediately 1`] = `
   let block2 = createBlock(\`<span><block-child-0/></span>\`);
   
   function value1(ctx, node, key = "") {
-    const b3 = safeOutput(ctx['v1'], key + \`__1\`);
+    const b3 = safeOutput(ctx['v1'], key, "__1");
     return block2([], [b3]);
   }
   
@@ -438,7 +518,7 @@ exports[`t-set > t-set body is evaluated immediately 1`] = `
     ctx["v1"] = 'before';
     ctx["v2"] = new LazyValue(value1, ctx, this, node, key);
     ctx["v1"] = 'after';
-    const b4 = safeOutput(ctx['v2'], key + \`__2\`);
+    const b4 = safeOutput(ctx['v2'], key, "__2");
     return block1([], [b4]);
   }
 }"
@@ -468,7 +548,7 @@ exports[`t-set > t-set body of only a comment 2`] = `
   return function template(ctx, node, key = "") {
     ctx = Object.create(ctx);
     ctx["x"] = 1;
-    return safeOutput(ctx['x'], key + \`__1\`);
+    return safeOutput(ctx['x'], key, "__1");
   }
 }"
 `;
@@ -482,7 +562,7 @@ exports[`t-set > t-set body of text with entities is a string 1`] = `
   return function template(ctx, node, key = "") {
     ctx = Object.create(ctx);
     ctx["v"] = \`a > b\`;
-    return safeOutput(ctx['v'].length, key + \`__1\`);
+    return safeOutput(ctx['v'].length, key, "__1");
   }
 }"
 `;
@@ -496,7 +576,7 @@ exports[`t-set > t-set body of text with entities is a string 2`] = `
   return function template(ctx, node, key = "") {
     ctx = Object.create(ctx);
     ctx["v"] = \`a b\`;
-    return safeOutput(ctx['v'], key + \`__1\`);
+    return safeOutput(ctx['v'], key, "__1");
   }
 }"
 `;
@@ -512,9 +592,9 @@ exports[`t-set > t-set can't alter from within callee 1`] = `
   return function template(ctx, node, key = "") {
     ctx = Object.create(ctx);
     ctx["iter"] = 'source';
-    const b2 = safeOutput(ctx['iter'], key + \`__1\`);
+    const b2 = safeOutput(ctx['iter'], key, "__1");
     const b3 = callTemplate(\`sub\`, this, app, Object.assign(Object.create(ctx), {[zero]: null}), node, key + \`__2\`);
-    const b4 = safeOutput(ctx['iter'], key + \`__3\`);
+    const b4 = safeOutput(ctx['iter'], key, "__3");
     return block1([], [b2, b3, b4]);
   }
 }"
@@ -530,9 +610,9 @@ exports[`t-set > t-set can't alter from within callee 2`] = `
   
   return function template(ctx, node, key = "") {
     ctx = Object.create(ctx);
-    const b2 = safeOutput(ctx['iter'], key + \`__1\`);
+    const b2 = safeOutput(ctx['iter'], key, "__1");
     ctx["iter"] = 'called';
-    const b3 = safeOutput(ctx['iter'], key + \`__2\`);
+    const b3 = safeOutput(ctx['iter'], key, "__2");
     return block1([], [b2, b3]);
   }
 }"
@@ -555,10 +635,10 @@ exports[`t-set > t-set can't alter in t-call body 1`] = `
   return function template(ctx, node, key = "") {
     ctx = Object.create(ctx);
     ctx["iter"] = 'source';
-    const b2 = safeOutput(ctx['iter'], key + \`__1\`);
+    const b2 = safeOutput(ctx['iter'], key, "__1");
     const lazyBlock1 = callBody1.bind(this, ctx);
     const b3 = callTemplate(\`sub\`, this, app, Object.assign(Object.create(ctx), {[zero]: lazyBlock1}), node, key + \`__2\`);
-    const b4 = safeOutput(ctx['iter'], key + \`__3\`);
+    const b4 = safeOutput(ctx['iter'], key, "__3");
     return block1([], [b2, b3, b4]);
   }
 }"
@@ -574,9 +654,9 @@ exports[`t-set > t-set can't alter in t-call body 2`] = `
   
   return function template(ctx, node, key = "") {
     ctx = Object.create(ctx);
-    const b2 = safeOutput(ctx['iter'], key + \`__1\`);
+    const b2 = safeOutput(ctx['iter'], key, "__1");
     ctx["iter"] = 'called';
-    const b3 = safeOutput(ctx['iter'], key + \`__2\`);
+    const b3 = safeOutput(ctx['iter'], key, "__2");
     return block1([], [b2, b3]);
   }
 }"
@@ -593,7 +673,7 @@ exports[`t-set > t-set does not modify render context existing key values 1`] = 
   return function template(ctx, node, key = "") {
     ctx = Object.create(ctx);
     ctx["value"] = 35;
-    const b2 = safeOutput(ctx['value'], key + \`__1\`);
+    const b2 = safeOutput(ctx['value'], key, "__1");
     return block1([], [b2]);
   }
 }"
@@ -610,8 +690,8 @@ exports[`t-set > t-set evaluates an expression only once 1`] = `
   return function template(ctx, node, key = "") {
     ctx = Object.create(ctx);
     ctx["v"] = ctx['value']+' artois';
-    const b2 = safeOutput(ctx['v'], key + \`__1\`);
-    const b3 = safeOutput(ctx['v'], key + \`__2\`);
+    const b2 = safeOutput(ctx['v'], key, "__1");
+    const b3 = safeOutput(ctx['v'], key, "__2");
     return block1([], [b2, b3]);
   }
 }"
@@ -621,7 +701,7 @@ exports[`t-set > t-set outside modified in t-foreach 1`] = `
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { prepareList, safeOutput, withKey, keyOf } = helpers;
+  let { prepareList, safeOutput, withKey } = helpers;
   
   let block1 = createBlock(\`<div><block-child-0/><p>EndLoop: <block-child-1/></p></div>\`);
   let block3 = createBlock(\`<p>InLoop: <block-child-0/></p>\`);
@@ -635,13 +715,12 @@ exports[`t-set > t-set outside modified in t-foreach 1`] = `
       let ctx = Object.create(ctx1);
       ctx["val"] = k_block2[i1];
       const key1 = ctx['val'];
-      const skey1 = keyOf(key1);
-      const b4 = safeOutput(ctx['iter'], key + \`__1__\${skey1}\`);
+      const b4 = safeOutput(ctx['iter'], key, "__1", 1, key1);
       c_block2[i1] = withKey(block3([], [b4]), key1);
       ctx1["iter"] = ctx['iter']+1;
     }
     const b2 = list(c_block2);
-    const b5 = safeOutput(ctx['iter'], key + \`__2\`);
+    const b5 = safeOutput(ctx['iter'], key, "__2");
     return block1([], [b2, b5]);
   }
 }"
@@ -651,7 +730,7 @@ exports[`t-set > t-set outside modified in t-foreach increment-after operator 1`
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { prepareList, safeOutput, withKey, keyOf } = helpers;
+  let { prepareList, safeOutput, withKey } = helpers;
   
   let block1 = createBlock(\`<div><block-child-0/><p>EndLoop: <block-child-1/></p></div>\`);
   let block3 = createBlock(\`<p>InLoop: <block-child-0/></p>\`);
@@ -665,13 +744,12 @@ exports[`t-set > t-set outside modified in t-foreach increment-after operator 1`
       let ctx = Object.create(ctx1);
       ctx["val"] = k_block2[i1];
       const key1 = ctx['val'];
-      const skey1 = keyOf(key1);
-      const b4 = safeOutput(ctx['iter'], key + \`__1__\${skey1}\`);
+      const b4 = safeOutput(ctx['iter'], key, "__1", 1, key1);
       c_block2[i1] = withKey(block3([], [b4]), key1);
       ctx1["iter"] = ctx['iter']++;
     }
     const b2 = list(c_block2);
-    const b5 = safeOutput(ctx['iter'], key + \`__2\`);
+    const b5 = safeOutput(ctx['iter'], key, "__2");
     return block1([], [b2, b5]);
   }
 }"
@@ -681,7 +759,7 @@ exports[`t-set > t-set outside modified in t-foreach increment-before operator 1
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { prepareList, safeOutput, withKey, keyOf } = helpers;
+  let { prepareList, safeOutput, withKey } = helpers;
   
   let block1 = createBlock(\`<div><block-child-0/><p>EndLoop: <block-child-1/></p></div>\`);
   let block3 = createBlock(\`<p>InLoop: <block-child-0/></p>\`);
@@ -695,13 +773,12 @@ exports[`t-set > t-set outside modified in t-foreach increment-before operator 1
       let ctx = Object.create(ctx1);
       ctx["val"] = k_block2[i1];
       const key1 = ctx['val'];
-      const skey1 = keyOf(key1);
-      const b4 = safeOutput(ctx['iter'], key + \`__1__\${skey1}\`);
+      const b4 = safeOutput(ctx['iter'], key, "__1", 1, key1);
       c_block2[i1] = withKey(block3([], [b4]), key1);
       ctx1["iter"] = ++ctx['iter'];
     }
     const b2 = list(c_block2);
-    const b5 = safeOutput(ctx['iter'], key + \`__2\`);
+    const b5 = safeOutput(ctx['iter'], key, "__2");
     return block1([], [b2, b5]);
   }
 }"
@@ -711,7 +788,7 @@ exports[`t-set > t-set should reuse variable if possible 1`] = `
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { prepareList, safeOutput, withKey, keyOf } = helpers;
+  let { prepareList, safeOutput, withKey } = helpers;
   
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   let block3 = createBlock(\`<div><span>v<block-child-0/></span></div>\`);
@@ -726,8 +803,7 @@ exports[`t-set > t-set should reuse variable if possible 1`] = `
       ctx["elem"] = k_block2[i1];
       ctx["elem_index"] = i1;
       const key1 = ctx['elem_index'];
-      const skey1 = keyOf(key1);
-      const b4 = safeOutput(ctx['v'], key + \`__1__\${skey1}\`);
+      const b4 = safeOutput(ctx['v'], key, "__1", 1, key1);
       ctx1["v"] = ctx['elem'];
       c_block2[i1] = withKey(block3([], [b4]), key1);
     }
@@ -746,7 +822,7 @@ exports[`t-set > t-set with content and sub t-out 1`] = `
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
   function value1(ctx, node, key = "") {
-    const b3 = safeOutput(ctx['beep'], key + \`__1\`);
+    const b3 = safeOutput(ctx['beep'], key, "__1");
     const b4 = text(\` boop\`);
     return multi([b3, b4]);
   }
@@ -754,7 +830,7 @@ exports[`t-set > t-set with content and sub t-out 1`] = `
   return function template(ctx, node, key = "") {
     ctx = Object.create(ctx);
     ctx["setvar"] = new LazyValue(value1, ctx, this, node, key);
-    const b5 = safeOutput(ctx['setvar'], key + \`__2\`);
+    const b5 = safeOutput(ctx['setvar'], key, "__2");
     return block1([], [b5]);
   }
 }"
@@ -770,7 +846,7 @@ exports[`t-set > t-set with t-value (falsy) and body 1`] = `
   let block2 = createBlock(\`<span><block-child-0/></span>\`);
   
   function value1(ctx, node, key = "") {
-    const b3 = safeOutput(ctx['v1'], key + \`__1\`);
+    const b3 = safeOutput(ctx['v1'], key, "__1");
     return block2([], [b3]);
   }
   
@@ -781,7 +857,7 @@ exports[`t-set > t-set with t-value (falsy) and body 1`] = `
     ctx["v2"] = withDefault(ctx['v3'], new LazyValue(value1, ctx, this, node, key));
     ctx["v1"] = 'after';
     ctx["v3"] = true;
-    const b4 = safeOutput(ctx['v2'], key + \`__2\`);
+    const b4 = safeOutput(ctx['v2'], key, "__2");
     return block1([], [b4]);
   }
 }"
@@ -797,7 +873,7 @@ exports[`t-set > t-set with t-value (truthy) and body 1`] = `
   let block2 = createBlock(\`<span><block-child-0/></span>\`);
   
   function value1(ctx, node, key = "") {
-    const b3 = safeOutput(ctx['v1'], key + \`__1\`);
+    const b3 = safeOutput(ctx['v1'], key, "__1");
     return block2([], [b3]);
   }
   
@@ -808,7 +884,7 @@ exports[`t-set > t-set with t-value (truthy) and body 1`] = `
     ctx["v2"] = withDefault(ctx['v3'], new LazyValue(value1, ctx, this, node, key));
     ctx["v1"] = 'after';
     ctx["v3"] = false;
-    const b4 = safeOutput(ctx['v2'], key + \`__2\`);
+    const b4 = safeOutput(ctx['v2'], key, "__2");
     return block1([], [b4]);
   }
 }"
@@ -851,7 +927,7 @@ exports[`t-set > t-set, t-if, and mix of expression/body lookup, 1 1`] = `
     } else {
       ctx["ourvar"] = 0;
     }
-    b2 = safeOutput(ctx['ourvar'], key + \`__1\`);
+    b2 = safeOutput(ctx['ourvar'], key, "__1");
     return block1([], [b2]);
   }
 }"
@@ -873,7 +949,7 @@ exports[`t-set > t-set, t-if, and mix of expression/body lookup, 2 1`] = `
     } else {
       ctx["ourvar"] = \`0\`;
     }
-    b2 = safeOutput(ctx['ourvar'], key + \`__1\`);
+    b2 = safeOutput(ctx['ourvar'], key, "__1");
     return block1([], [b2]);
   }
 }"
@@ -893,7 +969,7 @@ exports[`t-set > t-set, t-if, and mix of expression/body lookup, 3 1`] = `
     } else {
       ctx["ourvar"] = \`0\`;
     }
-    b2 = safeOutput(ctx['ourvar'], key + \`__1\`);
+    b2 = safeOutput(ctx['ourvar'], key, "__1");
     return multi([b2]);
   }
 }"
@@ -929,7 +1005,7 @@ exports[`t-set > value priority (with non text body 1`] = `
   return function template(ctx, node, key = "") {
     ctx = Object.create(ctx);
     ctx["value"] = withDefault(1, new LazyValue(value1, ctx, this, node, key));
-    const b3 = safeOutput(ctx['value'], key + \`__1\`);
+    const b3 = safeOutput(ctx['value'], key, "__1");
     return block1([], [b3]);
   }
 }"
@@ -946,7 +1022,7 @@ exports[`t-set > value priority 1`] = `
   return function template(ctx, node, key = "") {
     ctx = Object.create(ctx);
     ctx["value"] = withDefault(1, \`2\`);
-    const b2 = safeOutput(ctx['value'], key + \`__1\`);
+    const b2 = safeOutput(ctx['value'], key, "__1");
     return block1([], [b2]);
   }
 }"

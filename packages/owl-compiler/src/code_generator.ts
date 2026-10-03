@@ -31,6 +31,8 @@ import {
 } from "./parser";
 
 const zero = Symbol("zero");
+// loop levels whose keys a t-out passes to safeOutput as is (see compileTOut)
+const MAX_LAZY_LOOP_KEYS = 3;
 
 type BlockType = "block" | "text" | "multi" | "list" | "html";
 // HTML whitespace: a non-breaking space is content, never condensed
@@ -801,16 +803,30 @@ export class CodeGenerator {
       blockStr = this.compileZero(ast, ctx);
     } else {
       // the key of this output site: a t-set body (LazyValue) output at several
-      // sites, or once per loop iteration, renders its components under each
-      const key = this.scopeKey(ctx, true);
-      this.helpers.add("safeOutput");
-      let defaultContent = "";
+      // sites, or once per loop iteration, renders its components under each.
+      // Only a LazyValue needs it, so its parts are passed and safeOutput joins
+      // them only then: the key, the site id, and the raw loop keys
+      const site = this.generateId("__");
+      const keyExpr = ctx.tKeyExpr ? `${ctx.tKeyExpr} + key` : "key";
+      const level = this.target.loopLevel;
+      let keyArgs: string;
+      if (level <= MAX_LAZY_LOOP_KEYS) {
+        const loopKeys = Array.from({ length: level }, (_, i) => `, key${i + 1}`).join("");
+        keyArgs = `${keyExpr}, "${site}"${level ? `, ${level}${loopKeys}` : ""}`;
+      } else {
+        keyArgs = `${this.scopeKey(ctx, false, site)}, ""`;
+      }
+      const expr = compileExpr(ast.expr);
       if (ast.body) {
         const bodyAst: AST = { type: ASTType.Multi, content: ast.body };
         const name = this.compileInNewTarget("defaultContent", bodyAst, ctx);
-        defaultContent = `, () => ${name}.call(this, ctx, node, ${key})`;
+        const key = this.scopeKey(ctx, false, site);
+        this.helpers.add("safeOutputOr");
+        blockStr = `safeOutputOr(${expr}, () => ${name}.call(this, ctx, node, ${key}), ${keyArgs})`;
+      } else {
+        this.helpers.add("safeOutput");
+        blockStr = `safeOutput(${expr}, ${keyArgs})`;
       }
-      blockStr = `safeOutput(${compileExpr(ast.expr)}, ${key}${defaultContent})`;
     }
     this.insertBlock(block, ctx, blockStr);
     return block.varName;
@@ -1079,8 +1095,8 @@ export class CodeGenerator {
     return null;
   }
 
-  scopeKey(ctx: Context, unique: boolean = false): string {
-    let suffix = unique ? this.generateId("__") : "";
+  scopeKey(ctx: Context, unique: boolean = false, site: string = ""): string {
+    let suffix = unique ? this.generateId("__") : site;
     for (let i = 1; i <= this.target.loopLevel; i++) {
       suffix += `__\${${this.target.stringKey(i)}}`;
     }

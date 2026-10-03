@@ -100,7 +100,7 @@ exports[`simple templates, mostly static > dom node with t-out 1`] = `
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['text'], key + \`__1\`);
+    const b2 = safeOutput(ctx['text'], key, "__1");
     return block1([], [b2]);
   }
 }"
@@ -115,7 +115,7 @@ exports[`simple templates, mostly static > dom node with t-out 2`] = `
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['text'], key + \`__1\`);
+    const b2 = safeOutput(ctx['text'], key, "__1");
     return block1([], [b2]);
   }
 }"
@@ -128,7 +128,7 @@ exports[`simple templates, mostly static > dynamic text value 1`] = `
   let { safeOutput } = helpers;
   
   return function template(ctx, node, key = "") {
-    return safeOutput(ctx['text'], key + \`__1\`);
+    return safeOutput(ctx['text'], key, "__1");
   }
 }"
 `;
@@ -175,7 +175,7 @@ exports[`simple templates, mostly static > inline template string in t-out 1`] =
   let { safeOutput } = helpers;
   
   return function template(ctx, node, key = "") {
-    return safeOutput(\`text\`, key + \`__1\`);
+    return safeOutput(\`text\`, key, "__1");
   }
 }"
 `;
@@ -189,7 +189,7 @@ exports[`simple templates, mostly static > inline template string with content i
   return function template(ctx, node, key = "") {
     ctx = Object.create(ctx);
     ctx["v"] = 1;
-    return safeOutput(\`text\${ctx['v']}\`, key + \`__1\`);
+    return safeOutput(\`text\${ctx['v']}\`, key, "__1");
   }
 }"
 `;
@@ -201,7 +201,7 @@ exports[`simple templates, mostly static > inline template string with variable 
   let { safeOutput } = helpers;
   
   return function template(ctx, node, key = "") {
-    return safeOutput(\`text \${ctx['v']}\`, key + \`__1\`);
+    return safeOutput(\`text \${ctx['v']}\`, key, "__1");
   }
 }"
 `;
@@ -252,7 +252,7 @@ exports[`simple templates, mostly static > static text and dynamic text (no t ta
   
   return function template(ctx, node, key = "") {
     const b2 = text(\`hello \`);
-    const b3 = safeOutput(ctx['text'], key + \`__1\`);
+    const b3 = safeOutput(ctx['text'], key, "__1");
     return multi([b2, b3]);
   }
 }"
@@ -266,7 +266,7 @@ exports[`simple templates, mostly static > static text and dynamic text 1`] = `
   
   return function template(ctx, node, key = "") {
     const b2 = text(\`hello \`);
-    const b3 = safeOutput(ctx['text'], key + \`__1\`);
+    const b3 = safeOutput(ctx['text'], key, "__1");
     return multi([b2, b3]);
   }
 }"
@@ -281,7 +281,7 @@ exports[`simple templates, mostly static > t-out in dom node 1`] = `
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['text'], key + \`__1\`);
+    const b2 = safeOutput(ctx['text'], key, "__1");
     return block1([], [b2]);
   }
 }"
@@ -296,7 +296,7 @@ exports[`simple templates, mostly static > t-out in dom node, variations 1`] = `
   let block1 = createBlock(\`<div>hello <block-child-0/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['text'], key + \`__1\`);
+    const b2 = safeOutput(ctx['text'], key, "__1");
     return block1([], [b2]);
   }
 }"
@@ -311,7 +311,7 @@ exports[`simple templates, mostly static > t-out in dom node, variations 2`] = `
   let block1 = createBlock(\`<div>hello <block-child-0/> world</div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['text'], key + \`__1\`);
+    const b2 = safeOutput(ctx['text'], key, "__1");
     return block1([], [b2]);
   }
 }"
@@ -326,9 +326,9 @@ exports[`simple templates, mostly static > template with multiple t tag with mul
   let block1 = createBlock(\`<div><block-child-0/><block-child-1/>Loading<block-child-2/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['a'], key + \`__1\`);
-    const b3 = safeOutput(ctx['b'], key + \`__2\`);
-    const b4 = safeOutput(ctx['c'], key + \`__3\`);
+    const b2 = safeOutput(ctx['a'], key, "__1");
+    const b3 = safeOutput(ctx['b'], key, "__2");
+    const b4 = safeOutput(ctx['c'], key, "__3");
     return block1([], [b2, b3, b4]);
   }
 }"
@@ -391,8 +391,8 @@ exports[`simple templates, mostly static > two t-outs next to each other 1`] = `
   let { safeOutput } = helpers;
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['text1'], key + \`__1\`);
-    const b3 = safeOutput(ctx['text2'], key + \`__2\`);
+    const b2 = safeOutput(ctx['text1'], key, "__1");
+    const b3 = safeOutput(ctx['text2'], key, "__2");
     return multi([b2, b3]);
   }
 }"
@@ -405,8 +405,8 @@ exports[`simple templates, mostly static > two t-outs next to each other 2`] = `
   let { safeOutput } = helpers;
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['text1'], key + \`__1\`);
-    const b3 = safeOutput(ctx['text2'], key + \`__2\`);
+    const b2 = safeOutput(ctx['text1'], key, "__1");
+    const b3 = safeOutput(ctx['text2'], key, "__2");
     return multi([b2, b3]);
   }
 }"
@@ -421,8 +421,8 @@ exports[`simple templates, mostly static > two t-outs next to each other, in a d
   let block1 = createBlock(\`<div><block-child-0/><block-child-1/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['text1'], key + \`__1\`);
-    const b3 = safeOutput(ctx['text2'], key + \`__2\`);
+    const b2 = safeOutput(ctx['text1'], key, "__1");
+    const b3 = safeOutput(ctx['text2'], key, "__2");
     return block1([], [b2, b3]);
   }
 }"

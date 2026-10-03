@@ -13,7 +13,7 @@ exports[`t-model directive > .lazy modifier 1`] = `
     const expr1 = modelExpr(ctx['this'].text);
     let prop1 = expr1();
     let hdlr1 = [hdlr_fn1, ctx, 0, expr1];
-    const b2 = safeOutput(ctx['this'].text(), key + \`__1\`);
+    const b2 = safeOutput(ctx['this'].text(), key, "__1");
     return block1([prop1, hdlr1], [b2]);
   }
 }"
@@ -32,7 +32,7 @@ exports[`t-model directive > .number modifier 1`] = `
     const expr1 = modelExpr(ctx['this'].number);
     let prop1 = expr1();
     let hdlr1 = [hdlr_fn1, ctx, 0, expr1];
-    const b2 = safeOutput(ctx['this'].number(), key + \`__1\`);
+    const b2 = safeOutput(ctx['this'].number(), key, "__1");
     return block1([prop1, hdlr1], [b2]);
   }
 }"
@@ -51,7 +51,7 @@ exports[`t-model directive > .trim modifier 1`] = `
     const expr1 = modelExpr(ctx['this'].text);
     let prop1 = expr1();
     let hdlr1 = [hdlr_fn1, ctx, 0, expr1];
-    const b2 = safeOutput(ctx['this'].text(), key + \`__1\`);
+    const b2 = safeOutput(ctx['this'].text(), key, "__1");
     return block1([prop1, hdlr1], [b2]);
   }
 }"
@@ -70,7 +70,7 @@ exports[`t-model directive > .trim modifier implies .lazy modifier 1`] = `
     const expr1 = modelExpr(ctx['this'].text);
     let prop1 = expr1();
     let hdlr1 = [hdlr_fn1, ctx, 0, expr1];
-    const b2 = safeOutput(ctx['this'].text(), key + \`__1\`);
+    const b2 = safeOutput(ctx['this'].text(), key, "__1");
     return block1([prop1, hdlr1], [b2]);
   }
 }"
@@ -143,7 +143,7 @@ exports[`t-model directive > basic use, on an input 1`] = `
     const expr1 = modelExpr(ctx['this'].text);
     let prop1 = expr1();
     let hdlr1 = [hdlr_fn1, ctx, 0, expr1];
-    const b2 = safeOutput(ctx['this'].text(), key + \`__1\`);
+    const b2 = safeOutput(ctx['this'].text(), key, "__1");
     return block1([prop1, hdlr1], [b2]);
   }
 }"
@@ -162,7 +162,7 @@ exports[`t-model directive > basic use, on an input with bracket expression 1`] 
     const expr1 = modelExpr(ctx['this'].state['text']);
     let prop1 = expr1();
     let hdlr1 = [hdlr_fn1, ctx, 0, expr1];
-    const b2 = safeOutput(ctx['this'].state.text(), key + \`__1\`);
+    const b2 = safeOutput(ctx['this'].state.text(), key, "__1");
     return block1([prop1, hdlr1], [b2]);
   }
 }"
@@ -181,7 +181,7 @@ exports[`t-model directive > basic use, on another key in component 1`] = `
     const expr1 = modelExpr(ctx['this'].some.text);
     let prop1 = expr1();
     let hdlr1 = [hdlr_fn1, ctx, 0, expr1];
-    const b2 = safeOutput(ctx['this'].some.text(), key + \`__1\`);
+    const b2 = safeOutput(ctx['this'].some.text(), key, "__1");
     return block1([prop1, hdlr1], [b2]);
   }
 }"
@@ -354,7 +354,7 @@ exports[`t-model directive > on a select 1`] = `
     const expr1 = modelExpr(ctx['this'].color);
     let prop1 = expr1();
     let hdlr1 = [hdlr_fn1, ctx, 0, expr1];
-    const b2 = safeOutput(ctx['this'].color(), key + \`__1\`);
+    const b2 = safeOutput(ctx['this'].color(), key, "__1");
     return block1([prop1, hdlr1], [b2]);
   }
 }"
@@ -391,7 +391,7 @@ exports[`t-model directive > on a sub state key 1`] = `
     const expr1 = modelExpr(ctx['this'].state.something.text);
     let prop1 = expr1();
     let hdlr1 = [hdlr_fn1, ctx, 0, expr1];
-    const b2 = safeOutput(ctx['this'].state.something.text(), key + \`__1\`);
+    const b2 = safeOutput(ctx['this'].state.something.text(), key, "__1");
     return block1([prop1, hdlr1], [b2]);
   }
 }"
@@ -413,7 +413,7 @@ exports[`t-model directive > on an input type=radio 1`] = `
     const expr2 = modelExpr(ctx['this'].choice);
     let prop2 = expr2() === "Two";
     let hdlr2 = [hdlr_fn1, ctx, 0, expr2];
-    const b2 = safeOutput(ctx['this'].choice(), key + \`__1\`);
+    const b2 = safeOutput(ctx['this'].choice(), key, "__1");
     return block1([prop1, hdlr1, prop2, hdlr2], [b2]);
   }
 }"
@@ -477,7 +477,7 @@ exports[`t-model directive > on an textarea 1`] = `
     const expr1 = modelExpr(ctx['this'].text);
     let prop1 = expr1();
     let hdlr1 = [hdlr_fn1, ctx, 0, expr1];
-    const b2 = safeOutput(ctx['this'].text(), key + \`__1\`);
+    const b2 = safeOutput(ctx['this'].text(), key, "__1");
     return block1([prop1, hdlr1], [b2]);
   }
 }"
@@ -596,9 +596,9 @@ exports[`t-model directive > t-model on select with static options 1`] = `
     const expr1 = modelExpr(ctx['this'].model);
     let prop1 = expr1();
     let hdlr1 = [hdlr_fn1, ctx, 0, expr1];
-    const b2 = safeOutput('a', key + \`__1\`);
-    const b3 = safeOutput('b', key + \`__2\`);
-    const b4 = safeOutput('c', key + \`__3\`);
+    const b2 = safeOutput('a', key, "__1");
+    const b3 = safeOutput('b', key, "__2");
+    const b4 = safeOutput('c', key, "__3");
     return block1([prop1, hdlr1], [b2, b3, b4]);
   }
 }"
@@ -630,7 +630,7 @@ exports[`t-model directive > t-model with dynamic number values on select option
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { toNumber, modelExpr, prepareList, safeOutput, withKey, keyOf } = helpers;
+  let { toNumber, modelExpr, prepareList, safeOutput, withKey } = helpers;
   const hdlr_fn1 = (ctx, ev, model) => model.set(toNumber(ev.target.value));
   
   let block1 = createBlock(\`<select block-handler-0="change"><block-child-0/></select>\`);
@@ -646,10 +646,9 @@ exports[`t-model directive > t-model with dynamic number values on select option
       let ctx = Object.create(ctx1);
       ctx["o"] = k_block2[i1];
       const key1 = ctx['o'].value;
-      const skey1 = keyOf(key1);
       let attr1 = ctx['o'].value;
       let attr2 = bValue1 === attr1;
-      const b4 = safeOutput(ctx['o'].value, key + \`__1__\${skey1}\`);
+      const b4 = safeOutput(ctx['o'].value, key, "__1", 1, key1);
       c_block2[i1] = withKey(block3([attr1, attr2], [b4]), key1);
     }
     const b2 = list(c_block2);
@@ -673,10 +672,10 @@ exports[`t-model directive > t-model with dynamic values on select options -- 2 
     let hdlr1 = [hdlr_fn1, ctx, 0, expr1];
     let attr1 = ctx['this'].options[0];
     let attr2 = bValue1 === attr1;
-    const b2 = safeOutput(ctx['this'].options[0], key + \`__1\`);
+    const b2 = safeOutput(ctx['this'].options[0], key, "__1");
     let attr3 = (ctx['this'].options[1]);
     let attr4 = bValue1 === attr3;
-    const b3 = safeOutput(ctx['this'].options[1], key + \`__2\`);
+    const b3 = safeOutput(ctx['this'].options[1], key, "__2");
     return block1([hdlr1, attr1, attr2, attr3, attr4], [b2, b3]);
   }
 }"
@@ -697,9 +696,9 @@ exports[`t-model directive > t-model with dynamic values on select options -- 3 
     let hdlr1 = [hdlr_fn1, ctx, 0, expr1];
     let attr1 = ctx['this'].options[0];
     let attr2 = bValue1 === attr1;
-    const b2 = safeOutput(ctx['this'].options[0], key + \`__1\`);
+    const b2 = safeOutput(ctx['this'].options[0], key, "__1");
     let attr3 = bValue1 === "b";
-    const b3 = safeOutput(ctx['this'].options[1], key + \`__2\`);
+    const b3 = safeOutput(ctx['this'].options[1], key, "__2");
     return block1([hdlr1, attr1, attr2, attr3], [b2, b3]);
   }
 }"
@@ -720,10 +719,10 @@ exports[`t-model directive > t-model with dynamic values on select options 1`] =
     let hdlr1 = [hdlr_fn1, ctx, 0, expr1];
     let attr1 = ctx['this'].options[0];
     let attr2 = bValue1 === attr1;
-    const b2 = safeOutput(ctx['this'].options[0], key + \`__1\`);
+    const b2 = safeOutput(ctx['this'].options[0], key, "__1");
     let attr3 = ctx['this'].options[1];
     let attr4 = bValue1 === attr3;
-    const b3 = safeOutput(ctx['this'].options[1], key + \`__2\`);
+    const b3 = safeOutput(ctx['this'].options[1], key, "__2");
     return block1([hdlr1, attr1, attr2, attr3, attr4], [b2, b3]);
   }
 }"
@@ -733,7 +732,7 @@ exports[`t-model directive > t-model with dynamic values on select options in fo
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { modelExpr, prepareList, safeOutput, withKey, keyOf } = helpers;
+  let { modelExpr, prepareList, safeOutput, withKey } = helpers;
   const hdlr_fn1 = (ctx, ev, model) => model.set(ev.target.value);
   
   let block1 = createBlock(\`<div><select block-handler-0="change"><block-child-0/></select></div>\`);
@@ -749,10 +748,9 @@ exports[`t-model directive > t-model with dynamic values on select options in fo
       let ctx = Object.create(ctx1);
       ctx["v"] = k_block2[i1];
       const key1 = ctx['v'];
-      const skey1 = keyOf(key1);
       let attr1 = ctx['v'];
       let attr2 = bValue1 === attr1;
-      const b4 = safeOutput(ctx['v'], key + \`__1__\${skey1}\`);
+      const b4 = safeOutput(ctx['v'], key, "__1", 1, key1);
       c_block2[i1] = withKey(block3([attr1, attr2], [b4]), key1);
     }
     const b2 = list(c_block2);
@@ -877,7 +875,7 @@ exports[`t-model directive > with expression having a changing key 1`] = `
     const expr1 = modelExpr(ctx['this'].state.something[ctx['this'].key()]);
     let prop1 = expr1();
     let hdlr1 = [hdlr_fn1, ctx, 0, expr1];
-    const b2 = safeOutput(ctx['this'].state.something[ctx['this'].key()](), key + \`__1\`);
+    const b2 = safeOutput(ctx['this'].state.something[ctx['this'].key()](), key, "__1");
     return block1([prop1, hdlr1], [b2]);
   }
 }"
@@ -895,7 +893,7 @@ exports[`t-model.proxy directive > basic use, on an input 1`] = `
   return function template(ctx, node, key = "") {
     let prop1 = ctx['this'].state.text;
     let hdlr1 = [hdlr_fn1, ctx];
-    const b2 = safeOutput(ctx['this'].state.text, key + \`__1\`);
+    const b2 = safeOutput(ctx['this'].state.text, key, "__1");
     return block1([prop1, hdlr1], [b2]);
   }
 }"
@@ -913,7 +911,7 @@ exports[`t-model.proxy directive > deeply nested path 1`] = `
   return function template(ctx, node, key = "") {
     let prop1 = ctx['this'].state.a.b;
     let hdlr1 = [hdlr_fn1, ctx];
-    const b2 = safeOutput(ctx['this'].state.a.b, key + \`__1\`);
+    const b2 = safeOutput(ctx['this'].state.a.b, key, "__1");
     return block1([prop1, hdlr1], [b2]);
   }
 }"
@@ -931,7 +929,7 @@ exports[`t-model.proxy directive > on a select 1`] = `
   return function template(ctx, node, key = "") {
     let prop1 = ctx['this'].state.color;
     let hdlr1 = [hdlr_fn1, ctx];
-    const b2 = safeOutput(ctx['this'].state.color, key + \`__1\`);
+    const b2 = safeOutput(ctx['this'].state.color, key, "__1");
     return block1([prop1, hdlr1], [b2]);
   }
 }"
@@ -949,7 +947,7 @@ exports[`t-model.proxy directive > on a textarea 1`] = `
   return function template(ctx, node, key = "") {
     let prop1 = ctx['this'].state.text;
     let hdlr1 = [hdlr_fn1, ctx];
-    const b2 = safeOutput(ctx['this'].state.text, key + \`__1\`);
+    const b2 = safeOutput(ctx['this'].state.text, key, "__1");
     return block1([prop1, hdlr1], [b2]);
   }
 }"
@@ -969,7 +967,7 @@ exports[`t-model.proxy directive > on an input type=radio 1`] = `
     let hdlr1 = [hdlr_fn1, ctx];
     let prop2 = ctx['this'].state.choice === "Two";
     let hdlr2 = [hdlr_fn1, ctx];
-    const b2 = safeOutput(ctx['this'].state.choice, key + \`__1\`);
+    const b2 = safeOutput(ctx['this'].state.choice, key, "__1");
     return block1([prop1, hdlr1, prop2, hdlr2], [b2]);
   }
 }"
@@ -987,7 +985,7 @@ exports[`t-model.proxy directive > on an input with bracket expression 1`] = `
   return function template(ctx, node, key = "") {
     let prop1 = ctx['this'].state['text'];
     let hdlr1 = [hdlr_fn1, ctx];
-    const b2 = safeOutput(ctx['this'].state.text, key + \`__1\`);
+    const b2 = safeOutput(ctx['this'].state.text, key, "__1");
     return block1([prop1, hdlr1], [b2]);
   }
 }"
@@ -1027,7 +1025,7 @@ exports[`t-model.proxy directive > with .lazy modifier 1`] = `
   return function template(ctx, node, key = "") {
     let prop1 = ctx['this'].state.text;
     let hdlr1 = [hdlr_fn1, ctx];
-    const b2 = safeOutput(ctx['this'].state.text, key + \`__1\`);
+    const b2 = safeOutput(ctx['this'].state.text, key, "__1");
     return block1([prop1, hdlr1], [b2]);
   }
 }"
@@ -1045,7 +1043,7 @@ exports[`t-model.proxy directive > with .number modifier 1`] = `
   return function template(ctx, node, key = "") {
     let prop1 = ctx['this'].state.num;
     let hdlr1 = [hdlr_fn1, ctx];
-    const b2 = safeOutput(ctx['this'].state.num, key + \`__1\`);
+    const b2 = safeOutput(ctx['this'].state.num, key, "__1");
     return block1([prop1, hdlr1], [b2]);
   }
 }"
@@ -1063,7 +1061,7 @@ exports[`t-model.proxy directive > with .trim modifier 1`] = `
   return function template(ctx, node, key = "") {
     let prop1 = ctx['this'].state.text;
     let hdlr1 = [hdlr_fn1, ctx];
-    const b2 = safeOutput(ctx['this'].state.text, key + \`__1\`);
+    const b2 = safeOutput(ctx['this'].state.text, key, "__1");
     return block1([prop1, hdlr1], [b2]);
   }
 }"

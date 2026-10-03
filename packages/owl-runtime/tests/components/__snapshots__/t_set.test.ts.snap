@@ -18,9 +18,9 @@ exports[`t-set > slot setted value (with t-set) not accessible with t-out 1`] = 
   return function template(ctx, node, key = "") {
     ctx = Object.create(ctx);
     ctx["iter"] = 'source';
-    const b2 = safeOutput(ctx['iter'], key + \`__1\`);
+    const b2 = safeOutput(ctx['iter'], key, "__1");
     const b3 = comp1({slots: markRaw({"default": {__render: slot1.bind(this), __ctx: ctx}})}, key + \`__2\`, node, this, null);
-    const b4 = safeOutput(ctx['iter'], key + \`__3\`);
+    const b4 = safeOutput(ctx['iter'], key, "__3");
     return block1([], [b2, b3, b4]);
   }
 }"
@@ -36,9 +36,9 @@ exports[`t-set > slot setted value (with t-set) not accessible with t-out 2`] = 
   
   return function template(ctx, node, key = "") {
     ctx = Object.create(ctx);
-    const b2 = safeOutput(ctx['iter'], key + \`__1\`);
+    const b2 = safeOutput(ctx['iter'], key, "__1");
     ctx["iter"] = 'called';
-    const b3 = safeOutput(ctx['iter'], key + \`__2\`);
+    const b3 = safeOutput(ctx['iter'], key, "__2");
     return block1([], [b2, b3]);
   }
 }"
@@ -56,7 +56,7 @@ exports[`t-set > slots with a t-set with a component in body 1`] = `
     ctx = Object.create(ctx);
     ctx["v"] = new LazyValue(value1, ctx, this, node, key);
     const b3 = text(\` in slot \`);
-    const b4 = safeOutput(ctx['v'], key + \`__2\`);
+    const b4 = safeOutput(ctx['v'], key, "__2");
     return multi([b3, b4]);
   }
   
@@ -109,7 +109,7 @@ exports[`t-set > slots with an t-set with a component in body 1`] = `
     ctx = Object.create(ctx);
     ctx["v"] = new LazyValue(value1, ctx, this, node, key);
     const b5 = text(\` tea \`);
-    const b6 = safeOutput(ctx['v'], key + \`__2\`);
+    const b6 = safeOutput(ctx['v'], key, "__2");
     return multi([b5, b6]);
   }
   
@@ -218,7 +218,7 @@ exports[`t-set > t-set body with a component, output in nested loops 1`] = `
         const key2 = ctx['c'];
         const skey2 = keyOf(key2);
         ctx["v"] = new LazyValue(value1, ctx, this, node, key + \`__\${skey1}__\${skey2}\`);
-        c_block4[i2] = withKey(safeOutput(ctx['v'], key + \`__2__\${skey1}__\${skey2}\`), key2);
+        c_block4[i2] = withKey(safeOutput(ctx['v'], key, "__2", 2, key1, key2), key2);
       }
       const b4 = list(c_block4);
       c_block2[i1] = withKey(block3([], [b4]), key1);
@@ -238,7 +238,7 @@ exports[`t-set > t-set body with a component, output in nested loops 2`] = `
   let block1 = createBlock(\`<b><block-child-0/></b>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].id, key + \`__1\`);
+    const b2 = safeOutput(ctx['this'].id, key, "__1");
     return block1([], [b2]);
   }
 }"
@@ -254,10 +254,10 @@ exports[`t-set > t-set can't alter component even if key in component 1`] = `
   
   return function template(ctx, node, key = "") {
     ctx = Object.create(ctx);
-    const b2 = safeOutput(ctx['this'].iter, key + \`__1\`);
+    const b2 = safeOutput(ctx['this'].iter, key, "__1");
     ctx["iter"] = 5;
-    const b3 = safeOutput(ctx['this'].iter, key + \`__2\`);
-    const b4 = safeOutput(ctx['iter'], key + \`__3\`);
+    const b3 = safeOutput(ctx['this'].iter, key, "__2");
+    const b4 = safeOutput(ctx['iter'], key, "__3");
     return block1([], [b2, b3, b4]);
   }
 }"
@@ -273,10 +273,10 @@ exports[`t-set > t-set can't alter component if key not in component 1`] = `
   
   return function template(ctx, node, key = "") {
     ctx = Object.create(ctx);
-    const b2 = safeOutput(ctx['this'].iter, key + \`__1\`);
+    const b2 = safeOutput(ctx['this'].iter, key, "__1");
     ctx["iter"] = 5;
-    const b3 = safeOutput(ctx['this'].iter, key + \`__2\`);
-    const b4 = safeOutput(ctx['iter'], key + \`__3\`);
+    const b3 = safeOutput(ctx['this'].iter, key, "__2");
+    const b4 = safeOutput(ctx['iter'], key, "__3");
     return block1([], [b2, b3, b4]);
   }
 }"
@@ -301,7 +301,7 @@ exports[`t-set > t-set in t-if 1`] = `
     } else {
       ctx["iter"] = 4;
     }
-    b2 = safeOutput(ctx['iter'], key + \`__1\`);
+    b2 = safeOutput(ctx['iter'], key, "__1");
     return block1([], [b2]);
   }
 }"
@@ -319,9 +319,9 @@ exports[`t-set > t-set not altered by child comp 1`] = `
   return function template(ctx, node, key = "") {
     ctx = Object.create(ctx);
     ctx["iter"] = 'source';
-    const b2 = safeOutput(ctx['iter'], key + \`__1\`);
+    const b2 = safeOutput(ctx['iter'], key, "__1");
     const b3 = comp1({}, key + \`__2\`, node, this, null);
-    const b4 = safeOutput(ctx['iter'], key + \`__3\`);
+    const b4 = safeOutput(ctx['iter'], key, "__3");
     return block1([], [b2, b3, b4]);
   }
 }"
@@ -337,10 +337,10 @@ exports[`t-set > t-set not altered by child comp 2`] = `
   
   return function template(ctx, node, key = "") {
     ctx = Object.create(ctx);
-    const b2 = safeOutput(ctx['this'].iter, key + \`__1\`);
+    const b2 = safeOutput(ctx['this'].iter, key, "__1");
     ctx["iter"] = 'called';
-    const b3 = safeOutput(ctx['this'].iter, key + \`__2\`);
-    const b4 = safeOutput(ctx['iter'], key + \`__3\`);
+    const b3 = safeOutput(ctx['this'].iter, key, "__2");
+    const b4 = safeOutput(ctx['iter'], key, "__3");
     return block1([], [b2, b3, b4]);
   }
 }"
@@ -366,7 +366,7 @@ exports[`t-set > t-set outside modified in t-if 1`] = `
     } else {
       ctx["iter"] = 4;
     }
-    b2 = safeOutput(ctx['iter'], key + \`__1\`);
+    b2 = safeOutput(ctx['iter'], key, "__1");
     return block1([], [b2]);
   }
 }"
@@ -388,7 +388,7 @@ exports[`t-set > t-set with a component in body 1`] = `
   return function template(ctx, node, key = "") {
     ctx = Object.create(ctx);
     ctx["v"] = new LazyValue(value1, ctx, this, node, key);
-    const b3 = safeOutput(ctx['v'], key + \`__2\`);
+    const b3 = safeOutput(ctx['v'], key, "__2");
     return block1([], [b3]);
   }
 }"
@@ -421,7 +421,7 @@ exports[`t-set > t-set with something in body 1`] = `
   return function template(ctx, node, key = "") {
     ctx = Object.create(ctx);
     ctx["v"] = new LazyValue(value1, ctx, this, node, key);
-    const b3 = safeOutput(ctx['v'], key + \`__1\`);
+    const b3 = safeOutput(ctx['v'], key, "__1");
     return block1([], [b3]);
   }
 }"

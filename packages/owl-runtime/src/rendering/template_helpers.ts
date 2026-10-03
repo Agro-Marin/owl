@@ -143,15 +143,21 @@ class LazyValue {
 }
 
 /*
- * Safely outputs `value` as a block depending on the nature of `value`
+ * Safely outputs `value` as a block depending on the nature of `value`. A
+ * LazyValue (a t-set body) renders under the key of the output site: `key` +
+ * `site` + the `depth` loop keys around it, joined only for a LazyValue.
  */
 export function safeOutput(
   value: any,
-  siteKey: string,
-  defaultContent?: () => BDom
+  key: string = "",
+  site: string = "",
+  depth: number = 0,
+  k1?: any,
+  k2?: any,
+  k3?: any
 ): ReturnType<typeof toggler> {
   if (value === undefined || value === null) {
-    return defaultContent ? toggler("default", defaultContent()) : toggler("undefined", text(""));
+    return toggler("undefined", text(""));
   }
   let safeKey;
   let block;
@@ -160,12 +166,41 @@ export function safeOutput(
     block = html(value);
   } else if (value instanceof LazyValue) {
     safeKey = `lazy_value`;
+    let siteKey = key + site;
+    if (depth) {
+      siteKey += "__" + keyOf(k1);
+      if (depth > 1) {
+        siteKey += "__" + keyOf(k2);
+        if (depth > 2) {
+          siteKey += "__" + keyOf(k3);
+        }
+      }
+    }
     block = value.evaluate(siteKey);
   } else {
     safeKey = "string_unsafe";
     block = text(value);
   }
   return toggler(safeKey, block);
+}
+
+/*
+ * safeOutput, with a default content for a missing value
+ */
+function safeOutputOr(
+  value: any,
+  defaultContent: () => BDom,
+  key: string,
+  site: string,
+  depth?: number,
+  k1?: any,
+  k2?: any,
+  k3?: any
+): ReturnType<typeof toggler> {
+  if (value === undefined || value === null) {
+    return toggler("default", defaultContent());
+  }
+  return safeOutput(value, key, site, depth, k1, k2, k3);
 }
 
 function createRef(ref: any, node: ComponentNode) {
@@ -461,6 +496,7 @@ export const helpers = {
   toNumber,
   LazyValue,
   safeOutput,
+  safeOutputOr,
   createCatcher,
   markRaw,
   OwlError,

@@ -1,5 +1,11 @@
-import { Component, mount, xml } from "../../src";
-import { makeTestFixture, renderToString, snapshotEverything, TestContext } from "../helpers";
+import { Component, mount, proxy, xml } from "../../src";
+import {
+  makeTestFixture,
+  nextTick,
+  renderToString,
+  snapshotEverything,
+  TestContext,
+} from "../helpers";
 
 snapshotEverything();
 
@@ -378,6 +384,38 @@ describe("t-set", () => {
     const root = await mount(Root, fixture);
     expect(fixture.innerHTML).toBe("<div><i>c</i><i>c</i></div>");
     expect(Object.keys(root.__owl__.children).length).toBe(2);
+  });
+
+  test("a t-set body holding a component keeps one component per site and iteration, nested loops included", async () => {
+    let setups = 0;
+    class Child extends Component {
+      static template = xml`<i>c</i>`;
+      setup() {
+        setups++;
+      }
+    }
+    class Root extends Component {
+      static template = xml`
+        <div>
+          <t t-set="v"><Child/></t>
+          <t t-out="this.state.n"/>
+          <t t-foreach="[1, 2]" t-as="a" t-key="a">
+            <t t-foreach="['x', 'y']" t-as="b" t-key="b"><t t-out="v"/></t>
+            <t t-foreach="[1]" t-as="c" t-key="c"><t t-foreach="[1]" t-as="d" t-key="d">
+              <t t-foreach="[{}, {}]" t-as="e" t-key="e_index"><t t-out="v"/></t>
+            </t></t>
+          </t>
+        </div>`;
+      static components = { Child };
+      state = proxy({ n: 0 });
+    }
+    const root = await mount(Root, fixture);
+    expect(fixture.innerHTML).toBe(`<div>0${"<i>c</i>".repeat(8)}</div>`);
+    expect(setups).toBe(8);
+    root.state.n++;
+    await nextTick();
+    expect(fixture.innerHTML).toBe(`<div>1${"<i>c</i>".repeat(8)}</div>`);
+    expect(setups).toBe(8);
   });
 
   test("a t-set body holding a component can be output in a loop", async () => {

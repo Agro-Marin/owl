@@ -4,7 +4,7 @@ exports[`list of components > a keyed item switching between text and markup, or
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { prepareList, safeOutput, withKey, keyOf, checkTagName } = helpers;
+  let { prepareList, safeOutput, withKey, checkTagName } = helpers;
   
   let block5 = tag => createBlock(\`<\${tag || 't'}>x</\${tag || 't'}>\`);
   
@@ -15,8 +15,7 @@ exports[`list of components > a keyed item switching between text and markup, or
       let ctx = Object.create(ctx1);
       ctx["item"] = k_block2[i1];
       const key1 = ctx['item'].id;
-      const skey1 = keyOf(key1);
-      c_block2[i1] = withKey(safeOutput(ctx['item'].content, key + \`__1__\${skey1}\`), key1);
+      c_block2[i1] = withKey(safeOutput(ctx['item'].content, key, "__1", 1, key1), key1);
     }
     const b2 = list(c_block2);
     const ctx2 = ctx;
@@ -70,7 +69,7 @@ exports[`list of components > components in a node in a t-foreach  2`] = `
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].props.item, key + \`__1\`);
+    const b2 = safeOutput(ctx['this'].props.item, key, "__1");
     return block1([], [b2]);
   }
 }"
@@ -211,7 +210,7 @@ exports[`list of components > dev mode: keys the list tells apart but the compon
   let block1 = createBlock(\`<i><block-child-0/></i>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].props.v, key + \`__1\`);
+    const b2 = safeOutput(ctx['this'].props.v, key, "__1");
     return block1([], [b2]);
   }
 }"
@@ -292,7 +291,7 @@ exports[`list of components > object keys are told apart by identity, components
   let block1 = createBlock(\`<i><block-child-0/></i>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].props.item.n, key + \`__1\`);
+    const b2 = safeOutput(ctx['this'].props.item.n, key, "__1");
     return block1([], [b2]);
   }
 }"
@@ -396,7 +395,7 @@ exports[`list of components > reconciliation alg works for t-foreach in t-foreac
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].props.blip, key + \`__1\`);
+    const b2 = safeOutput(ctx['this'].props.blip, key, "__1");
     return block1([], [b2]);
   }
 }"
@@ -449,7 +448,7 @@ exports[`list of components > reconciliation alg works for t-foreach in t-foreac
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].props.row+'_'+ctx['this'].props.col, key + \`__1\`);
+    const b2 = safeOutput(ctx['this'].props.row+'_'+ctx['this'].props.col, key, "__1");
     return block1([], [b2]);
   }
 }"
@@ -486,7 +485,7 @@ exports[`list of components > simple list 2`] = `
   let block1 = createBlock(\`<span><block-child-0/></span>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].props.value, key + \`__1\`);
+    const b2 = safeOutput(ctx['this'].props.value, key, "__1");
     return block1([], [b2]);
   }
 }"
@@ -526,7 +525,7 @@ exports[`list of components > sub components rendered in a loop 2`] = `
   let block1 = createBlock(\`<p><block-child-0/></p>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].props.n, key + \`__1\`);
+    const b2 = safeOutput(ctx['this'].props.n, key, "__1");
     return block1([], [b2]);
   }
 }"
@@ -566,7 +565,7 @@ exports[`list of components > sub components with some state rendered in a loop 
   let block1 = createBlock(\`<p><block-child-0/></p>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].state.n, key + \`__1\`);
+    const b2 = safeOutput(ctx['this'].state.n, key, "__1");
     return block1([], [b2]);
   }
 }"
@@ -606,7 +605,7 @@ exports[`list of components > switch component position 2`] = `
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].props.key, key + \`__1\`);
+    const b2 = safeOutput(ctx['this'].props.key, key, "__1");
     return block1([], [b2]);
   }
 }"
@@ -647,8 +646,8 @@ exports[`list of components > t-foreach with t-component, and update 2`] = `
   let block1 = createBlock(\`<span><block-child-0/><block-child-1/></span>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].state.val, key + \`__1\`);
-    const b3 = safeOutput(ctx['this'].props.val, key + \`__2\`);
+    const b2 = safeOutput(ctx['this'].state.val, key, "__1");
+    const b3 = safeOutput(ctx['this'].props.val, key, "__2");
     return block1([], [b2, b3]);
   }
 }"
