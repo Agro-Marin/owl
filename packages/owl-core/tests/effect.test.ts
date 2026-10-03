@@ -585,5 +585,93 @@ describe("effect", () => {
       await waitScheduler();
       expect(outerRuns).toBe(1);
     });
+
+    test("a cleanup that throws on dispose still disposes the children, and the caller gets the error", async () => {
+      const childDep = signal(0);
+      const childSpy = vi.fn();
+      const childCleanup = vi.fn();
+      const dispose = effect(() => {
+        effect(() => {
+          childSpy(childDep());
+          return childCleanup;
+        });
+        return () => {
+          throw new Error("cleanup failed");
+        };
+      });
+      expect(() => dispose()).toThrow("cleanup failed");
+      expect(childCleanup).toHaveBeenCalledTimes(1);
+      childDep.set(1);
+      await waitScheduler();
+      expectSpy(childSpy, 1, { args: [0] });
+    });
+
+    test("an effect whose cleanup throws still runs, and keeps running on later changes", async () => {
+      class IntentionalTestError extends Error {
+        override name = "IntentionalTestError";
+      }
+      const s = signal(0);
+      const spy = vi.fn();
+      const cleanups: number[] = [];
+      effect(() => {
+        const value = s();
+        spy(value);
+        return () => {
+          cleanups.push(value);
+          if (value === 0) {
+            throw new IntentionalTestError("cleanup failed");
+          }
+        };
+      });
+      s.set(1);
+      await waitScheduler();
+      expectSpy(spy, 2, { args: [1] });
+      s.set(2);
+      await waitScheduler();
+      expectSpy(spy, 3, { args: [2] });
+      expect(cleanups).toEqual([0, 1]);
+    });
+
+    test("a throwing cleanup run by dispose() inside another effect leaves the outer one tracking", async () => {
+      const dispose = effect(() => () => {
+        throw new Error("cleanup failed");
+      });
+      const later = signal(0);
+      const spy = vi.fn();
+      effect(() => {
+        try {
+          dispose();
+        } catch {
+          // reported, the outer effect carries on
+        }
+        spy(later());
+      });
+      later.set(1);
+      await waitScheduler();
+      expectSpy(spy, 2, { args: [1] });
+    });
+
+    test("an effect disposed by its own run stays disposed, and the cleanup it returns runs", async () => {
+      const s = signal(0);
+      const after = signal(0);
+      const spy = vi.fn();
+      const cleanups: number[] = [];
+      const dispose: () => void = effect(() => {
+        const value = s();
+        if (value === 1) {
+          dispose();
+        }
+        spy(value, after());
+        return () => cleanups.push(value);
+      });
+      s.set(1);
+      await waitScheduler();
+      expectSpy(spy, 2, { args: [1, 0] });
+      expect(cleanups).toEqual([0, 1]);
+      after.set(1);
+      s.set(2);
+      await waitScheduler();
+      expectSpy(spy, 2, { args: [1, 0] });
+    });
   });
 });
