@@ -93,10 +93,17 @@ function createSyntheticHandler(
 // Replays the propagation over the path fixed at dispatch time, as the browser
 // does for native listeners: in phase order (outermost first when capturing),
 // through open shadow roots, past a node a handler removed, and stopping where
-// a handler stopped propagation.
+// a handler stopped propagation: after the node's other handlers, or at once
+// when it stopped it immediately.
 function nativeToSyntheticEvent(eventKey: string, capture: boolean, event: Event) {
   const path = event.composedPath();
   const last = path.length - 1;
+  let stoppedImmediately = false;
+  const stopImmediatePropagation = event.stopImmediatePropagation;
+  event.stopImmediatePropagation = function () {
+    stoppedImmediately = true;
+    stopImmediatePropagation.call(this);
+  };
   for (let i = 0; i <= last; i++) {
     const node = path[capture ? last - i : i] as any;
     const handlers = node[eventKey];
@@ -104,7 +111,8 @@ function nativeToSyntheticEvent(eventKey: string, capture: boolean, event: Event
       continue;
     }
     for (const id in handlers) {
-      if (config.mainEventHandler(handlers[id], event, node)) {
+      config.mainEventHandler(handlers[id], event, node);
+      if (stoppedImmediately) {
         return;
       }
     }

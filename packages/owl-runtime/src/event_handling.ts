@@ -6,24 +6,21 @@ export const mainEventHandler = (data: any, ev: Event, currentTarget?: EventTarg
   setCurrentEvent(ev);
   // data is [handler, context, modifiers?]: see EventModifier
   const modifiers: number = data[2];
-  let stopped = false;
   if (modifiers) {
     if (modifiers & EventModifier.PREVENT_ANY) {
       ev.preventDefault();
     }
     if (modifiers & EventModifier.STOP_ANY) {
       ev.stopPropagation();
-      stopped = true;
     }
     if (modifiers & EventModifier.SELF && ev.target !== currentTarget) {
-      return stopped;
+      return;
     }
     if (modifiers & EventModifier.PREVENT) {
       ev.preventDefault();
     }
     if (modifiers & EventModifier.STOP) {
       ev.stopPropagation();
-      stopped = true;
     }
   }
   const handler = data[0];
@@ -39,5 +36,4 @@ export const mainEventHandler = (data: any, ev: Event, currentTarget?: EventTarg
       handler(context, ev);
     }
   }
-  return stopped;
 };

@@ -80,6 +80,35 @@ describe("synthetic events follow native propagation", () => {
     expect(calls).toEqual(["inner"]);
   });
 
+  const twoOnInner = () =>
+    createBlock(
+      '<div block-handler-0="click.synthetic"><p block-handler-1="click.synthetic" block-handler-2="click.synthetic">x</p></div>'
+    );
+
+  test("stopping propagation still runs the other handlers of the same element", async () => {
+    const calls: string[] = [];
+    const tree = twoOnInner()([
+      [() => calls.push("outer"), {}],
+      [() => calls.push("a"), {}, EventModifier.STOP],
+      [() => calls.push("b"), {}],
+    ]);
+    mount(tree, fixture);
+    fixture.querySelector("p")!.click();
+    expect(calls).toEqual(["a", "b"]);
+  });
+
+  test("stopping propagation immediately skips the other handlers of the same element", async () => {
+    const calls: string[] = [];
+    const tree = twoOnInner()([
+      [() => calls.push("outer"), {}],
+      [(_: any, ev: Event) => (calls.push("a"), ev.stopImmediatePropagation()), {}],
+      [() => calls.push("b"), {}],
+    ]);
+    mount(tree, fixture);
+    fixture.querySelector("p")!.click();
+    expect(calls).toEqual(["a"]);
+  });
+
   test("a handler removing its own element still bubbles", async () => {
     const calls: string[] = [];
     const tree = outerInner()([
