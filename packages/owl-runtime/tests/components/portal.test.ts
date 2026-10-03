@@ -680,3 +680,40 @@ test("content is committed even when a later sibling's onMounted throws and is h
   expect(fixture.innerHTML).toBe('<div><div class="dialog"><b>bad</b></div></div>');
   expect(target.innerHTML).toBe("<span>portaled</span>");
 });
+
+test("content rendered with its host mounts after the onMounted of that render", async () => {
+  const target = makeOutside("portal-target-order");
+  target.dataset.testPortal = "1";
+  const steps: string[] = [];
+  class Content extends Component {
+    static template = xml`<span class="content">portaled</span>`;
+    setup() {
+      onMounted(() => steps.push("content mounted"));
+    }
+  }
+  class Dialog extends Component {
+    static components = { Portal, Content };
+    static template = xml`<div class="dialog"><Portal target="this.target"><Content/></Portal></div>`;
+    target = target;
+    setup() {
+      onMounted(() =>
+        steps.push(`dialog mounted, content in target: ${!!target.querySelector(".content")}`)
+      );
+    }
+  }
+  class Parent extends Component {
+    static components = { Dialog };
+    static template = xml`<div><Dialog t-if="this.state.open"/></div>`;
+    state = proxy({ open: false });
+    setup() {
+      onMounted(() => steps.push("parent mounted"));
+    }
+  }
+  const parent = await mount(Parent, fixture);
+  steps.splice(0);
+  parent.state.open = true;
+  await nextTick();
+  await nextTick();
+  expect(target.innerHTML).toBe('<span class="content">portaled</span>');
+  expect(steps).toEqual(["dialog mounted, content in target: false", "content mounted"]);
+});

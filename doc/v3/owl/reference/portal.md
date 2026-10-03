@@ -92,6 +92,15 @@ What does **not** transfer:
   that creates it (a sibling's `onWillStart`, say) renders its content in
   memory but leaves the target untouched; if that render is cancelled, the
   content never appears.
+- The content is a separate root, so its mount is not ordered with its host's
+  like a child's. In the usual case, where the content finishes rendering in
+  the same frame as the render that creates the Portal, it is inserted after
+  that render's `onMounted` callbacks ran: the host and its ancestors do not
+  find the content in the target from their `onMounted`, and the content's own
+  `onMounted` comes last. Only content whose render finished earlier (the
+  host waited on a sibling's `onWillStart`) is inserted from the Portal's
+  `onMounted`, before its host's. Code that needs the content in the document
+  should run in the content's own `onMounted`.
 - The portal unmounts when the Portal component is destroyed, when the
   target signal flips to `null`, or when the target changes (the old
   mount is destroyed; a fresh mount is created at the new target).
