@@ -1,6 +1,7 @@
 import {
   ComputationState,
   ComputationAtom,
+  disposeOwned,
   getCurrentComputation,
   removeSources,
   untrack,
@@ -21,11 +22,11 @@ function createEffect<T>(fn: () => T, immediate: boolean) {
   const computation = createComputation(
     () => {
       // A stored cleanup function (computation.value) or nested child effects
-      // (computation.observers) are disposed before the re-run, untracked so
+      // (computation.owned) are disposed before the re-run, untracked so
       // they do not become sources of this effect. updateComputation handles
       // the effect's own sources.
       let failure: { error: unknown } | null = null;
-      if (computation.value || computation.observers.size) {
+      if (computation.value || computation.owned) {
         try {
           untrack(() => unsubscribeEffect(computation));
         } catch (error) {
@@ -52,12 +53,19 @@ function createEffect<T>(fn: () => T, immediate: boolean) {
     ComputationState.STALE,
     immediate
   );
+  // Owned by the computation it is created in, whatever its kind (an effect,
+  // a computed's getter, a render): disposed when that one runs again or is
+  // disposed. A computed or a render runs any number of times, so an effect
+  // they create must not outlive the run that created it.
   const parent = getCurrentComputation();
-  parent?.observers.add(computation);
+  if (parent) {
+    (parent.owned ??= new Set()).add(cleanupEffect);
+  }
 
   // Remove sources and unsubscribe
   function cleanupEffect() {
     disposed = true;
+    parent?.owned?.delete(cleanupEffect);
     // Mark as executed so a queued re-run (scheduled by an earlier signal
     // write in the same microtick) is skipped by updateComputation.
     computation.state = ComputationState.EXECUTED;
@@ -73,7 +81,6 @@ function createEffect<T>(fn: () => T, immediate: boolean) {
   } catch (error) {
     // the caller gets no cleanup function to dispose it with
     cleanupEffect();
-    parent?.observers.delete(computation);
     throw error;
   }
   return cleanupEffect;
@@ -89,18 +96,11 @@ function unsubscribeEffect(effect: ComputationAtom) {
   } catch (error) {
     failure = { error };
   }
-  for (const childEffect of effect.observers) {
-    // Consider it executed to avoid it's re-execution. The recursive
-    // unsubscribeEffect below clears the child's sources as its first step,
-    // so no explicit removeSources call is needed here.
-    childEffect.state = ComputationState.EXECUTED;
-    try {
-      unsubscribeEffect(childEffect);
-    } catch (error) {
-      failure ||= { error };
-    }
+  try {
+    disposeOwned(effect);
+  } catch (error) {
+    failure ||= { error };
   }
-  effect.observers.clear();
   if (failure) {
     throw failure.error;
   }

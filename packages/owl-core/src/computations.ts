@@ -67,6 +67,9 @@ export interface ComputationAtom<T = any> extends Atom<T> {
   // may have changed notifies without being recomputed, since recomputing it
   // inside a write reads records that write has not finished
   notifiesWithoutRecompute?: boolean;
+  // the disposers of the effects created while this computation ran: they
+  // last until it runs again or is disposed
+  owned: Set<() => void> | null;
 }
 
 export const atomSymbol = Symbol("Atom");
@@ -101,6 +104,7 @@ export function createComputation(
     observers: new Set(),
     isDerived,
     immediate,
+    owned: null,
   };
 }
 
@@ -310,6 +314,7 @@ export function removeSources(computation: ComputationAtom) {
 
 export function disposeComputation(computation: ComputationAtom) {
   const sources = computation.sources;
+  let failure: { error: unknown } | null = null;
   for (const source of sources) {
     source.observers.delete(computation);
     // Recursively dispose derived computations that lost all observers.
@@ -318,12 +323,47 @@ export function disposeComputation(computation: ComputationAtom) {
     // that the previous `"compute" in source` test served.
     const derived = source as ComputationAtom;
     if (derived.isDerived && derived.observers.size === 0) {
-      disposeComputation(derived);
+      try {
+        disposeComputation(derived);
+      } catch (error) {
+        failure ||= { error };
+      }
     }
   }
   sources.clear();
   // Mark as stale so it recomputes correctly if ever re-used (shared computed case)
   computation.state = ComputationState.STALE;
+  try {
+    disposeOwned(computation);
+  } catch (error) {
+    failure ||= { error };
+  }
+  if (failure) {
+    throw failure.error;
+  }
+}
+
+/**
+ * Disposes the effects created during the last run of `computation`. All of
+ * them are disposed even when a cleanup throws; the first error is rethrown.
+ */
+export function disposeOwned(computation: ComputationAtom) {
+  const owned = computation.owned;
+  if (!owned) {
+    return;
+  }
+  computation.owned = null;
+  let failure: { error: unknown } | null = null;
+  for (const dispose of owned) {
+    try {
+      dispose();
+    } catch (error) {
+      failure ||= { error };
+    }
+  }
+  if (failure) {
+    throw failure.error;
+  }
 }
 
 function markDownstream(computation: ComputationAtom) {

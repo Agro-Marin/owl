@@ -66,6 +66,11 @@ Each time the parent re-runs, the previous child is disposed and a fresh one
 is created (logging `"child cleanup"` before every re-run). When the parent
 itself is disposed, the child is disposed too.
 
+A [computed](computed_values.md)'s getter and a component's render own the
+effects they create the same way: such an effect lasts until the getter or the
+render runs again, and is disposed with the computed or the component. It is
+not a dependent of the computed.
+
 This ownership is **implicit** — any `effect()` call made while another effect
 is on the call stack is attached to that effect, even if it happens inside a
 helper called from the parent's body. Be especially careful with conditional

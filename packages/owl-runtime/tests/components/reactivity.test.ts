@@ -587,6 +587,43 @@ describe("reactive cleanup on component destruction", () => {
   });
 });
 
+describe("effects created during a render", () => {
+  test("last until the next render, and are disposed with the component", async () => {
+    const tick = signal(0);
+    const dep = signal(0);
+    const runs: number[] = [];
+
+    class Comp extends Component {
+      static template = xml`<div t-out="this.value()"/>`;
+      value() {
+        const t = tick();
+        effect(() => {
+          dep();
+          runs.push(t);
+        });
+        return t;
+      }
+    }
+
+    const comp = await mount(Comp, fixture);
+    tick.set(1);
+    await nextTick();
+    tick.set(2);
+    await nextTick();
+    expect(fixture.innerHTML).toBe("<div>2</div>");
+    runs.length = 0;
+
+    dep.set(1);
+    await nextTick();
+    expect(runs).toEqual([2]);
+
+    comp.__owl__.app.destroy();
+    dep.set(2);
+    await nextTick();
+    expect(runs).toEqual([2]);
+  });
+});
+
 describe("computed with equals in components", () => {
   test("a recompute with a shallow-equal result does not re-render", async () => {
     let renders = 0;

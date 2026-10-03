@@ -31,6 +31,7 @@ export {
   runTracked,
   removeSources,
   disposeComputation,
+  disposeOwned,
   withObserver,
 } from "./computations";
 

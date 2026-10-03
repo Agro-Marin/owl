@@ -8,6 +8,8 @@ import {
   toEqualsFn,
   updateComputation,
   createComputation,
+  disposeOwned,
+  untrack,
 } from "./computations";
 import { OwlError } from "./owl_error";
 import { getScope } from "./scope";
@@ -49,6 +51,9 @@ export function computed<TRead, TWrite = TRead>(
   // it runs again once the getter recovers.
   let failure: { error: unknown } | null = null;
   const computation = createComputation(() => {
+    if (computation.owned) {
+      untrack(() => disposeOwned(computation));
+    }
     let newValue: TRead;
     try {
       newValue = getter();

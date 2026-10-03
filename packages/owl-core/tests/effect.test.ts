@@ -1,4 +1,4 @@
-import { atomSymbol, computed, effect, proxy, signal, untrack } from "../src";
+import { atomSymbol, computed, disposeComputation, effect, proxy, signal, untrack } from "../src";
 import { expectSpy, nextMicroTick } from "./helpers";
 
 async function waitScheduler() {
@@ -274,6 +274,48 @@ describe("effect", () => {
       await waitScheduler();
       expectSpy(spy1, 2, { args: [2] });
       expectSpy(spy2, 2, { args: [20] });
+    });
+  });
+
+  describe("effects created by a computed", () => {
+    test("last until the computed recomputes, and do not count as its observers", async () => {
+      const n = signal(0);
+      const other = signal(0);
+      const spy = vi.fn();
+      const c = computed(() => {
+        const value = n();
+        effect(() => spy(value, other()));
+        return value;
+      });
+      const reader = vi.fn();
+      effect(() => reader(c()));
+      expectSpy(spy, 1, { args: [0, 0] });
+
+      n.set(1);
+      await waitScheduler();
+      expectSpy(spy, 2, { args: [1, 0] });
+      expectSpy(reader, 2, { args: [1] });
+
+      other.set(1);
+      await waitScheduler();
+      // only the effect of the last recompute is alive
+      expectSpy(spy, 3, { args: [1, 1] });
+      // and it is not a dependent of the computed: the reader alone re-ran
+      expectSpy(reader, 2, { args: [1] });
+    });
+
+    test("are disposed with the computed", async () => {
+      const other = signal(0);
+      const spy = vi.fn();
+      const c = computed(() => {
+        effect(() => spy(other()));
+        return 1;
+      });
+      c();
+      disposeComputation((c as any)[atomSymbol]);
+      other.set(1);
+      await waitScheduler();
+      expectSpy(spy, 1, { args: [0] });
     });
   });
 
