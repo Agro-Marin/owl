@@ -1,5 +1,15 @@
 import { compile } from "@odoo/owl-compiler";
-import { App, Component, onMounted, onWillPatch, onWillStart, props, proxy, xml } from "../../src";
+import {
+  App,
+  Component,
+  onMounted,
+  onWillDestroy,
+  onWillPatch,
+  onWillStart,
+  props,
+  proxy,
+  xml,
+} from "../../src";
 import { useApp } from "../../src/hooks";
 import { STATUS, status } from "../../src/status";
 import {
@@ -320,4 +330,52 @@ test("a test app loads its templates with the dev-mode checks", () => {
   expect(() => new App({ test: true, templates })).toThrow(
     "Template dup already defined with different content"
   );
+});
+
+test("app.destroy() finishes the teardown when an onWillDestroy throws, then rethrows", async () => {
+  const steps: string[] = [];
+  class Sibling extends Component {
+    static template = xml`<i/>`;
+    setup() {
+      onWillDestroy(() => steps.push("sibling"));
+    }
+  }
+  class Bad extends Component {
+    static template = xml`<b/>`;
+    setup() {
+      onWillDestroy(() => steps.push("bad cleanup"));
+      onWillDestroy(() => {
+        throw new Error("willDestroy failed");
+      });
+    }
+  }
+  class Root extends Component {
+    static template = xml`<div><Bad/><Sibling/></div>`;
+    static components = { Bad, Sibling };
+    setup() {
+      onWillDestroy(() => steps.push("root"));
+    }
+  }
+  const app = new App({ test: true });
+  const root = await app.createRoot(Root).mount(fixture);
+  const other = await app.createRoot(Sibling).mount(fixture);
+  const bad = Object.values(root.__owl__.children).find((n) => n.component instanceof Bad)!;
+
+  expect(() => app.destroy()).toThrow("willDestroy failed");
+  expect(steps.sort()).toEqual(["bad cleanup", "root", "sibling", "sibling"]);
+  expect(status(bad.component)).toBe("destroyed");
+  expect(status(root)).toBe("destroyed");
+  expect(status(other)).toBe("destroyed");
+  expect(fixture.innerHTML).toBe("");
+  expect(app.destroyed).toBe(true);
+});
+
+test("a destroyed app creates no root", () => {
+  class Root extends Component {
+    static template = xml`<div/>`;
+  }
+  const app = new App({ test: true });
+  app.destroy();
+  expect(() => app.createRoot(Root)).toThrow("Cannot create a root in a destroyed app");
+  expect(app.roots.size).toBe(0);
 });

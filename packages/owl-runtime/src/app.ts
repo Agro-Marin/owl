@@ -129,6 +129,9 @@ export class App extends TemplateSet {
     Root: T,
     config: RootConfig<GetProps<ComponentInstance<T>>> = {}
   ): Root<T> {
+    if (this.destroyed) {
+      throw new OwlError("Cannot create a root in a destroyed app");
+    }
     const props = config.props || ({} as any);
     let resolve!: (value: any) => void;
     let reject!: (reason?: any) => void;
@@ -285,8 +288,13 @@ export class App extends TemplateSet {
   }
 
   destroy() {
+    let failure: { error: unknown } | null = null;
     for (let root of this.roots) {
-      root.destroy();
+      try {
+        root.destroy();
+      } catch (error) {
+        failure ||= { error };
+      }
     }
     this.pluginManager.destroy();
     this.scheduler.tasks.clear();
@@ -294,6 +302,9 @@ export class App extends TemplateSet {
     this.scheduler.delayedRenders = [];
     apps.delete(this);
     this.destroyed = true;
+    if (failure) {
+      throw failure.error;
+    }
   }
 
   _handleError(error: any) {

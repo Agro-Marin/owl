@@ -40,10 +40,13 @@ await root.mount(document.body);
   returns a `Root` object exposing `prepare`, `mount`, `destroy`, plus
   `promise` (resolves to the component instance once mounted), `prepared`
   (true once the render phase has finished), and `destroyed` (true once
-  `destroy()` has been called). `options` accepts `{ props }`.
+  `destroy()` has been called). `options` accepts `{ props }`. A destroyed
+  app creates no root: `createRoot` throws.
 
 - **`app.destroy()`**: destroys every root, the plugin manager, and the
-  application itself.
+  application itself. An `onWillDestroy` or `onWillUnmount` callback that
+  throws does not stop the teardown: every root is still destroyed and
+  removed from the DOM, then the first error is rethrown.
 
 ### `mount` helper
 

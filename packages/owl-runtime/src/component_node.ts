@@ -191,10 +191,10 @@ export class ComponentNode extends Scope implements VNode<ComponentNode> {
       this._destroy();
     } finally {
       removalDepth--;
-    }
-    if (shouldRemove) {
-      this.bdom!.remove();
-      sweepRemovedRefs();
+      if (shouldRemove) {
+        this.bdom!.remove();
+        sweepRemovedRefs();
+      }
     }
   }
 
@@ -228,7 +228,15 @@ export class ComponentNode extends Scope implements VNode<ComponentNode> {
         failure ||= { error };
       }
     }
-    this.finalize((e) => handleError({ error: e, node: this }));
+    // an error no handler catches destroys the app and is rethrown: the other
+    // callbacks still run and the node is still finalized before it propagates
+    this.finalize((e) => {
+      try {
+        handleError({ error: e, node: this });
+      } catch (error) {
+        failure ||= { error };
+      }
+    });
     disposeComputation(this.signalComputation);
     if (failure) {
       throw failure.error;
