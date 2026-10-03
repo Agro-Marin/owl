@@ -417,7 +417,10 @@ function basicProxyHandler<T extends Target>(shallow: boolean): ProxyHandler<T> 
       if (shallow || typeof value !== "object" || value === null) {
         return value;
       }
-      if (!canBeMadeReactive(value)) {
+      // the proxy an object read before already has spares the checks
+      // proxifyTarget would make (twice) to find it
+      const reactive = deepProxies.get(value);
+      if (reactive ? skipped.has(value) : !canBeMadeReactive(value)) {
         return value;
       }
       // non-writable non-configurable properties cannot be made proxy
@@ -425,7 +428,7 @@ function basicProxyHandler<T extends Target>(shallow: boolean): ProxyHandler<T> 
       if (desc && !desc.writable && !desc.configurable) {
         return value;
       }
-      return proxifyTarget(value, false);
+      return reactive ?? proxifyTarget(value, false);
     },
     set(target, key, value, receiver) {
       // a write subscribes nothing, though a getter or setter it runs reads
