@@ -315,7 +315,9 @@ this moment:
   }
 ```
 
-The `willDestroy` hooks are first called on children, then on parents.
+The `willDestroy` hooks are first called on children, then on parents. If
+`setup` throws, the `willDestroy` hooks it registered before the throw run
+right away, and the effects it created are disposed.
 
 ### `onError`
 

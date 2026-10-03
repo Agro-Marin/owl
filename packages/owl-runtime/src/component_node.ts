@@ -83,6 +83,12 @@ export class ComponentNode extends Scope implements VNode<ComponentNode> {
       const ctx = { this: this.component, __owl__: this };
       this.renderFn = app.getTemplate(C.template).bind(this.component, ctx, this);
       this.component.setup();
+    } catch (e) {
+      // nothing will ever reference this node: what its setup acquired is
+      // released, and the setup error is the one reported
+      this.finalize((cleanupError) => console.error(cleanupError));
+      disposeComputation(this.signalComputation);
+      throw e;
     } finally {
       this.collectingWillStart = false;
       scopeStack.pop();

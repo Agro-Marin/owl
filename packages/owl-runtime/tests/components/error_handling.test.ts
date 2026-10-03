@@ -2273,3 +2273,35 @@ describe("errors of a destroyed component", () => {
     expect(parent.__owl__.app.destroyed).toBe(false);
   });
 });
+
+test("a component whose setup throws releases what the setup acquired", async () => {
+  const value = signal(0);
+  const steps: string[] = [];
+  class Broken extends Component {
+    static template = xml`<b/>`;
+    setup() {
+      useEffect(() => {
+        steps.push(`effect ${value()}`);
+      });
+      onWillDestroy(() => steps.push("willDestroy"));
+      throw new Error("setup failed");
+    }
+  }
+  class Parent extends Component {
+    static template = xml`<div><t t-if="this.state.error">error</t><Broken t-else=""/></div>`;
+    static components = { Broken };
+    state = proxy({ error: false });
+    setup() {
+      onError(() => {
+        this.state.error = true;
+      });
+    }
+  }
+  await mount(Parent, fixture);
+  expect(fixture.innerHTML).toBe("<div>error</div>");
+  expect(steps).toEqual(["effect 0", "willDestroy"]);
+
+  value.set(1);
+  await nextTick();
+  expect(steps).toEqual(["effect 0", "willDestroy"]);
+});

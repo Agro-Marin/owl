@@ -1,5 +1,39 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`a component whose setup throws releases what the setup acquired 1`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { createComponent } = helpers;
+  const comp1 = createComponent(app, \`Broken\`, true, false, false, []);
+  
+  let block1 = createBlock(\`<div><block-child-0/><block-child-1/></div>\`);
+  
+  return function template(ctx, node, key = "") {
+    let b2, b3;
+    if (ctx['this'].state.error) {
+      b2 = text(\`error\`);
+    } else {
+      b3 = comp1({}, key + \`__1\`, node, this, null);
+    }
+    return block1([], [b2, b3]);
+  }
+}"
+`;
+
+exports[`a component whose setup throws releases what the setup acquired 2`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  
+  let block1 = createBlock(\`<b/>\`);
+  
+  return function template(ctx, node, key = "") {
+    return block1();
+  }
+}"
+`;
+
 exports[`basics > a sync re-render error deep in the tree is only wrapped once 1`] = `
 "function anonymous(app, bdom, helpers
 ) {
