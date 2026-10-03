@@ -2077,4 +2077,48 @@ describe("errors in a pending render pass", () => {
     await nextTick();
     expect(fixture.innerHTML).toBe("<div>2<a>failed</a><b>3</b></div>");
   });
+
+  test("an error in a child's own pass leaves the parent's pending pass alone", async () => {
+    const load = makeDeferred();
+    const errors: string[] = [];
+    class C extends Component {
+      static template = xml`<c><t t-out="this.state.value"/></c>`;
+      state = proxy({ value: 1 });
+      setup() {
+        onPatched(() => {
+          throw new Error("patched");
+        });
+      }
+    }
+    class D extends Component {
+      static template = xml`<d><t t-out="this.props.value"/></d>`;
+      props = props();
+      setup() {
+        onWillUpdateProps(() => load);
+      }
+    }
+    class Parent extends Component {
+      static template = xml`<div><t t-out="this.state.value"/><C/><D value="this.state.value"/></div>`;
+      static components = { C, D };
+      state = proxy({ value: 1 });
+      setup() {
+        onError((e) => errors.push(e.message));
+      }
+    }
+    const parent = await mount(Parent, fixture);
+    const c = Object.values(parent.__owl__.children).find((n) => n.component instanceof C)!;
+    (c.component as C).state.value = 2;
+    await nextMicroTick();
+    await nextMicroTick();
+    await nextMicroTick();
+    parent.state.value = 2;
+    await nextTick();
+    expect(errors).toEqual(["patched"]);
+    expect(fixture.innerHTML).toBe("<div>1<c>2</c><d>1</d></div>");
+
+    load.resolve();
+    await nextTick();
+    await nextTick();
+    expect(fixture.innerHTML).toBe("<div>2<c>2</c><d>2</d></div>");
+  });
 });

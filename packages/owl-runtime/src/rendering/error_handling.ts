@@ -10,20 +10,13 @@ export const nodeErrorHandlers: WeakMap<
 
 // Walks up from `node` (inclusive), invoking the latest error handler at each
 // level. Returns whether a handler caught and the final (possibly rethrown)
-// error. When `markFibers` is true, each visited fiber is recorded in
-// `fibersInError` so re-renders can detect and clear in-error state — this is
-// what `handleError` wants, but sub-root forwarders (Suspense, Portal) want
-// to leave the outer tree's fibers alone.
+// error.
 function invokeErrorHandlers(
   node: ComponentNode | null,
   error: any,
-  finalize: Function,
-  markFibers: boolean
+  finalize: Function
 ): { handled: boolean; error: any } {
   while (node) {
-    if (markFibers && node.fiber) {
-      fibersInError.set(node.fiber, error);
-    }
     const handlers = nodeErrorHandlers.get(node);
     if (handlers) {
       for (let i = handlers.length - 1; i >= 0; i--) {
@@ -49,7 +42,7 @@ export function forwardErrorToParent(boundary: ComponentNode) {
     if (boundary.app.destroyed) {
       throw error;
     }
-    const result = invokeErrorHandlers(boundary, error, finalize, false);
+    const result = invokeErrorHandlers(boundary, error, finalize);
     if (!result.handled) {
       finalize();
       boundary.app._handleError(result.error);
@@ -93,7 +86,7 @@ export function handleError(params: ErrorParams) {
     }
   };
 
-  const result = invokeErrorHandlers(node, error, finalize, true);
+  const result = invokeErrorHandlers(node, error, finalize);
   if (!result.handled) {
     finalize();
     app._handleError(result.error);
