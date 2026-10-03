@@ -3,7 +3,7 @@ import {
   computed,
   markRaw,
   OwlError,
-  ReactiveValue,
+  ReadonlyReactiveValue,
   signal,
   Signal,
   untrack,
@@ -237,7 +237,7 @@ function callHandler(fn: any, ctx: any, ev: Event) {
   fn.call(ctx["this"], ev);
 }
 
-type PropSignal = Signal<any> & { readonly: ReactiveValue<any> };
+type PropSignal = Signal<any> & { readonly: ReadonlyReactiveValue<any> };
 
 // the signals behind a child's `.signal` props, one per prop name: they live as
 // long as the child does

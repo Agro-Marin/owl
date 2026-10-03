@@ -610,6 +610,7 @@ describe("writable computed", () => {
     expect(percentage()).toBe(0.5);
     expect(value()).toBe(50);
 
+    // @ts-expect-error a computed without a `set` option is typed read-only
     expect(() => value.set(0.21)).toThrow(/read-only computed/);
     expect(percentage()).toBe(0.5);
     expect(value()).toBe(50);
@@ -621,6 +622,7 @@ describe("writable computed", () => {
     expect(percentage()).toBe(0.5);
     expect(value()).toBe(0.5);
 
+    // @ts-expect-error a computed without a `set` option is typed read-only
     expect(() => value.set(0.21)).toThrow(/read-only computed/);
     expect(percentage()).toBe(0.5);
     expect(value()).toBe(0.5);

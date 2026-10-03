@@ -1,5 +1,5 @@
 import { computed } from "./computed";
-import { untrack, type ReactiveValue } from "./computations";
+import { untrack, type ReadonlyReactiveValue } from "./computations";
 import { OwlError } from "./owl_error";
 import { signal } from "./signal";
 import { ResourceAddOptions } from "./resource";
@@ -31,7 +31,7 @@ export class Registry<T> {
     this._validation = options.validation;
   }
 
-  entries: ReactiveValue<[string, Item<T>][]> = computed(
+  entries: ReadonlyReactiveValue<[string, Item<T>][]> = computed(
     () => {
       const entries: [string, Item<T>][] = Object.entries(this._map())
         .sort((el1, el2) => el1[1][0] - el2[1][0] || el1[1][2] - el2[1][2])
@@ -41,7 +41,7 @@ export class Registry<T> {
     { detached: true }
   );
 
-  items: ReactiveValue<Item<T>[]> = computed(() => this.entries().map((e) => e[1]), {
+  items: ReadonlyReactiveValue<Item<T>[]> = computed(() => this.entries().map((e) => e[1]), {
     detached: true,
   });
 

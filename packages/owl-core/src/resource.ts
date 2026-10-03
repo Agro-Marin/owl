@@ -1,5 +1,5 @@
 import { computed } from "./computed";
-import { untrack, type ReactiveValue } from "./computations";
+import { untrack, type ReadonlyReactiveValue } from "./computations";
 import { signal } from "./signal";
 import { useScope } from "./scope";
 import { type StripBrands } from "./types";
@@ -28,7 +28,7 @@ export class Resource<T> {
     this._validation = options.validation;
   }
 
-  items: ReactiveValue<Item<T>[]> = computed(
+  items: ReadonlyReactiveValue<Item<T>[]> = computed(
     () => {
       return [...this._items()].sort((el1, el2) => el1[0] - el2[0]).map((elem) => elem[1]);
     },

@@ -1,7 +1,10 @@
 import { batched } from "./batched";
 
-export interface ReactiveValue<TRead, TWrite = TRead> {
+export interface ReadonlyReactiveValue<TRead> {
   (): TRead;
+}
+
+export interface ReactiveValue<TRead, TWrite = TRead> extends ReadonlyReactiveValue<TRead> {
   /**
    * Update the value of the reactive with a new value. If the new value is different
    * from the previous values, all computations that depends on this reactive will

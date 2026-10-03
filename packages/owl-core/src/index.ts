@@ -18,6 +18,7 @@ export {
   untrack,
   type Equals,
   type ReactiveValue,
+  type ReadonlyReactiveValue,
   type Atom,
   type ComputationAtom,
   ComputationState,

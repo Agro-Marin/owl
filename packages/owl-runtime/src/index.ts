@@ -63,6 +63,7 @@ export {
   type AsyncComputedOptions,
   type Equals,
   type ReactiveValue,
+  type ReadonlyReactiveValue,
   type Signal,
 } from "@odoo/owl-core";
 export { useEffect, useListener, useOnChange, useApp } from "./hooks";

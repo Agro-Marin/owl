@@ -5,6 +5,7 @@ import {
   onReadAtom,
   onWriteAtom,
   ReactiveValue,
+  ReadonlyReactiveValue,
   toEqualsFn,
   updateComputation,
   createComputation,
@@ -37,6 +38,14 @@ function readonlySetter(): never {
   );
 }
 
+export function computed<TRead, TWrite = TRead>(
+  getter: () => TRead,
+  options: ComputedOptions<TRead, TWrite> & { set(value: TWrite): void }
+): ReactiveValue<TRead, TWrite>;
+export function computed<TRead>(
+  getter: () => TRead,
+  options?: ComputedOptions<TRead>
+): ReadonlyReactiveValue<TRead>;
 export function computed<TRead, TWrite = TRead>(
   getter: () => TRead,
   options: ComputedOptions<TRead, TWrite> = {}
