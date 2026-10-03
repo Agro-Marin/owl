@@ -1,4 +1,13 @@
-import { App, Component, onMounted, onWillDestroy, onWillStart, status, xml } from "../../src";
+import {
+  App,
+  Component,
+  onMounted,
+  onWillDestroy,
+  onWillStart,
+  proxy,
+  status,
+  xml,
+} from "../../src";
 import { makeDeferred, makeTestFixture, nextTick } from "../helpers";
 
 let fixture: HTMLElement;
@@ -305,5 +314,39 @@ test("mounting a root a second time throws, while pending or once mounted", asyn
   expect(() => root.mount(other)).toThrow("already mounted");
   expect(fixture.innerHTML).toBe("<div></div><span>root</span>");
   expect(other.innerHTML).toBe("");
+  app.destroy();
+});
+
+test("mount() during a re-render of the prepared root waits for that render", async () => {
+  const late = makeDeferred();
+  class Late extends Component {
+    static template = xml`<i>late</i>`;
+    setup() {
+      onWillStart(() => late);
+    }
+  }
+  let component: Root;
+  class Root extends Component {
+    static template = xml`<div><t t-out="this.state.value"/><Late t-if="this.state.value === 2"/></div>`;
+    static components = { Late };
+    state = proxy({ value: 1 });
+    setup() {
+      component = this;
+    }
+  }
+
+  const app = new App({ test: true });
+  const root = app.createRoot(Root);
+  await root.prepare();
+  component!.state.value = 2;
+  await nextTick();
+  const mounted = root.mount(fixture);
+  await nextTick();
+  expect(fixture.innerHTML).toBe("");
+  expect(app.destroyed).toBe(false);
+
+  late.resolve();
+  expect(await mounted).toBe(component!);
+  expect(fixture.innerHTML).toBe("<div>2<i>late</i></div>");
   app.destroy();
 });

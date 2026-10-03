@@ -136,8 +136,9 @@ phases:
   elements exist yet.
 - **`mount(target, options?)`** attaches the prepared bdom into `target`
   and fires `onMounted` hooks. Calling `mount` without a prior `prepare`
-  prepares implicitly. Returns a promise that resolves with the component
-  instance.
+  prepares implicitly. If the prepared root re-rendered in the meantime
+  (its state changed), `mount` waits for that render to finish. Returns a
+  promise that resolves with the component instance.
 
 The pattern is useful for:
 

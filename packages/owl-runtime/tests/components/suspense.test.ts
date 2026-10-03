@@ -5,6 +5,7 @@ import {
   onError,
   onMounted,
   onWillStart,
+  proxy,
   signal,
   Suspense,
   xml,
@@ -409,4 +410,58 @@ test("content sees the slot scope of the latest render", async () => {
   await nextTick();
   await nextTick();
   expect(fixture.innerHTML).toBe("<div><span>b</span><i>b!</i></div>");
+});
+
+test("content re-rendering when Suspense mounts is mounted once that render is done", async () => {
+  const slow = makeDeferred();
+  const late = makeDeferred();
+  class Slow extends Component {
+    static template = xml`<i>slow</i>`;
+    setup() {
+      onWillStart(() => slow);
+    }
+  }
+  class Late extends Component {
+    static template = xml`<b>late</b>`;
+    setup() {
+      onWillStart(() => late);
+    }
+  }
+  let content: Content;
+  class Content extends Component {
+    static template = xml`<span>content<Late t-if="this.state.show"/></span>`;
+    static components = { Late };
+    state = proxy({ show: false });
+    setup() {
+      content = this;
+    }
+  }
+  class Root extends Component {
+    static components = { Suspense, Content, Slow };
+    static template = xml`
+      <div>
+        <Suspense>
+          <t t-set-slot="fallback">loading</t>
+          <Content/>
+        </Suspense>
+        <Slow/>
+      </div>`;
+  }
+
+  const app = new App({ test: true });
+  const mounted = app.createRoot(Root).mount(fixture);
+  await nextTick();
+  content!.state.show = true;
+  await nextTick();
+  slow.resolve();
+  await mounted;
+  await nextTick();
+  expect(app.destroyed).toBe(false);
+  expect(fixture.innerHTML).toBe("<div><i>slow</i></div>");
+
+  late.resolve();
+  await nextTick();
+  await nextTick();
+  expect(fixture.innerHTML).toBe("<div><span>content<b>late</b></span><i>slow</i></div>");
+  app.destroy();
 });

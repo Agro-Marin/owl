@@ -50,6 +50,11 @@ export function makeRootFiber(node: ComponentNode): Fiber {
     current.childrenMap = {};
     current.bdom = null;
     current.phase = FiberPhase.NEW;
+    if (root instanceof MountFiber && root.prepared) {
+      // re-rendered between prepare and commit: commit() must wait again
+      root.prepared = false;
+      root.renderState &= ~APPLIED_TO_DOM;
+    }
     if (fibersInError.has(current)) {
       fibersInError.delete(current);
       fibersInError.delete(root);
@@ -344,9 +349,10 @@ export class MountFiber extends RootFiber {
   position: Position;
   afterNode: Node | null = null;
   allowDetached = false;
-  // true once the render phase finishes (counter reaches 0). If target is
-  // set at that point, we mount immediately; otherwise we signal readiness
-  // via onPrepared and wait for commit() to supply a target.
+  // true once the render phase finishes (counter reaches 0), false again if
+  // the root re-renders before its commit. If target is set at that point, we
+  // mount immediately; otherwise we signal readiness via onPrepared and wait
+  // for commit() to supply a target.
   prepared = false;
   onPrepared: (() => void) | null = null;
 
