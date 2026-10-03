@@ -189,22 +189,41 @@ function releaseKey(target: Target, key: PropertyKey): void {
 /**
  * Notify Reactives that are observing the indices an array dropped when its
  * length was written: such a write does not go through the deleteProperty trap.
+ * Visits the dropped range or the atoms, whichever is smaller: a pop() drops
+ * one index of an array whose every index may have an atom.
  *
  * @param target the array whose length was written
  * @param newLength the length after the write
+ * @param oldLength the length before the write
  */
-function onWriteDroppedIndices(target: Target, newLength: number): void {
-  const isDropped = (key: PropertyKey) =>
-    typeof key === "string" && Number(key) >= newLength && String(Number(key)) === key;
+function onWriteDroppedIndices(target: Target, newLength: number, oldLength: number): void {
   for (const atoms of [targetToKeysToAtomItem, targetToKeysToPresenceAtom]) {
     const table = atoms.get(target);
-    if (table) {
-      for (const key of [...table.keys.keys()].filter(isDropped)) {
-        onWriteTargetKey(target, key, atoms);
-        releaseKey(target, key);
+    if (!table) {
+      continue;
+    }
+    if (oldLength - newLength <= table.keys.size) {
+      for (let i = newLength; i < oldLength; i++) {
+        onWriteDroppedIndex(target, String(i), atoms);
+      }
+    } else {
+      for (const key of table.keys.keys()) {
+        if (typeof key === "string" && isIndexIn(key, newLength, oldLength)) {
+          onWriteDroppedIndex(target, key, atoms);
+        }
       }
     }
   }
+}
+
+function isIndexIn(key: string, start: number, end: number): boolean {
+  const index = Number(key);
+  return index >= start && index < end && String(index) === key;
+}
+
+function onWriteDroppedIndex(target: Target, key: string, atoms: KeyAtoms): void {
+  onWriteTargetKey(target, key, atoms);
+  releaseKey(target, key);
 }
 
 // Maps proxy objects to the underlying target
@@ -419,7 +438,7 @@ function basicProxyHandler<T extends Target>(shallow: boolean): ProxyHandler<T> 
         onWriteTargetKey(target, key);
         if (target.length < (originalValue as number)) {
           onWriteTargetKey(target, KEYCHANGES);
-          onWriteDroppedIndices(target, target.length);
+          onWriteDroppedIndices(target, target.length, originalValue as number);
         }
       } else if (valueChanged) {
         onWriteTargetKey(target, key);

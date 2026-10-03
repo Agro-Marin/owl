@@ -440,6 +440,19 @@ describe("Reactivity", () => {
     expect(state).toEqual([0]);
   });
 
+  test("truncating an array notifies only the indices it dropped", async () => {
+    const state: any = createProxy([0, 1, 2, 3]);
+    const droppedSpy = vi.fn();
+    const beyondSpy = vi.fn();
+    effect(() => droppedSpy(state[2]));
+    effect(() => beyondSpy(state[10]));
+
+    state.length = 1;
+    await waitScheduler();
+    expectSpy(droppedSpy, 2, [undefined]);
+    expectSpy(beyondSpy, 1, [undefined]);
+  });
+
   test("writing the index past the end of an array notifies its length", async () => {
     const state: any = createProxy([1, 2]);
     const lengthSpy = vi.fn();
