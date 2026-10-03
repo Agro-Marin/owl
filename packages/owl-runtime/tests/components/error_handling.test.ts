@@ -20,6 +20,7 @@ import {
 import { getCurrentComputation, useScope } from "@odoo/owl-core";
 import {
   logStep,
+  makeDeferred,
   makeTestFixture,
   nextAppError,
   nextMicroTick,
@@ -2008,5 +2009,72 @@ describe("errors in onWillUpdateProps", () => {
     await nextTick();
     expect(error).toBeDefined();
     expect(error.message).toBe("async boom from child");
+  });
+});
+
+describe("errors in a pending render pass", () => {
+  test("a component recovering from its own onWillUpdateProps rejection lets the pass commit", async () => {
+    const load = makeDeferred();
+    class Child extends Component {
+      static template = xml`<span><t t-if="this.state.failed">failed</t><t t-else="" t-out="this.props.value"/></span>`;
+      props = props();
+      state = proxy({ failed: false });
+      setup() {
+        onWillUpdateProps(() => load);
+        onError(() => {
+          this.state.failed = true;
+        });
+      }
+    }
+    class Parent extends Component {
+      static template = xml`<div><t t-out="this.state.value"/><Child value="this.state.value"/></div>`;
+      static components = { Child };
+      state = proxy({ value: 1 });
+    }
+    const parent = await mount(Parent, fixture);
+    parent.state.value = 2;
+    await nextTick();
+    load.reject(new Error("load failed"));
+    await nextTick();
+    await nextTick();
+    expect(fixture.innerHTML).toBe("<div>2<span>failed</span></div>");
+    expect(parent.__owl__.app.scheduler.tasks.size).toBe(0);
+  });
+
+  test("a pass with a failed render stays uncommitted when another of its components recovers", async () => {
+    const errors: string[] = [];
+    class A extends Component {
+      static template = xml`<a><t t-if="this.state.failed">failed</t><t t-else="" t-out="this.props.value.toFixed()"/></a>`;
+      props = props();
+      state = proxy({ failed: false });
+      setup() {
+        onError(() => {
+          this.state.failed = true;
+        });
+      }
+    }
+    class B extends Component {
+      static template = xml`<b><t t-out="this.props.value.toFixed()"/></b>`;
+      props = props();
+    }
+    class Parent extends Component {
+      static template = xml`<div><t t-out="this.state.count"/><A value="this.state.value"/><B value="this.state.value"/></div>`;
+      static components = { A, B };
+      state = proxy({ value: 1 as number | null, count: 1 });
+      setup() {
+        onError((e) => errors.push(e.message));
+      }
+    }
+    const parent = await mount(Parent, fixture);
+    parent.state.value = null;
+    parent.state.count = 2;
+    await nextTick();
+    await nextTick();
+    expect(errors).toEqual(["Cannot read properties of null (reading 'toFixed')"]);
+    expect(fixture.innerHTML).toBe("<div>1<a>1</a><b>1</b></div>");
+
+    parent.state.value = 3;
+    await nextTick();
+    expect(fixture.innerHTML).toBe("<div>2<a>failed</a><b>3</b></div>");
   });
 });

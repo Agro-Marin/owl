@@ -80,7 +80,9 @@ export function handleError(params: ErrorParams) {
       current = current.parent;
     } while (current);
 
-    fibersInError.set(fiber.root!, error);
+    const root = fiber.root!;
+    fibersInError.set(root, error);
+    (root.failed ||= new Set()).add(fiber);
   }
 
   const finalize = () => {

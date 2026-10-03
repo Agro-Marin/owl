@@ -44,7 +44,10 @@ export function makeRootFiber(node: ComponentNode): Fiber {
     // which means any arbitrary code can be run in onWillDestroy, which may
     // trigger new renderings
     root.locked = true;
-    root.setCounter(root.counter + 1 - cancelFibers(current.children));
+    // a fiber that never rendered (its onWillStart or onWillUpdateProps
+    // failed) is still counted from its creation
+    const rendered = current.phase === FiberPhase.NEW ? 0 : 1;
+    root.setCounter(root.counter + rendered - cancelFibers(current.children));
     root.locked = false;
     current.children = [];
     current.childrenMap = {};
@@ -57,7 +60,22 @@ export function makeRootFiber(node: ComponentNode): Fiber {
     }
     if (fibersInError.has(current)) {
       fibersInError.delete(current);
-      fibersInError.delete(root);
+      let failedElsewhere = false;
+      const failed = root.failed;
+      if (failed) {
+        failed.delete(current);
+        for (const fiber of failed) {
+          // a cancelled failure no longer belongs to the pass
+          if (fiber.node.fiber === fiber) {
+            failedElsewhere = true;
+            break;
+          }
+        }
+      }
+      if (!failedElsewhere) {
+        fibersInError.delete(root);
+        root.failed = null;
+      }
       current.renderState &= ~APPLIED_TO_DOM;
       if (current instanceof RootFiber) {
         // it is possible that this fiber is a fiber that crashed while being
@@ -254,6 +272,9 @@ export class Fiber {
 
 export class RootFiber extends Fiber {
   counter: number = 1;
+  // the fibers of this pass whose render, onWillStart or onWillUpdateProps
+  // failed: the pass stays failed until none of them is current
+  failed: Set<Fiber> | null = null;
 
   // only add stuff in this if they have registered some hooks
   willPatch: Fiber[] = [];
