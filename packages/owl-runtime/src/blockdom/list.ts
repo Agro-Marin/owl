@@ -167,7 +167,7 @@ class VList {
       // -------------------------------------------------------------------
       mapping = mapping || createMapping(ch1, startIdx1, endIdx1);
       let idxInOld = mapping.get(startKey2);
-      if (idxInOld === undefined) {
+      if (idxInOld === undefined || ch1[idxInOld] === null) {
         cMount.call(startVn2, parent, cFirstNode.call(startVn1) || null);
       } else {
         const elmToMove = ch1[idxInOld];

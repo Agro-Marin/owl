@@ -486,6 +486,19 @@ describe("miscellaneous operations", () => {
     expect(children[2]).toBe(n1);
   });
 
+  test("a key repeated in the new list mounts the repeat: [x,a,y] => [a,a,z]", () => {
+    const tree = list([kSpan("x", "x"), kSpan("a", "a"), kSpan("y", "y")]);
+    mount(tree, fixture);
+    const a = fixture.children[1];
+
+    patch(tree, list([kSpan("a1", "a"), kSpan("a2", "a"), kSpan("z", "z")]));
+    expect(fixture.textContent).toBe("a1a2z");
+    expect(fixture.children[0]).toBe(a);
+
+    patch(tree, list([kSpan("z", "z"), kSpan("a", "a")]));
+    expect(fixture.textContent).toBe("za");
+  });
+
   test("a list mounted by a patch into an only-child slot is an only child", () => {
     const block = createBlock("<div><block-child-0/></div>");
     const tree = block([], []);
