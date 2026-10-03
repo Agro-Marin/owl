@@ -1,4 +1,6 @@
+import { isAbortError } from "@odoo/owl-core";
 import type { ComponentNode } from "../component_node";
+import { STATUS } from "../status";
 import type { Fiber } from "./fibers";
 
 // Maps fibers to thrown errors
@@ -95,4 +97,18 @@ export function handleError(params: ErrorParams) {
     // the failed pass will never finish: the renders it delayed go on
     app.scheduler.flush();
   }
+}
+
+// An onWillStart or onWillUpdateProps rejection. Once its component is
+// destroyed nobody waits for it: it must neither reach the living ancestors'
+// handlers nor tear the app down, so an abort is dropped and any other error
+// is rethrown, to surface as an unhandled rejection.
+export function handleHookRejection(node: ComponentNode, error: any) {
+  if (node.status > STATUS.MOUNTED) {
+    if (isAbortError(error)) {
+      return;
+    }
+    throw error;
+  }
+  handleError({ node, error });
 }

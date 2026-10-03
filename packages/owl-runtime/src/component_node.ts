@@ -4,7 +4,6 @@ import {
   createComputation,
   disposeComputation,
   getCurrentComputation,
-  isAbortError,
   OwlError,
   Scope,
   scopeStack,
@@ -15,7 +14,7 @@ import {
 import type { App } from "./app";
 import { BDom, RefCallback, VNode } from "./blockdom";
 import { Component, ComponentConstructor } from "./component";
-import { fibersInError, handleError } from "./rendering/error_handling";
+import { fibersInError, handleError, handleHookRejection } from "./rendering/error_handling";
 import { APPLIED_TO_DOM, Fiber, FiberPhase, makeRootFiber, MountFiber } from "./rendering/fibers";
 import { STATUS } from "./status";
 
@@ -117,10 +116,7 @@ export class ComponentNode extends Scope implements VNode<ComponentNode> {
     try {
       await Promise.all(untrack(() => this.willStart.map((f) => f.call(component))));
     } catch (e) {
-      if (isAbortError(e) && this.status > STATUS.MOUNTED) {
-        return;
-      }
-      handleError({ node: this, error: e });
+      handleHookRejection(this, e);
       return;
     }
     if (this.status === STATUS.NEW && this.fiber === fiber) {

@@ -14,7 +14,7 @@ import { html } from "../blockdom/index";
 import { Component } from "../component";
 import { ComponentNode } from "../component_node";
 import { Markup } from "../utils";
-import { handleError } from "./error_handling";
+import { handleHookRejection } from "./error_handling";
 import { Fiber, makeChildFiber } from "./fibers";
 
 const ObjectCreate = Object.create;
@@ -334,9 +334,7 @@ function createComponent<P extends Record<string, any>>(
               for (const f of node.propsUpdated) f();
               fiber.render();
             },
-            (error) => {
-              handleError({ node, error });
-            }
+            (error) => handleHookRejection(node, error)
           );
         } else {
           node.props = props;

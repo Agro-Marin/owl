@@ -2191,3 +2191,85 @@ describe("errors in a pending render pass", () => {
     expect(parent.__owl__.app.scheduler.tasks.size).toBe(0);
   });
 });
+
+describe("errors of a destroyed component", () => {
+  async function collectUnhandled(run: () => Promise<void>): Promise<string[]> {
+    const errors: string[] = [];
+    const onRejection = (e: unknown) => errors.push(String(e));
+    process.on("unhandledRejection", onRejection);
+    try {
+      await run();
+    } finally {
+      process.off("unhandledRejection", onRejection);
+    }
+    return errors;
+  }
+
+  test("an onWillStart rejecting after its component was removed leaves the app and the ancestors alone", async () => {
+    const load = makeDeferred();
+    const caught: string[] = [];
+    class Child extends Component {
+      static template = xml`<span>child</span>`;
+      setup() {
+        onWillStart(() => load);
+      }
+    }
+    class Parent extends Component {
+      static template = xml`<div><t t-out="this.state.count"/><Child t-if="this.state.show"/></div>`;
+      static components = { Child };
+      state = proxy({ show: false, count: 1 });
+      setup() {
+        onError((e) => caught.push(e.message));
+      }
+    }
+    const parent = await mount(Parent, fixture);
+    parent.state.show = true;
+    await nextTick();
+    parent.state.show = false;
+    await nextTick();
+    const unhandled = await collectUnhandled(async () => {
+      load.reject(new Error("load failed"));
+      await nextTick();
+    });
+    expect(unhandled).toEqual(["Error: load failed"]);
+    expect(caught).toEqual([]);
+    expect(parent.__owl__.app.destroyed).toBe(false);
+
+    parent.state.count = 2;
+    await nextTick();
+    expect(fixture.innerHTML).toBe("<div>2</div>");
+  });
+
+  test("an onWillUpdateProps rejecting after its component was removed leaves the app and the ancestors alone", async () => {
+    const load = makeDeferred();
+    const caught: string[] = [];
+    class Child extends Component {
+      static template = xml`<span><t t-out="this.props.value"/></span>`;
+      props = props();
+      setup() {
+        onWillUpdateProps(() => load);
+      }
+    }
+    class Parent extends Component {
+      static template = xml`<div><t t-out="this.state.value"/><Child t-if="this.state.show" value="this.state.value"/></div>`;
+      static components = { Child };
+      state = proxy({ show: true, value: 1 });
+      setup() {
+        onError((e) => caught.push(e.message));
+      }
+    }
+    const parent = await mount(Parent, fixture);
+    parent.state.value = 2;
+    await nextTick();
+    parent.state.show = false;
+    await nextTick();
+    expect(fixture.innerHTML).toBe("<div>2</div>");
+    const unhandled = await collectUnhandled(async () => {
+      load.reject(new Error("load failed"));
+      await nextTick();
+    });
+    expect(unhandled).toEqual(["Error: load failed"]);
+    expect(caught).toEqual([]);
+    expect(parent.__owl__.app.destroyed).toBe(false);
+  });
+});
