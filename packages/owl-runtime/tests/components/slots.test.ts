@@ -15,6 +15,43 @@ beforeEach(() => {
 });
 
 describe("slots", () => {
+  test("a t-set-slot carrying t-out or t-call keeps its slot attributes", async () => {
+    class Child extends Component {
+      static template = xml`<div><t t-call-slot="a" v="'A'"/>|<t t-call-slot="b" v="'B'"/>|<t t-call-slot="c" v="'C'"/>|<t t-call-slot="d"/></div>`;
+    }
+    const sub = xml`<u t-out="s.v"/>`;
+    class Parent extends Component {
+      static template = xml`
+        <Child>
+          <t t-set-slot="a" t-slot-scope="s" t-out="s.v"/>
+          <t t-set-slot="b" t-slot-scope="s" t-out="s.v + '!'"/>
+          <t t-set-slot="c" t-slot-scope="s" t-call="${sub}"/>
+          <t t-set-slot="d" title="T" t-translation-context-title="ctx" t-out="'D'"/>
+        </Child>`;
+      static components = { Child };
+    }
+    await mount(Parent, fixture);
+    expect(fixture.innerHTML).toBe("<div>A|B!|<u>C</u>|D</div>");
+  });
+
+  test("a t-set-slot carrying t-call keeps its t-on handler on the slot", async () => {
+    const clicks: string[] = [];
+    class Child extends Component {
+      static template = xml`<div><t t-call-slot="a"/></div>`;
+    }
+    const sub = xml`<button>go</button>`;
+    class Parent extends Component {
+      static template = xml`<Child><t t-set-slot="a" t-on-click="() => this.clicked()" t-call="${sub}"/></Child>`;
+      static components = { Child };
+      clicked() {
+        clicks.push("click");
+      }
+    }
+    await mount(Parent, fixture);
+    fixture.querySelector("button")!.click();
+    expect(clicks).toEqual(["click"]);
+  });
+
   test("simple default slot", async () => {
     class Child extends Component {
       static template = xml`<span><t t-call-slot="default"/></span>`;

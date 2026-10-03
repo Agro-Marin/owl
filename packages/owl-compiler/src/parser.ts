@@ -845,16 +845,18 @@ function parseComponent(node: Element, ctx: ParsingContext): AST | null {
 
       slotNode.removeAttribute("t-set-slot");
       slotNode.remove();
-      const slotAst = parseNode(slotNode, ctx);
       let on: SlotDefinition["on"] = null;
       let attrs: Attrs | null = null;
       let attrsTranslationCtx: Attrs | null = null;
       let scope: string | null = null;
+      // on a <t>, the directives of the slot definition go before its content
+      // is parsed: a t-out or a t-call on the same node would reject them (an
+      // element keeps them, as its own t-on and translation contexts)
+      const isT = slotNode.tagName === "t";
       for (let attributeName of slotNode.getAttributeNames()) {
         const value = slotNode.getAttribute(attributeName)!;
         if (attributeName === "t-slot-scope") {
           scope = value;
-          continue;
         } else if (attributeName.startsWith("t-translation-context-")) {
           const attrName = attributeName.slice(22);
           attrsTranslationCtx = attrsTranslationCtx || {};
@@ -863,9 +865,24 @@ function parseComponent(node: Element, ctx: ParsingContext): AST | null {
           on = on || {};
           on[attributeName.slice(5)] = value;
         } else {
-          attrs = attrs || {};
-          attrs[attributeName] = value;
+          continue;
         }
+        if (isT) {
+          slotNode.removeAttribute(attributeName);
+        }
+      }
+      const slotAst = parseNode(slotNode, ctx);
+      // what the content left are the slot's params
+      for (let attributeName of slotNode.getAttributeNames()) {
+        if (
+          attributeName === "t-slot-scope" ||
+          attributeName.startsWith("t-translation-context-") ||
+          attributeName.startsWith("t-on-")
+        ) {
+          continue;
+        }
+        attrs = attrs || {};
+        attrs[attributeName] = slotNode.getAttribute(attributeName)!;
       }
       slots = slots || {};
       slots[name] = { content: slotAst, on, attrs, attrsTranslationCtx, scope };
