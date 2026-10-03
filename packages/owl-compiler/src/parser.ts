@@ -288,11 +288,12 @@ function parseTNode(node: Element, ctx: ParsingContext): AST | null {
 // Text and Comment Nodes
 // -----------------------------------------------------------------------------
 const lineBreakRE = /[\r\n]/;
+const htmlWhitespaceOnlyRE = /^[ \t\n\r\f]*$/;
 
 function parseTextCommentNode(node: Node, ctx: ParsingContext): AST | null {
   if (node.nodeType === Node.TEXT_NODE) {
     let value = node.textContent || "";
-    if (!ctx.inPreTag && lineBreakRE.test(value) && !value.trim()) {
+    if (!ctx.inPreTag && lineBreakRE.test(value) && htmlWhitespaceOnlyRE.test(value)) {
       return null;
     }
 

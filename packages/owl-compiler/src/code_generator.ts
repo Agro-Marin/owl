@@ -33,7 +33,8 @@ import {
 const zero = Symbol("zero");
 
 type BlockType = "block" | "text" | "multi" | "list" | "html";
-const whitespaceRE = /\s+/g;
+// HTML whitespace: a non-breaking space is content, never condensed
+const whitespaceRE = /[ \t\n\r\f]+/g;
 
 export interface Config {
   translateFn?: (s: string, translationCtx: string) => string;

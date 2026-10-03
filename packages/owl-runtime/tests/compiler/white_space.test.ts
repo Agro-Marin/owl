@@ -17,6 +17,14 @@ describe("white space handling", () => {
     expect(renderToString(template)).toBe("<div> abc </div>");
   });
 
+  test("non-breaking spaces are kept, never condensed", () => {
+    expect(renderToString(`<div>a&#160;&#160;b  c</div>`)).toBe("<div>a&nbsp;&nbsp;b c</div>");
+    const template = `<div><b>x</b>
+      &#160;
+      <b>y</b></div>`;
+    expect(renderToString(template)).toBe("<div><b>x</b> &nbsp; <b>y</b></div>");
+  });
+
   test("whitespace only text nodes with newlines are removed", () => {
     const template = `<div>
           <span>abc</span>

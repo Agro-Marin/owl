@@ -13,6 +13,32 @@ exports[`white space handling > consecutives whitespaces are condensed into a si
 }"
 `;
 
+exports[`white space handling > non-breaking spaces are kept, never condensed 1`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  
+  let block1 = createBlock(\`<div>a  b c</div>\`);
+  
+  return function template(ctx, node, key = "") {
+    return block1();
+  }
+}"
+`;
+
+exports[`white space handling > non-breaking spaces are kept, never condensed 2`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  
+  let block1 = createBlock(\`<div><b>x</b>   <b>y</b></div>\`);
+  
+  return function template(ctx, node, key = "") {
+    return block1();
+  }
+}"
+`;
+
 exports[`white space handling > nothing is done in pre tags 1`] = `
 "function anonymous(app, bdom, helpers
 ) {
