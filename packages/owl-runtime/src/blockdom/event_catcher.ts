@@ -87,7 +87,6 @@ export function createCatcher(eventsSpec: EventsSpec): Catcher {
 
     moveBeforeVNode(other: VCatcher | null, afterNode: Node | null) {
       if (other) {
-        // check this with @ged-odoo for use in foreach
         afterNode = other.firstNode() || afterNode;
       }
       this.child.moveBeforeVNode(other ? other.child : null, afterNode);

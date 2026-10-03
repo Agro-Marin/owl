@@ -77,6 +77,12 @@ describe("adding/patching blocks", () => {
   });
 });
 
+test("a block keeps the text of its template, whitespace and no-break spaces included", () => {
+  const block = createBlock("<p><b>\u00a0</b> <i> </i></p>");
+  mount(block(), fixture);
+  expect(fixture.innerHTML).toBe("<p><b>&nbsp;</b> <i> </i></p>");
+});
+
 describe("sub blocks", () => {
   test("block with subblock (only child)", async () => {
     const block1 = createBlock("<div><block-child-0/></div>");

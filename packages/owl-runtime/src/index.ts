@@ -15,7 +15,6 @@ import {
 import { mainEventHandler } from "./event_handling";
 export { Resource, Registry } from "@odoo/owl-core";
 
-config.shouldNormalizeDom = false;
 config.mainEventHandler = mainEventHandler;
 
 export const blockDom = {

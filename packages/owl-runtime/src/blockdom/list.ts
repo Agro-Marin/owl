@@ -49,7 +49,7 @@ class VList {
     for (let i = 0, l = children.length; i < l; i++) {
       children[i].moveBeforeDOMNode(node);
     }
-    this.parentEl!.insertBefore(this.anchor!, node);
+    nodeInsertBefore.call(this.parentEl, this.anchor!, node);
   }
 
   moveBeforeVNode(other: VList | null, afterNode: Node | null) {
@@ -61,7 +61,7 @@ class VList {
     for (let i = 0, l = children.length; i < l; i++) {
       children[i].moveBeforeVNode(null, afterNode);
     }
-    this.parentEl!.insertBefore(this.anchor!, afterNode);
+    nodeInsertBefore.call(this.parentEl, this.anchor!, afterNode);
   }
 
   patch(other: VList, withBeforeRemove: boolean) {
