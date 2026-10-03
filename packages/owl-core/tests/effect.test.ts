@@ -294,33 +294,34 @@ describe("effect", () => {
   });
 
   describe("effects created by a computed", () => {
-    test("last until the computed recomputes, and do not count as its observers", async () => {
+    test("are owned by nothing: not its observers, and kept across its recomputes", async () => {
       const n = signal(0);
       const other = signal(0);
       const spy = vi.fn();
+      let memo: (() => void) | null = null;
       const c = computed(() => {
         const value = n();
-        effect(() => spy(value, other()));
+        memo ??= effect(() => spy(other()));
         return value;
       });
       const reader = vi.fn();
       effect(() => reader(c()));
-      expectSpy(spy, 1, { args: [0, 0] });
+      expectSpy(spy, 1, { args: [0] });
 
       n.set(1);
       await waitScheduler();
-      expectSpy(spy, 2, { args: [1, 0] });
       expectSpy(reader, 2, { args: [1] });
 
       other.set(1);
       await waitScheduler();
-      // only the effect of the last recompute is alive
-      expectSpy(spy, 3, { args: [1, 1] });
-      // and it is not a dependent of the computed: the reader alone re-ran
+      // the memoized effect survived the recompute
+      expectSpy(spy, 2, { args: [1] });
+      // and is not a dependent of the computed: the reader did not re-run
       expectSpy(reader, 2, { args: [1] });
+      memo!();
     });
 
-    test("are disposed with the computed", async () => {
+    test("do not keep the computed observed, nor die with it", async () => {
       const other = signal(0);
       const spy = vi.fn();
       const c = computed(() => {
@@ -329,9 +330,10 @@ describe("effect", () => {
       });
       c();
       disposeComputation((c as any)[atomSymbol]);
+      expect((c as any)[atomSymbol].observers.size).toBe(0);
       other.set(1);
       await waitScheduler();
-      expectSpy(spy, 1, { args: [0] });
+      expectSpy(spy, 2, { args: [1] });
     });
   });
 

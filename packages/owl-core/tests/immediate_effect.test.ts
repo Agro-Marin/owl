@@ -254,3 +254,86 @@ describe("immediateEffect", () => {
     expect(log).toEqual(["a0", "b0", "c0", "b1", "c1", "a2", "b2"]);
   });
 });
+
+describe("owner of an effect", () => {
+  test("a parent writing what its immediate child reads is not re-entered", () => {
+    const x = signal(0);
+    let parentRuns = 0;
+    const childSeen: number[] = [];
+    const dispose = effect(() => {
+      parentRuns++;
+      immediateEffect(() => {
+        childSeen.push(x());
+      });
+      x.set(parentRuns);
+    });
+    expect(parentRuns).toBe(1);
+    expect(childSeen).toEqual([0, 1]);
+    dispose();
+  });
+
+  test("a parent's cleanup runs once per run when its immediate child re-runs inside it", () => {
+    const x = signal(0);
+    const log: string[] = [];
+    let run = 0;
+    const dispose = effect(() => {
+      const r = ++run;
+      log.push(`start ${r}`);
+      immediateEffect(() => {
+        x();
+      });
+      x.set(1);
+      log.push(`end ${r}`);
+      return () => log.push(`cleanup ${r}`);
+    });
+    dispose();
+    expect(log).toEqual(["start 1", "end 1", "cleanup 1"]);
+  });
+
+  test("a deferred parent is not pulled into the write that re-runs its immediate child", async () => {
+    const a = signal(0);
+    const b = signal(0);
+    const log: string[] = [];
+    effect(() => {
+      log.push(`parent a=${a()} b=${b()}`);
+      immediateEffect(() => {
+        log.push(`child a=${a()}`);
+      });
+    });
+    log.length = 0;
+    a.set(1);
+    b.set(1);
+    // the immediate child runs inside the write; its deferred parent does not
+    expect(log).toEqual(["child a=1"]);
+    await waitScheduler();
+    expect(log).toEqual(["child a=1", "parent a=1 b=1", "child a=1"]);
+  });
+});
+
+describe("array methods run as one batch", () => {
+  test("the method's own error propagates, not an immediate effect's", () => {
+    const list = proxy([1, 2, 3]);
+    Object.defineProperty(list, 1, { value: 2, writable: false });
+    const seen: number[] = [];
+    immediateEffect(() => {
+      seen.push(list[0]);
+      if (list[0] === 0) {
+        throw new Error("immediate saw 0");
+      }
+    });
+    let error: any = null;
+    const rejections: unknown[] = [];
+    const onRejection = (reason: unknown) => rejections.push(reason);
+    process.on("unhandledRejection", onRejection);
+    try {
+      list.fill(0);
+    } catch (e) {
+      error = e;
+    }
+    expect(error).toBeInstanceOf(TypeError);
+    return new Promise((resolve) => setTimeout(resolve, 0)).then(() => {
+      process.off("unhandledRejection", onRejection);
+      expect(rejections).toMatchObject([{ message: "immediate saw 0" }]);
+    });
+  });
+});

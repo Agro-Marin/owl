@@ -1,4 +1,5 @@
 import {
+  asyncComputed,
   Component,
   computed,
   effect,
@@ -588,18 +589,19 @@ describe("reactive cleanup on component destruction", () => {
 });
 
 describe("effects created during a render", () => {
-  test("last until the next render, and are disposed with the component", async () => {
+  test("last as long as the component, so a memoized one keeps working across renders", async () => {
     const tick = signal(0);
     const dep = signal(0);
-    const runs: number[] = [];
+    const runs: string[] = [];
 
     class Comp extends Component {
       static template = xml`<div t-out="this.value()"/>`;
+      memo: (() => void) | null = null;
       value() {
         const t = tick();
-        effect(() => {
+        this.memo ??= effect(() => {
           dep();
-          runs.push(t);
+          runs.push("memo");
         });
         return t;
       }
@@ -615,14 +617,46 @@ describe("effects created during a render", () => {
 
     dep.set(1);
     await nextTick();
-    expect(runs).toEqual([2]);
+    expect(runs).toEqual(["memo"]);
 
     comp.__owl__.app.destroy();
     dep.set(2);
     await nextTick();
-    expect(runs).toEqual([2]);
+    expect(runs).toEqual(["memo"]);
+  });
+
+  test("a memoized asyncComputed read by the template refetches after unrelated renders", async () => {
+    const id = signal(1);
+    const counter = signal(0);
+    let calls = 0;
+    class C extends Component {
+      static template = xml`<div><t t-out="this.data()"/>|<t t-out="this.counter()"/></div>`;
+      _data: any = null;
+      counter = counter;
+      get data() {
+        return (this._data ??= asyncComputed(async () => {
+          calls++;
+          return id() * 10;
+        }));
+      }
+    }
+    await mount(C, fixture);
+    await waitAsync();
+    expect(fixture.innerHTML).toBe("<div>10|0</div>");
+    counter.set(1);
+    await waitAsync();
+    id.set(2);
+    await waitAsync();
+    expect(fixture.innerHTML).toBe("<div>20|1</div>");
+    expect(calls).toBe(2);
   });
 });
+
+async function waitAsync() {
+  for (let i = 0; i < 3; i++) {
+    await nextTick();
+  }
+}
 
 describe("computed with equals in components", () => {
   test("a recompute with a shallow-equal result does not re-render", async () => {

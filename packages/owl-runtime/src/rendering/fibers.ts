@@ -1,11 +1,4 @@
-import {
-  ComputationState,
-  disposeOwned,
-  OwlError,
-  removeSources,
-  runTracked,
-  untrack,
-} from "@odoo/owl-core";
+import { ComputationState, OwlError, removeSources, runTracked } from "@odoo/owl-core";
 import { BDom, mount, type MountTarget } from "../blockdom";
 import type { ComponentNode } from "../component_node";
 import { STATUS } from "../status";
@@ -255,13 +248,6 @@ export class Fiber {
       // already read schedules a re-render. Its previous subscriptions must go
       // first: kept, a write to a value the last render read but this one
       // writes before reading would schedule a re-render on every render.
-      if (node.signalComputation.owned) {
-        try {
-          untrack(() => disposeOwned(node.signalComputation));
-        } catch (e) {
-          handleError({ node, error: e });
-        }
-      }
       removeSources(node.signalComputation);
       node.signalComputation.state = ComputationState.EXECUTED;
       this.phase = FiberPhase.RENDERING;

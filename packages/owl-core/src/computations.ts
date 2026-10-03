@@ -77,6 +77,9 @@ export interface ComputationAtom<T = any> extends Atom<T> {
   // first, and its run disposes the child it recreates
   owner: ComputationAtom | null;
   isEffect: boolean;
+  // true while its compute runs: a write it makes can reach a computation that
+  // would otherwise pull it forward as its owner
+  running: boolean;
 }
 
 export const atomSymbol = Symbol("Atom");
@@ -114,6 +117,7 @@ export function createComputation(
     owned: null,
     owner: null,
     isEffect: false,
+    running: false,
   };
 }
 
@@ -184,13 +188,24 @@ let batchDepth = 0;
 
 export function batch<T>(fn: () => T): T {
   batchDepth++;
+  let completed = false;
   try {
-    return fn();
+    const result = fn();
+    completed = true;
+    return result;
   } finally {
     if (--batchDepth === 0 && immediateObservers.length) {
       const toRun = immediateObservers;
       immediateObservers = [];
-      rethrow(updateEach(toRun));
+      const errors = updateEach(toRun);
+      if (completed) {
+        rethrow(errors);
+      } else if (errors) {
+        // the error of fn is the one that propagates
+        for (const error of errors) {
+          Promise.reject(error);
+        }
+      }
     }
   }
 }
@@ -209,9 +224,17 @@ function updateEach(computations: ComputationAtom[]): unknown[] | null {
   return errors;
 }
 
+// An owner due in the same queue runs first: its run disposes the child it
+// recreates. One that is running already (the child runs inside a write of
+// its) or that waits in the other queue is left to its own turn.
 function updateOwnerFirst(computation: ComputationAtom) {
   const owner = computation.owner;
-  if (owner && owner.state !== ComputationState.EXECUTED) {
+  if (
+    owner &&
+    owner.state !== ComputationState.EXECUTED &&
+    !owner.running &&
+    owner.immediate === computation.immediate
+  ) {
     updateOwnerFirst(owner);
   }
   updateComputation(computation);
@@ -284,15 +307,20 @@ export function updateComputation(computation: ComputationAtom) {
     }
   }
   const writesBefore = writeCount;
+  computation.running = true;
   try {
     computation.value = runTracked(computation, computation.compute);
   } finally {
-    if (writeCount !== writesBefore) {
-      settleDerivedSources(computation);
+    computation.running = false;
+    try {
+      if (writeCount !== writesBefore) {
+        settleDerivedSources(computation);
+      }
+    } finally {
+      // A computation that threw stays subscribed to what it read before the
+      // throw, and runs again when one of those changes.
+      computation.state = ComputationState.EXECUTED;
     }
-    // A computation that threw stays subscribed to what it read before the
-    // throw, and runs again when one of those changes.
-    computation.state = ComputationState.EXECUTED;
   }
 }
 
