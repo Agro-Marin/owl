@@ -376,6 +376,21 @@ const ROOT_SVG_TAGS = new Set(["svg", "g", "path"]);
 const ATT_DIRECTIVE_RE = /^t-att(f?-.+)?$/;
 const T_MODEL_MODIFIERS = new Set(["lazy", "trim", "number", "proxy"]);
 
+// the directives whose content renders conditionally, repeatedly or somewhere
+// else: a t-set-slot lifted out of it would be defined unconditionally, once
+const SLOT_HIDING_DIRECTIVES = new Set([
+  "t-if",
+  "t-elif",
+  "t-else",
+  "t-foreach",
+  "t-out",
+  "t-esc",
+  "t-call",
+  "t-call-slot",
+  "t-slot",
+  "t-set",
+]);
+
 function parseDOMNode(node: Element, ctx: ParsingContext): AST | null {
   const { tagName } = node;
   const dynamicTag = node.getAttribute("t-tag");
@@ -825,9 +840,7 @@ function parseComponent(node: Element, ctx: ParsingContext): AST | null {
           isInSubComponent = true;
           break;
         }
-        const directive = el
-          .getAttributeNames()
-          .find((a) => a.startsWith("t-") && !a.startsWith("t-translation"));
+        const directive = el.getAttributeNames().find((a) => SLOT_HIDING_DIRECTIVES.has(a));
         if (directive && !directiveAbove) {
           directiveAbove = `${directive} on a <${el.tagName}>`;
         }

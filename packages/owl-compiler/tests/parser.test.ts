@@ -1542,6 +1542,41 @@ describe("qweb parser", () => {
     );
   });
 
+  test("a named slot under a directive that neither conditions nor repeats it is defined", async () => {
+    for (const wrapper of [
+      `<div t-att-class="c">X</div>`,
+      `<div t-attf-class="a-{{c}}">X</div>`,
+      `<t t-tag="c">X</t>`,
+      `<div t-key="c">X</div>`,
+      `<div t-ref="r">X</div>`,
+      `<div t-on-click="f">X</div>`,
+    ]) {
+      const ast: any = parse(
+        `<MyComponent>${wrapper.replace("X", `<t t-set-slot="a">foo</t>`)}</MyComponent>`
+      );
+      expect(ast.slots.a.content).toEqual({ type: ASTType.Text, value: "foo" });
+    }
+  });
+
+  test("a named slot in a body rendered only on some condition throws", async () => {
+    for (const [wrapper, directive] of [
+      [`<t t-elif="c">X</t>`, "t-elif on a <t>"],
+      [`<t t-out="c">X</t>`, "t-out on a <t>"],
+      [`<t t-call="sub">X</t>`, "t-call on a <t>"],
+      [`<t t-call-slot="s">X</t>`, "t-call-slot on a <t>"],
+      [`<t t-set="v">X</t>`, "t-set on a <t>"],
+    ]) {
+      const prefix = directive.startsWith("t-elif") ? `<t t-if="d">Y</t>` : "";
+      expect(() =>
+        parse(
+          `<MyComponent>${prefix}${wrapper.replace("X", `<t t-set-slot="a">foo</t>`)}</MyComponent>`
+        )
+      ).toThrow(
+        `Directive 't-set-slot' cannot be used under a directive (${directive}) inside a component`
+      );
+    }
+  });
+
   test("a component with a named slot and some white space", async () => {
     expect(parse(`<MyComponent><t t-set-slot="name">foo</t> </MyComponent>`)).toEqual({
       type: ASTType.TComponent,
