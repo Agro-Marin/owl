@@ -373,6 +373,11 @@ function basicProxyHandler<T extends Target>(shallow: boolean): ProxyHandler<T> 
       const valueChanged = originalValue !== Reflect.get(target, key, receiver);
       if (keyCreated) {
         onWriteKeyPresence(target, key);
+        // an index past the end grows the array without a length write
+        // going through this trap
+        if (key !== "length" && Array.isArray(target)) {
+          onWriteTargetKey(target, "length");
+        }
       }
       if (key === "length" && Array.isArray(target)) {
         // While Array length may trigger the set trap, it's not actually set by this

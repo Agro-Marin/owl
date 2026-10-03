@@ -440,6 +440,23 @@ describe("Reactivity", () => {
     expect(state).toEqual([0]);
   });
 
+  test("writing the index past the end of an array notifies its length", async () => {
+    const state: any = createProxy([1, 2]);
+    const lengthSpy = vi.fn();
+    const itemsSpy = vi.fn();
+    effect(() => lengthSpy(state.length));
+    effect(() => itemsSpy([...state]));
+
+    state[state.length] = 3;
+    await waitScheduler();
+    expectSpy(lengthSpy, 2, [3]);
+    expectSpy(itemsSpy, 2, [[1, 2, 3]]);
+
+    state[5] = 6;
+    await waitScheduler();
+    expectSpy(lengthSpy, 3, [6]);
+  });
+
   test("object pushed into arrays are observed", async () => {
     const spy = vi.fn();
     const arr: any = createProxy([]);
