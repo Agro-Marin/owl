@@ -1,5 +1,5 @@
-import { isAbortError } from "../src";
-import { TestScope } from "./helpers";
+import { computed, effect, isAbortError, signal } from "../src";
+import { TestScope, waitScheduler } from "./helpers";
 
 function rethrow(e: unknown) {
   throw e;
@@ -25,6 +25,30 @@ describe("Scope.finalize", () => {
     });
     scope.finalize(rethrow);
     expect(aborted).toBe(true);
+  });
+
+  test("a computed another scope still observes keeps following its sources", async () => {
+    const scope = new TestScope({});
+    const n = signal(1);
+    const double = scope.run(() => computed(() => n() * 2));
+    const seen: number[] = [];
+    effect(() => seen.push(double()));
+    scope.finalize(rethrow);
+    n.set(2);
+    await waitScheduler();
+    expect(seen).toEqual([2, 4]);
+  });
+
+  test("a computed nothing else observes is disposed with its scope", () => {
+    const scope = new TestScope({});
+    const n = signal(1);
+    const getter = vi.fn(() => n() * 2);
+    const double = scope.run(() => computed(getter));
+    double();
+    scope.finalize(rethrow);
+    n.set(2);
+    expect(getter).toHaveBeenCalledTimes(1);
+    expect(double()).toBe(4);
   });
 
   test("finalize called from a destroy callback does not run the callbacks twice", () => {

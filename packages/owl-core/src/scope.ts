@@ -156,8 +156,8 @@ export abstract class Scope {
 
   /**
    * Aborts the scope's signal, runs all registered onDestroy callbacks in
-   * reverse registration order, disposes any computations attached to this
-   * scope, and transitions status to DESTROYED. Callbacks run *before* the
+   * reverse registration order, disposes the computations attached to this
+   * scope that nothing else observes, and transitions status to DESTROYED. Callbacks run *before* the
    * status transition so they can still observe the pre-destroyed state
    * (matching the prior onWillDestroy contract). A callback registered by
    * another callback runs too, after the current round. Errors in callbacks
@@ -174,9 +174,7 @@ export abstract class Scope {
       this._destroyCbs = null;
       runReversed(cbs, reportError);
     }
-    for (const computation of this.computations.splice(0)) {
-      disposeComputation(computation);
-    }
+    disposeUnobserved(this.computations.splice(0));
     this.status = STATUS.DESTROYED;
   }
 
@@ -197,9 +195,7 @@ export abstract class Scope {
     if (this._destroyCbs) {
       runReversed(this._destroyCbs.splice(mark[1]), reportError);
     }
-    for (const computation of this.computations.splice(mark[2])) {
-      disposeComputation(computation);
-    }
+    disposeUnobserved(this.computations.splice(mark[2]));
   }
 
   /**
@@ -212,6 +208,18 @@ export abstract class Scope {
    */
   decorate(fn: Function, _hookName: string): Function {
     return fn.bind(undefined, this);
+  }
+}
+
+// A computation something else still observes outlives its scope: disposed,
+// it would stop following its sources and leave that observer on a value that
+// never changes again. It is disposed once its last observer leaves it (a
+// disposed component takes its unobserved computeds along).
+function disposeUnobserved(computations: ComputationAtom[]): void {
+  for (const computation of computations) {
+    if (!computation.observers.size) {
+      disposeComputation(computation);
+    }
   }
 }
 
