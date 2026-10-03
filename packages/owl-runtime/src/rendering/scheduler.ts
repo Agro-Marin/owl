@@ -66,8 +66,9 @@ export class Scheduler {
         this.tasks.delete(fiber);
         continue;
       }
-      const hasError = fibersInError.has(fiber);
-      if (hasError && fiber.counter !== 0) {
+      // a failed pass never completes; its node keeps the fiber, so the next
+      // render reuses it and schedules it again
+      if (fibersInError.has(fiber)) {
         this.tasks.delete(fiber);
         continue;
       }
@@ -76,9 +77,7 @@ export class Scheduler {
         continue;
       }
       if (fiber.counter === 0) {
-        if (!hasError) {
-          fiber.complete();
-        }
+        fiber.complete();
         // at this point, the fiber should have been applied to the DOM, so we can
         // remove it from the task list. If it is not the case, it means that there
         // was an error and an error handler triggered a new rendering that recycled

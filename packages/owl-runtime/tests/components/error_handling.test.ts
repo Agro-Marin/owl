@@ -2121,4 +2121,73 @@ describe("errors in a pending render pass", () => {
     await nextTick();
     expect(fixture.innerHTML).toBe("<div>2<c>2</c><d>2</d></div>");
   });
+
+  test("a failed pass its handler does not re-render leaves the scheduler", async () => {
+    const errors: string[] = [];
+    class Child extends Component {
+      static template = xml`<span><t t-out="this.props.value.toFixed()"/></span>`;
+      props = props();
+    }
+    class Parent extends Component {
+      static template = xml`<div><Child value="this.state.value"/></div>`;
+      static components = { Child };
+      state = proxy({ value: 1 as number | null });
+      setup() {
+        onError((e) => errors.push(e.message));
+      }
+    }
+    const parent = await mount(Parent, fixture);
+    parent.state.value = null;
+    await nextTick();
+    await nextTick();
+    expect(errors).toEqual(["Cannot read properties of null (reading 'toFixed')"]);
+    expect(parent.__owl__.app.scheduler.tasks.size).toBe(0);
+
+    parent.state.value = 2;
+    await nextTick();
+    expect(fixture.innerHTML).toBe("<div><span>2</span></div>");
+    expect(parent.__owl__.app.scheduler.tasks.size).toBe(0);
+  });
+
+  test("a sibling's own render waiting on a pass that failed in onWillUpdateProps resumes", async () => {
+    const load = makeDeferred();
+    const errors: string[] = [];
+    class A extends Component {
+      static template = xml`<a><t t-out="this.props.value"/></a>`;
+      props = props();
+      setup() {
+        onWillUpdateProps(() => load);
+      }
+    }
+    class B extends Component {
+      static template = xml`<b><t t-out="this.state.value"/></b>`;
+      state = proxy({ value: 1 });
+    }
+    class Parent extends Component {
+      static template = xml`<div><A value="this.state.value"/><B/></div>`;
+      static components = { A, B };
+      state = proxy({ value: 1 });
+      setup() {
+        onError((e) => errors.push(e.message));
+      }
+    }
+    const parent = await mount(Parent, fixture);
+    const b = Object.values(parent.__owl__.children).find((n) => n.component instanceof B)!;
+    parent.state.value = 2;
+    await nextTick();
+    (b.component as B).state.value = 2;
+    await nextTick();
+    expect(fixture.innerHTML).toBe("<div><a>1</a><b>1</b></div>");
+
+    load.reject(new Error("load failed"));
+    await nextTick();
+    await nextTick();
+    expect(errors).toEqual(["load failed"]);
+    expect(fixture.innerHTML).toBe("<div><a>1</a><b>2</b></div>");
+
+    (b.component as B).state.value = 3;
+    await nextTick();
+    expect(fixture.innerHTML).toBe("<div><a>1</a><b>3</b></div>");
+    expect(parent.__owl__.app.scheduler.tasks.size).toBe(0);
+  });
 });

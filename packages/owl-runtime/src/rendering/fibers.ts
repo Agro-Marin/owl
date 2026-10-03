@@ -202,9 +202,9 @@ export class Fiber {
           // `!prev.parent` means we crossed a sub-root boundary: the content
           // never appears in the host's childrenMap, but it is retained as
           // long as the host node survives — and a node holding a fiber of a
-          // finished (counter 0) render pass survives that pass.
+          // finished (counter 0) or failed render pass survives that pass.
           if (
-            root.counter === 0 &&
+            (root.counter === 0 || fibersInError.has(root)) &&
             (!prev.parent || prev.parentKey! in current.fiber.childrenMap)
           ) {
             current = root.node;
