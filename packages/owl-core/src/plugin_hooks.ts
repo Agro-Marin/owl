@@ -10,12 +10,17 @@ export function usePlugin<T extends PluginConstructor>(pluginType: T): PluginIns
   const scope = useScope();
 
   const manager = scope.pluginManager;
-  let plugin =
+  const plugin =
     manager.getPluginById(pluginType.id) ??
-    (scope instanceof PluginManager
-      ? manager.startPlugin(pluginType)
-      : manager.startPending(pluginType.id));
+    (scope instanceof PluginManager ? manager.startPlugin(pluginType) : null);
   if (!plugin) {
+    if (manager.isPending(pluginType.id)) {
+      // starting it now would run its setup before the data of the earlier
+      // batch it may read is loaded
+      throw new OwlError(
+        `Plugin "${pluginType.id}" is not started yet: its batch waits for the onWillStart of a lower sequence. Use it from a child component, or lower its sequence.`
+      );
+    }
     throw new OwlError(`Unknown plugin "${pluginType.id}"`);
   }
 

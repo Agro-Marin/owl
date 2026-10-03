@@ -1344,35 +1344,81 @@ describe("plugin start failures and lookups", () => {
     );
   });
 
-  test("a host uses a provided plugin of a later batch while an earlier batch is still starting", async () => {
+  test("a host asking for a provided plugin whose batch still waits gets a clear error; a child gets it loaded", async () => {
     const rpc = makeDeferred<void>();
     class Session extends Plugin {
       static sequence = 10;
+      uid = 0;
       setup() {
-        onWillStart(() => rpc);
+        onWillStart(async () => {
+          await rpc;
+          this.uid = 7;
+        });
       }
     }
     class Late extends Plugin {
-      value = "late";
+      uidAtSetup = -1;
+      setup() {
+        this.uidAtSetup = plugin(Session).uid;
+      }
     }
-    let seen = "";
+    let hostError = "";
+    class Child extends Component {
+      static template = xml`<span t-out="this.late.uidAtSetup"/>`;
+      late = plugin(Late);
+    }
     class Root extends Component {
-      static template = xml`<span t-out="this.late.value"/>`;
-      late: any;
+      static template = xml`<Child/>`;
+      static components = { Child };
       setup() {
         providePlugins([Session, Late]);
-        this.late = plugin(Late);
-        seen = this.late.value;
+        try {
+          plugin(Late);
+        } catch (e: any) {
+          hostError = e.message;
+        }
       }
     }
     const fixture = makeTestFixture();
     const app = new App();
     const mounted = app.createRoot(Root).mount(fixture);
-    expect(seen).toBe("late");
+    expect(hostError).toBe(
+      'Plugin "Late" is not started yet: its batch waits for the onWillStart of a lower sequence. Use it from a child component, or lower its sequence.'
+    );
     rpc.resolve();
     await mounted;
-    expect(fixture.innerHTML).toBe("<span>late</span>");
+    expect(fixture.innerHTML).toBe("<span>7</span>");
     app.destroy();
+  });
+
+  test("a cycle through a setup reports its whole path", () => {
+    class A extends Plugin {
+      b: any = plugin(B);
+    }
+    class B extends Plugin {
+      setup() {
+        plugin(A);
+      }
+    }
+    const manager = new PluginManager(new App());
+    expect(() => manager.startPlugins([A])).toThrow("Circular plugin dependency: A -> B -> A");
+  });
+
+  test("a plugin with a then method is handed out as itself", () => {
+    class Thenable extends Plugin {
+      then() {
+        throw new Error("called");
+      }
+    }
+    let found: any = null;
+    class User extends Plugin {
+      setup() {
+        found = plugin(Thenable);
+      }
+    }
+    const manager = new PluginManager(new App());
+    manager.startPlugins([Thenable, User]);
+    expect(found).toBeInstanceOf(Thenable);
   });
 
   test("usePlugin applies the scoped view of the plugin it finds, not of the one it asked for", () => {

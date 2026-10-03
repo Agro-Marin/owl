@@ -321,6 +321,27 @@ describe("effect", () => {
       memo!();
     });
 
+    test("are the creator's to dispose: one made on every recompute accumulates", async () => {
+      const n = signal(0);
+      const other = signal(0);
+      const spy = vi.fn();
+      const c = computed(() => {
+        const value = n();
+        effect(() => spy(other()));
+        return value;
+      });
+      effect(() => c());
+      n.set(1);
+      await waitScheduler();
+      n.set(2);
+      await waitScheduler();
+      spy.mockClear();
+      other.set(1);
+      await waitScheduler();
+      // three recomputes, three live effects: nothing owns them
+      expect(spy).toHaveBeenCalledTimes(3);
+    });
+
     test("do not keep the computed observed, nor die with it", async () => {
       const other = signal(0);
       const spy = vi.fn();

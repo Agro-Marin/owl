@@ -351,11 +351,13 @@ callbacks still run in parallel.
 
 Two things to keep in mind:
 
-- An explicit dependency wins over sequence: calling `usePlugin(X)` starts `X`
-  immediately, even if `X` has a higher sequence number. This holds for a
-  component too: a component that provides plugins with `providePlugins` can
-  use any of them in its own `setup()`, even one whose batch is still waiting
-  for an earlier batch's `onWillStart`.
+- An explicit dependency wins over sequence: calling `usePlugin(X)` from a
+  plugin starts `X` immediately, even if `X` has a higher sequence number.
+- A component that provides plugins with `providePlugins` cannot use, in its
+  own `setup()`, one whose batch still waits for an earlier batch's
+  `onWillStart`: that throws `Plugin "X" is not started yet`, since starting it
+  early would run its `setup()` before the data it may read is loaded. Its
+  children render once every batch is ready, and can use it.
 - If an `onWillStart` callback in a batch rejects, the remaining batches are
   not started and the mount is rejected.
 

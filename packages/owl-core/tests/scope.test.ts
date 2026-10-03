@@ -102,3 +102,15 @@ describe("Scope.rollback", () => {
     expect(steps).toEqual(["kept"]);
   });
 });
+
+describe("Scope.finalize with a reporter that rethrows", () => {
+  test("still leaves the scope destroyed", () => {
+    const scope = new TestScope({});
+    scope.onDestroy(() => {
+      throw new Error("boom");
+    });
+    expect(() => scope.finalize(rethrow)).toThrow("boom");
+    expect(scope.isDestroyed()).toBe(true);
+    expect(() => scope.run(() => 1)).toThrow("Cannot run a callback in a destroyed scope");
+  });
+});

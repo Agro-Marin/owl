@@ -168,14 +168,18 @@ export abstract class Scope {
       return;
     }
     this._finalizing = true;
-    this._controller?.abort();
-    let cbs;
-    while ((cbs = this._destroyCbs)) {
-      this._destroyCbs = null;
-      runReversed(cbs, reportError);
+    try {
+      this._controller?.abort();
+      let cbs;
+      while ((cbs = this._destroyCbs)) {
+        this._destroyCbs = null;
+        runReversed(cbs, reportError);
+      }
+    } finally {
+      // a reportError that rethrows still leaves the scope destroyed
+      disposeUnobserved(this.computations.splice(0));
+      this.status = STATUS.DESTROYED;
     }
-    disposeUnobserved(this.computations.splice(0));
-    this.status = STATUS.DESTROYED;
   }
 
   /**

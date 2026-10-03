@@ -1311,3 +1311,18 @@ test("assertType prints a value met twice in full", () => {
     }`
   );
 });
+
+test("assertType prints a value sharing sub-objects in bounded size", () => {
+  let o: any = { leaf: 1 };
+  for (let i = 0; i < 24; i++) {
+    o = { a: o, b: o };
+  }
+  let message = "";
+  try {
+    assertType(o, t.object({ missing: t.number() }));
+  } catch (e: any) {
+    message = e.message;
+  }
+  expect(message).toContain("[Repeated]");
+  expect(message.length).toBeLessThan(200_000);
+});

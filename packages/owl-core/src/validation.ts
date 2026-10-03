@@ -18,11 +18,17 @@ export interface ValidationContext {
   withKey(key: PropertyKey): ValidationContext;
 }
 
+// Objects a message prints in full: past it, an object met before is a marker,
+// so values sharing sub-objects (a DAG) stay linear instead of exponential.
+const PRINT_BUDGET = 1000;
+
 // A JSON.stringify replacer that prints a value seen twice in full, and only
 // a value that contains itself as "[Circular]": `ancestors` is the path from
 // the root to the object being serialized (the replacer's `this`).
 function makeSafeReplacer() {
   const ancestors: object[] = [];
+  const seen = new Set<object>();
+  let printed = 0;
   return function (this: object, _key: string, value: any): any {
     if (typeof value === "function") {
       return value.name || "[Function]";
@@ -38,6 +44,11 @@ function makeSafeReplacer() {
       if (ancestors.includes(value)) {
         return "[Circular]";
       }
+      if (seen.has(value) && printed >= PRINT_BUDGET) {
+        return "[Repeated]";
+      }
+      seen.add(value);
+      printed++;
       ancestors.push(value);
     }
     return value;

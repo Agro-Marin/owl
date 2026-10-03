@@ -1,7 +1,7 @@
 import { effect } from "./effect";
 import { OwlError } from "./owl_error";
 import { Resource } from "./resource";
-import { isAbortError, Scope } from "./scope";
+import { isAbortError, Scope, scopeStack } from "./scope";
 import { STATUS } from "./status";
 import { untrack } from "./computations";
 
@@ -80,11 +80,14 @@ export class PluginManager extends Scope {
   ready: Promise<void> = Promise.resolve();
   private hasPendingReady = false;
   // constructors of the batches still waiting for an earlier batch's
-  // willStart, by id: a consumer that cannot wait starts one ahead of its batch
+  // willStart, by id, to tell a consumer why the plugin is not there yet
   private pending = new Map<string, PluginConstructor>();
   // plugins whose constructor is running: a plugin is registered only once it
   // is built, so asking for one of them again is a dependency cycle
   private constructing = new Set<PluginConstructor>();
+  // plugins being started (constructor or setup), in dependency order: the
+  // path a cycle error reports
+  private startingPath: PluginConstructor[] = [];
   // own plugin ids in start order, so a failed setup can unregister what it started
   private startedIds: string[] = [];
 
@@ -138,8 +141,9 @@ export class PluginManager extends Scope {
       return null;
     }
     if (this.constructing.has(pluginConstructor)) {
-      const path = [...this.constructing, pluginConstructor].map((ctor) => ctor.id);
-      throw new OwlError(`Circular plugin dependency: ${path.join(" -> ")}`);
+      const path = this.startingPath.slice(this.startingPath.indexOf(pluginConstructor));
+      const ids = [...path, pluginConstructor].map((ctor) => ctor.id);
+      throw new OwlError(`Circular plugin dependency: ${ids.join(" -> ")}`);
     }
 
     // undo everything this start registered, including the plugins it
@@ -154,47 +158,54 @@ export class PluginManager extends Scope {
     };
     let plugin: Plugin;
     this.constructing.add(pluginConstructor);
+    this.startingPath.push(pluginConstructor);
     try {
-      plugin = new pluginConstructor(this);
-    } catch (e) {
-      undo();
-      throw e;
+      try {
+        plugin = new pluginConstructor(this);
+      } catch (e) {
+        undo();
+        throw e;
+      } finally {
+        this.constructing.delete(pluginConstructor);
+      }
+      this.plugins[id] = plugin;
+      this.startedIds.push(id);
+      try {
+        plugin.setup();
+      } catch (e) {
+        undo();
+        throw e;
+      }
     } finally {
-      this.constructing.delete(pluginConstructor);
-    }
-    this.plugins[id] = plugin;
-    this.startedIds.push(id);
-    try {
-      plugin.setup();
-    } catch (e) {
-      undo();
-      throw e;
+      this.startingPath.pop();
     }
     this.pending.delete(id);
     return plugin as InstanceType<T>;
   }
 
   /**
-   * Starts now, in the manager that holds it, a plugin whose batch is still
-   * waiting for an earlier one: a component asking for it in its setup cannot
-   * wait. Its willStart callbacks run with the next batch.
+   * The manager, up the parent chain, whose batch holding `id` still waits for
+   * an earlier batch's onWillStart.
    */
-  startPending(id: string): Plugin | null {
+  isPending(id: string): boolean {
     for (let manager: PluginManager | null = this; manager; manager = manager.parent) {
-      const pluginConstructor = manager.pending.get(id);
-      if (pluginConstructor) {
-        return manager.collect(() => manager!.startPlugin(pluginConstructor));
+      if (manager.pending.has(id)) {
+        return true;
       }
     }
-    return null;
+    return false;
   }
 
+  // Runs a batch in this scope, collecting its onWillStart callbacks. Not
+  // through run(): its result is returned as is, never guarded as a promise.
   private collect<T>(fn: () => T): T {
     const collecting = this.collectingWillStart;
     this.collectingWillStart = true;
+    scopeStack.push(this);
     try {
-      return untrack(() => this.run(fn));
+      return untrack(fn);
     } finally {
+      scopeStack.pop();
       this.collectingWillStart = collecting;
     }
   }
