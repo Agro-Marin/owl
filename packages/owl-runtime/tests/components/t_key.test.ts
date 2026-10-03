@@ -1,5 +1,6 @@
 import { snapshotEverything, makeTestFixture, render, nextTick, elem } from "../helpers";
 import { Component, mount, props, proxy, xml } from "../../src";
+import { helpers } from "../../src/rendering/template_helpers";
 
 snapshotEverything();
 
@@ -10,6 +11,45 @@ beforeEach(() => {
 });
 
 describe("t-key", () => {
+  test("an array t-key is its string form: a new array of the same items keeps the component", async () => {
+    let setups = 0;
+    class Child extends Component {
+      static template = xml`<i t-out="this.props.n"/>`;
+      props = props();
+      setup() {
+        setups++;
+      }
+    }
+    class Parent extends Component {
+      static template = xml`<Child t-key="[this.state.a, 'b']" n="this.state.n"/>`;
+      static components = { Child };
+      state = proxy({ a: "a", n: 1 });
+    }
+    const parent = await mount(Parent, fixture);
+    parent.state.n = 2;
+    await nextTick();
+    expect([fixture.innerHTML, setups]).toEqual(["<i>2</i>", 1]);
+    parent.state.a = "c";
+    await nextTick();
+    expect(setups).toBe(2);
+  });
+
+  test("an object key never shares a component with a string key", async () => {
+    class Child extends Component {
+      static template = xml`<i t-out="this.props.v"/>`;
+      props = props();
+    }
+    class Parent extends Component {
+      static template = xml`<t t-foreach="this.items" t-as="item" t-key="item"><Child v="typeof item"/></t>`;
+      static components = { Child };
+      obj = {};
+      // the id the object gets, as a string
+      items = [this.obj, helpers.keyOf(this.obj)];
+    }
+    await mount(Parent, fixture, { test: true });
+    expect(fixture.innerHTML).toBe("<i>object</i><i>string</i>");
+  });
+
   test("t-key on Component", async () => {
     let childInstance = null;
     class Child extends Component {

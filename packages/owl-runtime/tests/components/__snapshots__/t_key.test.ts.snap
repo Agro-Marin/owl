@@ -41,6 +41,76 @@ exports[`t-key > a t-key on the t-call node itself recreates it when the key cha
 }"
 `;
 
+exports[`t-key > an array t-key is its string form: a new array of the same items keeps the component 1`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { keyOf, createComponent } = helpers;
+  const comp1 = createComponent(app, \`Child\`, true, false, false, ["n"]);
+  
+  return function template(ctx, node, key = "") {
+    const tKey_1 = keyOf([ctx['this'].state.a,'b']);
+    return toggler(tKey_1, comp1({n: ctx['this'].state.n}, tKey_1 + key + \`__1\`, node, this, null));
+  }
+}"
+`;
+
+exports[`t-key > an array t-key is its string form: a new array of the same items keeps the component 2`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { safeOutput } = helpers;
+  
+  let block1 = createBlock(\`<i><block-child-0/></i>\`);
+  
+  return function template(ctx, node, key = "") {
+    const b2 = safeOutput(ctx['this'].props.n, key + \`__1\`);
+    return block1([], [b2]);
+  }
+}"
+`;
+
+exports[`t-key > an object key never shares a component with a string key 1`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { prepareList, createComponent, withKey, keyOf, OwlError } = helpers;
+  const comp1 = createComponent(app, \`Child\`, true, false, false, ["v"]);
+  
+  return function template(ctx, node, key = "") {
+    const ctx1 = ctx;
+    const [k_block1, v_block1, l_block1, c_block1] = prepareList(ctx['this'].items);
+    const keys1 = new Set();
+    for (let i1 = 0; i1 < l_block1; i1++) {
+      let ctx = Object.create(ctx1);
+      ctx["item"] = k_block1[i1];
+      const key1 = ctx['item'];
+      const skey1 = keyOf(key1);
+      if (keys1.has(skey1)) { throw new OwlError(\`Got duplicate key in t-foreach: \${key1}\`)}
+      keys1.add(skey1);
+      const props1 = {v: typeof ctx['item']};
+      c_block1[i1] = withKey(comp1(props1, key + \`__1__\${skey1}\`, node, this, null), key1);
+    }
+    return list(c_block1);
+  }
+}"
+`;
+
+exports[`t-key > an object key never shares a component with a string key 2`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { safeOutput } = helpers;
+  
+  let block1 = createBlock(\`<i><block-child-0/></i>\`);
+  
+  return function template(ctx, node, key = "") {
+    const b2 = safeOutput(ctx['this'].props.v, key + \`__1\`);
+    return block1([], [b2]);
+  }
+}"
+`;
+
 exports[`t-key > an object t-key on a component recreates it when it changes 1`] = `
 "function anonymous(app, bdom, helpers
 ) {

@@ -58,16 +58,26 @@ function callSlot(
 }
 
 // string keys (component, slot, t-call keys) are built by concatenation: a key
-// takes the string form it has there, and an object key gets an id of its own
-// instead of "[object Object]"
+// takes the string form it has there. An object or a function is told apart by
+// identity, with an id of its own instead of "[object Object]"; an array keeps
+// its string form, so that a new array of the same items is the same key.
+// An id is \u0002 and a number, and a \u0002 in a string key is doubled: no
+// string key can read as an id.
 const objectKeys = new WeakMap<object, string>();
 let nextObjectKey = 0;
+const ID_MARK = "\u0002";
 
 function keyOf(key: any): string {
+  if (typeof key === "string") {
+    return key.includes(ID_MARK) ? key.replaceAll(ID_MARK, ID_MARK + ID_MARK) : key;
+  }
   if ((typeof key === "object" && key !== null) || typeof key === "function") {
+    if (Array.isArray(key)) {
+      return keyOf(String(key));
+    }
     let id = objectKeys.get(key);
     if (id === undefined) {
-      id = `\u0002${++nextObjectKey}`;
+      id = ID_MARK + ++nextObjectKey;
       objectKeys.set(key, id);
     }
     return id;
