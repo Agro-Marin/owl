@@ -3,6 +3,7 @@ import { BDom, mount, type MountTarget } from "../blockdom";
 import type { ComponentNode } from "../component_node";
 import { STATUS } from "../status";
 import { fibersInError, handleError } from "./error_handling";
+import { Scheduler } from "./scheduler";
 
 // Max times a given fiber may be recycled before being committed to the DOM
 // before we treat it as an infinite render loop. A healthy render commits after
@@ -191,9 +192,10 @@ export class Fiber {
     const scheduler = this.root!.node.app.scheduler;
     // If more than one root fiber is in flight, an ancestor may be rendering —
     // walk up to detect it and delay if needed. Otherwise no ancestor can have
-    // a fiber (every in-progress root lives in scheduler.tasks), so skip the
-    // walk.
-    if (scheduler.tasks.size > 1) {
+    // a fiber (every in-progress root lives in the tasks of a scheduler, this
+    // one or, for an ancestor of another app, another active one), so skip
+    // the walk.
+    if (scheduler.tasks.size > 1 || Scheduler.active.size > 1) {
       let prev = this.root!.node;
       let current = above(prev);
       while (current) {

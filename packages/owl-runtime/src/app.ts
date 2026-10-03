@@ -290,6 +290,7 @@ export class App extends TemplateSet {
     }
     this.pluginManager.destroy();
     this.scheduler.tasks.clear();
+    Scheduler.active.delete(this.scheduler);
     this.scheduler.delayedRenders = [];
     apps.delete(this);
     this.destroyed = true;

@@ -15,6 +15,9 @@ export class Scheduler {
   // capture the value of requestAnimationFrame as soon as possible, to avoid
   // interactions with other code, such as test frameworks that override them
   static requestAnimationFrame = requestAnimationFrame;
+  // the schedulers that may hold a task: a node's ancestor may belong to
+  // another app, whose render then delays it
+  static active: Set<Scheduler> = new Set();
   tasks: Set<RootFiber> = new Set();
   requestAnimationFrame: Window["requestAnimationFrame"];
   frame: number = 0;
@@ -27,6 +30,7 @@ export class Scheduler {
 
   addFiber(fiber: Fiber) {
     this.tasks.add(fiber.root!);
+    Scheduler.active.add(this);
   }
 
   /**
@@ -92,6 +96,9 @@ export class Scheduler {
       if (task.node.status === STATUS.DESTROYED) {
         this.tasks.delete(task);
       }
+    }
+    if (!this.tasks.size) {
+      Scheduler.active.delete(this);
     }
     this.processing = false;
   }

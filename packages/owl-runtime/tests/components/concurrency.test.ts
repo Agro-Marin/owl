@@ -4490,3 +4490,39 @@ test("a render delayed by a rendering ancestor of another app resumes when that 
   await nextTick();
   expect(fixture.innerHTML).toBe("<div><span>2</span><p>2</p><p>2</p></div>");
 });
+
+test("a single render below a rendering ancestor of another app is delayed too", async () => {
+  const def = makeDeferred();
+  class Slow extends Component {
+    static template = xml`<span><t t-out="this.props.value"/></span>`;
+    props = props();
+    setup() {
+      onWillUpdateProps(() => def);
+    }
+  }
+  class Child extends Component {
+    static template = xml`<p><t t-out="this.state.value"/></p>`;
+    state = proxy({ value: 1 });
+  }
+  class Parent extends Component {
+    static template = xml`<div><Slow value="this.state.value"/><Child/></div>`;
+    static components = { Slow, Child };
+    state = proxy({ value: 1 });
+  }
+  const parent = await mount(Parent, fixture);
+  const childNode: any = Object.values((parent as any).__owl__.children).find(
+    (n: any) => n.component instanceof Child
+  );
+  childNode.app = new App();
+
+  parent.state.value = 2;
+  await nextMicroTick();
+  childNode.component.state.value = 2;
+  await nextTick();
+  expect(fixture.innerHTML).toBe("<div><span>1</span><p>1</p></div>");
+
+  def.resolve();
+  await nextTick();
+  await nextTick();
+  expect(fixture.innerHTML).toBe("<div><span>2</span><p>2</p></div>");
+});
