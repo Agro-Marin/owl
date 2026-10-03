@@ -94,30 +94,41 @@ function createSyntheticHandler(
 // does for native listeners: in phase order (outermost first when capturing),
 // through open shadow roots, past a node a handler removed, and stopping where
 // a handler stopped propagation: after the node's other handlers, or at once
-// when it stopped it immediately.
+// when it stopped it immediately. The event's stopImmediatePropagation is
+// shadowed for the replay only, to learn about that call (the flag it sets is
+// not readable); a direct Event.prototype call goes unnoticed.
 function nativeToSyntheticEvent(eventKey: string, capture: boolean, event: Event) {
   const path = event.composedPath();
   const last = path.length - 1;
   let stoppedImmediately = false;
+  const shadowed = Object.hasOwn(event, "stopImmediatePropagation");
   const stopImmediatePropagation = event.stopImmediatePropagation;
   event.stopImmediatePropagation = function () {
     stoppedImmediately = true;
     stopImmediatePropagation.call(this);
   };
-  for (let i = 0; i <= last; i++) {
-    const node = path[capture ? last - i : i] as any;
-    const handlers = node[eventKey];
-    if (!handlers || !node.isConnected) {
-      continue;
-    }
-    for (const id in handlers) {
-      config.mainEventHandler(handlers[id], event, node);
-      if (stoppedImmediately) {
+  try {
+    for (let i = 0; i <= last; i++) {
+      const node = path[capture ? last - i : i] as any;
+      const handlers = node[eventKey];
+      if (!handlers || !node.isConnected) {
+        continue;
+      }
+      for (const id in handlers) {
+        config.mainEventHandler(handlers[id], event, node);
+        if (stoppedImmediately) {
+          return;
+        }
+      }
+      if (event.cancelBubble) {
         return;
       }
     }
-    if (event.cancelBubble) {
-      return;
+  } finally {
+    if (shadowed) {
+      event.stopImmediatePropagation = stopImmediatePropagation;
+    } else {
+      delete (event as any).stopImmediatePropagation;
     }
   }
 }

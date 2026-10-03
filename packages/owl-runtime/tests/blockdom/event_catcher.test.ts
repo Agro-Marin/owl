@@ -109,6 +109,25 @@ describe("synthetic events follow native propagation", () => {
     expect(calls).toEqual(["a"]);
   });
 
+  test("the event keeps its own stopImmediatePropagation once the dispatch is over", async () => {
+    const seen: boolean[] = [];
+    const tree = twoOnInner()([
+      [(_: any, ev: Event) => seen.push(Object.hasOwn(ev, "stopImmediatePropagation")), {}],
+      [() => {}, {}],
+      [() => {}, {}],
+    ]);
+    mount(tree, fixture);
+    const p = fixture.querySelector("p")!;
+    const ev = new MouseEvent("click", { bubbles: true });
+    for (let i = 0; i < 3; i++) {
+      p.dispatchEvent(ev);
+      expect(Object.hasOwn(ev, "stopImmediatePropagation")).toBe(false);
+      expect(ev.stopImmediatePropagation).toBe(Event.prototype.stopImmediatePropagation);
+    }
+    // shadowed while the handlers run, never stacked on the previous dispatch
+    expect(seen).toEqual([true, true, true]);
+  });
+
   test("a handler removing its own element still bubbles", async () => {
     const calls: string[] = [];
     const tree = outerInner()([
