@@ -220,6 +220,18 @@ test("a false class value adds no class", async () => {
   expect(div.className).toBe("");
 });
 
+test("an array class lists its classes, a string object is its string", async () => {
+  const block = createBlock('<div block-attribute-0="class"></div>');
+  const tree = block([["a", "b c", false, { d: true, e: false }]]);
+  mount(tree, fixture);
+  const div = fixture.firstChild as HTMLElement;
+  expect(div.className).toBe("a b c d");
+  patch(tree, block([["b"]]));
+  expect(div.className).toBe("b");
+  patch(tree, block([new String("x y")]));
+  expect(div.className).toBe("x y");
+});
+
 describe("a class written by several sources", () => {
   test("a dynamic class never removes a static one", async () => {
     const block = createBlock('<div class="btn" block-attribute-0="class"></div>');

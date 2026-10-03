@@ -307,6 +307,13 @@ if the class is or is not present:
 <div t-att-class="{'a b': true, 'c': true}"/> <!-- result: <div class="a b c"></div> -->
 ```
 
+It also accepts an array, whose items are any of these forms (a false item adds
+nothing):
+
+```xml
+<div t-att-class="['a b', cond and 'c', {'d': true}]"/> <!-- result if cond is false: <div class="a b d"></div> -->
+```
+
 Note that it can be combined with normal class attribute:
 
 ```xml

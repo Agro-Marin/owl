@@ -93,46 +93,53 @@ function updateAttr(
 
 export const { attrsSetter, attrsUpdater } = makeAttrsUpdaters(updateClass);
 
-function toClassObj(expr: string | number | boolean | { [c: string]: any } | null | undefined) {
+type ClassExpr = string | number | boolean | String | ClassExpr[] | { [c: string]: any };
+
+function toClassObj(expr: ClassExpr | null | undefined): { [c: string]: any } {
+  const result: { [c: string]: any } = {};
+  addClasses(result, expr);
+  return result;
+}
+
+function addClasses(result: { [c: string]: any }, expr: ClassExpr | null | undefined) {
   // `cond and 'a'` yields false: no class, as a false t-att-x drops x (0 stays
   // a class, as QWeb renders it)
   if (expr === false || expr === null || expr === undefined) {
-    return {};
+    return;
   }
-  const result: { [c: string]: any } = {};
   switch (typeof expr) {
     case "string":
-      // we transform here a list of classes into an object:
-      //  'hey you' becomes {hey: true, you: true}
-      const str = trim.call(expr);
-      if (!str) {
-        return {};
-      }
-      let words = split.call(str, wordRegexp);
-      for (let i = 0, l = words.length; i < l; i++) {
-        result[words[i]] = true;
-      }
-      return result;
+      addWords(result, expr, true);
+      return;
     case "object":
-      // this is already an object but we may need to split keys:
-      // {'a': true, 'b c': true} should become {a: true, b: true, c: true}
-      for (let key in expr as any) {
-        const value = (expr as any)[key];
-        if (value) {
-          key = trim.call(key);
-          if (!key) {
-            continue;
-          }
-          const words = split.call(key, wordRegexp);
-          for (let word of words) {
-            result[word] = value;
+      if (isArray(expr)) {
+        for (const item of expr) {
+          addClasses(result, item);
+        }
+      } else if (expr instanceof String) {
+        addWords(result, expr.valueOf(), true);
+      } else {
+        // {'a': true, 'b c': true} becomes {a: true, b: true, c: true}
+        for (const key in expr) {
+          const value = expr[key];
+          if (value) {
+            addWords(result, key, value);
           }
         }
       }
-      return result;
-
+      return;
     default:
-      return { [expr as any]: true };
+      result[expr as any] = true;
+  }
+}
+
+function addWords(result: { [c: string]: any }, str: string, value: any) {
+  str = trim.call(str);
+  if (str) {
+    const words = split.call(str, wordRegexp);
+    for (let i = 0, l = words.length; i < l; i++) {
+      result[words[i]] = value;
+    }
   }
 }
 
