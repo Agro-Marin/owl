@@ -330,9 +330,9 @@ function patchStyle(el: HTMLElement, oldVal: StyleObj, val: StyleObj) {
   const style = el.style;
   // Properties are applied in declaration order. Re-setting a shorthand (e.g.
   // `background`, `margin`) resets the longhands it covers: once a property
-  // changed, an unchanged one after it is re-applied if the element no longer
-  // holds its value. Removing a property re-applies all of them, as a removed
-  // shorthand clears longhands that some engines (jsdom) still report.
+  // changed or moved, an unchanged one after it is re-applied if the element
+  // no longer holds its value. Removing a property re-applies all of them, as
+  // a removed shorthand clears longhands that some engines (jsdom) still report.
   let removed = false;
   for (let prop in oldVal) {
     if (!(prop in val)) {
@@ -340,9 +340,15 @@ function patchStyle(el: HTMLElement, oldVal: StyleObj, val: StyleObj) {
       removed = true;
     }
   }
+  const oldProps = removed ? null : Object.keys(oldVal);
+  let next = 0;
   let changed = false;
   for (let prop in val) {
     const value = val[prop];
+    if (oldProps && prop in oldVal && oldProps[next++] !== prop) {
+      // moved after a property it used to precede, which may overwrite it now
+      changed = true;
+    }
     if (removed || value !== oldVal[prop] || (changed && !holdsStyleProp(style, prop, value))) {
       setStyleProp(style, prop, value);
       changed = true;

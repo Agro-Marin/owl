@@ -366,4 +366,33 @@ describe("a style written by several sources", () => {
     ]);
     expect(div.getAttribute("style")).toBe("color: blue; margin-top: 3px;");
   });
+
+  test("a static property a dynamic one moves after a shorthand is applied again", async () => {
+    const div = check('<div style="margin-top: 4px" block-attribute-0="style"></div>', [
+      ["margin: 2px"],
+      ["margin: 2px; margin-top: 4px"],
+    ]);
+    expect(div.style.marginTop).toBe("4px");
+    expect(div.style.marginLeft).toBe("2px");
+  });
+
+  test("a t-att property moved after a t-att-style shorthand is applied again", async () => {
+    const div = check('<div block-attribute-0="style" block-attributes="1"></div>', [
+      ["margin-top: 4px; margin: 2px", {}],
+      ["margin-top: 4px; margin: 2px", { style: "margin-top: 4px" }],
+    ]);
+    expect(div.style.marginTop).toBe("4px");
+  });
+});
+
+test("a style property moved after a shorthand it follows is applied again", async () => {
+  const block = createBlock('<div block-attribute-0="style"></div>');
+  const tree = block(["margin-top: 4px; margin: 2px"]);
+  mount(tree, fixture);
+  const div = fixture.firstChild as HTMLElement;
+  expect(div.style.marginTop).toBe("2px");
+  patch(tree, block(["margin: 2px; margin-top: 4px"]));
+  expect(div.style.marginTop).toBe("4px");
+  patch(tree, block(["margin-top: 4px; margin: 2px"]));
+  expect(div.style.marginTop).toBe("2px");
 });
