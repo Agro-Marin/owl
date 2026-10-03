@@ -95,7 +95,7 @@ exports[`render loop detection > wide re-render under an uncommitted root is not
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { prepareList, OwlError, createComponent, withKey, keyOf } = helpers;
+  let { prepareList, createComponent, withKey, keyOf, OwlError } = helpers;
   const comp1 = createComponent(app, \`Child\`, true, false, false, []);
   const comp2 = createComponent(app, \`AsyncChild\`, true, false, false, []);
   
@@ -108,8 +108,8 @@ exports[`render loop detection > wide re-render under an uncommitted root is not
       ctx["i"] = k_block2[i1];
       const key1 = ctx['i'];
       const skey1 = keyOf(key1);
-      if (keys2.has(key1)) { throw new OwlError(\`Got duplicate key in t-foreach: \${key1}\`)}
-      keys2.add(key1);
+      if (keys2.has(skey1)) { throw new OwlError(\`Got duplicate key in t-foreach: \${key1}\`)}
+      keys2.add(skey1);
       const props1 = {};
       c_block2[i1] = withKey(comp1(props1, key + \`__1__\${skey1}\`, node, this, null), key1);
     }

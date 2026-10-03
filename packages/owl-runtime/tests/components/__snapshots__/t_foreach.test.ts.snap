@@ -80,7 +80,7 @@ exports[`list of components > crash on duplicate key in dev mode 1`] = `
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { prepareList, OwlError, createComponent, withKey, keyOf } = helpers;
+  let { prepareList, createComponent, withKey, keyOf, OwlError } = helpers;
   const comp1 = createComponent(app, \`Child\`, true, false, false, []);
   
   return function template(ctx, node, key = "") {
@@ -92,8 +92,8 @@ exports[`list of components > crash on duplicate key in dev mode 1`] = `
       ctx["item"] = k_block1[i1];
       const key1 = 'child';
       const skey1 = keyOf(key1);
-      if (keys1.has(key1)) { throw new OwlError(\`Got duplicate key in t-foreach: \${key1}\`)}
-      keys1.add(key1);
+      if (keys1.has(skey1)) { throw new OwlError(\`Got duplicate key in t-foreach: \${key1}\`)}
+      keys1.add(skey1);
       const props1 = {};
       c_block1[i1] = withKey(comp1(props1, key + \`__1__\${skey1}\`, node, this, null), key1);
     }
@@ -117,7 +117,7 @@ exports[`list of components > crash on the same object used twice as a key in de
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { prepareList, OwlError, createComponent, withKey, keyOf } = helpers;
+  let { prepareList, createComponent, withKey, keyOf, OwlError } = helpers;
   const comp1 = createComponent(app, \`Child\`, true, false, false, []);
   
   return function template(ctx, node, key = "") {
@@ -129,8 +129,8 @@ exports[`list of components > crash on the same object used twice as a key in de
       ctx["item"] = k_block1[i1];
       const key1 = ctx['item'];
       const skey1 = keyOf(key1);
-      if (keys1.has(key1)) { throw new OwlError(\`Got duplicate key in t-foreach: \${key1}\`)}
-      keys1.add(key1);
+      if (keys1.has(skey1)) { throw new OwlError(\`Got duplicate key in t-foreach: \${key1}\`)}
+      keys1.add(skey1);
       const props1 = {};
       c_block1[i1] = withKey(comp1(props1, key + \`__1__\${skey1}\`, node, this, null), key1);
     }
@@ -146,6 +146,73 @@ exports[`list of components > crash on the same object used twice as a key in de
   
   return function template(ctx, node, key = "") {
     return text(\`\`);
+  }
+}"
+`;
+
+exports[`list of components > dev mode: a body without components keeps the list's own keys 1`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { prepareList, withKey, OwlError } = helpers;
+  
+  let block2 = createBlock(\`<i block-attribute-0="class"/>\`);
+  
+  return function template(ctx, node, key = "") {
+    const ctx1 = ctx;
+    const [k_block1, v_block1, l_block1, c_block1] = prepareList(ctx['this'].items);
+    const keys1 = new Set();
+    for (let i1 = 0; i1 < l_block1; i1++) {
+      let ctx = Object.create(ctx1);
+      ctx["item"] = k_block1[i1];
+      const key1 = ctx['item'];
+      if (keys1.has(key1)) { throw new OwlError(\`Got duplicate key in t-foreach: \${key1}\`)}
+      keys1.add(key1);
+      let attr1 = typeof ctx['item'];
+      c_block1[i1] = withKey(block2([attr1]), key1);
+    }
+    return list(c_block1);
+  }
+}"
+`;
+
+exports[`list of components > dev mode: keys the list tells apart but the components share are duplicates 1`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { prepareList, createComponent, withKey, keyOf, OwlError } = helpers;
+  const comp1 = createComponent(app, \`Child\`, true, false, false, ["v"]);
+  
+  return function template(ctx, node, key = "") {
+    const ctx1 = ctx;
+    const [k_block1, v_block1, l_block1, c_block1] = prepareList(ctx['this'].items);
+    const keys1 = new Set();
+    for (let i1 = 0; i1 < l_block1; i1++) {
+      let ctx = Object.create(ctx1);
+      ctx["item"] = k_block1[i1];
+      const key1 = ctx['item'];
+      const skey1 = keyOf(key1);
+      if (keys1.has(skey1)) { throw new OwlError(\`Got duplicate key in t-foreach: \${key1}\`)}
+      keys1.add(skey1);
+      const props1 = {v: ctx['item']};
+      c_block1[i1] = withKey(comp1(props1, key + \`__1__\${skey1}\`, node, this, null), key1);
+    }
+    return list(c_block1);
+  }
+}"
+`;
+
+exports[`list of components > dev mode: keys the list tells apart but the components share are duplicates 2`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { safeOutput } = helpers;
+  
+  let block1 = createBlock(\`<i><block-child-0/></i>\`);
+  
+  return function template(ctx, node, key = "") {
+    const b2 = safeOutput(ctx['this'].props.v, key + \`__1\`);
+    return block1([], [b2]);
   }
 }"
 `;
@@ -194,7 +261,7 @@ exports[`list of components > object keys are told apart by identity, components
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { prepareList, OwlError, createComponent, withKey, keyOf } = helpers;
+  let { prepareList, createComponent, withKey, keyOf, OwlError } = helpers;
   const comp1 = createComponent(app, \`Child\`, true, false, false, ["item"]);
   
   return function template(ctx, node, key = "") {
@@ -206,8 +273,8 @@ exports[`list of components > object keys are told apart by identity, components
       ctx["item"] = k_block1[i1];
       const key1 = ctx['item'];
       const skey1 = keyOf(key1);
-      if (keys1.has(key1)) { throw new OwlError(\`Got duplicate key in t-foreach: \${key1}\`)}
-      keys1.add(key1);
+      if (keys1.has(skey1)) { throw new OwlError(\`Got duplicate key in t-foreach: \${key1}\`)}
+      keys1.add(skey1);
       const props1 = {item: ctx['item']};
       c_block1[i1] = withKey(comp1(props1, key + \`__1__\${skey1}\`, node, this, null), key1);
     }

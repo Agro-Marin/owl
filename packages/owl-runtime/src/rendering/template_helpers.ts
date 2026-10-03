@@ -57,12 +57,13 @@ function callSlot(
   return slotBDom || text("");
 }
 
-// string keys (component, slot, t-call keys) are built by concatenation: an
-// object key gets an id of its own instead of "[object Object]"
+// string keys (component, slot, t-call keys) are built by concatenation: a key
+// takes the string form it has there, and an object key gets an id of its own
+// instead of "[object Object]"
 const objectKeys = new WeakMap<object, string>();
 let nextObjectKey = 0;
 
-function keyOf(key: any): any {
+function keyOf(key: any): string {
   if ((typeof key === "object" && key !== null) || typeof key === "function") {
     let id = objectKeys.get(key);
     if (id === undefined) {
@@ -71,7 +72,7 @@ function keyOf(key: any): any {
     }
     return id;
   }
-  return key;
+  return "" + key;
 }
 
 function withKey(elem: any, k: string) {

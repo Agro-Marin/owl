@@ -339,6 +339,35 @@ describe("list of components", () => {
     expect(getConsoleOutput()).toEqual([]);
   });
 
+  test("dev mode: keys the list tells apart but the components share are duplicates", async () => {
+    class Child extends Component {
+      static template = xml`<i t-out="this.props.v"/>`;
+      props = props();
+    }
+    class Parent extends Component {
+      static template = xml`<t t-foreach="this.items" t-as="item" t-key="item"><Child v="item"/></t>`;
+      static components = { Child };
+      items = [1, "1"];
+    }
+    let error: any;
+    try {
+      await mount(Parent, fixture, { test: true });
+    } catch (e) {
+      error = e;
+    }
+    expect(error?.message).toBe("Got duplicate key in t-foreach: 1");
+    expect(getConsoleOutput()).toEqual([]);
+  });
+
+  test("dev mode: a body without components keeps the list's own keys", async () => {
+    class Parent extends Component {
+      static template = xml`<t t-foreach="this.items" t-as="item" t-key="item"><i t-att-class="typeof item"/></t>`;
+      items = [1, "1"];
+    }
+    await mount(Parent, fixture, { test: true });
+    expect(fixture.innerHTML).toBe('<i class="number"></i><i class="string"></i>');
+  });
+
   test("object keys are told apart by identity, components included", async () => {
     const instances: any[] = [];
     class Child extends Component {

@@ -890,22 +890,29 @@ export class CodeGenerator {
     }
     const level = this.target.loopLevel;
     this.define(`key${level}`, compileExpr(ast.key));
-    const stringKeyIdx = this.target.code.length;
-    if (this.dev) {
-      // Throw error on duplicate keys in dev mode
-      this.helpers.add("OwlError");
-      this.addLine(
-        `if (keys${id}.has(key${level})) { throw new OwlError(\`Got duplicate key in t-foreach: \${key${level}}\`)}`
-      );
-      this.addLine(`keys${id}.add(key${level});`);
-    }
+    const keyIdx = this.target.code.length;
 
     const subCtx = createContext(ctx, { block, index: loopVar });
     this.compileAST(ast.body, subCtx);
+    // the body is compiled: whether its keys need the string form is known
+    const keyLines: string[] = [];
+    let uniqueKey = `key${level}`;
     if (this.target.stringKeyLevels.delete(level)) {
       this.helpers.add("keyOf");
-      this.addLine(`const skey${level} = keyOf(key${level});`, stringKeyIdx);
+      keyLines.push(`const skey${level} = keyOf(key${level});`);
+      uniqueKey = `skey${level}`;
     }
+    if (this.dev) {
+      // Throw error on duplicate keys in dev mode: two keys are the same when
+      // the body's string keys (components, slots, calls) are, even if the
+      // list tells them apart
+      this.helpers.add("OwlError");
+      keyLines.push(
+        `if (keys${id}.has(${uniqueKey})) { throw new OwlError(\`Got duplicate key in t-foreach: \${key${level}}\`)}`,
+        `keys${id}.add(${uniqueKey});`
+      );
+    }
+    keyLines.forEach((line, i) => this.addLine(line, keyIdx + i));
     this.target.indentLevel--;
     this.target.loopLevel--;
     this.target.loopCtxVars.pop();
