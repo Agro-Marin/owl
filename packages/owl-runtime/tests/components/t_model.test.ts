@@ -661,6 +661,26 @@ describe("t-model directive", () => {
     expect(fixture.querySelectorAll("option").length).toBe(2);
   });
 
+  test("t-model selects a dynamic option inside an optgroup", async () => {
+    class Test extends Component {
+      static template = xml`
+        <select t-model="this.model">
+          <optgroup label="g">
+            <option t-att-value="'a'">A</option>
+            <option t-att-value="'b'">B</option>
+          </optgroup>
+        </select>`;
+      model = signal("b");
+    }
+
+    const comp = await mount(Test, fixture);
+    const select = fixture.querySelector("select")!;
+    expect(select.value).toBe("b");
+    comp.model.set("a");
+    await nextTick();
+    expect(select.value).toBe("a");
+  });
+
   test("t-model with dynamic values on select options -- 2", async () => {
     class Test extends Component {
       static template = xml`

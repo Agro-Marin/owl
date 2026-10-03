@@ -527,6 +527,27 @@ exports[`t-model directive > t-model on select with static options 1`] = `
 }"
 `;
 
+exports[`t-model directive > t-model selects a dynamic option inside an optgroup 1`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { modelExpr, toNumber } = helpers;
+  
+  let block1 = createBlock(\`<select block-handler-0="change"><optgroup label="g"><option block-attribute-1="value" block-attribute-2="selected">A</option><option block-attribute-3="value" block-attribute-4="selected">B</option></optgroup></select>\`);
+  
+  return function template(ctx, node, key = "") {
+    const expr1 = modelExpr(ctx['this'].model);
+    const bValue1 = expr1();
+    let hdlr1 = [(ctx, ev) => { expr1.set(ev.target.value); }, ctx];
+    let attr1 = 'a';
+    let attr2 = bValue1 === 'a';
+    let attr3 = 'b';
+    let attr4 = bValue1 === 'b';
+    return block1([hdlr1, attr1, attr2, attr3, attr4]);
+  }
+}"
+`;
+
 exports[`t-model directive > t-model with dynamic number values on select options in foreach 1`] = `
 "function anonymous(app, bdom, helpers
 ) {

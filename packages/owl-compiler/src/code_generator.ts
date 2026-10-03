@@ -751,7 +751,7 @@ export class CodeGenerator {
           forceNewBlock: false,
           tKeyExpr: ctx.tKeyExpr,
           nameSpace,
-          tModelSelectedExpr,
+          tModelSelectedExpr: tModelSelectedExpr || ctx.tModelSelectedExpr,
           inPreTag: ctx.inPreTag || ast.tag === "pre",
         });
         this.compileAST(child, subCtx);
