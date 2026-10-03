@@ -794,6 +794,27 @@ describe("equals option", () => {
     await waitScheduler();
     expectSpy(e.spy, 2);
   });
+
+  test("a throwing equals is the computed's error, and its readers keep tracking it", async () => {
+    const record = signal<{ id: number } | null>({ id: 1 });
+    const c = computed(() => record(), { equals: (a, b) => a!.id === b!.id });
+    const seen: unknown[] = [];
+    effect(() => {
+      try {
+        seen.push(c());
+      } catch (error) {
+        seen.push((error as Error).name);
+      }
+    });
+
+    record.set(null);
+    await waitScheduler();
+    expect(seen).toEqual([{ id: 1 }, "TypeError"]);
+
+    record.set({ id: 2 });
+    await waitScheduler();
+    expect(seen).toEqual([{ id: 1 }, "TypeError", { id: 2 }]);
+  });
 });
 
 describe("detached", () => {

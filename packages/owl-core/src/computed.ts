@@ -52,6 +52,11 @@ export function computed<TRead, TWrite = TRead>(
     let newValue: TRead;
     try {
       newValue = getter();
+      if (hasValue && !failure && equalsFn(computation.value, newValue)) {
+        // discard the equal result: readers keep a stable identity, like a
+        // signal write that compares equal
+        return computation.value;
+      }
     } catch (error) {
       if (hasValue) {
         onWriteAtom(computation);
@@ -61,11 +66,6 @@ export function computed<TRead, TWrite = TRead>(
       return undefined;
     }
     if (hasValue) {
-      if (!failure && equalsFn(computation.value, newValue)) {
-        // discard the equal result: readers keep a stable identity, like a
-        // signal write that compares equal
-        return computation.value;
-      }
       onWriteAtom(computation);
     }
     hasValue = true;
