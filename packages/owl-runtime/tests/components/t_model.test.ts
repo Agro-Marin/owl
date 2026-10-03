@@ -1,6 +1,7 @@
 import { Component } from "../../src/component";
 import { computed, mount, proxy, signal, xml } from "../../src";
 import { editInput, makeTestFixture, nextTick, snapshotEverything } from "../helpers";
+import { compile } from "@odoo/owl-compiler";
 
 snapshotEverything();
 
@@ -659,6 +660,28 @@ describe("t-model directive", () => {
     });
     expect(fixture.querySelector("select")!.value).toEqual("a");
     expect(fixture.querySelectorAll("option").length).toBe(2);
+  });
+
+  test("a dynamic option value is evaluated once per render", async () => {
+    let calls = 0;
+    class Test extends Component {
+      static template = xml`
+        <select t-model="this.model">
+          <option t-att-value="this.value()">A</option>
+        </select>`;
+      model = signal("a");
+      value = () => (calls++, "a");
+    }
+
+    await mount(Test, fixture);
+    expect(calls).toBe(1);
+  });
+
+  test("the t-model handler is hoisted, and toNumber only imported for .number", async () => {
+    const code = compile(`<input t-model="m"/><input t-model.proxy="s.v"/>`).toString();
+    const render = code.slice(code.indexOf("return function"));
+    expect(render).not.toContain("=>");
+    expect(code).not.toContain("toNumber");
   });
 
   test("t-model selects a dynamic option inside an optgroup", async () => {

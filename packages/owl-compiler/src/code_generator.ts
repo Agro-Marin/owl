@@ -280,6 +280,7 @@ export class CodeGenerator {
   translatableAttributes: string[] = TRANSLATABLE_ATTRS;
   ast: AST;
   staticDefs: { id: string; expr: string }[] = [];
+  hoistedHandlers: Map<string, string> = new Map();
   slotNames: Set<String | Symbol> = new Set();
   helpers: Set<string> = new Set();
   // per generator, so that generating a template (a translateFn may compile
@@ -572,9 +573,18 @@ export class CodeGenerator {
       hoistedExpr = `(ctx, ev) => callHandler(${compiled}, ctx, ev)`;
     }
 
-    const id = this.generateId("hdlr_fn");
-    this.staticDefs.push({ id, expr: hoistedExpr });
-    return `[${id}, ctx${modifiersCode}]`;
+    return `[${this.hoistHandler(hoistedExpr)}, ctx${modifiersCode}]`;
+  }
+
+  // handlers are static functions of (context, event): one per distinct code
+  hoistHandler(expr: string): string {
+    let id = this.hoistedHandlers.get(expr);
+    if (!id) {
+      id = this.generateId("hdlr_fn");
+      this.hoistedHandlers.set(expr, id);
+      this.staticDefs.push({ id, expr });
+    }
+    return id;
   }
 
   compileTDomNode(ast: ASTDomNode, ctx: Context): string {
@@ -593,6 +603,8 @@ export class CodeGenerator {
     }
     // attributes
     const attrs: Attrs = {};
+    // the variable holding a dynamic value attribute, for t-model to compare
+    let valueVar: string | null = null;
 
     for (let key in ast.attrs) {
       let expr, attrName;
@@ -609,6 +621,7 @@ export class CodeGenerator {
           if (attrName === "value") {
             const valueId = this.generateId("v");
             this.define(valueId, expr);
+            valueVar = valueId;
             // When the expression is falsy (except 0), fall back to an empty string
             expr = `new String(${valueId} === 0 ? 0 : ${valueId} || "")`;
           } else {
@@ -623,6 +636,9 @@ export class CodeGenerator {
           } else {
             attrs[`block-attribute-${idx}`] = attrName!;
           }
+          if (attrName === "value") {
+            valueVar = block!.data[idx];
+          }
         }
       } else if (ctx.translate && this.translatableAttributes.includes(key)) {
         const attrTranslationCtx = ast.attrsTranslationCtx?.[key] || ctx.translationCtx;
@@ -634,7 +650,8 @@ export class CodeGenerator {
       }
 
       if (attrName === "value" && ctx.tModelSelectedExpr) {
-        let selectedId = block!.insertData(`${ctx.tModelSelectedExpr} === ${expr}`, "attr");
+        const value = key.startsWith("t-att") ? valueVar : expr;
+        let selectedId = block!.insertData(`${ctx.tModelSelectedExpr} === ${value}`, "attr");
         attrs[`block-attribute-${selectedId}`] = "selected";
       }
     }
@@ -654,33 +671,31 @@ export class CodeGenerator {
       } = ast.model;
 
       let readExpr: string;
-      let writeExpr: (value: string) => string;
+      let handlerCtx: string;
+      let valueCode = `ev.target.${targetAttr}`;
+      valueCode = shouldTrim ? `${valueCode}.trim()` : valueCode;
+      if (shouldNumberize) {
+        this.helpers.add("toNumber");
+        valueCode = `toNumber(${valueCode})`;
+      }
+      let handlerId: string;
       if (isProxy) {
-        const expression = compileExpr(expr);
-        readExpr = expression;
-        writeExpr = (value) => `${expression} = ${value}`;
+        readExpr = compileExpr(expr);
+        handlerCtx = "ctx";
+        handlerId = this.hoistHandler(`(ctx, ev) => { ${readExpr} = ${valueCode}; }`);
       } else {
         const exprId = this.generateId("expr");
-        const expression = compileExpr(expr);
         this.helpers.add("modelExpr");
-        this.define(exprId, `modelExpr(${expression})`);
+        this.define(exprId, `modelExpr(${compileExpr(expr)})`);
         readExpr = `${exprId}()`;
-        writeExpr = (value) => `${exprId}.set(${value})`;
+        handlerCtx = exprId;
+        handlerId = this.hoistHandler(`(model, ev) => model.set(${valueCode})`);
       }
 
       let idx: number;
       if (specialInitTargetAttr) {
-        let targetExpr = targetAttr in attrs && JSON.stringify(attrs[targetAttr]);
-        if (!targetExpr && ast.attrs) {
-          // look at the dynamic attribute counterpart
-          const dynamicTgExpr = ast.attrs[`t-att-${targetAttr}`];
-          const formatTgExpr = ast.attrs[`t-attf-${targetAttr}`];
-          if (dynamicTgExpr) {
-            targetExpr = compileExpr(dynamicTgExpr);
-          } else if (formatTgExpr) {
-            targetExpr = interpolate(formatTgExpr);
-          }
-        }
+        const targetExpr =
+          targetAttr in attrs ? JSON.stringify(attrs[targetAttr]) : valueVar || "false";
         idx = block!.insertData(`${readExpr} === ${targetExpr}`, "prop");
         attrs[`block-property-${idx}`] = specialInitTargetAttr;
       } else if (hasDynamicChildren) {
@@ -691,13 +706,7 @@ export class CodeGenerator {
         idx = block!.insertData(readExpr, "prop");
         attrs[`block-property-${idx}`] = targetAttr;
       }
-      this.helpers.add("toNumber");
-      let valueCode = `ev.target.${targetAttr}`;
-      valueCode = shouldTrim ? `${valueCode}.trim()` : valueCode;
-      valueCode = shouldNumberize ? `toNumber(${valueCode})` : valueCode;
-
-      const handler = `[(ctx, ev) => { ${writeExpr(valueCode)}; }, ctx]`;
-      idx = block!.insertData(handler, "hdlr");
+      idx = block!.insertData(`[${handlerId}, ${handlerCtx}]`, "hdlr");
       attrs[`block-handler-${idx}`] = eventType;
     }
 

@@ -71,10 +71,6 @@ exports[`slots > a sub-template looping over a slot can be called twice 3`] = `
     for (let i1 = 0; i1 < l_block1; i1++) {
       let ctx = Object.create(ctx1);
       ctx["i"] = k_block1[i1];
-      ctx["i_first"] = i1 === 0;
-      ctx["i_last"] = i1 === k_block1.length - 1;
-      ctx["i_index"] = i1;
-      ctx["i_value"] = v_block1[i1];
       const key1 = ctx['i'];
       const skey1 = keyOf(key1);
       c_block1[i1] = withKey(callSlot(ctx, node, key + \`__\${skey1}\`, "default", false, {}), key1);
@@ -2014,10 +2010,6 @@ exports[`slots > slot called inside nested loops gets one component per outer it
     for (let i1 = 0; i1 < l_block2; i1++) {
       let ctx = Object.create(ctx1);
       ctx["r"] = k_block2[i1];
-      ctx["r_first"] = i1 === 0;
-      ctx["r_last"] = i1 === k_block2.length - 1;
-      ctx["r_index"] = i1;
-      ctx["r_value"] = v_block2[i1];
       const key1 = ctx['r'];
       const skey1 = keyOf(key1);
       const ctx2 = ctx;
@@ -2025,10 +2017,6 @@ exports[`slots > slot called inside nested loops gets one component per outer it
       for (let i2 = 0; i2 < l_block4; i2++) {
         let ctx = Object.create(ctx2);
         ctx["c"] = k_block4[i2];
-        ctx["c_first"] = i2 === 0;
-        ctx["c_last"] = i2 === k_block4.length - 1;
-        ctx["c_index"] = i2;
-        ctx["c_value"] = v_block4[i2];
         const key2 = ctx['c'];
         const skey2 = keyOf(key2);
         c_block4[i2] = withKey(callSlot(ctx, node, key + \`__\${skey1}__\${skey2}\`, "cell", false, {}), key2);
@@ -2317,10 +2305,7 @@ exports[`slots > slot in t-foreach locations 2`] = `
     for (let i1 = 0; i1 < l_block1; i1++) {
       let ctx = Object.create(ctx1);
       ctx["elem"] = k_block1[i1];
-      ctx["elem_first"] = i1 === 0;
-      ctx["elem_last"] = i1 === k_block1.length - 1;
       ctx["elem_index"] = i1;
-      ctx["elem_value"] = v_block1[i1];
       const key1 = ctx['elem_index'];
       const skey1 = keyOf(key1);
       const b3 = safeOutput(ctx['elem'], key + \`__1__\${skey1}\`);

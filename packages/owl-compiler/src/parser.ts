@@ -561,7 +561,8 @@ function parseTForEach(node: Element, ctx: ParsingContext): AST | null {
     return null;
   }
 
-  const hasNoTCall = !html.includes("t-call");
+  // a called template reads the loop variables from the context
+  const hasNoTCall = !/\st-call="/.test(html);
   let noFlags = 0;
   if (hasNoTCall && !html.includes(`${elem}_first`)) noFlags |= ForEachNoFlag.First;
   if (hasNoTCall && !html.includes(`${elem}_last`)) noFlags |= ForEachNoFlag.Last;

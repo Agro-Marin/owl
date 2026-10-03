@@ -274,10 +274,6 @@ exports[`list of components > order is correct when slots are not of same type 2
     for (let i1 = 0; i1 < l_block1; i1++) {
       let ctx = Object.create(ctx1);
       ctx["slotName"] = k_block1[i1];
-      ctx["slotName_first"] = i1 === 0;
-      ctx["slotName_last"] = i1 === k_block1.length - 1;
-      ctx["slotName_index"] = i1;
-      ctx["slotName_value"] = v_block1[i1];
       const key1 = ctx['slotName'];
       const skey1 = keyOf(key1);
       const slot1 = (ctx['slotName']);

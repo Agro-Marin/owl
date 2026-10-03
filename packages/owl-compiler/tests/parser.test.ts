@@ -994,6 +994,13 @@ describe("qweb parser", () => {
     });
   });
 
+  test("t-foreach with a t-call-slot inside sets no loop flag", async () => {
+    const ast = parse(`<t t-foreach="list" t-as="item" t-key="item"><t t-call-slot="s"/></t>`);
+    expect((ast as any).noFlags).toBe(
+      ForEachNoFlag.First | ForEachNoFlag.Last | ForEachNoFlag.Index | ForEachNoFlag.Value
+    );
+  });
+
   // ---------------------------------------------------------------------------
   // t-call
   // ---------------------------------------------------------------------------
