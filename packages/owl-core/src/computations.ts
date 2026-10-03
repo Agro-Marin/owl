@@ -83,6 +83,9 @@ let currentComputation: ComputationAtom | undefined;
 // a computation being pulled lazily is unobserved while it recomputes — so
 // the flush re-checks before disposing.
 let pendingDisposals = new Set<ComputationAtom>();
+// Bumped by every write: a run during which it did not move wrote nothing, so
+// it cannot have invalidated one of its own sources.
+let writeCount = 0;
 
 export function createComputation(
   compute: () => any,
@@ -134,6 +137,7 @@ export function withObserver<T>(observer: ComputationAtom, fn: () => T): T {
 }
 
 export function onWriteAtom(atom: Atom) {
+  writeCount++;
   for (const ctx of atom.observers) {
     if (ctx.state === ComputationState.EXECUTED) {
       if (ctx.isDerived) {
@@ -239,12 +243,28 @@ export function updateComputation(computation: ComputationAtom) {
       return;
     }
   }
+  const writesBefore = writeCount;
   try {
     computation.value = runTracked(computation, computation.compute);
   } finally {
+    if (writeCount !== writesBefore) {
+      settleDerivedSources(computation);
+    }
     // A computation that threw stays subscribed to what it read before the
     // throw, and runs again when one of those changes.
     computation.state = ComputationState.EXECUTED;
+  }
+}
+
+// A derived source the run read and then invalidated, by a write of its own,
+// is brought up to date before the run counts as done: left stale, it would
+// never propagate a later change to this computation. As with a signal the
+// run wrote after reading it, the run does not start over.
+function settleDerivedSources(computation: ComputationAtom) {
+  for (const source of computation.sources) {
+    if ((source as ComputationAtom).isDerived && (source as ComputationAtom).state) {
+      updateComputation(source as ComputationAtom);
+    }
   }
 }
 

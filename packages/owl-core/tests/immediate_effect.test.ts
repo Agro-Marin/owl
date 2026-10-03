@@ -89,6 +89,22 @@ describe("immediateEffect", () => {
     expectSpy(spy, 2, { args: [false] });
   });
 
+  test("an immediateEffect that writes the source of a computed it read keeps tracking the computed", () => {
+    const n = signal(0);
+    const double = computed(() => n() * 2);
+    const seen: number[] = [];
+    immediateEffect(() => {
+      const value = double();
+      seen.push(value);
+      if (!value) {
+        n.set(1);
+      }
+    });
+    n.set(5);
+    n.set(6);
+    expect(seen).toEqual([0, 10, 12]);
+  });
+
   test("immediateEffect should unsubscribe previous dependencies", () => {
     const state = proxy({ a: 1, b: 10, c: 100 });
     const spy = vi.fn();

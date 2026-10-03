@@ -203,6 +203,29 @@ describe("effect", () => {
     expect(uppercaseRuns).toBe(1);
   });
 
+  test("an effect that writes the source of a computed it read keeps tracking the computed", async () => {
+    const page = signal(3);
+    const items = signal([1, 2, 3, 4, 5]);
+    const visible = computed(() => items().slice(page() * 2, page() * 2 + 2));
+    const seen: number[][] = [];
+    effect(() => {
+      const rows = visible();
+      seen.push(rows);
+      if (!rows.length) {
+        page.set(2);
+      }
+    });
+    expect(seen).toEqual([[]]);
+
+    items.set([10, 20, 30, 40, 50, 60]);
+    await waitScheduler();
+    expect(seen).toEqual([[], [50, 60]]);
+
+    page.set(0);
+    await waitScheduler();
+    expect(seen).toEqual([[], [50, 60], [10, 20]]);
+  });
+
   test("effects, signals, stuff", async () => {
     const s1 = signal(1);
     const s2 = signal(0);
