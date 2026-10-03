@@ -216,25 +216,29 @@ function callHandler(fn: any, ctx: any, ev: Event) {
   fn.call(ctx["this"], ev);
 }
 
-type CachedSignal<T> = Signal<T> & { readonly: ReactiveValue<T> };
+type PropSignal = Signal<any> & { readonly: ReactiveValue<any> };
 
-const signalCaches = new WeakMap<ComponentNode, Map<string, CachedSignal<any>>>();
+// the signals behind a child's `.signal` props, one per prop name: they live as
+// long as the child does
+const propSignals = new WeakMap<ComponentNode, Record<string, PropSignal>>();
 
-function toSignal(node: ComponentNode, cacheKey: string, value: any): ReactiveValue<any> {
-  let cache = signalCaches.get(node);
-  if (!cache) {
-    cache = new Map();
-    signalCaches.set(node, cache);
+function wrapPropSignals(props: Record<string, any>, names: string[]): Record<string, PropSignal> {
+  const signals: Record<string, PropSignal> = Object.create(null);
+  for (const name of names) {
+    const s = signal(props[name]) as PropSignal;
+    s.readonly = computed(s);
+    signals[name] = s;
+    props[name] = s.readonly;
   }
-  const existing = cache.get(cacheKey);
-  if (existing) {
-    existing.set(value);
-    return existing.readonly;
+  return signals;
+}
+
+function updatePropSignals(props: Record<string, any>, signals: Record<string, PropSignal>) {
+  for (const name in signals) {
+    const s = signals[name];
+    s.set(props[name]);
+    props[name] = s.readonly;
   }
-  const s = signal(value) as CachedSignal<any>;
-  s.readonly = computed(s);
-  cache.set(cacheKey, s);
-  return s.readonly;
 }
 
 function modelExpr(value: any) {
@@ -252,7 +256,8 @@ function createComponent<P extends Record<string, any>>(
   isStatic: boolean,
   hasSlotsProp: boolean,
   hasDynamicPropList: boolean,
-  propList: string[]
+  propList: string[],
+  signalProps?: string[]
 ) {
   const isDynamic = !isStatic;
   let arePropsDifferent: (p1: P, p2: P) => boolean;
@@ -290,6 +295,15 @@ function createComponent<P extends Record<string, any>>(
       node = undefined;
     }
     const parentFiber = ctx.fiber!;
+    let signals: Record<string, PropSignal> | undefined;
+    if (signalProps) {
+      signals = node && propSignals.get(node);
+      if (signals) {
+        updatePropSignals(props, signals);
+      } else {
+        signals = wrapPropSignals(props, signalProps);
+      }
+    }
     if (node) {
       if (arePropsDifferent(node.props, props) || parentFiber.deep || node.forceNextRender) {
         node.forceNextRender = false;
@@ -361,6 +375,9 @@ function createComponent<P extends Record<string, any>>(
         }
       }
       node = new ComponentNode(C, props, app, ctx, key);
+      if (signals) {
+        propSignals.set(node, signals);
+      }
       children[key] = node;
       const fiber = new Fiber(node, parentFiber);
       if (node.willStart.length) {
@@ -419,5 +436,4 @@ export const helpers = {
   createComponent,
   callTemplate,
   callHandler,
-  toSignal,
 };

@@ -922,6 +922,76 @@ test(".signal suffix: child receives a read-only reactive value", async () => {
   expect(fixture.innerHTML).toBe("3");
 });
 
+describe(".signal suffix: one signal per child", () => {
+  class Leaf extends Component {
+    static template = xml`<b t-out="this.props.v()"/>`;
+    props = props({ v: t.signal(t.any()) });
+  }
+
+  test("a .signal in a template and one in a template it calls", async () => {
+    class Parent extends Component {
+      static template = xml`<div><Leaf v.signal="'main'"/><t t-call="sub"/></div>`;
+      static components = { Leaf };
+    }
+    await mount(Parent, fixture, {
+      templates: `<templates><t t-name="sub"><Leaf v.signal="'sub'"/></t></templates>`,
+    });
+    expect(fixture.innerHTML).toBe("<div><b>main</b><b>sub</b></div>");
+  });
+
+  test("a .signal in slot content and one in the slot host's template", async () => {
+    class Child extends Component {
+      static template = xml`<div><Leaf v.signal="'child'"/><t t-call-slot="default"/></div>`;
+      static components = { Leaf };
+    }
+    class Parent extends Component {
+      static template = xml`<Child><Leaf v.signal="'slot'"/></Child>`;
+      static components = { Child, Leaf };
+    }
+    await mount(Parent, fixture);
+    expect(fixture.innerHTML).toBe("<div><b>child</b><b>slot</b></div>");
+  });
+
+  test("a template with a .signal called twice", async () => {
+    class Parent extends Component {
+      static template = xml`<div><t t-call="sub" x="this.state.a"/><t t-call="sub" x="this.state.b"/></div>`;
+      static components = { Leaf };
+      state = proxy({ a: 1, b: 2 });
+    }
+    const parent = await mount(Parent, fixture, {
+      templates: `<templates><t t-name="sub"><Leaf v.signal="x"/></t></templates>`,
+    });
+    expect(fixture.innerHTML).toBe("<div><b>1</b><b>2</b></div>");
+    parent.state.a = 3;
+    await nextTick();
+    expect(fixture.innerHTML).toBe("<div><b>3</b><b>2</b></div>");
+  });
+
+  test("a removed child takes its signal with it", async () => {
+    const seen: any[] = [];
+    class Item extends Component {
+      static template = xml`<b t-out="this.props.v()"/>`;
+      props = props({ v: t.signal(t.any()) });
+      setup() {
+        seen.push(this.props.v);
+      }
+    }
+    class Parent extends Component {
+      static template = xml`<div><t t-foreach="this.state.items" t-as="i" t-key="i"><Item v.signal="i"/></t></div>`;
+      static components = { Item };
+      state = proxy({ items: [1] });
+    }
+    const parent = await mount(Parent, fixture);
+    parent.state.items = [];
+    await nextTick();
+    parent.state.items = [1];
+    await nextTick();
+    expect(fixture.innerHTML).toBe("<div><b>1</b></div>");
+    expect(seen.length).toBe(2);
+    expect(seen[0]).not.toBe(seen[1]);
+  });
+});
+
 describe("reactive props (issue #1908)", () => {
   test("effect observing a prop reacts to both in-place mutation and value swap", async () => {
     const observed: number[] = [];

@@ -1070,14 +1070,6 @@ export class CodeGenerator {
     return ctx.tKeyExpr ? `${ctx.tKeyExpr} + ${key}` : key;
   }
 
-  generateSignalCacheKey() {
-    const parts = [this.generateId("__sig_")];
-    for (let i = 0; i < this.target.loopLevel; i++) {
-      parts.push(`\${key${i + 1}}`);
-    }
-    return `\`${parts.join("__")}\``;
-  }
-
   /**
    * Formats a prop name and value into a string suitable to be inserted in the
    * generated code. For example:
@@ -1145,16 +1137,15 @@ export class CodeGenerator {
     const hasSlotsProp = "slots" in (ast.props || {});
     const props: string[] = [];
     const propList: string[] = [];
+    const signalProps: string[] = [];
 
     for (let p in ast.props || {}) {
       let [name, suffix] = p.split(".");
 
       if (suffix === "signal") {
-        const compiledValue = compileExpr(ast.props![p]);
         const propName = /^[a-z_]+$/i.test(name) ? name : `'${name}'`;
-        this.helpers.add("toSignal");
-        const cacheKey = this.generateSignalCacheKey();
-        props.push(`${propName}: toSignal(node, ${cacheKey}, ${compiledValue})`);
+        props.push(`${propName}: ${compileExpr(ast.props![p]) || undefined}`);
+        signalProps.push(JSON.stringify(name));
         continue;
       }
 
@@ -1245,7 +1236,9 @@ export class CodeGenerator {
       id,
       expr: `createComponent(app, ${
         ast.isDynamic ? null : expr
-      }, ${!ast.isDynamic}, ${!!ast.slots}, ${!!ast.dynamicProps}, [${propList}])`,
+      }, ${!ast.isDynamic}, ${!!ast.slots}, ${!!ast.dynamicProps}, [${propList}]${
+        signalProps.length ? `, [${signalProps}]` : ""
+      })`,
     });
 
     if (ast.isDynamic) {

@@ -442,10 +442,10 @@ value at the call site:
 <Counter count.signal="this.state.count"/>
 ```
 
-Owl creates the signal once per call site (per loop iteration inside a
-`t-foreach`), keeps it across renders, and updates its value on each parent
-render. The signal reference is stable, so `effect` and `computed` subscriptions
-inside the child remain valid across parent updates.
+Owl creates the signal with the child component, keeps it across renders, and
+updates its value on each parent render; it goes away with the child. The signal
+reference is stable, so `effect` and `computed` subscriptions inside the child
+remain valid across parent updates.
 
 `.signal` is an adapter, not a parent-side performance optimization: the parent
 still re-renders when its own state changes, and that re-render is what updates
