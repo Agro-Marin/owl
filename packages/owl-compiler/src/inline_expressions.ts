@@ -28,7 +28,7 @@ import { OwlError } from "@odoo/owl-core";
 //------------------------------------------------------------------------------
 
 const RESERVED_WORDS = new Set(
-  "true,false,NaN,null,undefined,debugger,console,window,in,instanceof,new,function,return,eval,void,async,await,Math,RegExp,Array,Object,Date,__globals__".split(
+  "true,false,NaN,null,undefined,debugger,console,window,in,instanceof,new,function,return,eval,void,Math,RegExp,Array,Object,Date,__globals__".split(
     ","
   )
 );
@@ -68,6 +68,8 @@ interface Token {
   replace?: Function;
   isLocal?: boolean;
   templateVars?: string[];
+  // `async` before an arrow, `await` in an async arrow's body
+  isKeyword?: boolean;
 }
 
 const STATIC_TOKEN_MAP: { [key: string]: TKind } = Object.assign(Object.create(null), {
@@ -356,12 +358,12 @@ const paddedValues = new Map([
   ["in ", " in "],
   ["instanceof", " instanceof "],
   ["void", "void "],
-  ["async", "async "],
-  ["await", "await "],
 ]);
 
 function render(tokens: Token[]): string {
-  return tokens.map((t) => paddedValues.get(t.value) || t.value).join("");
+  return tokens
+    .map((t) => (t.isKeyword ? t.value + " " : paddedValues.get(t.value) || t.value))
+    .join("");
 }
 
 interface ProcessedExpr {
@@ -417,6 +419,33 @@ function bindArrowParams(tokens: Token[], end: number, scope: Set<string>): numb
   return start;
 }
 
+/**
+ * Whether the `async` at `i` starts an arrow function: `async x =>` or
+ * `async (...) =>`. Anywhere else it is a name.
+ */
+function isAsyncArrow(tokens: Token[], i: number): boolean {
+  const prev = tokens[i - 1];
+  if (prev?.type === "OPERATOR" && (prev.value === "." || prev.value === "?.")) {
+    return false;
+  }
+  let next = i + 1;
+  if (tokens[next]?.type === "LEFT_PAREN") {
+    let depth = 0;
+    for (; next < tokens.length; next++) {
+      const type = tokens[next].type;
+      if (LEFT_GROUPS.has(type)) {
+        depth++;
+      } else if (RIGHT_GROUPS.has(type) && !--depth) {
+        break;
+      }
+    }
+  } else if (tokens[next]?.type !== "SYMBOL") {
+    return false;
+  }
+  const arrow = tokens[next + 1];
+  return arrow?.type === "OPERATOR" && arrow.value === "=>";
+}
+
 function collectVariables(tokens: Token[], start: number): string[] {
   const vars = new Set<string>();
   for (let i = start; i < tokens.length; i++) {
@@ -435,14 +464,24 @@ function collectVariables(tokens: Token[], start: number): string[] {
  * Processes a javascript expression: compiles variable lookups and detects
  * top-level arrow functions with their free variables, all in a single pass.
  */
-export function processExpr(expr: string, seededLocals?: Set<string>): ProcessedExpr {
+export function processExpr(
+  expr: string,
+  seededLocals?: Set<string>,
+  inAsyncArrow: boolean = false
+): ProcessedExpr {
   // scope entries carry the stack depth at which they were created
-  const scopeStack: { vars: Set<string>; depth: number; ternaries: number }[] = [];
+  const scopeStack: { vars: Set<string>; depth: number; ternaries: number; isAsync?: boolean }[] =
+    [];
 
   // Seed outer locals
   // depth: -Infinity so this scope never gets popped
-  if (seededLocals?.size) {
-    scopeStack.push({ vars: seededLocals, depth: -Infinity, ternaries: 0 });
+  if (seededLocals?.size || inAsyncArrow) {
+    scopeStack.push({
+      vars: seededLocals || new Set(),
+      depth: -Infinity,
+      ternaries: 0,
+      isAsync: inAsyncArrow,
+    });
   }
 
   const tokens = tokenize(expr);
@@ -507,7 +546,14 @@ export function processExpr(expr: string, seededLocals?: Set<string>): Processed
         break;
     }
 
-    let isVar = token.type === "SYMBOL" && !RESERVED_WORDS.has(token.value);
+    if (token.type === "SYMBOL") {
+      if (token.value === "async") {
+        token.isKeyword = isAsyncArrow(tokens, i);
+      } else if (token.value === "await") {
+        token.isKeyword = !!scopeStack[scopeStack.length - 1]?.isAsync;
+      }
+    }
+    let isVar = token.type === "SYMBOL" && !token.isKeyword && !RESERVED_WORDS.has(token.value);
     if (isVar) {
       if (prevToken) {
         // normalize missing tokens: {a} should be equivalent to {a:a}
@@ -540,7 +586,8 @@ export function processExpr(expr: string, seededLocals?: Set<string>): Processed
       }
       const templateVars: string[] = [];
       token.value = token.replace!((expr: any) => {
-        const processed = processExpr(expr, currentLocals);
+        const isAsync = !!scopeStack[scopeStack.length - 1]?.isAsync;
+        const processed = processExpr(expr, currentLocals, isAsync);
         templateVars.push(...processed.variables);
         return processed.expr;
       });
@@ -560,12 +607,13 @@ export function processExpr(expr: string, seededLocals?: Set<string>): Processed
         // The isVar block will then see isLocal=true and prefix with _.
         newScope.add(token.value);
       }
-      if (paramStart === 0 || (paramStart === 1 && tokens[0].value === "async")) {
+      const isAsync = !!tokens[paramStart - 1]?.isKeyword;
+      if (paramStart === 0 || (paramStart === 1 && isAsync)) {
         topLevelArrowIndex = i + 1;
         topLevelParams = params;
       }
       // record current stack depth so we know when this scope expires
-      scopeStack.push({ vars: newScope, depth: stack.length, ternaries: 0 });
+      scopeStack.push({ vars: newScope, depth: stack.length, ternaries: 0, isAsync });
     }
 
     if (isVar) {
@@ -590,7 +638,7 @@ export function processExpr(expr: string, seededLocals?: Set<string>): Processed
     topLevelArrowIndex === -1
       ? null
       : {
-          isAsync: tokens[0].value === "async",
+          isAsync: !!tokens[0].isKeyword,
           params: render(tokens.slice(...topLevelParams!)),
           body: render(tokens.slice(topLevelArrowIndex + 1)),
         };

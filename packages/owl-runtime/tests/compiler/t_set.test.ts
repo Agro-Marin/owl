@@ -13,6 +13,11 @@ beforeEach(() => {
 // -----------------------------------------------------------------------------
 
 describe("t-set", () => {
+  test("a variable may be named await or async", () => {
+    const template = `<div><t t-set="await" t-value="v"/><t t-set="async" t-value="2"/><t t-out="await.x"/><t t-if="await.x and async" t-out="async"/></div>`;
+    expect(renderToString(template, { v: { x: 1 } })).toBe("<div>12</div>");
+  });
+
   test("set from attribute literal", () => {
     const template = `<div><t t-set="value" t-value="'ok'"/><t t-out="value"/></div>`;
     expect(renderToString(template)).toBe("<div>ok</div>");

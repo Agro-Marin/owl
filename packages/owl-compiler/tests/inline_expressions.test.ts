@@ -280,6 +280,19 @@ describe("expression evaluation", () => {
     expect(processExpr("async (a) => f(a, b)").freeVariables).toEqual(["f", "b"]);
   });
 
+  test("async and await are variables outside an async arrow", () => {
+    expect(compileExpr("await.x")).toBe("ctx['await'].x");
+    expect(compileExpr("async")).toBe("ctx['async']");
+    expect(compileExpr("async(1)")).toBe("ctx['async'](1)");
+    expect(compileExpr("{async, await}")).toBe("{async:ctx['async'],await:ctx['await']}");
+    expect(compileExpr("a.async + b.await")).toBe("ctx['a'].async+ctx['b'].await");
+    expect(compileExpr("() => await")).toBe("()=>ctx['await']");
+    expect(compileExpr("async () => () => await")).toBe("async ()=>()=>ctx['await']");
+    expect(compileExpr("async (a) => await a")).toBe("async (_a)=>await _a");
+    expect(compileExpr("async () => `${await f()}`")).toBe("async ()=>`${await ctx['f']()}`");
+    expect(compileExpr("() => `${await}`")).toBe("()=>`${ctx['await']}`");
+  });
+
   test("arrow parameters with default values", () => {
     expect(compileExpr("(a = f()) => a")).toBe("(_a=ctx['f']())=>_a");
     expect(compileExpr("(a, b = g(a, c)) => a + b + c")).toBe(
