@@ -440,6 +440,23 @@ describe("Reactivity", () => {
     expect(state).toEqual([0]);
   });
 
+  test("includes, indexOf and lastIndexOf find an item given raw or as its proxy", async () => {
+    const item = { id: 1 };
+    const other = { id: 2 };
+    const state: any = createProxy([other, item]);
+    expect(state.includes(item)).toBe(true);
+    expect(state.indexOf(item)).toBe(1);
+    expect(state.lastIndexOf(item)).toBe(1);
+    expect(state.includes(state[1])).toBe(true);
+    expect(state.indexOf({ id: 1 })).toBe(-1);
+
+    const spy = vi.fn();
+    effect(() => spy(state.includes(item)));
+    state.splice(1, 1);
+    await waitScheduler();
+    expectSpy(spy, 2, [false]);
+  });
+
   test("truncating an array notifies only the indices it dropped", async () => {
     const state: any = createProxy([0, 1, 2, 3]);
     const droppedSpy = vi.fn();

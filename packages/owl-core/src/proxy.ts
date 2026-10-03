@@ -411,7 +411,7 @@ function basicProxyHandler<T extends Target>(shallow: boolean): ProxyHandler<T> 
       onReadTargetKey(target, key);
       const value = Reflect.get(target, key, receiver);
       if (typeof value === "function") {
-        return batchedArrayMethods.get(value) ?? value;
+        return arrayMethods.get(value) ?? value;
       }
       // Fast path: signal-based proxies and primitive values don't need wrapping
       if (shallow || typeof value !== "object" || value === null) {
@@ -475,21 +475,38 @@ function basicProxyHandler<T extends Target>(shallow: boolean): ProxyHandler<T> 
     },
   } as ProxyHandler<T>;
 }
-// The array methods that write several keys, run as one batch: an immediate
-// computation sees the array before or after the call, not in between.
-const batchedArrayMethods = new Map<Function, Function>(
-  (
-    ["copyWithin", "fill", "pop", "push", "reverse", "shift", "sort", "splice", "unshift"] as const
-  ).map((name) => {
-    const method = Array.prototype[name] as Function;
-    return [
-      method,
-      function (this: unknown[], ...args: unknown[]) {
-        return batch(() => method.apply(this, args));
-      },
-    ];
-  })
-);
+// Array methods a proxy array replaces. Those that write several keys run as
+// one batch: an immediate computation sees the array before or after the
+// call, not in between. Those that search an item by identity also find the
+// raw object of an item they read as its proxy.
+const arrayMethods = new Map<Function, Function>();
+for (const name of [
+  "copyWithin",
+  "fill",
+  "pop",
+  "push",
+  "reverse",
+  "shift",
+  "sort",
+  "splice",
+  "unshift",
+] as const) {
+  const method = Array.prototype[name] as Function;
+  arrayMethods.set(method, function (this: unknown[], ...args: unknown[]) {
+    return batch(() => method.apply(this, args));
+  });
+}
+for (const name of ["includes", "indexOf", "lastIndexOf"] as const) {
+  const method = Array.prototype[name] as Function;
+  arrayMethods.set(method, function (this: unknown[], ...args: unknown[]) {
+    const result = method.apply(this, args);
+    if (result !== -1 && result !== false) {
+      return result;
+    }
+    // the call above read every item through the proxy, which observes them
+    return method.apply(toRaw(this), [toRaw(args[0] as object), ...args.slice(1)]);
+  });
+}
 
 // the traps only use the target they are given: one handler per flavor
 const deepHandler = basicProxyHandler(false);
