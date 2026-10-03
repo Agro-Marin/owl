@@ -103,6 +103,18 @@ describe("expression evaluation", () => {
     expect(compileExpr("debugger")).toBe("debugger");
   });
 
+  test("a sign or increment after a + or - operator stays its own token", () => {
+    const run = (expr: string, ctx: any) => new Function("ctx", `return ${compileExpr(expr)}`)(ctx);
+    const ctx = { a: 2, b: 3, n: 1, m: 5 };
+    expect(run("a + +b", ctx)).toBe(5);
+    expect(run("a - -b", ctx)).toBe(5);
+    expect(run("n + ++m", ctx)).toBe(7);
+    expect(ctx.n).toBe(1);
+    expect(ctx.m).toBe(6);
+    expect(run("n - --m", ctx)).toBe(-4);
+    expect(compileExpr("x++ + y")).toBe("ctx['x']++ +ctx['y']");
+  });
+
   test("parenthesis", () => {
     expect(compileExpr("(1)")).toBe("(1)");
     expect(compileExpr("a*(1 +3)")).toBe("ctx['a']*(1+3)");

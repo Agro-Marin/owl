@@ -366,9 +366,18 @@ const paddedValues = new Map([
 ]);
 
 function render(tokens: Token[]): string {
-  return tokens
-    .map((t) => (t.isKeyword ? t.value + " " : paddedValues.get(t.value) || t.value))
-    .join("");
+  let code = "";
+  for (const t of tokens) {
+    const value = t.isKeyword ? t.value + " " : paddedValues.get(t.value) || t.value;
+    // tokens are joined without spaces: `a + +b` must not read as `a++b`, nor
+    // `n + ++m` as `n++ + m`
+    const last = code[code.length - 1];
+    if ((last === "+" || last === "-") && value[0] === last) {
+      code += " ";
+    }
+    code += value;
+  }
+  return code;
 }
 
 interface ProcessedExpr {
