@@ -8,16 +8,25 @@ import {
   updateComputation,
   createComputation,
 } from "./computations";
+import { debug, debugLog } from "./debug";
 
-export function effect<T>(fn: () => T) {
-  return createEffect(fn, false);
+export interface EffectOptions {
+  /**
+   * What debug logging calls it (default: the function's name if the effect
+   * channel is on when it is created, else "effect").
+   */
+  name?: string;
 }
 
-export function immediateEffect<T>(fn: () => T) {
-  return createEffect(fn, true);
+export function effect<T>(fn: () => T, options?: EffectOptions) {
+  return createEffect(fn, false, options);
 }
 
-function createEffect<T>(fn: () => T, immediate: boolean) {
+export function immediateEffect<T>(fn: () => T, options?: EffectOptions) {
+  return createEffect(fn, true, options);
+}
+
+function createEffect<T>(fn: () => T, immediate: boolean, options?: EffectOptions) {
   let disposed = false;
   const computation = createComputation(
     () => {
@@ -51,7 +60,10 @@ function createEffect<T>(fn: () => T, immediate: boolean) {
     },
     false,
     ComputationState.STALE,
-    immediate
+    immediate,
+    // fn.name costs a measurable share of an effect's creation: read only
+    // while debugging
+    options?.name || (debug.effect && fn.name) || (immediate ? "immediateEffect" : "effect")
   );
   // Created by an effect, it is disposed when that effect runs again or is
   // disposed. Created by a render, it is disposed with the component: a value
@@ -65,9 +77,18 @@ function createEffect<T>(fn: () => T, immediate: boolean) {
     }
   }
   computation.isEffect = true;
+  if (debug.effect) {
+    debugLog(
+      "effect",
+      `create ${computation.name}, owned by ${parent && !parent.isDerived ? parent.name : "nothing"}`
+    );
+  }
 
   // Remove sources and unsubscribe
   function cleanupEffect() {
+    if (debug.effect) {
+      debugLog("effect", `dispose ${computation.name}`);
+    }
     disposed = true;
     parent?.owned?.delete(cleanupEffect);
     // Mark as executed so a queued re-run (scheduled by an earlier signal

@@ -10,6 +10,7 @@ import {
   untrack,
   withObserver,
 } from "./computations";
+import { debug, debugLog } from "./debug";
 
 // Special key to subscribe to, to be notified of key creation/deletion
 const KEYCHANGES = Symbol("Key changes");
@@ -154,8 +155,15 @@ function onWriteTargetKey(
   const table = atoms.get(target);
   const atom = table && findAtom(table, key);
   if (atom) {
+    if (debug.reactivity) {
+      debugLog("reactivity", `proxy write ${describeKey(key)}`, target);
+    }
     onWriteAtom(atom);
   }
+}
+
+function describeKey(key: PropertyKey): string {
+  return key === KEYCHANGES ? "(keys)" : String(key);
 }
 
 function onReadKeyPresence(target: Target, key: PropertyKey): void {
@@ -321,7 +329,8 @@ export function observe<T extends Target>(target: T, callback: () => void): T {
     () => untrack(callback),
     false,
     ComputationState.EXECUTED,
-    true
+    true,
+    `observe ${callback.name || "callback"}`
   );
   computation.notifiesWithoutRecompute = true;
   const views = new WeakMap<Target, any>();

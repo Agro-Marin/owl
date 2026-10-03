@@ -1,4 +1,5 @@
 import { batched } from "./batched";
+import { debug, debugLog } from "./debug";
 
 export interface ReadonlyReactiveValue<TRead> {
   (): TRead;
@@ -80,6 +81,8 @@ export interface ComputationAtom<T = any> extends Atom<T> {
   // true while its compute runs: a write it makes can reach a computation that
   // would otherwise pull it forward as its owner
   running: boolean;
+  // what debug logging calls it
+  name: string;
 }
 
 export const atomSymbol = Symbol("Atom");
@@ -104,7 +107,8 @@ export function createComputation(
   compute: () => any,
   isDerived: boolean,
   state: ComputationState = ComputationState.STALE,
-  immediate: boolean = false
+  immediate: boolean = false,
+  name: string = ""
 ): ComputationAtom {
   return {
     state,
@@ -118,6 +122,7 @@ export function createComputation(
     owner: null,
     isEffect: false,
     running: false,
+    name,
   };
 }
 
@@ -155,6 +160,9 @@ export function withObserver<T>(observer: ComputationAtom, fn: () => T): T {
 
 export function onWriteAtom(atom: Atom) {
   writeCount++;
+  if (debug.reactivity) {
+    debugLog("reactivity", `write, ${atom.observers.size} observer(s)`, observerNames(atom));
+  }
   for (const ctx of atom.observers) {
     if (ctx.state === ComputationState.EXECUTED) {
       if (ctx.isDerived) {
@@ -197,6 +205,9 @@ export function batch<T>(fn: () => T): T {
     if (--batchDepth === 0 && immediateObservers.length) {
       const toRun = immediateObservers;
       immediateObservers = [];
+      if (debug.effect) {
+        debugLog("effect", `batch end, ${toRun.length} immediate effect(s)`);
+      }
       const errors = updateEach(toRun);
       if (completed) {
         rethrow(errors);
@@ -235,6 +246,9 @@ function updateOwnerFirst(computation: ComputationAtom) {
     !owner.running &&
     owner.immediate === computation.immediate
   ) {
+    if (debug.effect) {
+      debugLog("effect", `run owner ${owner.name} before ${computation.name}`);
+    }
     updateOwnerFirst(owner);
   }
   updateComputation(computation);
@@ -253,6 +267,13 @@ const batchProcessEffects = batched(processEffects);
 function processEffects() {
   const pending = observers;
   observers = [];
+  if (debug.effect) {
+    debugLog(
+      "effect",
+      `flush ${pending.length} effect(s)`,
+      pending.map((c) => c.name)
+    );
+  }
   const errors = updateEach(pending);
   if (pendingDisposals.size !== 0) {
     const candidates = pendingDisposals;
@@ -263,6 +284,9 @@ function processEffects() {
       // safe: it is already STALE, so a later read fully recomputes it and
       // re-subscribes to whatever it reads.
       if (computation.observers.size === 0) {
+        if (debug.computed) {
+          debugLog("computed", `dispose unobserved ${computation.name}`);
+        }
         disposeComputation(computation);
       }
     }
@@ -308,8 +332,16 @@ export function updateComputation(computation: ComputationAtom) {
   }
   const writesBefore = writeCount;
   computation.running = true;
+  if (computation.isEffect ? debug.effect : computation.isDerived && debug.computed) {
+    debugLog(computation.isEffect ? "effect" : "computed", `run ${computation.name}`);
+  }
   try {
     computation.value = runTracked(computation, computation.compute);
+  } catch (error) {
+    if (debug.error) {
+      debugLog("error", `${computation.name} threw`, error);
+    }
+    throw error;
   } finally {
     computation.running = false;
     try {
@@ -331,6 +363,12 @@ export function updateComputation(computation: ComputationAtom) {
 function settleDerivedSources(computation: ComputationAtom) {
   for (const source of computation.sources) {
     if ((source as ComputationAtom).isDerived && (source as ComputationAtom).state) {
+      if (debug.computed) {
+        debugLog(
+          "computed",
+          `settle ${(source as ComputationAtom).name}, invalidated by ${computation.name}`
+        );
+      }
       updateComputation(source as ComputationAtom);
     }
   }
@@ -467,4 +505,12 @@ export function untrack<T>(fn: (...args: any[]) => T): T {
     currentComputation = previousComputation;
   }
   return result;
+}
+
+function observerNames(atom: Atom): string[] {
+  const names: string[] = [];
+  for (const observer of atom.observers) {
+    names.push(observer.name || "?");
+  }
+  return names;
 }

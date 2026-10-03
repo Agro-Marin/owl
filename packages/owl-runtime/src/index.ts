@@ -99,6 +99,8 @@ export type { PluginInstance } from "./plugin_hooks";
 export { Plugin } from "@odoo/owl-core";
 export type { PluginConstructor } from "@odoo/owl-core";
 export { getScope, isAbortError, Scope, useScope } from "@odoo/owl-core";
+export { DEBUG_CHANNELS, setDebug, setDebugSink } from "@odoo/owl-core";
+export type { DebugChannel, DebugSink, EffectOptions } from "@odoo/owl-core";
 
 export const __info__: Record<string, string> = {
   version: App.version,

@@ -43,7 +43,18 @@ export { signal, type Signal } from "./signal";
 export { computed } from "./computed";
 
 // Reactivity: effect
-export { effect, immediateEffect } from "./effect";
+export { effect, immediateEffect, type EffectOptions } from "./effect";
+
+// Debug logging
+export {
+  debug,
+  debugLog,
+  DEBUG_CHANNELS,
+  setDebug,
+  setDebugSink,
+  type DebugChannel,
+  type DebugSink,
+} from "./debug";
 
 // Reactivity: asyncComputed
 export {

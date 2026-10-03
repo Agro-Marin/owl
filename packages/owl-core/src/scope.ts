@@ -1,3 +1,4 @@
+import { debug, debugLog } from "./debug";
 import { OwlError } from "./owl_error";
 import { ComputationAtom, disposeComputation } from "./computations";
 import { STATUS, StatusValue } from "./status";
@@ -107,11 +108,21 @@ export abstract class Scope {
       result = await p;
     } catch (e) {
       if (this.status > STATUS.MOUNTED) {
+        if (debug.scope) {
+          debugLog(
+            "scope",
+            `${scopeName(this)}: a guarded promise failed after destroy, aborted`,
+            e
+          );
+        }
         throw makeAbortError(e);
       }
       throw e;
     }
     if (this.status > STATUS.MOUNTED) {
+      if (debug.scope) {
+        debugLog("scope", `${scopeName(this)}: a guarded promise settled after destroy, aborted`);
+      }
       throw makeAbortError();
     }
     return result;
@@ -168,6 +179,12 @@ export abstract class Scope {
       return;
     }
     this._finalizing = true;
+    if (debug.scope) {
+      debugLog(
+        "scope",
+        `${scopeName(this)}: finalize, ${this._destroyCbs?.length ?? 0} destroy callback(s), ${this.computations.length} computation(s)`
+      );
+    }
     try {
       this._controller?.abort();
       let cbs;
@@ -195,6 +212,12 @@ export abstract class Scope {
    * computations. Used when a setup fails half way.
    */
   rollback(mark: ScopeMark, reportError: (e: unknown) => void): void {
+    if (debug.scope) {
+      debugLog(
+        "scope",
+        `${scopeName(this)}: rollback to ${mark[0]} willStart, ${mark[1]} destroy callback(s), ${mark[2]} computation(s)`
+      );
+    }
     this.willStart.length = mark[0];
     if (this._destroyCbs) {
       runReversed(this._destroyCbs.splice(mark[1]), reportError);
@@ -245,4 +268,8 @@ export function makeAbortError(cause?: unknown): Error {
   const err = new Error("The operation was aborted", cause === undefined ? undefined : { cause });
   err.name = "AbortError";
   return err;
+}
+
+function scopeName(scope: Scope): string {
+  return (scope as any).componentName ?? scope.constructor.name;
 }

@@ -1,3 +1,4 @@
+import { debug, debugLog } from "./debug";
 import { effect } from "./effect";
 import { OwlError } from "./owl_error";
 import { Resource } from "./resource";
@@ -151,11 +152,21 @@ export class PluginManager extends Scope {
     const mark = this.mark();
     const startedMark = this.startedIds.length;
     const undo = () => {
+      if (debug.plugin) {
+        debugLog("plugin", `start of ${id} failed, undo`, this.startedIds.slice(startedMark));
+      }
       for (const startedId of this.startedIds.splice(startedMark)) {
         delete this.plugins[startedId];
       }
       this.rollback(mark, (e) => console.error(e));
     };
+    if (debug.plugin) {
+      debugLog(
+        "plugin",
+        `start ${id}`,
+        this.startingPath.map((ctor) => ctor.id)
+      );
+    }
     let plugin: Plugin;
     this.constructing.add(pluginConstructor);
     this.startingPath.push(pluginConstructor);
@@ -250,12 +261,22 @@ export class PluginManager extends Scope {
       if (this.status >= STATUS.DESTROYED) {
         return null;
       }
+      if (debug.plugin) {
+        debugLog(
+          "plugin",
+          `batch of sequence ${batch[0].sequence}`,
+          batch.map((ctor) => ctor.id)
+        );
+      }
       return this.collect(() => {
         for (const ctor of batch) {
           this.pending.delete(ctor.id);
           this.startPlugin(ctor);
         }
         const pending = this.willStart.splice(0);
+        if (debug.plugin && pending.length) {
+          debugLog("plugin", `batch of sequence ${batch[0].sequence}: ${pending.length} willStart`);
+        }
         return pending.length ? Promise.all(pending.map((fn) => fn())) : null;
       });
     };
@@ -285,6 +306,9 @@ export class PluginManager extends Scope {
     this.hasPendingReady = true;
     const ready = (this.ready = chain.then(
       () => {
+        if (debug.plugin) {
+          debugLog("plugin", "ready");
+        }
         if (this.status < STATUS.MOUNTED) {
           this.status = STATUS.MOUNTED;
         }
@@ -293,6 +317,9 @@ export class PluginManager extends Scope {
         }
       },
       (e) => {
+        if (debug.plugin) {
+          debugLog("plugin", "start failed, later batches skipped", e);
+        }
         this.pending.clear();
         // A start cancelled by the destruction of the manager is not a
         // failure: `ready` resolves. Anything else keeps `ready` rejected and

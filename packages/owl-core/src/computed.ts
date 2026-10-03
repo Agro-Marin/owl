@@ -10,6 +10,7 @@ import {
   updateComputation,
   createComputation,
 } from "./computations";
+import { debug, debugLog } from "./debug";
 import { OwlError } from "./owl_error";
 import { getScope } from "./scope";
 
@@ -28,6 +29,11 @@ interface ComputedOptions<TRead, TWrite = TRead> {
    * component that happened to create that object.
    */
   detached?: boolean;
+  /**
+   * What debug logging calls it (default: the getter's name if the computed
+   * channel is on when it is created, else "computed").
+   */
+  name?: string;
 }
 
 function readonlySetter(): never {
@@ -62,11 +68,17 @@ export function computed<TRead, TWrite = TRead>(
     try {
       newValue = getter();
       if (hasValue && !failure && equalsFn(computation.value, newValue)) {
+        if (debug.computed) {
+          debugLog("computed", `${computation.name} recomputed an equal value, readers kept`);
+        }
         // discard the equal result: readers keep a stable identity, like a
         // signal write that compares equal
         return computation.value;
       }
     } catch (error) {
+      if (debug.computed) {
+        debugLog("computed", `${computation.name} failed, the error is its value`, error);
+      }
       if (hasValue) {
         onWriteAtom(computation);
       }
@@ -81,6 +93,7 @@ export function computed<TRead, TWrite = TRead>(
     failure = null;
     return newValue;
   }, true);
+  computation.name = options.name || (debug.computed && getter.name) || "computed";
 
   function readComputed() {
     if (computation.state !== ComputationState.EXECUTED) {
