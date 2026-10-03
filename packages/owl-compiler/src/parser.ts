@@ -788,15 +788,28 @@ function parseComponent(node: Element, ctx: ParsingContext): AST | null {
       // be ignored)
       let el = slotNode.parentElement!;
       let isInSubComponent = false;
+      let directiveAbove: string | null = null;
       while (el && el !== clone) {
         if (el!.hasAttribute("t-component") || el!.tagName[0] === el!.tagName[0].toUpperCase()) {
           isInSubComponent = true;
           break;
         }
+        const directive = el
+          .getAttributeNames()
+          .find((a) => a.startsWith("t-") && !a.startsWith("t-translation"));
+        if (directive && !directiveAbove) {
+          directiveAbove = `${directive} on a <${el.tagName}>`;
+        }
         el = el.parentElement!;
       }
       if (isInSubComponent || !el) {
         continue;
+      }
+      if (directiveAbove) {
+        // the slot would be lifted out of the directive and always be defined
+        throw new OwlError(
+          `Directive 't-set-slot' cannot be used under a directive (${directiveAbove}) inside a component`
+        );
       }
 
       slotNode.removeAttribute("t-set-slot");

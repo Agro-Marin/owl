@@ -1482,6 +1482,21 @@ describe("qweb parser", () => {
     expect(() => parse(`<MyComponent><div t-set-slot="name">foo</div></MyComponent>`)).toThrow();
   });
 
+  test("a named slot under a directive inside a component throws", async () => {
+    expect(() =>
+      parse(`<MyComponent><t t-if="cond"><t t-set-slot="a">foo</t></t></MyComponent>`)
+    ).toThrow(
+      "Directive 't-set-slot' cannot be used under a directive (t-if on a <t>) inside a component"
+    );
+    expect(() =>
+      parse(
+        `<MyComponent><div t-foreach="l" t-as="i" t-key="i"><t t-set-slot="a">foo</t></div></MyComponent>`
+      )
+    ).toThrow(
+      "Directive 't-set-slot' cannot be used under a directive (t-foreach on a <div>) inside a component"
+    );
+  });
+
   test("a component with a named slot and some white space", async () => {
     expect(parse(`<MyComponent><t t-set-slot="name">foo</t> </MyComponent>`)).toEqual({
       type: ASTType.TComponent,
