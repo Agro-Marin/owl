@@ -105,6 +105,18 @@ describe("immediateEffect", () => {
     expect(seen).toEqual([0, 10, 12]);
   });
 
+  test("an immediateEffect sees an array method's result, not its intermediate states", () => {
+    const list = proxy(["a", "b", "c"]);
+    const seen: string[] = [];
+    immediateEffect(() => {
+      seen.push(list.join(","));
+    });
+    list.splice(0, 1);
+    list.unshift("z");
+    list.reverse();
+    expect(seen).toEqual(["a,b,c", "b,c", "z,b,c", "c,b,z"]);
+  });
+
   test("immediateEffect should unsubscribe previous dependencies", () => {
     const state = proxy({ a: 1, b: 10, c: 100 });
     const spy = vi.fn();

@@ -161,13 +161,32 @@ export function onWriteAtom(atom: Atom) {
     }
   }
   let errors: unknown[] | null = null;
-  if (immediateObservers.length) {
+  if (immediateObservers.length && !batchDepth) {
     const toRun = immediateObservers;
     immediateObservers = [];
     errors = updateEach(toRun);
   }
   batchProcessEffects();
   rethrow(errors);
+}
+
+// Writes made inside `batch` queue the immediate computations they notify
+// instead of running them: the computations run once, when the outermost
+// batch returns. An array method writes one index at a time, and must not
+// expose its intermediate states (a splice duplicating an item) to them.
+let batchDepth = 0;
+
+export function batch<T>(fn: () => T): T {
+  batchDepth++;
+  try {
+    return fn();
+  } finally {
+    if (--batchDepth === 0 && immediateObservers.length) {
+      const toRun = immediateObservers;
+      immediateObservers = [];
+      rethrow(updateEach(toRun));
+    }
+  }
 }
 
 // Runs every computation even when one throws: a computation left behind is not
