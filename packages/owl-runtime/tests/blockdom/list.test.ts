@@ -512,3 +512,71 @@ describe("miscellaneous operations", () => {
     expect(fixture.innerHTML).toBe("<div></div>");
   });
 });
+
+describe("repeated keys", () => {
+  const item = createBlock("<span><block-text-0/></span>");
+  function items(keys: string[], tag: string): VNode {
+    return list(keys.map((key, i) => withKey(item([`${key}${tag}${i}`]), key)));
+  }
+  function expected(keys: string[], tag: string): string {
+    return keys.map((key, i) => `<span>${key}${tag}${i}</span>`).join("");
+  }
+
+  test("an old child a start match consumed is not taken again for a repeated key", () => {
+    const tree = items(["p", "a", "q"], "o");
+    mount(tree, fixture);
+    patch(tree, items(["r", "p", "p", "z"], "n"));
+    expect(fixture.innerHTML).toBe(expected(["r", "p", "p", "z"], "n"));
+    patch(tree, items(["p", "z"], "u"));
+    expect(fixture.innerHTML).toBe(expected(["p", "z"], "u"));
+  });
+
+  test("random lists with repeated keys patch to what a fresh mount gives", () => {
+    let seed = 999;
+    const random = (n: number) => {
+      seed = (seed + 0x6d2b79f5) | 0;
+      let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return Math.floor((((t ^ (t >>> 14)) >>> 0) / 4294967296) * n);
+    };
+    const keys = (repeat: boolean) => {
+      const result: string[] = [];
+      const length = random(7);
+      while (result.length < length) {
+        const key = "abcdefg"[random(repeat ? 4 : 7)];
+        if (repeat || !result.includes(key)) {
+          result.push(key);
+        }
+      }
+      return result;
+    };
+    const failures: string[] = [];
+    for (let i = 0; i < 1000; i++) {
+      const [k1, k2, k3] = [keys(true), keys(true), keys(false)];
+      const host = document.createElement("div");
+      fixture.appendChild(host);
+      const tree = items(k1, "o");
+      if (i % 2) {
+        // a list in a mixed parent, not cleared in bulk
+        host.appendChild(document.createElement("i"));
+      }
+      mount(tree, host);
+      const html = () => host.innerHTML.replace("<i></i>", "");
+      const steps = `${k1.join("")}>${k2.join("")}>${k3.join("")}`;
+      try {
+        patch(tree, items(k2, "n"));
+        if (html() !== expected(k2, "n")) {
+          failures.push(`${steps}: ${html()}`);
+          continue;
+        }
+        patch(tree, items(k3, "u"));
+        if (html() !== expected(k3, "u")) {
+          failures.push(`${steps}, then: ${html()}`);
+        }
+      } catch (e: any) {
+        failures.push(`${steps}: ${e.message}`);
+      }
+    }
+    expect(failures).toEqual([]);
+  });
+});

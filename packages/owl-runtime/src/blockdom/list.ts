@@ -169,7 +169,14 @@ class VList {
       // -------------------------------------------------------------------
       mapping = mapping || createMapping(ch1, startIdx1, endIdx1);
       let idxInOld = mapping.get(startKey2);
-      if (idxInOld === undefined || ch1[idxInOld] === null) {
+      // with repeated keys, the mapped child may already be taken: moved by
+      // the mapping (null) or matched at an end of the range since
+      if (
+        idxInOld === undefined ||
+        idxInOld < startIdx1 ||
+        idxInOld > endIdx1 ||
+        ch1[idxInOld] === null
+      ) {
         cMount.call(startVn2, parent, cFirstNode.call(startVn1) || null);
       } else {
         const elmToMove = ch1[idxInOld];
