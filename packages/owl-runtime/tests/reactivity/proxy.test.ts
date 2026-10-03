@@ -1798,6 +1798,23 @@ describe("proxy flavors", () => {
     expect(toRaw(sig())).toBe(obj);
     expect(toRaw(p)).toBe(obj);
   });
+
+  test("proxy() of a collection signal's value is deep", async () => {
+    const sig = signal.Object({ inner: { x: 1 } });
+    const p = proxy(sig());
+    const spy = vi.fn();
+    effect(() => spy(p.inner.x));
+    p.inner.x = 2;
+    await waitScheduler();
+    expectSpy(spy, 2, [2]);
+  });
+
+  test("a collection signal of a proxy() is shallow", () => {
+    const obj = { inner: { x: 1 } };
+    const sig = signal.Object(proxy(obj));
+    expect(sig().inner).toBe(obj.inner);
+    expect(toRaw(sig())).toBe(obj);
+  });
 });
 
 describe("key presence", () => {

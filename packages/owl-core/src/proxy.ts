@@ -238,11 +238,17 @@ export function proxifyTarget<T extends Target>(target: T, shallow: boolean): T 
   if (!canBeMadeReactive(target)) {
     throw new OwlError(`Cannot make the given value reactive`);
   }
-  if (skipped.has(target)) {
-    return target;
+  const raw = targets.get(target);
+  if (raw) {
+    // a proxy of the other flavor is unwrapped: proxy() of a collection
+    // signal's value is deep, a collection signal of a proxy() is shallow. A
+    // proxy of this flavor, or an observe() view, is kept as it is.
+    if ((shallow ? deepProxies : shallowProxies).get(raw) !== target) {
+      return target;
+    }
+    target = raw as T;
   }
-  if (targets.has(target)) {
-    // target is reactive, create a reactive on the underlying object instead
+  if (skipped.has(target)) {
     return target;
   }
   const cache = shallow ? shallowProxies : deepProxies;
