@@ -2560,3 +2560,68 @@ describe("Reactivity: proxy", () => {
     expect(fixture.innerHTML).toBe("<div><p><span>2b</span></p></div>");
   });
 });
+
+describe("collections and arrays: values stay what they are", () => {
+  test("ES2025 set operations on deep reactive sets of objects compare raw members", () => {
+    const o1 = { n: 1 };
+    const o2 = { n: 2 };
+    const o3 = { n: 3 };
+    const a: any = proxy(new Set([o1]));
+    const b: any = proxy(new Set([o1, o2, o3]));
+    if (!("union" in Set.prototype)) {
+      return;
+    }
+    expect(a.union(b).size).toBe(3);
+    expect(a.isSubsetOf(b)).toBe(true);
+    expect(b.isSupersetOf(a)).toBe(true);
+    expect(b.intersection(a).size).toBe(1);
+    expect(b.difference(a).size).toBe(2);
+    expect(a.symmetricDifference(b).size).toBe(2);
+    expect(b.isDisjointFrom(a)).toBe(false);
+  });
+
+  test("a set operation observes the reactive set it is given", async () => {
+    if (!("union" in Set.prototype)) {
+      return;
+    }
+    const a: any = proxy(new Set([1]));
+    const b: any = proxy(new Set([2]));
+    const sizes: number[] = [];
+    effect(() => {
+      sizes.push(a.union(b).size);
+    });
+    b.add(3);
+    await waitScheduler();
+    expect(sizes).toEqual([2, 3]);
+  });
+
+  test("a signal.Map hands back the proxy it was given, and tracks through it", async () => {
+    const m = signal.Map<string, any>();
+    const rec = proxy({ n: 1 });
+    m().set("a", rec);
+    expect(m().get("a")).toBe(rec);
+    const seen: number[] = [];
+    effect(() => {
+      seen.push(m().get("a").n);
+    });
+    rec.n = 2;
+    await waitScheduler();
+    expect(seen).toEqual([1, 2]);
+  });
+
+  test("a non-index key created on an array does not notify its length", async () => {
+    const arr: any = proxy([1, 2]);
+    let runs = 0;
+    effect(() => {
+      arr.length;
+      runs++;
+    });
+    arr.foo = 1;
+    arr["-1"] = 1;
+    await waitScheduler();
+    expect(runs).toBe(1);
+    arr[arr.length] = 3;
+    await waitScheduler();
+    expect(runs).toBe(2);
+  });
+});

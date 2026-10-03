@@ -460,9 +460,10 @@ function basicProxyHandler<T extends Target>(shallow: boolean): ProxyHandler<T> 
 function writeKey(target: any, key: PropertyKey, value: any, receiver: any): boolean {
   const hadKey = objectHasOwnProperty.call(target, key);
   const originalValue = Reflect.get(target, key, receiver);
+  const originalLength = Array.isArray(target) ? target.length : 0;
   const ret = Reflect.set(target, key, toRaw(value), receiver);
   if (!hadKey && objectHasOwnProperty.call(target, key)) {
-    onWriteKeyCreated(target, key);
+    onWriteKeyCreated(target, key, originalLength);
   }
   if (key === "length" && Array.isArray(target)) {
     // While Array length may trigger the set trap, it's not actually set by this
@@ -479,11 +480,11 @@ function writeKey(target: any, key: PropertyKey, value: any, receiver: any): boo
   return ret;
 }
 
-function onWriteKeyCreated(target: Target, key: PropertyKey): void {
+function onWriteKeyCreated(target: Target, key: PropertyKey, originalLength: number): void {
   onWriteKeyPresence(target, key);
   // an index past the end grows the array without a length write going
   // through the set trap
-  if (key !== "length" && Array.isArray(target)) {
+  if (key !== "length" && Array.isArray(target) && target.length !== originalLength) {
     onWriteTargetKey(target, "length");
   }
 }
@@ -611,10 +612,16 @@ function makeForEachObserver(target: any, shallow: boolean) {
  * the whole membership of the set. Its result is a fresh, plain Set or a
  * boolean. A reactive `other` is read through its proxy, and so observed too.
  */
+// The operation runs on raw sets on both sides: a reactive `other` would yield
+// proxies of the objects the raw target holds. Reading its size observes it.
 function makeSetOperation(method: Function, target: Set<any>) {
   return (other: any) => {
     onReadTargetKey(target, KEYCHANGES);
-    return method.call(target, other);
+    const rawOther = toRaw(other);
+    if (rawOther !== other) {
+      other.size;
+    }
+    return method.call(target, rawOther);
   };
 }
 /**
@@ -630,13 +637,15 @@ function makeSetOperation(method: Function, target: Set<any>) {
 function delegateAndNotify(
   setterName: "set" | "add" | "delete",
   getterName: "has" | "get",
-  target: any
+  target: any,
+  shallow: boolean
 ) {
   return (key: any, value: any) => {
     key = toRaw(key);
     const hadKey = target.has(key);
     const originalValue = target[getterName](key);
-    const ret = target[setterName](key, toRaw(value));
+    // a shallow collection hands its values back as stored: keep the proxy
+    const ret = target[setterName](key, shallow ? value : toRaw(value));
     const hasKey = target.has(key);
     if (hadKey !== hasKey) {
       onWriteKeyPresence(target, key);
@@ -672,8 +681,8 @@ type MethodFactory = (target: any, shallow: boolean) => Function;
 
 const setMethods: [PropertyKey, MethodFactory][] = [
   ["has", (target, shallow) => makeKeyObserver("has", target, shallow)],
-  ["add", (target) => delegateAndNotify("add", "has", target)],
-  ["delete", (target) => delegateAndNotify("delete", "has", target)],
+  ["add", (target, shallow) => delegateAndNotify("add", "has", target, shallow)],
+  ["delete", (target, shallow) => delegateAndNotify("delete", "has", target, shallow)],
   ["keys", (target, shallow) => makeIteratorObserver("keys", target, shallow)],
   ["values", (target, shallow) => makeIteratorObserver("values", target, shallow)],
   ["entries", (target, shallow) => makeIteratorObserver("entries", target, shallow)],
@@ -701,8 +710,8 @@ const setOperations = (
 const weakMapMethods: [PropertyKey, MethodFactory][] = [
   ["has", (target, shallow) => makeKeyObserver("has", target, shallow)],
   ["get", (target, shallow) => makeKeyObserver("get", target, shallow)],
-  ["set", (target) => delegateAndNotify("set", "get", target)],
-  ["delete", (target) => delegateAndNotify("delete", "has", target)],
+  ["set", (target, shallow) => delegateAndNotify("set", "get", target, shallow)],
+  ["delete", (target, shallow) => delegateAndNotify("delete", "has", target, shallow)],
 ];
 
 /**
