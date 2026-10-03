@@ -548,3 +548,62 @@ test("onWillStart can await currentPromise() before mounting", async () => {
 
   app.destroy();
 });
+
+test("refresh() called from an effect does not subscribe that effect to later refreshes", async () => {
+  let fetches = 0;
+  const a = asyncComputed(async () => ++fetches);
+  const trigger = signal(0);
+  let effectRuns = 0;
+  effect(() => {
+    effectRuns++;
+    if (trigger()) {
+      a.refresh();
+    }
+  });
+  trigger.set(1);
+  await flush();
+  expect(effectRuns).toBe(2);
+  expect(fetches).toBe(2);
+
+  a.refresh();
+  await flush();
+  expect(effectRuns).toBe(2);
+  expect(fetches).toBe(3);
+  a.dispose();
+});
+
+test("an asyncComputed created in an effect is aborted when that effect re-runs", async () => {
+  const id = signal(1);
+  const aborted: number[] = [];
+  let first: { loading(): boolean } | null = null;
+  const dispose = effect(() => {
+    const myId = id();
+    const a = asyncComputed(
+      ({ abortSignal }) =>
+        new Promise<number>((_, reject) => {
+          abortSignal.addEventListener("abort", () => {
+            aborted.push(myId);
+            reject(abortSignal.reason);
+          });
+        })
+    );
+    first ??= a;
+  });
+  id.set(2);
+  await flush();
+  expect(aborted).toEqual([1]);
+  expect(first!.loading()).toBe(false);
+  dispose();
+  expect(aborted).toEqual([1, 2]);
+});
+
+test("a thrown non-Error is reported as an Error whose cause is the thrown value", async () => {
+  const a = asyncComputed(async () => {
+    throw "not found";
+  });
+  await flush();
+  expect(a.error()).toBeInstanceOf(Error);
+  expect(a.error()!.message).toBe("not found");
+  expect(a.error()!.cause).toBe("not found");
+  a.dispose();
+});

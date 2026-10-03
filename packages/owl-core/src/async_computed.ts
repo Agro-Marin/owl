@@ -1,4 +1,4 @@
-import { Equals } from "./computations";
+import { Equals, untrack } from "./computations";
 import { getScope, isAbortError } from "./scope";
 import { effect } from "./effect";
 import { signal } from "./signal";
@@ -48,7 +48,6 @@ export function asyncComputed<T>(
   const scope = getScope();
 
   let runId = 0;
-  let runController: AbortController | null = null;
 
   // Whether a run is currently in flight. Mirrors `loading`, but as a plain
   // (non-reactive) flag: `currentPromise()` can read it without registering a
@@ -77,15 +76,17 @@ export function asyncComputed<T>(
     pending = null;
   }
 
+  function fail(e: unknown) {
+    if (!isAbortError(e)) {
+      error.set(toError(e));
+    }
+    endRun();
+  }
+
   const stopEffect = effect(() => {
     refreshTick();
     const myRunId = ++runId;
-
-    if (runController) {
-      runController.abort();
-    }
     const controller = new AbortController();
-    runController = controller;
 
     const abortSignals = [controller.signal];
     if (scope?.abortSignal) {
@@ -99,39 +100,31 @@ export function asyncComputed<T>(
     try {
       promise = Promise.resolve(fetcher({ abortSignal: AbortSignal.any(abortSignals) }));
     } catch (e) {
-      if (myRunId !== runId) return;
-      if (isAbortError(e)) {
-        endRun();
-        return;
-      }
-      error.set(e as Error);
-      endRun();
+      fail(e);
       return;
     }
 
     promise.then(
       (result) => {
-        if (myRunId !== runId) return;
-        value.set(result);
-        endRun();
+        if (myRunId === runId) {
+          value.set(result);
+          endRun();
+        }
       },
       (e) => {
-        if (myRunId !== runId) return;
-        if (isAbortError(e)) {
-          endRun();
-          return;
+        if (myRunId === runId) {
+          fail(e);
         }
-        error.set(e);
-        endRun();
       }
     );
+    // superseded by the next run, or disposed: with this asyncComputed, or
+    // with the effect, computed or render that created it
+    return () => controller.abort();
   });
 
   function dispose() {
     runId++;
     stopEffect();
-    runController?.abort();
-    runController = null;
     // Mark the abandoned run as no longer in flight and release any awaiter.
     inFlight = false;
     pending?.resolve();
@@ -143,7 +136,7 @@ export function asyncComputed<T>(
   const read = (() => value()) as AsyncComputed<T>;
   read.loading = () => loading();
   read.error = () => error();
-  read.refresh = () => refreshTick.set(refreshTick() + 1);
+  read.refresh = () => refreshTick.set(untrack(refreshTick) + 1);
   read.dispose = dispose;
   read.currentPromise = () => {
     if (!inFlight) {
@@ -156,4 +149,12 @@ export function asyncComputed<T>(
     return pending.promise;
   };
   return read;
+}
+
+// error() is typed Error: a thrown non-Error (a string, a plain object) is
+// wrapped, and kept as its cause
+function toError(e: unknown): Error {
+  return e instanceof Error || Object.prototype.toString.call(e) === "[object Error]"
+    ? (e as Error)
+    : new Error(String(e), { cause: e });
 }

@@ -138,8 +138,10 @@ user.currentPromise(); // promise that resolves once no run is in flight
 
 The `abortSignal` argument follows the same convention as
 [`onWillStart`](scope.md#async-cancellation): it fires when the run is
-superseded (deps changed, or `refresh()` called), or when the surrounding
-[scope](scope.md) is destroyed. Any `fetch` keyed to it is cancelled
+superseded (deps changed, or `refresh()` called), when the surrounding
+[scope](scope.md) is destroyed, or when the effect, computed or render that
+created the `asyncComputed` runs again or is disposed (see
+[nested effects](effects.md#nested-effects)). Any `fetch` keyed to it is cancelled
 automatically; the resulting `AbortError` is silently dropped.
 
 While a fetch is in flight, the previous resolved value remains visible via
@@ -219,7 +221,8 @@ filter without triggering a network request.
 ### Errors
 
 Errors thrown by the fetcher (sync or async) populate `error()` and clear
-`loading()`. The next successful run clears the error. `AbortError` is treated
+`loading()`; a thrown value that is not an `Error` is wrapped in one, with the
+value as its `cause`. The next successful run clears the error. `AbortError` is treated
 as a cancellation, not a real error — it never reaches `error()`.
 
 ### No `.set` (read-only)
