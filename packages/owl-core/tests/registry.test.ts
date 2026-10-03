@@ -1,5 +1,5 @@
-import { effect, Plugin, PluginManager, Registry, Scope, types as t } from "../src";
-import { waitScheduler } from "./helpers";
+import { effect, Plugin, PluginManager, Registry, types as t } from "../src";
+import { TestScope, waitScheduler } from "./helpers";
 
 const rethrow = (e: unknown) => {
   throw e;
@@ -239,7 +239,7 @@ describe("registry", () => {
   });
 
   test("a registry created in a scope keeps updating after the scope is destroyed", async () => {
-    const scope = new Scope({});
+    const scope = new TestScope({});
     const registry = scope.run(() => new Registry<number>());
     const seen: number[][] = [];
     effect(() => {
@@ -423,8 +423,8 @@ describe("registry", () => {
     test("a scope that overwrote with the same value removes only its own entry", () => {
       const shared = new Registry<string>();
       const app = {};
-      const a = new Scope(app);
-      const b = new Scope(app);
+      const a = new TestScope(app);
+      const b = new TestScope(app);
       a.run(() => shared.use("k", "v"));
       b.run(() => shared.use("k", "v", { force: true }));
       a.finalize(rethrow);

@@ -46,7 +46,7 @@ function makePropSetter(name: string): Setter<HTMLElement> {
 // Main compiler code
 // -----------------------------------------------------------------------------
 
-type BlockType = (data?: any[], children?: VNode[]) => VNode;
+type BlockType = (data?: any[], children?: (VNode | undefined)[]) => VNode;
 
 const cache: { [key: string]: BlockType } = {};
 

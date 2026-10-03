@@ -1,5 +1,7 @@
 import { vi, type Mock } from "vitest";
-import { effect } from "../src";
+import { effect, Scope } from "../src";
+
+export class TestScope extends Scope {}
 
 export function nextMicroTick(): Promise<void> {
   return Promise.resolve();

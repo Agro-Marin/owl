@@ -25,6 +25,7 @@
     "build": "node build.mjs",
     "build:types": "node build.mjs types",
     "test": "vitest run",
+    "test:types": "tsc --project tsconfig.tests.json",
     "test:watch": "vitest"
   },
   "repository": {

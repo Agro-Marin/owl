@@ -1,5 +1,5 @@
-import { effect, Plugin, PluginManager, Resource, Scope, types as t } from "../src";
-import { waitScheduler } from "./helpers";
+import { effect, Plugin, PluginManager, Resource, types as t } from "../src";
+import { TestScope, waitScheduler } from "./helpers";
 
 const rethrow = (e: unknown) => {
   throw e;
@@ -165,7 +165,7 @@ test("do not bind signals on clear", async () => {
 });
 
 test("a resource created in a scope keeps updating after the scope is destroyed", async () => {
-  const scope = new Scope({});
+  const scope = new TestScope({});
   const resource = scope.run(() => new Resource<number>());
   const seen: number[][] = [];
   effect(() => {
@@ -287,8 +287,8 @@ describe("use()", () => {
   test("an item used by two scopes stays until both are destroyed", () => {
     const shared = new Resource<string>();
     const app = {};
-    const a = new Scope(app);
-    const b = new Scope(app);
+    const a = new TestScope(app);
+    const b = new TestScope(app);
     a.run(() => shared.use("x"));
     b.run(() => shared.use("x"));
     expect(shared.items()).toEqual(["x", "x"]);
