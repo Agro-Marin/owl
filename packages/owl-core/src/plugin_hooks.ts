@@ -9,18 +9,21 @@ export type PluginInstance<T extends PluginConstructor> = Omit<InstanceType<T>, 
 export function usePlugin<T extends PluginConstructor>(pluginType: T): PluginInstance<T> {
   const scope = useScope();
 
-  let plugin = scope.pluginManager.getPluginById<InstanceType<T>>(pluginType.id);
+  const manager = scope.pluginManager;
+  let plugin =
+    manager.getPluginById(pluginType.id) ??
+    (scope instanceof PluginManager
+      ? manager.startPlugin(pluginType)
+      : manager.startPending(pluginType.id));
   if (!plugin) {
-    if (scope instanceof PluginManager) {
-      plugin = scope.pluginManager.startPlugin(pluginType)!;
-    } else {
-      throw new OwlError(`Unknown plugin "${pluginType.id}"`);
-    }
+    throw new OwlError(`Unknown plugin "${pluginType.id}"`);
   }
 
   // A plugin can define a specialized, per-consumer view of itself (see
-  // PluginConstructor.scoped); the view is bound to the calling scope.
-  const scoped = pluginType.scoped;
+  // PluginConstructor.scoped); the view is bound to the calling scope. It is
+  // the view of the plugin actually found, which may shadow the requested one
+  // under the same id.
+  const scoped = (plugin.constructor as PluginConstructor).scoped;
   return (scoped ? scoped(plugin, scope) : plugin) as PluginInstance<T>;
 }
 

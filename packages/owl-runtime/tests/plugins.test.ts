@@ -1285,3 +1285,193 @@ test("can use useListener in a plugin", () => {
   bus.dispatchEvent(new Event("blip"));
   expect(n).toBe(2);
 });
+
+describe("plugin start failures and lookups", () => {
+  test("a dependency cycle between field initializers throws instead of overflowing", () => {
+    class A extends Plugin {
+      b: any = plugin(B);
+    }
+    class B extends Plugin {
+      a: any = plugin(A);
+    }
+    const manager = new PluginManager(new App());
+    expect(() => manager.startPlugins([A])).toThrow("Circular plugin dependency: A -> B -> A");
+    expect(manager.getPlugin(A)).toBe(null);
+    expect(manager.getPlugin(B)).toBe(null);
+  });
+
+  test("a setup that throws undoes its willStart, destroy callbacks and dependencies", async () => {
+    const steps: string[] = [];
+    class Dep extends Plugin {
+      setup() {
+        onWillDestroy(() => steps.push("dep destroy"));
+      }
+    }
+    class Bad extends Plugin {
+      setup() {
+        plugin(Dep);
+        onWillStart(() => {
+          steps.push("bad willStart");
+        });
+        onWillDestroy(() => steps.push("bad destroy"));
+        throw new Error("boom");
+      }
+    }
+    class Later extends Plugin {
+      setup() {
+        onWillStart(() => {
+          steps.push("later willStart");
+        });
+      }
+    }
+    const manager = new PluginManager(new App());
+    expect(() => manager.startPlugins([Bad])).toThrow("boom");
+    expect(steps.splice(0)).toEqual(["bad destroy", "dep destroy"]);
+    expect(manager.getPlugin(Dep)).toBe(null);
+
+    manager.startPlugins([Later]);
+    await manager.ready;
+    manager.destroy();
+    expect(steps).toEqual(["later willStart"]);
+  });
+
+  test("onWillStart outside a setup throws instead of never running", () => {
+    class A extends Plugin {}
+    const manager = new PluginManager(new App());
+    manager.startPlugins([A]);
+    expect(() => manager.run(() => onWillStart(() => {}))).toThrow(
+      "onWillStart can only be called while a component or plugin is set up"
+    );
+  });
+
+  test("a host uses a provided plugin of a later batch while an earlier batch is still starting", async () => {
+    const rpc = makeDeferred<void>();
+    class Session extends Plugin {
+      static sequence = 10;
+      setup() {
+        onWillStart(() => rpc);
+      }
+    }
+    class Late extends Plugin {
+      value = "late";
+    }
+    let seen = "";
+    class Root extends Component {
+      static template = xml`<span t-out="this.late.value"/>`;
+      late: any;
+      setup() {
+        providePlugins([Session, Late]);
+        this.late = plugin(Late);
+        seen = this.late.value;
+      }
+    }
+    const fixture = makeTestFixture();
+    const app = new App();
+    const mounted = app.createRoot(Root).mount(fixture);
+    expect(seen).toBe("late");
+    rpc.resolve();
+    await mounted;
+    expect(fixture.innerHTML).toBe("<span>late</span>");
+    app.destroy();
+  });
+
+  test("usePlugin applies the scoped view of the plugin it finds, not of the one it asked for", () => {
+    class Orm extends Plugin {
+      static id = "orm";
+      static scoped(self: Orm) {
+        return { via: "Orm.scoped", self };
+      }
+    }
+    class MockOrm extends Plugin {
+      static id = "orm";
+    }
+    const parent = new PluginManager(new App());
+    parent.startPlugins([Orm]);
+    const sub = new PluginManager(parent.app, { parent });
+    sub.startPlugins([MockOrm]);
+    const found: any = sub.run(() => plugin(Orm));
+    expect(found).toBeInstanceOf(MockOrm);
+  });
+
+  test("a sub manager's config falls back to its parent's", () => {
+    const seen: any[] = [];
+    class A extends Plugin {
+      setup() {
+        seen.push(config("url"), config("timeout"));
+      }
+    }
+    const parent = new PluginManager(new App(), { config: { url: "/app", timeout: 10 } });
+    const sub = new PluginManager(parent.app, { parent, config: { url: "/sub" } });
+    sub.startPlugins([A]);
+    expect(seen).toEqual(["/sub", 10]);
+    expect(parent.config).toEqual({ url: "/app", timeout: 10 });
+  });
+
+  test("a plugin id named like an Object.prototype key is not a plugin", () => {
+    class Ctor extends Plugin {
+      static id = "constructor";
+    }
+    const manager = new PluginManager(new App());
+    expect(manager.getPluginById("toString")).toBe(null);
+    expect(() => manager.run(() => plugin(Ctor))).not.toThrow();
+    expect(manager.getPlugin(Ctor)).toBeInstanceOf(Ctor);
+  });
+
+  test("starting plugins from an effect does not subscribe it to what they read", async () => {
+    const s = signal(0);
+    let runs = 0;
+    class A extends Plugin {
+      setup() {
+        s();
+      }
+    }
+    const manager = new PluginManager(new App());
+    effect(() => {
+      runs++;
+      manager.startPlugins([A]);
+    });
+    expect(runs).toBe(1);
+    s.set(1);
+    await waitScheduler();
+    expect(runs).toBe(1);
+  });
+
+  test("destroying an app whose plugin start is aborted rejects nothing unhandled", async () => {
+    class Fetching extends Plugin {
+      setup() {
+        onWillStart(
+          ({ abortSignal }) =>
+            new Promise((_, reject) =>
+              abortSignal.addEventListener("abort", () => reject(abortSignal.reason))
+            )
+        );
+      }
+    }
+    const app = new App({ plugins: [Fetching] });
+    app.destroy();
+    await expect(app.pluginManager.ready).resolves.toBeUndefined();
+  });
+
+  test("mount() rejects with an AbortError when its app dies while plugins start", async () => {
+    let manager!: PluginManager;
+    class Fetching extends Plugin {
+      setup() {
+        manager = this.__owl__;
+        onWillStart(
+          ({ abortSignal }) =>
+            new Promise((_, reject) =>
+              abortSignal.addEventListener("abort", () => reject(abortSignal.reason))
+            )
+        );
+      }
+    }
+    class Root extends Component {
+      static template = xml`<div/>`;
+    }
+    const fixture = makeTestFixture();
+    const mounted = mount(Root, fixture, { plugins: [Fetching] });
+    manager.app.destroy();
+    await expect(mounted).rejects.toMatchObject({ name: "AbortError" });
+    expect(fixture.innerHTML).toBe("");
+  });
+});

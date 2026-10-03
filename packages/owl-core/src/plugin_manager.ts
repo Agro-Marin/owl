@@ -1,7 +1,7 @@
 import { effect } from "./effect";
 import { OwlError } from "./owl_error";
 import { Resource } from "./resource";
-import { Scope, scopeStack } from "./scope";
+import { isAbortError, Scope } from "./scope";
 import { STATUS } from "./status";
 import { untrack } from "./computations";
 
@@ -70,6 +70,7 @@ interface PluginManagerOptions {
 export class PluginManager extends Scope {
   config: Record<string, any>;
   plugins: Record<string, Plugin>;
+  parent: PluginManager | null;
 
   // Resolves once all batches of plugins have started and their willStart
   // callbacks have settled. The scope transitions to MOUNTED as the last step
@@ -78,22 +79,34 @@ export class PluginManager extends Scope {
   // from Scope.
   ready: Promise<void> = Promise.resolve();
   private hasPendingReady = false;
+  // constructors of the batches still waiting for an earlier batch's
+  // willStart, by id: a consumer that cannot wait starts one ahead of its batch
+  private pending = new Map<string, PluginConstructor>();
+  // plugins whose constructor is running: a plugin is registered only once it
+  // is built, so asking for one of them again is a dependency cycle
+  private constructing = new Set<PluginConstructor>();
+  // own plugin ids in start order, so a failed setup can unregister what it started
+  private startedIds: string[] = [];
 
   constructor(app: any, options: PluginManagerOptions = {}) {
     super(app);
-    this.config = options.config ?? {};
+    const parent = options.parent ?? null;
+    this.parent = parent;
+    this.config = parent
+      ? Object.assign(Object.create(parent.config), options.config)
+      : (options.config ?? {});
     this.pluginManager = this;
 
-    if (options.parent) {
+    if (parent) {
       // The parent deliberately keeps NO reference to this sub manager: an
       // onDestroy callback on the parent is never removed, so a long-lived
       // parent would retain every destroyed sub manager (and all its plugin
       // instances). Whoever creates a sub manager is responsible for
       // destroying it — providePlugins ties it to its host component's
       // lifetime, and the app destroys its own manager.
-      this.plugins = Object.create(options.parent.plugins);
+      this.plugins = Object.create(parent.plugins);
     } else {
-      this.plugins = {};
+      this.plugins = Object.create(null);
     }
   }
 
@@ -110,34 +123,85 @@ export class PluginManager extends Scope {
   }
 
   startPlugin<T extends PluginConstructor>(pluginConstructor: T): InstanceType<T> | null {
-    if (!pluginConstructor.id) {
+    const id = pluginConstructor.id;
+    if (!id) {
       throw new OwlError(`Plugin "${pluginConstructor.name}" has no id`);
     }
 
-    if (this.plugins.hasOwnProperty(pluginConstructor.id)) {
-      const existingPluginType = this.getPluginById(pluginConstructor.id)!.constructor;
+    if (Object.hasOwn(this.plugins, id)) {
+      const existingPluginType = this.plugins[id].constructor;
       if (existingPluginType !== pluginConstructor) {
         throw new OwlError(
-          `Trying to start a plugin with the same id as an other plugin (id: '${pluginConstructor.id}', existing plugin: '${existingPluginType.name}', starting plugin: '${pluginConstructor.name}')`
+          `Trying to start a plugin with the same id as an other plugin (id: '${id}', existing plugin: '${existingPluginType.name}', starting plugin: '${pluginConstructor.name}')`
         );
       }
       return null;
     }
+    if (this.constructing.has(pluginConstructor)) {
+      const path = [...this.constructing, pluginConstructor].map((ctor) => ctor.id);
+      throw new OwlError(`Circular plugin dependency: ${path.join(" -> ")}`);
+    }
 
-    const plugin = new pluginConstructor(this);
-    this.plugins[pluginConstructor.id] = plugin;
+    // undo everything this start registered, including the plugins it
+    // started as dependencies, so a failed setup leaves nothing behind
+    const mark = this.mark();
+    const startedMark = this.startedIds.length;
+    const undo = () => {
+      for (const startedId of this.startedIds.splice(startedMark)) {
+        delete this.plugins[startedId];
+      }
+      this.rollback(mark, (e) => console.error(e));
+    };
+    let plugin: Plugin;
+    this.constructing.add(pluginConstructor);
+    try {
+      plugin = new pluginConstructor(this);
+    } catch (e) {
+      undo();
+      throw e;
+    } finally {
+      this.constructing.delete(pluginConstructor);
+    }
+    this.plugins[id] = plugin;
+    this.startedIds.push(id);
     try {
       plugin.setup();
     } catch (e) {
-      delete this.plugins[pluginConstructor.id];
+      undo();
       throw e;
     }
+    this.pending.delete(id);
     return plugin as InstanceType<T>;
+  }
+
+  /**
+   * Starts now, in the manager that holds it, a plugin whose batch is still
+   * waiting for an earlier one: a component asking for it in its setup cannot
+   * wait. Its willStart callbacks run with the next batch.
+   */
+  startPending(id: string): Plugin | null {
+    for (let manager: PluginManager | null = this; manager; manager = manager.parent) {
+      const pluginConstructor = manager.pending.get(id);
+      if (pluginConstructor) {
+        return manager.collect(() => manager!.startPlugin(pluginConstructor));
+      }
+    }
+    return null;
+  }
+
+  private collect<T>(fn: () => T): T {
+    const collecting = this.collectingWillStart;
+    this.collectingWillStart = true;
+    try {
+      return untrack(() => this.run(fn));
+    } finally {
+      this.collectingWillStart = collecting;
+    }
   }
 
   startPlugins(pluginConstructors: PluginConstructor[]): void {
     const fresh = pluginConstructors.filter((ctor) => {
-      if (!ctor.id || this.plugins.hasOwnProperty(ctor.id)) {
+      if (!ctor.id || Object.hasOwn(this.plugins, ctor.id)) {
         // already started (or invalid): startPlugin throws on missing ids and
         // id conflicts, and is a no-op otherwise
         this.startPlugin(ctor);
@@ -162,23 +226,27 @@ export class PluginManager extends Scope {
         batches.push([ctor]);
       }
     }
+    for (const batch of batches.slice(1)) {
+      for (const ctor of batch) {
+        this.pending.set(ctor.id, ctor);
+      }
+    }
 
-    // Instantiate one batch synchronously (its own scopeStack push/pop, never
-    // spanning an await) and return its pending willStart promise, if any.
+    // Instantiate one batch synchronously (never spanning an await) and
+    // return its pending willStart promise, if any. Nothing a plugin reads
+    // while starting subscribes the caller, which may be an effect.
     const startBatch = (batch: PluginConstructor[]): Promise<unknown> | null => {
       if (this.status >= STATUS.DESTROYED) {
         return null;
       }
-      scopeStack.push(this);
-      try {
+      return this.collect(() => {
         for (const ctor of batch) {
+          this.pending.delete(ctor.id);
           this.startPlugin(ctor);
         }
-      } finally {
-        scopeStack.pop();
-      }
-      const pending = this.willStart.splice(0);
-      return pending.length ? Promise.all(pending.map((fn) => fn())) : null;
+        const pending = this.willStart.splice(0);
+        return pending.length ? Promise.all(pending.map((fn) => fn())) : null;
+      });
     };
 
     // Chain onto a still-pending `ready` (re-entrant call, e.g. a plugin added
@@ -204,18 +272,28 @@ export class PluginManager extends Scope {
       return;
     }
     this.hasPendingReady = true;
-    const ready = (this.ready = chain.then(() => {
-      if (this.status < STATUS.MOUNTED) {
-        this.status = STATUS.MOUNTED;
+    const ready = (this.ready = chain.then(
+      () => {
+        if (this.status < STATUS.MOUNTED) {
+          this.status = STATUS.MOUNTED;
+        }
+        if (this.ready === ready) {
+          this.hasPendingReady = false;
+        }
+      },
+      (e) => {
+        this.pending.clear();
+        // A start cancelled by the destruction of the manager is not a
+        // failure: `ready` resolves. Anything else keeps `ready` rejected and
+        // `hasPendingReady` true, so later startPlugins calls chain onto the
+        // rejected promise and are skipped, and the error surfaces as an
+        // unhandled rejection when no consumer awaits `ready`.
+        if (isAbortError(e) && this.status >= STATUS.DESTROYED) {
+          return;
+        }
+        throw e;
       }
-      if (this.ready === ready) {
-        this.hasPendingReady = false;
-      }
-      // Note: no rejection handler here. On failure, `ready` stays rejected
-      // and `hasPendingReady` stays true, so later startPlugins calls chain
-      // onto the rejected promise and are skipped, and the error surfaces as
-      // an unhandled rejection when no consumer awaits `ready`.
-    }));
+    ));
   }
 }
 
@@ -226,11 +304,6 @@ export function startPlugins(
   if (Array.isArray(plugins)) {
     manager.startPlugins(plugins);
   } else {
-    manager.onDestroy(
-      effect(() => {
-        const pluginItems = plugins.items();
-        untrack(() => manager.startPlugins(pluginItems));
-      })
-    );
+    manager.onDestroy(effect(() => manager.startPlugins(plugins.items())));
   }
 }

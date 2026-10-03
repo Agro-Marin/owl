@@ -78,12 +78,14 @@ export class ComponentNode extends Scope implements VNode<ComponentNode> {
     const previousComputation = getCurrentComputation();
     setComputation(undefined);
     scopeStack.push(this);
+    this.collectingWillStart = true;
     try {
       this.component = new C(this);
       const ctx = { this: this.component, __owl__: this };
       this.renderFn = app.getTemplate(C.template).bind(this.component, ctx, this);
       this.component.setup();
     } finally {
+      this.collectingWillStart = false;
       scopeStack.pop();
       setComputation(previousComputation);
     }

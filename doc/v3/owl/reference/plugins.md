@@ -234,6 +234,9 @@ setup() {
 }
 ```
 
+A key the component-level config does not set falls back to the config of the
+enclosing `providePlugins`, and finally to the app's.
+
 ## Plugin Shadowing
 
 A child `providePlugins` can override a parent plugin by providing a plugin
@@ -349,7 +352,10 @@ callbacks still run in parallel.
 Two things to keep in mind:
 
 - An explicit dependency wins over sequence: calling `usePlugin(X)` starts `X`
-  immediately, even if `X` has a higher sequence number.
+  immediately, even if `X` has a higher sequence number. This holds for a
+  component too: a component that provides plugins with `providePlugins` can
+  use any of them in its own `setup()`, even one whose batch is still waiting
+  for an earlier batch's `onWillStart`.
 - If an `onWillStart` callback in a batch rejects, the remaining batches are
   not started and the mount is rejected.
 
@@ -358,13 +364,21 @@ Two things to keep in mind:
 Plugins follow a simple lifecycle:
 
 1. The plugin is instantiated
-2. `setup()` is called (may register `onWillStart` for async init)
+2. `setup()` is called (may register `onWillStart` for async init; calling
+   `onWillStart` anywhere else throws)
 3. The plugin is active and can be used
 4. On destroy, cleanup runs in reverse order (LIFO)
 
-All reactive values (signals, computed, effects) created during `setup()` are
-automatically cleaned up when the plugin is destroyed. For manual cleanup,
-use `onWillDestroy()`:
+If the constructor or `setup()` throws, the start is undone: the plugin and
+any plugin it started as a dependency are unregistered, their `onWillStart`
+callbacks dropped and their `onWillDestroy` callbacks run at once. Two
+plugins whose field initializers ask for each other throw `Circular plugin
+dependency: A -> B -> A`.
+
+The computed values created during `setup()` are disposed when the plugin is
+destroyed. A plain `effect()` is not tied to any scope: use `useEffect()` for
+an effect that should stop with the plugin. For manual cleanup, use
+`onWillDestroy()`:
 
 ```js
 class WebSocketPlugin extends Plugin {

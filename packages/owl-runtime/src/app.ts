@@ -3,6 +3,7 @@ import { ComponentConstructor } from "./component";
 import { ComponentNode } from "./component_node";
 import { GetProps } from "./props";
 import {
+  makeAbortError,
   OwlError,
   PluginConstructor,
   PluginManager,
@@ -310,6 +311,9 @@ export async function mount<T extends ComponentConstructor>(
     // the root's setup/field initializers can safely call plugin() — including
     // plugins that only start in a later sequence batch.
     await app.pluginManager.ready;
+    if (app.destroyed) {
+      throw makeAbortError();
+    }
   }
   const root = app.createRoot(C, config);
   return root.mount(target, config) as any;

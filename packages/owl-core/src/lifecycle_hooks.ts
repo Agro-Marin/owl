@@ -1,3 +1,4 @@
+import { OwlError } from "./owl_error";
 import { Scope, useScope } from "./scope";
 
 // -----------------------------------------------------------------------------
@@ -6,6 +7,9 @@ import { Scope, useScope } from "./scope";
 
 export function onWillStart(fn: (scope: Scope) => Promise<void> | void | any) {
   const scope = useScope();
+  if (!scope.collectingWillStart) {
+    throw new OwlError("onWillStart can only be called while a component or plugin is set up");
+  }
   scope.willStart.push(scope.decorate(fn, "onWillStart") as () => any);
 }
 
