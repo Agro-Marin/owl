@@ -57,7 +57,7 @@ exports[`hooks > can use onWillStart, onWillUpdateProps 2`] = `
   let block1 = createBlock(\`<span><block-child-0/></span>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].props.value);
+    const b2 = safeOutput(ctx['this'].props.value, key + \`__1\`);
     return block1([], [b2]);
   }
 }"
@@ -72,7 +72,7 @@ exports[`hooks > mounted callbacks should be called in reverse order from willUn
   let block1 = createBlock(\`<div>hey<block-child-0/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].state.value);
+    const b2 = safeOutput(ctx['this'].state.value, key + \`__1\`);
     return block1([], [b2]);
   }
 }"
@@ -101,7 +101,7 @@ exports[`hooks > onWillUpdateProps receives nextProps (dev mode) 2`] = `
   let block1 = createBlock(\`<span><block-child-0/></span>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].props.value);
+    const b2 = safeOutput(ctx['this'].props.value, key + \`__1\`);
     return block1([], [b2]);
   }
 }"
@@ -129,7 +129,7 @@ exports[`hooks > onWillUpdateProps receives nextProps 2`] = `
   let block1 = createBlock(\`<span><block-child-0/></span>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].props.value);
+    const b2 = safeOutput(ctx['this'].props.value, key + \`__1\`);
     return block1([], [b2]);
   }
 }"
@@ -144,7 +144,7 @@ exports[`hooks > two different call to willPatch/patched should work 1`] = `
   let block1 = createBlock(\`<div>hey<block-child-0/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].state.value);
+    const b2 = safeOutput(ctx['this'].state.value, key + \`__1\`);
     return block1([], [b2]);
   }
 }"
@@ -204,7 +204,7 @@ exports[`hooks > useEffect hook > effect that depends on a value is rerun if val
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].state.value);
+    const b2 = safeOutput(ctx['this'].state.value, key + \`__1\`);
     return block1([], [b2]);
   }
 }"
@@ -249,7 +249,7 @@ exports[`hooks > useListener 2`] = `
   let block1 = createBlock(\`<span><block-child-0/></span>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].props.value);
+    const b2 = safeOutput(ctx['this'].props.value, key + \`__1\`);
     return block1([], [b2]);
   }
 }"
@@ -378,7 +378,7 @@ exports[`hooks > useListener work with references 1`] = `
   
   return function template(ctx, node, key = "") {
     let ref1 = createRef(ctx['this'].span, node);
-    const b2 = safeOutput(ctx['this'].value());
+    const b2 = safeOutput(ctx['this'].value(), key + \`__1\`);
     return block1([ref1], [b2]);
   }
 }"

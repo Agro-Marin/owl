@@ -22,7 +22,7 @@ exports[`a child render writing a value before reading it does not re-render whe
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].label());
+    const b2 = safeOutput(ctx['this'].label(), key + \`__1\`);
     return block1([], [b2]);
   }
 }"
@@ -37,7 +37,7 @@ exports[`a throwing effect does not freeze a component notified with it 1`] = `
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].s());
+    const b2 = safeOutput(ctx['this'].s(), key + \`__1\`);
     return block1([], [b2]);
   }
 }"
@@ -51,8 +51,8 @@ exports[`components and computed > Child is not rerender when reactive is comput
   const comp1 = createComponent(app, \`Child\`, true, false, false, []);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].c());
-    const b3 = comp1({}, key + \`__1\`, node, this, null);
+    const b2 = safeOutput(ctx['this'].c(), key + \`__1\`);
+    const b3 = comp1({}, key + \`__2\`, node, this, null);
     return multi([b2, b3]);
   }
 }"
@@ -76,8 +76,8 @@ exports[`components and computed > simple component and computed value 1`] = `
   let { safeOutput } = helpers;
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].value++);
-    const b3 = safeOutput(ctx['this'].c());
+    const b2 = safeOutput(ctx['this'].value++, key + \`__1\`);
+    const b3 = safeOutput(ctx['this'].c(), key + \`__2\`);
     return multi([b2, b3]);
   }
 }"
@@ -93,14 +93,14 @@ exports[`computed with equals in components > a recompute with a shallow-equal r
   let block4 = createBlock(\`<li><block-child-0/></li>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].track());
+    const b2 = safeOutput(ctx['this'].track(), key + \`__1\`);
     const ctx1 = ctx;
     const [k_block3, v_block3, l_block3, c_block3] = prepareList(ctx['this'].visible());
     for (let i1 = 0; i1 < l_block3; i1++) {
       let ctx = Object.create(ctx1);
       ctx[\`todo\`] = k_block3[i1];
       const key1 = ctx['todo'].id;
-      const b5 = safeOutput(ctx['todo'].text);
+      const b5 = safeOutput(ctx['todo'].text, key + \`__2__\${key1}\`);
       c_block3[i1] = withKey(block4([], [b5]), key1);
     }
     const b3 = list(c_block3);
@@ -143,8 +143,8 @@ exports[`reactive cleanup on component destruction > benchmark-like scenario: si
   
   return function template(ctx, node, key = "") {
     let attr1 = ctx['this'].isSelected()?'danger':'';
-    const b2 = safeOutput(ctx['this'].p.row.id);
-    const b3 = safeOutput(ctx['this'].p.row.label());
+    const b2 = safeOutput(ctx['this'].p.row.id, key + \`__1\`);
+    const b3 = safeOutput(ctx['this'].p.row.label(), key + \`__2\`);
     return block1([attr1], [b2, b3]);
   }
 }"
@@ -178,7 +178,7 @@ exports[`reactive cleanup on component destruction > destroying a component with
   let block1 = createBlock(\`<span><block-child-0/></span>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].isSelected());
+    const b2 = safeOutput(ctx['this'].isSelected(), key + \`__1\`);
     return block1([], [b2]);
   }
 }"
@@ -217,7 +217,7 @@ exports[`reactive cleanup on component destruction > destroying multiple childre
   let block1 = createBlock(\`<span><block-child-0/></span>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].isSelected());
+    const b2 = safeOutput(ctx['this'].isSelected(), key + \`__1\`);
     return block1([], [b2]);
   }
 }"
@@ -247,7 +247,7 @@ exports[`reactivity in lifecycle > Child component doesn't render when state the
   let { safeOutput } = helpers;
   
   return function template(ctx, node, key = "") {
-    return safeOutput(ctx['this'].props.state.content.a);
+    return safeOutput(ctx['this'].props.state.content.a, key + \`__1\`);
   }
 }"
 `;
@@ -276,8 +276,8 @@ exports[`reactivity in lifecycle > Component is automatically subscribed to prox
   return function template(ctx, node, key = "") {
     ctx = Object.create(ctx);
     ctx["noop"] = ctx['this'].notify();
-    const b2 = safeOutput(ctx['this'].props.obj.a);
-    const b3 = safeOutput(ctx['this'].props.proxyObj.b);
+    const b2 = safeOutput(ctx['this'].props.obj.a, key + \`__1\`);
+    const b3 = safeOutput(ctx['this'].props.proxyObj.b, key + \`__2\`);
     return multi([b2, b3]);
   }
 }"
@@ -293,8 +293,8 @@ exports[`reactivity in lifecycle > an external proxy object should be tracked 1`
   let block1 = createBlock(\`<div><block-child-0/><block-child-1/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].obj1.value);
-    const b3 = comp1({}, key + \`__1\`, node, this, null);
+    const b2 = safeOutput(ctx['this'].obj1.value, key + \`__1\`);
+    const b3 = comp1({}, key + \`__2\`, node, this, null);
     return block1([], [b2, b3]);
   }
 }"
@@ -309,7 +309,7 @@ exports[`reactivity in lifecycle > an external proxy object should be tracked 2`
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].obj2.value);
+    const b2 = safeOutput(ctx['this'].obj2.value, key + \`__1\`);
     return block1([], [b2]);
   }
 }"
@@ -324,7 +324,7 @@ exports[`reactivity in lifecycle > can use a state hook 1`] = `
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].counter.value);
+    const b2 = safeOutput(ctx['this'].counter.value, key + \`__1\`);
     return block1([], [b2]);
   }
 }"
@@ -341,7 +341,7 @@ exports[`reactivity in lifecycle > can use a state hook 2 1`] = `
   return function template(ctx, node, key = "") {
     ctx = Object.create(ctx);
     ctx["noop"] = ctx['this'].notify();
-    const b2 = safeOutput(ctx['this'].state.a);
+    const b2 = safeOutput(ctx['this'].state.a, key + \`__1\`);
     return block1([], [b2]);
   }
 }"
@@ -356,7 +356,7 @@ exports[`reactivity in lifecycle > can use a state hook on Map 1`] = `
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].counter.get('value'));
+    const b2 = safeOutput(ctx['this'].counter.get('value'), key + \`__1\`);
     return block1([], [b2]);
   }
 }"
@@ -373,7 +373,7 @@ exports[`reactivity in lifecycle > change state while mounting component 1`] = `
   return function template(ctx, node, key = "") {
     ctx = Object.create(ctx);
     ctx["noop"] = ctx['this'].notify();
-    const b2 = safeOutput(ctx['this'].state.val);
+    const b2 = safeOutput(ctx['this'].state.val, key + \`__1\`);
     return block1([], [b2]);
   }
 }"
@@ -389,9 +389,9 @@ exports[`reactivity in lifecycle > child re-renders when shared atom changes whi
   return function template(ctx, node, key = "") {
     const b2 = comp1({bv: ctx['this'].b()}, key + \`__1\`, node, this, null);
     const b3 = text(\`parent:a=\`);
-    const b4 = safeOutput(ctx['this'].a());
+    const b4 = safeOutput(ctx['this'].a(), key + \`__2\`);
     const b5 = text(\`:b=\`);
-    const b6 = safeOutput(ctx['this'].b());
+    const b6 = safeOutput(ctx['this'].b(), key + \`__3\`);
     return multi([b2, b3, b4, b5, b6]);
   }
 }"
@@ -407,9 +407,9 @@ exports[`reactivity in lifecycle > child re-renders when shared atom changes whi
     ctx = Object.create(ctx);
     ctx["_"] = ctx['this'].notify();
     const b2 = text(\`child:bv=\`);
-    const b3 = safeOutput(ctx['this'].props.bv);
+    const b3 = safeOutput(ctx['this'].props.bv, key + \`__1\`);
     const b4 = text(\`:a=\`);
-    const b5 = safeOutput(ctx['this'].a());
+    const b5 = safeOutput(ctx['this'].a(), key + \`__2\`);
     return multi([b2, b3, b4, b5]);
   }
 }"
@@ -445,8 +445,8 @@ exports[`reactivity in lifecycle > state changes in willUnmount do not trigger r
   return function template(ctx, node, key = "") {
     ctx = Object.create(ctx);
     ctx["noop"] = ctx['this'].notify();
-    const b2 = safeOutput(ctx['this'].props.val);
-    const b3 = safeOutput(ctx['this'].state.n);
+    const b2 = safeOutput(ctx['this'].props.val, key + \`__1\`);
+    const b3 = safeOutput(ctx['this'].state.n, key + \`__2\`);
     return block1([], [b2, b3]);
   }
 }"
@@ -472,7 +472,7 @@ exports[`reading reactive state in setup should work as expected 2`] = `
   let { safeOutput } = helpers;
   
   return function template(ctx, node, key = "") {
-    return safeOutput(ctx['this'].c());
+    return safeOutput(ctx['this'].c(), key + \`__1\`);
   }
 }"
 `;

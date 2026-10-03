@@ -14,19 +14,6 @@ exports[`a props.static default is validated against its type in dev mode 1`] = 
 }"
 `;
 
-exports[`a props.static default is validated against its type in dev mode 2`] = `
-"function anonymous(app, bdom, helpers
-) {
-  let { text, createBlock, list, multi, html, toggler } = bdom;
-  
-  let block1 = createBlock(\`<span/>\`);
-  
-  return function template(ctx, node, key = "") {
-    return block1();
-  }
-}"
-`;
-
 exports[`basics > can be mixed with props() 1`] = `
 "function anonymous(app, bdom, helpers
 ) {
@@ -52,8 +39,8 @@ exports[`basics > can be mixed with props() 2`] = `
   let block1 = createBlock(\`<span><block-child-0/>/<block-child-1/></span>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].all.extra);
-    const b3 = safeOutput(ctx['this'].main);
+    const b2 = safeOutput(ctx['this'].all.extra, key + \`__1\`);
+    const b3 = safeOutput(ctx['this'].main, key + \`__2\`);
     return block1([], [b2, b3]);
   }
 }"
@@ -84,7 +71,7 @@ exports[`basics > default value when prop is absent 2`] = `
   let block1 = createBlock(\`<span><block-child-0/></span>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].label);
+    const b2 = safeOutput(ctx['this'].label, key + \`__1\`);
     return block1([], [b2]);
   }
 }"
@@ -115,8 +102,8 @@ exports[`basics > multiple prop fields in same component 2`] = `
   let block1 = createBlock(\`<span><block-child-0/>/<block-child-1/></span>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].a);
-    const b3 = safeOutput(ctx['this'].b);
+    const b2 = safeOutput(ctx['this'].a, key + \`__1\`);
+    const b3 = safeOutput(ctx['this'].b, key + \`__2\`);
     return block1([], [b2, b3]);
   }
 }"
@@ -147,7 +134,7 @@ exports[`basics > prop accepts instanceOf type 2`] = `
   let block1 = createBlock(\`<span><block-child-0/></span>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].todo.name);
+    const b2 = safeOutput(ctx['this'].todo.name, key + \`__1\`);
     return block1([], [b2]);
   }
 }"
@@ -178,7 +165,7 @@ exports[`basics > provided value takes precedence over default 2`] = `
   let block1 = createBlock(\`<span><block-child-0/></span>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].label);
+    const b2 = safeOutput(ctx['this'].label, key + \`__1\`);
     return block1([], [b2]);
   }
 }"
@@ -209,7 +196,7 @@ exports[`basics > reads the named prop 2`] = `
   let block1 = createBlock(\`<span><block-child-0/></span>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].value);
+    const b2 = safeOutput(ctx['this'].value, key + \`__1\`);
     return block1([], [b2]);
   }
 }"
@@ -241,7 +228,7 @@ exports[`basics > type argument is optional (accepts any value) 2`] = `
   let block1 = createBlock(\`<span><block-child-0/></span>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].value);
+    const b2 = safeOutput(ctx['this'].value, key + \`__1\`);
     return block1([], [b2]);
   }
 }"
@@ -271,9 +258,9 @@ exports[`dev mode > a key another view defaults does not trigger the static-prop
   let block4 = createBlock(\`<i><block-child-0/></i>\`);
   
   return function template(ctx, node, key = "") {
-    const b3 = safeOutput(ctx['this'].props.n);
+    const b3 = safeOutput(ctx['this'].props.n, key + \`__1\`);
     const b2 = block2([], [b3]);
-    const b5 = safeOutput(ctx['this'].mode);
+    const b5 = safeOutput(ctx['this'].mode, key + \`__2\`);
     const b4 = block4([], [b5]);
     return multi([b2, b4]);
   }
@@ -289,7 +276,7 @@ exports[`dev mode > default value skips validation when prop is absent 1`] = `
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].label);
+    const b2 = safeOutput(ctx['this'].label, key + \`__1\`);
     return block1([], [b2]);
   }
 }"
@@ -345,7 +332,7 @@ exports[`dev mode > omitted prop with default does not trigger static-prop error
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].label);
+    const b2 = safeOutput(ctx['this'].label, key + \`__1\`);
     return block1([], [b2]);
   }
 }"

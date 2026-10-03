@@ -22,7 +22,7 @@ exports[`basics > basic use 2`] = `
   let block1 = createBlock(\`<span>child<block-child-0/></span>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].props.p);
+    const b2 = safeOutput(ctx['this'].props.p, key + \`__1\`);
     return block1([], [b2]);
   }
 }"
@@ -146,7 +146,7 @@ exports[`basics > sub widget is interactive 2`] = `
   
   return function template(ctx, node, key = "") {
     let hdlr1 = [hdlr_fn1, ctx];
-    const b2 = safeOutput(ctx['this'].state.val);
+    const b2 = safeOutput(ctx['this'].state.val, key + \`__1\`);
     return block1([hdlr1], [b2]);
   }
 }"

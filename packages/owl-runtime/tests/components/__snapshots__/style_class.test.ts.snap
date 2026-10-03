@@ -403,7 +403,7 @@ exports[`style and class handling > error in subcomponent with class 2`] = `
   
   return function template(ctx, node, key = "") {
     let attr1 = ctx['this'].props.class;
-    const b2 = safeOutput(ctx['this'].will.crash);
+    const b2 = safeOutput(ctx['this'].will.crash, key + \`__1\`);
     return block1([attr1], [b2]);
   }
 }"

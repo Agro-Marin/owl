@@ -9,7 +9,7 @@ exports[`translation context > body of t-sets are translated in context 1`] = `
   return function template(ctx, node, key = "") {
     ctx = Object.create(ctx);
     ctx["label"] = \`traduit\`;
-    return safeOutput(ctx['label']);
+    return safeOutput(ctx['label'], key + \`__1\`);
   }
 }"
 `;
@@ -55,7 +55,7 @@ exports[`translation context > props with modifier .translate are translated in 
   let block1 = createBlock(\`<span><block-child-0/></span>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].props.text);
+    const b2 = safeOutput(ctx['this'].props.text, key + \`__1\`);
     return block1([], [b2]);
   }
 }"
@@ -161,7 +161,7 @@ exports[`translation support > body of t-sets are translated 1`] = `
   return function template(ctx, node, key = "") {
     ctx = Object.create(ctx);
     ctx["label"] = \`translated\`;
-    return safeOutput(ctx['label']);
+    return safeOutput(ctx['label'], key + \`__1\`);
   }
 }"
 `;
@@ -175,7 +175,7 @@ exports[`translation support > body of t-sets inside translation=off are not tra
   return function template(ctx, node, key = "") {
     ctx = Object.create(ctx);
     ctx["label"] = \`untranslated\`;
-    return safeOutput(ctx['label']);
+    return safeOutput(ctx['label'], key + \`__1\`);
   }
 }"
 `;
@@ -189,7 +189,7 @@ exports[`translation support > body of t-sets inside translation=off are not tra
   return function template(ctx, node, key = "") {
     ctx = Object.create(ctx);
     ctx["label"] = \`untranslated\`;
-    return safeOutput(ctx['label']);
+    return safeOutput(ctx['label'], key + \`__1\`);
   }
 }"
 `;
@@ -209,7 +209,7 @@ exports[`translation support > body of t-sets with html content are translated 1
   return function template(ctx, node, key = "") {
     ctx = Object.create(ctx);
     ctx[\`label\`] = new LazyValue(value1, ctx, this, node, key);
-    return safeOutput(ctx['label']);
+    return safeOutput(ctx['label'], key + \`__1\`);
   }
 }"
 `;
@@ -231,7 +231,7 @@ exports[`translation support > body of t-sets with text and html content are tra
   return function template(ctx, node, key = "") {
     ctx = Object.create(ctx);
     ctx[\`label\`] = new LazyValue(value1, ctx, this, node, key);
-    return safeOutput(ctx['label']);
+    return safeOutput(ctx['label'], key + \`__1\`);
   }
 }"
 `;
@@ -288,7 +288,7 @@ exports[`translation support > does not translate attributes and .translate prop
   let block1 = createBlock(\`<i><block-child-0/></i>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].props.text);
+    const b2 = safeOutput(ctx['this'].props.text, key + \`__1\`);
     return block1([], [b2]);
   }
 }"
@@ -329,7 +329,7 @@ exports[`translation support > t-set and falsy t-value: t-body are translated 1`
   return function template(ctx, node, key = "") {
     ctx = Object.create(ctx);
     ctx["label"] = withDefault(false, \`translated\`);
-    return safeOutput(ctx['label']);
+    return safeOutput(ctx['label'], key + \`__1\`);
   }
 }"
 `;

@@ -1,18 +1,5 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`a destroyed app creates no root 1`] = `
-"function anonymous(app, bdom, helpers
-) {
-  let { text, createBlock, list, multi, html, toggler } = bdom;
-  
-  let block1 = createBlock(\`<div/>\`);
-  
-  return function template(ctx, node, key = "") {
-    return block1();
-  }
-}"
-`;
-
 exports[`app > app: clear scheduler tasks on destroy 1`] = `
 "function anonymous(app, bdom, helpers
 ) {
@@ -95,7 +82,7 @@ exports[`app > can configure an app with props 1`] = `
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].props.value);
+    const b2 = safeOutput(ctx['this'].props.value, key + \`__1\`);
     return block1([], [b2]);
   }
 }"

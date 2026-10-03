@@ -779,15 +779,18 @@ export class CodeGenerator {
     let blockStr;
     if (ast.expr === "0") {
       blockStr = this.compileZero(ctx);
-    } else if (ast.body) {
-      const bodyAst: AST = { type: ASTType.Multi, content: ast.body };
-      const name = this.compileInNewTarget("defaultContent", bodyAst, ctx);
-      const key = this.scopeKey(ctx);
-      this.helpers.add("safeOutput");
-      blockStr = `safeOutput(${compileExpr(ast.expr)}, () => ${name}.call(this, ctx, node, ${key}))`;
     } else {
+      // the key of this output site: a t-set body (LazyValue) output at several
+      // sites, or once per loop iteration, renders its components under each
+      const key = this.scopeKey(ctx, true);
       this.helpers.add("safeOutput");
-      blockStr = `safeOutput(${compileExpr(ast.expr)})`;
+      let defaultContent = "";
+      if (ast.body) {
+        const bodyAst: AST = { type: ASTType.Multi, content: ast.body };
+        const name = this.compileInNewTarget("defaultContent", bodyAst, ctx);
+        defaultContent = `, () => ${name}.call(this, ctx, node, ${key})`;
+      }
+      blockStr = `safeOutput(${compileExpr(ast.expr)}, ${key}${defaultContent})`;
     }
     this.insertBlock(blockStr, block, ctx);
     return block.varName;

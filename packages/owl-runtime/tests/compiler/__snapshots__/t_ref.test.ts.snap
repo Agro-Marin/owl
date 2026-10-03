@@ -106,7 +106,7 @@ exports[`t-ref > refs in a loop 1`] = `
       const key1 = ctx['item'].id;
       const tKey_1 = ctx['item'].id;
       let ref1 = createRef(ctx['item'].ref, node);
-      const b4 = toggler(tKey_1, safeOutput(ctx['item'].id));
+      const b4 = toggler(tKey_1, safeOutput(ctx['item'].id, tKey_1 + key + \`__1__\${key1}\`));
       c_block2[i1] = withKey(block3([ref1], [b4]), tKey_1 + key1);
     }
     const b2 = list(c_block2);

@@ -7,7 +7,7 @@ exports[`components and useEffect 1`] = `
   let { safeOutput } = helpers;
   
   return function template(ctx, node, key = "") {
-    return safeOutput(ctx['this'].current());
+    return safeOutput(ctx['this'].current(), key + \`__1\`);
   }
 }"
 `;

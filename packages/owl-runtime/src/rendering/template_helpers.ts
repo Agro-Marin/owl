@@ -105,8 +105,8 @@ class LazyValue {
     this.key = key;
   }
 
-  evaluate(): any {
-    return this.fn.call(this.component, this.ctx, this.node, this.key);
+  evaluate(siteKey: string = ""): any {
+    return this.fn.call(this.component, this.ctx, this.node, this.key + siteKey);
   }
 
   toString() {
@@ -117,7 +117,11 @@ class LazyValue {
 /*
  * Safely outputs `value` as a block depending on the nature of `value`
  */
-export function safeOutput(value: any, defaultContent?: () => BDom): ReturnType<typeof toggler> {
+export function safeOutput(
+  value: any,
+  siteKey: string,
+  defaultContent?: () => BDom
+): ReturnType<typeof toggler> {
   if (value === undefined || value === null) {
     return defaultContent ? toggler("default", defaultContent()) : toggler("undefined", text(""));
   }
@@ -128,7 +132,7 @@ export function safeOutput(value: any, defaultContent?: () => BDom): ReturnType<
     block = html(value);
   } else if (value instanceof LazyValue) {
     safeKey = `lazy_value`;
-    block = value.evaluate();
+    block = value.evaluate(siteKey);
   } else {
     safeKey = "string_unsafe";
     block = text(value);

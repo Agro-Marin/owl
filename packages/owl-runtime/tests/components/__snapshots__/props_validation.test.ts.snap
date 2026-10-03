@@ -121,7 +121,7 @@ exports[`props validation > can use custom class as type 2`] = `
   let { safeOutput } = helpers;
   
   return function template(ctx, node, key = "") {
-    return safeOutput(ctx['this'].props.customObj.val);
+    return safeOutput(ctx['this'].props.customObj.val, key + \`__1\`);
   }
 }"
 `;
@@ -768,7 +768,7 @@ exports[`props validation > default values are applied before validating props a
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].props.p);
+    const b2 = safeOutput(ctx['this'].props.p, key + \`__1\`);
     return block1([], [b2]);
   }
 }"
@@ -845,7 +845,7 @@ exports[`props validation > props are validated in dev mode (code snapshot) 2`] 
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].props.message);
+    const b2 = safeOutput(ctx['this'].props.message, key + \`__1\`);
     return block1([], [b2]);
   }
 }"
@@ -1362,7 +1362,7 @@ exports[`schema defaults > a key with a schema default may be omitted 1`] = `
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].props.p);
+    const b2 = safeOutput(ctx['this'].props.p, key + \`__1\`);
     return block1([], [b2]);
   }
 }"
@@ -1397,7 +1397,7 @@ exports[`schema defaults > a plain default value is shared between component ins
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].props.p.length);
+    const b2 = safeOutput(ctx['this'].props.p.length, key + \`__1\`);
     return block1([], [b2]);
   }
 }"
@@ -1429,7 +1429,7 @@ exports[`schema defaults > default values can be declared in the schema 2`] = `
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].props.p);
+    const b2 = safeOutput(ctx['this'].props.p, key + \`__1\`);
     return block1([], [b2]);
   }
 }"
@@ -1464,7 +1464,7 @@ exports[`schema defaults > factory defaults are resolved once per component inst
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].props.p.length);
+    const b2 = safeOutput(ctx['this'].props.p.length, key + \`__1\`);
     return block1([], [b2]);
   }
 }"
@@ -1533,7 +1533,7 @@ exports[`schema defaults > schema defaults are applied whenever component is upd
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].props.p);
+    const b2 = safeOutput(ctx['this'].props.p, key + \`__1\`);
     return block1([], [b2]);
   }
 }"
@@ -1548,8 +1548,8 @@ exports[`schema defaults > schema defaults work next to optional props 1`] = `
   let block1 = createBlock(\`<div><block-child-0/>|<block-child-1/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].props.p);
-    const b3 = safeOutput(ctx['this'].props.q);
+    const b2 = safeOutput(ctx['this'].props.p, key + \`__1\`);
+    const b3 = safeOutput(ctx['this'].props.q, key + \`__2\`);
     return block1([], [b2, b3]);
   }
 }"
@@ -1672,7 +1672,7 @@ exports[`schema.toShape() > an object schema drives props via toShape() 2`] = `
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].props.title);
+    const b2 = safeOutput(ctx['this'].props.title, key + \`__1\`);
     return block1([], [b2]);
   }
 }"

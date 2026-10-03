@@ -33,7 +33,7 @@ exports[`.alike suffix in a list 2`] = `
   return function template(ctx, node, key = "") {
     let b2, b3;
     let hdlr1 = [hdlr_fn1, ctx];
-    b2 = safeOutput(ctx['this'].props.todo.id);
+    b2 = safeOutput(ctx['this'].props.todo.id, key + \`__1\`);
     if (ctx['this'].props.todo.isChecked) {
       b3 = text(\`V\`);
     }
@@ -50,8 +50,8 @@ exports[`.alike suffix in a simple case 1`] = `
   const comp1 = createComponent(app, \`Child\`, true, false, false, []);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].state.counter);
-    const b3 = comp1({fn: ()=>1}, key + \`__1\`, node, this, null);
+    const b2 = safeOutput(ctx['this'].state.counter, key + \`__1\`);
+    const b3 = comp1({fn: ()=>1}, key + \`__2\`, node, this, null);
     return multi([b2, b3]);
   }
 }"
@@ -64,7 +64,7 @@ exports[`.alike suffix in a simple case 2`] = `
   let { safeOutput } = helpers;
   
   return function template(ctx, node, key = "") {
-    return safeOutput(ctx['this'].props.fn());
+    return safeOutput(ctx['this'].props.fn(), key + \`__1\`);
   }
 }"
 `;
@@ -90,7 +90,7 @@ exports[`.signal suffix accepts a signal-typed prop without validation error 2`]
   let { safeOutput } = helpers;
   
   return function template(ctx, node, key = "") {
-    return safeOutput(ctx['this'].props.count());
+    return safeOutput(ctx['this'].props.count(), key + \`__1\`);
   }
 }"
 `;
@@ -116,7 +116,7 @@ exports[`.signal suffix promotes a plain value to a signal 2`] = `
   let { safeOutput } = helpers;
   
   return function template(ctx, node, key = "") {
-    return safeOutput(ctx['this'].props.count());
+    return safeOutput(ctx['this'].props.count(), key + \`__1\`);
   }
 }"
 `;
@@ -151,7 +151,7 @@ exports[`.signal suffix works in a t-foreach loop 2`] = `
   let block1 = createBlock(\`<span><block-child-0/></span>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].props.value());
+    const b2 = safeOutput(ctx['this'].props.value(), key + \`__1\`);
     return block1([], [b2]);
   }
 }"
@@ -177,7 +177,7 @@ exports[`.signal suffix: child re-reads updated value when parent state changes 
   let { safeOutput } = helpers;
   
   return function template(ctx, node, key = "") {
-    return safeOutput(ctx['this'].props.count());
+    return safeOutput(ctx['this'].props.count(), key + \`__1\`);
   }
 }"
 `;
@@ -202,7 +202,7 @@ exports[`.signal suffix: child receives a read-only reactive value 2`] = `
   let { safeOutput } = helpers;
   
   return function template(ctx, node, key = "") {
-    return safeOutput(ctx['this'].props.count());
+    return safeOutput(ctx['this'].props.count(), key + \`__1\`);
   }
 }"
 `;
@@ -227,7 +227,7 @@ exports[`.signal suffix: effects in child react to parent value changes 2`] = `
   let { safeOutput } = helpers;
   
   return function template(ctx, node, key = "") {
-    return safeOutput(ctx['this'].props.count());
+    return safeOutput(ctx['this'].props.count(), key + \`__1\`);
   }
 }"
 `;
@@ -258,7 +258,7 @@ exports[`.signal suffix: one signal per child > a .signal in a template and one 
   let block1 = createBlock(\`<b><block-child-0/></b>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].props.v());
+    const b2 = safeOutput(ctx['this'].props.v(), key + \`__1\`);
     return block1([], [b2]);
   }
 }"
@@ -321,7 +321,7 @@ exports[`.signal suffix: one signal per child > a .signal in slot content and on
   let block1 = createBlock(\`<b><block-child-0/></b>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].props.v());
+    const b2 = safeOutput(ctx['this'].props.v(), key + \`__1\`);
     return block1([], [b2]);
   }
 }"
@@ -360,7 +360,7 @@ exports[`.signal suffix: one signal per child > a removed child takes its signal
   let block1 = createBlock(\`<b><block-child-0/></b>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].props.v());
+    const b2 = safeOutput(ctx['this'].props.v(), key + \`__1\`);
     return block1([], [b2]);
   }
 }"
@@ -404,7 +404,7 @@ exports[`.signal suffix: one signal per child > a template with a .signal called
   let block1 = createBlock(\`<b><block-child-0/></b>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].props.v());
+    const b2 = safeOutput(ctx['this'].props.v(), key + \`__1\`);
     return block1([], [b2]);
   }
 }"
@@ -430,8 +430,8 @@ exports[`.signal suffix: signal reference is stable across updates 2`] = `
   let { safeOutput } = helpers;
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].props.count());
-    const b3 = safeOutput(ctx['this'].props.tick);
+    const b2 = safeOutput(ctx['this'].props.count(), key + \`__1\`);
+    const b3 = safeOutput(ctx['this'].props.tick, key + \`__2\`);
     return multi([b2, b3]);
   }
 }"
@@ -457,7 +457,7 @@ exports[`.translate props are translated 2`] = `
   let { safeOutput } = helpers;
   
   return function template(ctx, node, key = "") {
-    return safeOutput(ctx['this'].props.message);
+    return safeOutput(ctx['this'].props.message, key + \`__1\`);
   }
 }"
 `;
@@ -508,7 +508,7 @@ exports[`a schema-less view resolves the defaults the component declared 2`] = `
   let { safeOutput } = helpers;
   
   return function template(ctx, node, key = "") {
-    return safeOutput(ctx['this'].props.width);
+    return safeOutput(ctx['this'].props.width, key + \`__1\`);
   }
 }"
 `;
@@ -541,7 +541,7 @@ exports[`an expression choosing between arrow functions is re-evaluated as a pro
   let { safeOutput } = helpers;
   
   return function template(ctx, node, key = "") {
-    return safeOutput(ctx['this'].props.cb());
+    return safeOutput(ctx['this'].props.cb(), key + \`__1\`);
   }
 }"
 `;
@@ -554,8 +554,8 @@ exports[`arrow function props auto-skip re-render when captured variables don't 
   const comp1 = createComponent(app, \`Child\`, true, false, false, []);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].state.counter);
-    const b3 = comp1({fn: ()=>1}, key + \`__1\`, node, this, null);
+    const b2 = safeOutput(ctx['this'].state.counter, key + \`__1\`);
+    const b3 = comp1({fn: ()=>1}, key + \`__2\`, node, this, null);
     return multi([b2, b3]);
   }
 }"
@@ -568,7 +568,7 @@ exports[`arrow function props auto-skip re-render when captured variables don't 
   let { safeOutput } = helpers;
   
   return function template(ctx, node, key = "") {
-    return safeOutput(ctx['this'].props.fn());
+    return safeOutput(ctx['this'].props.fn(), key + \`__1\`);
   }
 }"
 `;
@@ -606,7 +606,7 @@ exports[`arrow function props re-render when captured variable changes 2`] = `
   return function template(ctx, node, key = "") {
     let b2, b3;
     let hdlr1 = [hdlr_fn1, ctx];
-    b2 = safeOutput(ctx['this'].props.todo.id);
+    b2 = safeOutput(ctx['this'].props.todo.id, key + \`__1\`);
     if (ctx['this'].props.todo.isChecked) {
       b3 = text(\`V\`);
     }
@@ -640,7 +640,7 @@ exports[`basics > accept ES6-like syntax for props (with getters) 2`] = `
   let block1 = createBlock(\`<span><block-child-0/></span>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].props.greetings);
+    const b2 = safeOutput(ctx['this'].props.greetings, key + \`__1\`);
     return block1([], [b2]);
   }
 }"
@@ -676,7 +676,7 @@ exports[`basics > arrow function props do not leak synthetic keys into props() 2
   let block1 = createBlock(\`<span><block-child-0/></span>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].props.onClick);
+    const b2 = safeOutput(ctx['this'].props.onClick, key + \`__1\`);
     return block1([], [b2]);
   }
 }"
@@ -744,7 +744,7 @@ exports[`basics > explicit object prop 2`] = `
   let block1 = createBlock(\`<span><block-child-0/></span>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].state.someval);
+    const b2 = safeOutput(ctx['this'].state.someval, key + \`__1\`);
     return block1([], [b2]);
   }
 }"
@@ -772,7 +772,7 @@ exports[`basics > prop names can contain - 2`] = `
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].props['prop-name']);
+    const b2 = safeOutput(ctx['this'].props['prop-name'], key + \`__1\`);
     return block1([], [b2]);
   }
 }"
@@ -839,7 +839,7 @@ exports[`basics > t-set with a body expression can be passed in props, and then 
   let block1 = createBlock(\`<span><block-child-0/></span>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].props.val);
+    const b2 = safeOutput(ctx['this'].props.val, key + \`__1\`);
     return block1([], [b2]);
   }
 }"
@@ -872,7 +872,7 @@ exports[`basics > t-set with a body expression can be used as textual prop 2`] =
   let block1 = createBlock(\`<span><block-child-0/></span>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].props.val);
+    const b2 = safeOutput(ctx['this'].props.val, key + \`__1\`);
     return block1([], [b2]);
   }
 }"
@@ -905,7 +905,7 @@ exports[`basics > t-set works  2`] = `
   let block1 = createBlock(\`<span><block-child-0/></span>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].props.val);
+    const b2 = safeOutput(ctx['this'].props.val, key + \`__1\`);
     return block1([], [b2]);
   }
 }"
@@ -943,8 +943,8 @@ exports[`bound functions are considered 'alike' 1`] = `
   const comp1 = createComponent(app, \`Child\`, true, false, false, []);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].state.val);
-    const b3 = comp1({fn: (ctx['this'].someFunction).bind(this)}, key + \`__1\`, node, this, null);
+    const b2 = safeOutput(ctx['this'].state.val, key + \`__1\`);
+    const b3 = comp1({fn: (ctx['this'].someFunction).bind(this)}, key + \`__2\`, node, this, null);
     return multi([b2, b3]);
   }
 }"
@@ -981,7 +981,7 @@ exports[`bound functions is not referentially equal after update 2`] = `
   let { safeOutput } = helpers;
   
   return function template(ctx, node, key = "") {
-    return safeOutput(ctx['this'].props.val);
+    return safeOutput(ctx['this'].props.val, key + \`__1\`);
   }
 }"
 `;
@@ -1030,7 +1030,7 @@ exports[`can use .translate suffix 2`] = `
   let { safeOutput } = helpers;
   
   return function template(ctx, node, key = "") {
-    return safeOutput(ctx['this'].props.message);
+    return safeOutput(ctx['this'].props.message, key + \`__1\`);
   }
 }"
 `;
@@ -1047,9 +1047,9 @@ exports[`default props don't cause spurious updates with t-props 1`] = `
   
   return function template(ctx, node, key = "") {
     let hdlr1 = [hdlr_fn1, ctx];
-    const b3 = safeOutput(ctx['this'].v());
+    const b3 = safeOutput(ctx['this'].v(), key + \`__1\`);
     const b2 = block2([hdlr1], [b3]);
-    const b4 = comp1(Object.assign({}, ctx['this'].makeProps()), key + \`__1\`, node, this, null);
+    const b4 = comp1(Object.assign({}, ctx['this'].makeProps()), key + \`__2\`, node, this, null);
     return multi([b2, b4]);
   }
 }"
@@ -1062,7 +1062,7 @@ exports[`default props don't cause spurious updates with t-props 2`] = `
   let { safeOutput } = helpers;
   
   return function template(ctx, node, key = "") {
-    return safeOutput(ctx['this'].props.b);
+    return safeOutput(ctx['this'].props.b, key + \`__1\`);
   }
 }"
 `;
@@ -1171,7 +1171,7 @@ exports[`reactive props (issue #1908) > effect observing a prop reacts to both i
   let block1 = createBlock(\`<span><block-child-0/></span>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].props.o.val);
+    const b2 = safeOutput(ctx['this'].props.o.val, key + \`__1\`);
     return block1([], [b2]);
   }
 }"
@@ -1202,7 +1202,7 @@ exports[`reactive props (issue #1908) > making props reactive does not introduce
   let block1 = createBlock(\`<span><block-child-0/></span>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].tick());
+    const b2 = safeOutput(ctx['this'].tick(), key + \`__1\`);
     return block1([], [b2]);
   }
 }"
@@ -1230,7 +1230,7 @@ exports[`reactive props (issue #1908) > props() tracks new and deleted keys from
   let block1 = createBlock(\`<span><block-child-0/></span>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].label());
+    const b2 = safeOutput(ctx['this'].label(), key + \`__1\`);
     return block1([], [b2]);
   }
 }"
@@ -1258,7 +1258,7 @@ exports[`reactive props (issue #1908) > this.props still reflects the old value 
   let block1 = createBlock(\`<span><block-child-0/></span>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].props.value);
+    const b2 = safeOutput(ctx['this'].props.value, key + \`__1\`);
     return block1([], [b2]);
   }
 }"
@@ -1284,9 +1284,9 @@ exports[`schema defaults and signal-driven props 2`] = `
   let { safeOutput } = helpers;
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].props.width);
+    const b2 = safeOutput(ctx['this'].props.width, key + \`__1\`);
     const b3 = text(\` / \`);
-    const b4 = safeOutput(ctx['this'].props.height);
+    const b4 = safeOutput(ctx['this'].props.height, key + \`__2\`);
     return multi([b2, b3, b4]);
   }
 }"
@@ -1314,7 +1314,7 @@ exports[`schema-less view key set > a computed over a key read before it existed
   let block1 = createBlock(\`<span><block-child-0/></span>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].c());
+    const b2 = safeOutput(ctx['this'].c(), key + \`__1\`);
     return block1([], [b2]);
   }
 }"
@@ -1342,7 +1342,7 @@ exports[`schema-less view key set > a computed over a key that disappears sees u
   let block1 = createBlock(\`<span><block-child-0/></span>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].c());
+    const b2 = safeOutput(ctx['this'].c(), key + \`__1\`);
     return block1([], [b2]);
   }
 }"
@@ -1370,7 +1370,7 @@ exports[`schema-less view key set > a computed over the key list follows keys ad
   let block1 = createBlock(\`<span><block-child-0/></span>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].c());
+    const b2 = safeOutput(ctx['this'].c(), key + \`__1\`);
     return block1([], [b2]);
   }
 }"
@@ -1385,7 +1385,7 @@ exports[`schema-less view key set > a view created before the schema view resolv
   let block1 = createBlock(\`<span><block-child-0/></span>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].props.w);
+    const b2 = safeOutput(ctx['this'].props.w, key + \`__1\`);
     return block1([], [b2]);
   }
 }"

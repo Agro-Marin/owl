@@ -362,4 +362,33 @@ describe("t-set", () => {
     expect(renderToString(`<t t-set="v">a &gt; b</t><t t-out="v.length"/>`)).toBe("5");
     expect(renderToString(`<t t-set="v">a <!-- c -->b</t><t t-out="v"/>`)).toBe("a b");
   });
+  test("a t-set body holding a component can be output twice", async () => {
+    class Child extends Component {
+      static template = xml`<i>c</i>`;
+    }
+    class Root extends Component {
+      static template = xml`<div><t t-set="v"><Child/></t><t t-out="v"/><t t-out="v"/></div>`;
+      static components = { Child };
+    }
+    const root = await mount(Root, fixture);
+    expect(fixture.innerHTML).toBe("<div><i>c</i><i>c</i></div>");
+    expect(Object.keys(root.__owl__.children).length).toBe(2);
+  });
+
+  test("a t-set body holding a component can be output in a loop", async () => {
+    class Child extends Component {
+      static template = xml`<i>c</i>`;
+    }
+    class Root extends Component {
+      static template = xml`
+        <div>
+          <t t-set="v"><Child/></t>
+          <t t-foreach="this.items" t-as="n" t-key="n"><t t-out="v"/></t>
+        </div>`;
+      static components = { Child };
+      items = [1, 2];
+    }
+    await mount(Root, fixture);
+    expect(fixture.innerHTML).toBe("<div><i>c</i><i>c</i></div>");
+  });
 });

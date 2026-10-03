@@ -274,7 +274,7 @@ exports[`t-on > t-on modifiers (native listener) > t-on combined with t-out 1`] 
   
   return function template(ctx, node, key = "") {
     let hdlr1 = [hdlr_fn1, ctx];
-    const b2 = safeOutput(ctx['html']);
+    const b2 = safeOutput(ctx['html'], key + \`__1\`);
     return block1([hdlr1], [b2]);
   }
 }"
@@ -398,7 +398,7 @@ exports[`t-on > t-on modifiers (native listener) > t-on with prevent modifier in
       ctx[\`project\`] = k_block2[i1];
       const key1 = ctx['project'];
       let hdlr1 = [hdlr_fn1, ctx, 8];
-      const b4 = safeOutput(ctx['project'].name);
+      const b4 = safeOutput(ctx['project'].name, key + \`__1__\${key1}\`);
       c_block2[i1] = withKey(block3([hdlr1], [b4]), key1);
     }
     const b2 = list(c_block2);

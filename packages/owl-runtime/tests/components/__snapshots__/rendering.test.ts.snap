@@ -8,8 +8,8 @@ exports[`children, default props and renderings 1`] = `
   const comp1 = createComponent(app, \`Child\`, true, false, false, []);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].state.value);
-    const b3 = comp1({}, key + \`__1\`, node, this, null);
+    const b2 = safeOutput(ctx['this'].state.value, key + \`__1\`);
+    const b3 = comp1({}, key + \`__2\`, node, this, null);
     return multi([b2, b3]);
   }
 }"
@@ -48,7 +48,7 @@ exports[`force render in case of existing render 2`] = `
   
   return function template(ctx, node, key = "") {
     const b2 = comp1({}, key + \`__1\`, node, this, null);
-    const b3 = safeOutput(ctx['this'].props.val);
+    const b3 = safeOutput(ctx['this'].props.val, key + \`__2\`);
     return multi([b2, b3]);
   }
 }"
@@ -86,7 +86,7 @@ exports[`render loop detection > throws a clear error instead of freezing on a r
   let { safeOutput } = helpers;
   
   return function template(ctx, node, key = "") {
-    return safeOutput(ctx['this'].props.value);
+    return safeOutput(ctx['this'].props.value, key + \`__1\`);
   }
 }"
 `;
@@ -127,7 +127,7 @@ exports[`render loop detection > wide re-render under an uncommitted root is not
   let { safeOutput } = helpers;
   
   return function template(ctx, node, key = "") {
-    return safeOutput(ctx['this'].shared());
+    return safeOutput(ctx['this'].shared(), key + \`__1\`);
   }
 }"
 `;
@@ -152,8 +152,8 @@ exports[`rendering semantics > can force a render to update sub tree 1`] = `
   
   return function template(ctx, node, key = "") {
     ctx = Object.create(ctx);
-    const b2 = safeOutput(ctx['this'].state.value);
-    const b3 = comp1({}, key + \`__1\`, node, this, null);
+    const b2 = safeOutput(ctx['this'].state.value, key + \`__1\`);
+    const b3 = comp1({}, key + \`__2\`, node, this, null);
     ctx["noop"] = ctx['this'].notify();
     return multi([b2, b3]);
   }
@@ -181,8 +181,8 @@ exports[`rendering semantics > can render a parent without rendering child 1`] =
   const comp1 = createComponent(app, \`Child\`, true, false, false, []);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].state.value);
-    const b3 = comp1({}, key + \`__1\`, node, this, null);
+    const b2 = safeOutput(ctx['this'].state.value, key + \`__1\`);
+    const b3 = comp1({}, key + \`__2\`, node, this, null);
     return multi([b2, b3]);
   }
 }"
@@ -219,7 +219,7 @@ exports[`rendering semantics > props are proxy (nested prop) 2`] = `
   let { safeOutput } = helpers;
   
   return function template(ctx, node, key = "") {
-    return safeOutput(ctx['this'].props.a.b.c);
+    return safeOutput(ctx['this'].props.a.b.c, key + \`__1\`);
   }
 }"
 `;
@@ -244,7 +244,7 @@ exports[`rendering semantics > props are proxy 2`] = `
   let { safeOutput } = helpers;
   
   return function template(ctx, node, key = "") {
-    return safeOutput(ctx['this'].props.a.b);
+    return safeOutput(ctx['this'].props.a.b, key + \`__1\`);
   }
 }"
 `;
@@ -258,8 +258,8 @@ exports[`rendering semantics > render with deep=true followed by render with dee
   
   return function template(ctx, node, key = "") {
     const b2 = text(\`parent\`);
-    const b3 = safeOutput(ctx['this'].state.value);
-    const b4 = comp1({}, key + \`__1\`, node, this, null);
+    const b3 = safeOutput(ctx['this'].state.value, key + \`__1\`);
+    const b4 = comp1({}, key + \`__2\`, node, this, null);
     return multi([b2, b3, b4]);
   }
 }"
@@ -273,7 +273,7 @@ exports[`rendering semantics > render with deep=true followed by render with dee
   
   return function template(ctx, node, key = "") {
     const b2 = text(\`child\`);
-    const b3 = safeOutput(ctx['this'].state.getValue());
+    const b3 = safeOutput(ctx['this'].state.getValue(), key + \`__1\`);
     return multi([b2, b3]);
   }
 }"
@@ -287,8 +287,8 @@ exports[`rendering semantics > rendering is atomic (for one subtree) 1`] = `
   const comp1 = createComponent(app, \`B\`, true, false, false, ["obj"]);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].state.obj.val);
-    const b3 = comp1({obj: ctx['this'].state.obj}, key + \`__1\`, node, this, null);
+    const b2 = safeOutput(ctx['this'].state.obj.val, key + \`__1\`);
+    const b3 = comp1({obj: ctx['this'].state.obj}, key + \`__2\`, node, this, null);
     return multi([b2, b3]);
   }
 }"
@@ -314,7 +314,7 @@ exports[`rendering semantics > rendering is atomic (for one subtree) 3`] = `
   let { safeOutput } = helpers;
   
   return function template(ctx, node, key = "") {
-    return safeOutput(ctx['this'].props.obj.val);
+    return safeOutput(ctx['this'].props.obj.val, key + \`__1\`);
   }
 }"
 `;
@@ -339,7 +339,7 @@ exports[`rendering semantics > works as expected for dynamic number of props 2`]
   let { safeOutput } = helpers;
   
   return function template(ctx, node, key = "") {
-    return safeOutput(Object.keys(ctx['this'].props).length);
+    return safeOutput(Object.keys(ctx['this'].props).length, key + \`__1\`);
   }
 }"
 `;

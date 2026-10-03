@@ -136,7 +136,7 @@ exports[`lifecycle hooks > components are unmounted and destroyed if no longer i
   let block1 = createBlock(\`<span><block-child-0/></span>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].props.n);
+    const b2 = safeOutput(ctx['this'].props.n, key + \`__1\`);
     return block1([], [b2]);
   }
 }"
@@ -253,7 +253,7 @@ exports[`lifecycle hooks > lifecycle callbacks are bound to component 2`] = `
   let { safeOutput } = helpers;
   
   return function template(ctx, node, key = "") {
-    return safeOutput(ctx['this'].props.rev);
+    return safeOutput(ctx['this'].props.rev, key + \`__1\`);
   }
 }"
 `;
@@ -569,7 +569,7 @@ exports[`lifecycle hooks > patched hook is called after updating State 1`] = `
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].state.a);
+    const b2 = safeOutput(ctx['this'].state.a, key + \`__1\`);
     return block1([], [b2]);
   }
 }"
@@ -584,7 +584,7 @@ exports[`lifecycle hooks > render in mounted 1`] = `
   let block1 = createBlock(\`<span><block-child-0/></span>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].patched);
+    const b2 = safeOutput(ctx['this'].patched, key + \`__1\`);
     return block1([], [b2]);
   }
 }"
@@ -599,7 +599,7 @@ exports[`lifecycle hooks > render in patched 1`] = `
   let block1 = createBlock(\`<span><block-child-0/></span>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].patched);
+    const b2 = safeOutput(ctx['this'].patched, key + \`__1\`);
     return block1([], [b2]);
   }
 }"
@@ -614,7 +614,7 @@ exports[`lifecycle hooks > render in willPatch 1`] = `
   let block1 = createBlock(\`<span><block-child-0/></span>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].patched);
+    const b2 = safeOutput(ctx['this'].patched, key + \`__1\`);
     return block1([], [b2]);
   }
 }"
@@ -752,7 +752,7 @@ exports[`lifecycle hooks > willPatch, patched hook are called on subsubcomponent
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].props.n);
+    const b2 = safeOutput(ctx['this'].props.n, key + \`__1\`);
     return block1([], [b2]);
   }
 }"
@@ -867,7 +867,7 @@ exports[`lifecycle hooks > willUpdateProps hook is called 2`] = `
   let block1 = createBlock(\`<span><block-child-0/></span>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].props.n);
+    const b2 = safeOutput(ctx['this'].props.n, key + \`__1\`);
     return block1([], [b2]);
   }
 }"

@@ -19,7 +19,7 @@ exports[`components in t-out > simple list 1`] = `
       ctx[\`n\`] = k_block1[i1];
       const key1 = ctx['n'];
       ctx[\`blabla\`] = new LazyValue(value1, ctx, this, node, key + \`__\${key1}\`);
-      c_block1[i1] = withKey(safeOutput(ctx['blabla']), key1);
+      c_block1[i1] = withKey(safeOutput(ctx['blabla'], key + \`__2__\${key1}\`), key1);
     }
     return list(c_block1);
   }
