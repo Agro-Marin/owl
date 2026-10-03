@@ -47,7 +47,10 @@ export class Scheduler {
         }
       }
     }
+    this.requestFrame();
+  }
 
+  requestFrame() {
     if (this.frame === 0) {
       this.frame = this.requestAnimationFrame(() => this.processTasks());
     }
@@ -59,6 +62,7 @@ export class Scheduler {
     }
     this.processing = true;
     this.frame = 0;
+    let failed = false;
     for (let fiber of this.tasks) {
       if (fiber.root !== fiber) {
         this.tasks.delete(fiber);
@@ -74,6 +78,7 @@ export class Scheduler {
       // render reuses it and schedules it again
       if (fibersInError.has(fiber)) {
         this.tasks.delete(fiber);
+        failed = true;
         continue;
       }
       if (fiber.node.status === STATUS.DESTROYED) {
@@ -96,6 +101,11 @@ export class Scheduler {
       if (task.node.status === STATUS.DESTROYED) {
         this.tasks.delete(task);
       }
+    }
+    if (failed) {
+      // a frame after the failure, the handlers had their chance to re-render
+      // around it: the renders the failed pass delayed go on
+      this.flush();
     }
     if (!this.tasks.size) {
       Scheduler.active.delete(this);

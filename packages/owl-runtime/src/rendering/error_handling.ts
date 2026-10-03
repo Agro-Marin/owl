@@ -94,8 +94,9 @@ export function handleError(params: ErrorParams) {
     app._handleError(result.error);
   }
   if (fiber && fiber.root!.counter !== 0) {
-    // the failed pass will never finish: the renders it delayed go on
-    app.scheduler.flush();
+    // the pass may never finish: its scheduler, which holds the renders it
+    // delayed, drops it at the next frame unless a handler re-rendered it
+    fiber.root!.node.app.scheduler.requestFrame();
   }
 }
 

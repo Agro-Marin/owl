@@ -2206,6 +2206,113 @@ describe("errors in a pending render pass", () => {
     expect(fixture.innerHTML).toBe("<div><a>1</a><b>3</b></div>");
     expect(parent.__owl__.app.scheduler.tasks.size).toBe(0);
   });
+
+  test("a pass failing in onWillUpdateProps of a node of another app resumes the renders it delayed", async () => {
+    const load = makeDeferred();
+    const errors: string[] = [];
+    class A extends Component {
+      static template = xml`<a><t t-out="this.props.value"/></a>`;
+      props = props();
+      setup() {
+        onWillUpdateProps(() => load);
+      }
+    }
+    class B extends Component {
+      static template = xml`<b><t t-out="this.state.value"/></b>`;
+      state = proxy({ value: 1 });
+    }
+    class Parent extends Component {
+      static template = xml`<div><A value="this.state.value"/><B/></div>`;
+      static components = { A, B };
+      state = proxy({ value: 1 });
+      setup() {
+        onError((e) => errors.push(e.message));
+      }
+    }
+    const parent = await mount(Parent, fixture);
+    const children = Object.values(parent.__owl__.children);
+    const a = children.find((n) => n.component instanceof A)!;
+    const b = children.find((n) => n.component instanceof B)!;
+    // a component a slot of another app renders here
+    a.app = new App();
+    parent.state.value = 2;
+    await nextTick();
+    (b.component as B).state.value = 2;
+    await nextTick();
+    expect(fixture.innerHTML).toBe("<div><a>1</a><b>1</b></div>");
+
+    load.reject(new Error("load failed"));
+    await nextTick();
+    await nextTick();
+    expect(errors).toEqual(["load failed"]);
+    expect(fixture.innerHTML).toBe("<div><a>1</a><b>2</b></div>");
+
+    (b.component as B).state.value = 3;
+    await nextTick();
+    expect(fixture.innerHTML).toBe("<div><a>1</a><b>3</b></div>");
+  });
+
+  test("a render the handler of a failed render re-renders around is not rendered before", async () => {
+    const slow = makeDeferred();
+    const late = makeDeferred();
+    let bRenders = 0;
+    class S extends Component {
+      static template = xml`<s><t t-out="this.props.value"/></s>`;
+      props = props();
+      setup() {
+        onWillUpdateProps(() => slow);
+      }
+    }
+    class C extends Component {
+      static template = xml`<c><t t-out="this.check()"/></c>`;
+      props = props();
+      setup() {
+        onWillUpdateProps(() => late);
+      }
+      check() {
+        if (this.props.value === 2) {
+          throw new Error("C fails");
+        }
+        return this.props.value;
+      }
+    }
+    class B extends Component {
+      static template = xml`<b><t t-out="this.read()"/></b>`;
+      props = props();
+      state = proxy({ value: 1 });
+      read() {
+        bRenders++;
+        return this.state.value;
+      }
+    }
+    class Parent extends Component {
+      static template = xml`
+        <div>
+          <S value="this.state.value"/>
+          <C t-if="!this.state.failed" value="this.state.value"/>
+          <B failed="this.state.failed"/>
+        </div>`;
+      static components = { S, C, B };
+      state = proxy({ value: 1, failed: false });
+      setup() {
+        onError(() => (this.state.failed = true));
+      }
+    }
+    const parent = await mount(Parent, fixture);
+    const b = Object.values(parent.__owl__.children).find((n) => n.component instanceof B)!;
+    bRenders = 0;
+    parent.state.value = 2;
+    await nextMicroTick();
+    (b.component as B).state.value = 2;
+    await nextMicroTick();
+    late.resolve();
+    await nextTick();
+    slow.resolve();
+    await nextTick();
+    await nextTick();
+    expect(fixture.innerHTML).toBe("<div><s>2</s><b>2</b></div>");
+    expect(bRenders).toBe(1);
+  });
 });
 
 describe("errors of a destroyed component", () => {
