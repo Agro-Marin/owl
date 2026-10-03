@@ -1,3 +1,4 @@
+import { releaseCatchers } from "./event_catcher";
 import type { VNode } from "./index";
 
 const getDescriptor = (o: any, p: any) => Object.getOwnPropertyDescriptor(o, p)!;
@@ -124,7 +125,8 @@ export class VMulti {
   remove() {
     const parentEl = this.parentEl;
     if (this.isOnlyChild) {
-      nodeSetTextContent.call(parentEl, "");
+      nodeSetTextContent.call(parentEl!, "");
+      releaseCatchers(parentEl!);
     } else {
       const children = this.children;
       const anchors = this.anchors;

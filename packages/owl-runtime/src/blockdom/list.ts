@@ -1,3 +1,4 @@
+import { releaseCatchers } from "./event_catcher";
 import type { VNode } from "./index";
 
 const getDescriptor = (o: any, p: any) => Object.getOwnPropertyDescriptor(o, p)!;
@@ -95,6 +96,7 @@ class VList {
         }
       }
       nodeSetTextContent.call(parent, "");
+      releaseCatchers(parent);
       nodeAppendChild.call(parent, _anchor);
       return;
     }
@@ -214,7 +216,8 @@ class VList {
   remove() {
     const { parentEl, anchor } = this;
     if (this.isOnlyChild) {
-      nodeSetTextContent.call(parentEl, "");
+      nodeSetTextContent.call(parentEl!, "");
+      releaseCatchers(parentEl!);
     } else {
       const children = this.children;
       const l = children.length;

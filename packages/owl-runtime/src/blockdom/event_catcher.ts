@@ -6,6 +6,22 @@ type EventsSpec = { [name: string]: number };
 
 type Catcher = (child: VNode, handlers: any[]) => VNode;
 
+// A catcher listens on its parent element, which outlives it. A list or multi
+// that is its parent's only child clears that parent with textContent = ""
+// instead of removing each child, so the catchers it held never run remove():
+// the clear releases them from here.
+const catchersByParent = new WeakMap<Node, Set<{ releaseHandlers(): void }>>();
+
+export function releaseCatchers(parent: Node) {
+  const catchers = catchersByParent.get(parent);
+  if (catchers) {
+    catchersByParent.delete(parent);
+    for (const catcher of catchers) {
+      catcher.releaseHandlers();
+    }
+  }
+}
+
 export function createCatcher(eventsSpec: EventsSpec): Catcher {
   const n = Object.keys(eventsSpec).length;
 
@@ -32,6 +48,17 @@ export function createCatcher(eventsSpec: EventsSpec): Catcher {
         const handler = createEventHandler(name);
         this.handlerFns[index] = handler;
         handler.setup.call(parent, [this.makeDispatcher(index), null]);
+      }
+      let catchers = catchersByParent.get(parent);
+      if (!catchers) {
+        catchersByParent.set(parent, (catchers = new Set()));
+      }
+      catchers.add(this);
+    }
+
+    releaseHandlers() {
+      for (let i = 0; i < n; i++) {
+        this.handlerFns[i].remove.call(this.parentEl!);
       }
     }
 
@@ -80,9 +107,8 @@ export function createCatcher(eventsSpec: EventsSpec): Catcher {
     }
 
     remove() {
-      for (let i = 0; i < n; i++) {
-        this.handlerFns[i].remove.call(this.parentEl!);
-      }
+      this.releaseHandlers();
+      catchersByParent.get(this.parentEl!)?.delete(this);
       this.child.remove();
       this.afterNode!.remove();
     }

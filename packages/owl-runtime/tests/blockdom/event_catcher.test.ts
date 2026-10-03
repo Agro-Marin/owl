@@ -1,4 +1,13 @@
-import { config, createBlock, createCatcher, mount, patch } from "../../src/blockdom";
+import {
+  config,
+  createBlock,
+  createCatcher,
+  list,
+  mount,
+  multi,
+  patch,
+  remove,
+} from "../../src/blockdom";
 import { makeTestFixture } from "./helpers";
 import { mainEventHandler } from "../../src/event_handling";
 import { EventModifier } from "@odoo/owl-core";
@@ -214,4 +223,61 @@ test("the synthetic document listener carries a marker a test harness can recogn
   }
   expect(added.length).toBe(1);
   expect(added[0][Symbol.for("owl.syntheticListener")]).toBe(true);
+});
+
+describe("a parent cleared in bulk releases the catchers listening on it", () => {
+  function countListeners(el: HTMLElement) {
+    const live = new Set<any>();
+    const add = el.addEventListener;
+    const rm = el.removeEventListener;
+    el.addEventListener = function (this: HTMLElement, name: string, l: any, o: any) {
+      live.add(l);
+      return add.call(this, name, l, o);
+    } as any;
+    el.removeEventListener = function (this: HTMLElement, name: string, l: any, o: any) {
+      live.delete(l);
+      return rm.call(this, name, l, o);
+    } as any;
+    return live;
+  }
+  const host = createBlock("<div><block-child-0/></div>");
+  const span = createBlock("<span>c</span>");
+  const catcher = createCatcher({ click: 0, "click.synthetic": 1 });
+  const handlers = [
+    [() => {}, {}],
+    [() => {}, {}],
+  ];
+  const item = (key: number) => Object.assign(catcher(span(), handlers), { key });
+  const syntheticEntries = (el: any) => Object.keys(el["__event__synthetic_click"] || {}).length;
+
+  test("a keyed list emptied by the only-child fast path", () => {
+    const tree = host([], [list([1, 2, 3].map(item))]);
+    mount(tree, fixture);
+    const div = fixture.firstChild as HTMLElement;
+    const live = countListeners(div);
+    for (let i = 0; i < 5; i++) {
+      patch(tree, host([], [list([])]));
+      patch(tree, host([], [list([1, 2, 3].map(item))]));
+    }
+    expect(live.size).toBe(3);
+    patch(tree, host([], [list([])]));
+    expect(div.innerHTML).toBe("");
+    expect(live.size).toBe(0);
+    expect(syntheticEntries(div)).toBe(0);
+  });
+
+  test("an only-child list or multi removed by its parent block", () => {
+    for (const content of [() => list([1, 2].map(item)), () => multi([item(1), item(2)])]) {
+      const tree = host([], [content()]);
+      mount(tree, fixture);
+      const div = fixture.firstChild as HTMLElement;
+      const live = countListeners(div);
+      patch(tree, host([], [content()]));
+      patch(tree, host([], [undefined]));
+      expect(div.innerHTML).toBe("");
+      expect(live.size).toBe(0);
+      expect(syntheticEntries(div)).toBe(0);
+      remove(tree);
+    }
+  });
 });
