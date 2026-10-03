@@ -73,7 +73,13 @@ export function toRaw<T extends Target, U extends Reactive<T>>(value: U | T): T 
   return targets.has(value) ? (targets.get(value) as T) : value;
 }
 
-type KeyAtoms = WeakMap<Target, Map<PropertyKey, Atom>>;
+interface TargetAtoms {
+  keys: Map<PropertyKey, Atom>;
+  // an object key (of a Map, Set or WeakMap) is held weakly: its atom must
+  // not keep a deleted key, or any key of a WeakMap, alive
+  objectKeys: WeakMap<object, Atom> | null;
+}
+type KeyAtoms = WeakMap<Target, TargetAtoms>;
 
 // a key's value, read by a get
 const targetToKeysToAtomItem: KeyAtoms = new WeakMap();
@@ -81,25 +87,37 @@ const targetToKeysToAtomItem: KeyAtoms = new WeakMap();
 // disappears, not when its value changes
 const targetToKeysToPresenceAtom: KeyAtoms = new WeakMap();
 
+function isObjectKey(key: unknown): key is object {
+  return (typeof key === "object" && key !== null) || typeof key === "function";
+}
+
 function getTargetKeyAtom(
   target: Target,
   key: PropertyKey,
   atoms: KeyAtoms = targetToKeysToAtomItem
 ): Atom {
-  let keyToAtomItem: Map<PropertyKey, Atom> = atoms.get(target)!;
-  if (!keyToAtomItem) {
-    keyToAtomItem = new Map();
-    atoms.set(target, keyToAtomItem);
+  let table = atoms.get(target);
+  if (!table) {
+    table = { keys: new Map(), objectKeys: null };
+    atoms.set(target, table);
   }
-  let atom = keyToAtomItem.get(key)!;
+  let atom = findAtom(table, key);
   if (!atom) {
     atom = {
       value: undefined,
       observers: new Set(),
     };
-    keyToAtomItem.set(key, atom);
+    if (isObjectKey(key)) {
+      (table.objectKeys ??= new WeakMap()).set(key, atom);
+    } else {
+      table.keys.set(key, atom);
+    }
   }
   return atom;
+}
+
+function findAtom(table: TargetAtoms, key: PropertyKey): Atom | undefined {
+  return isObjectKey(key) ? table.objectKeys?.get(key) : table.keys.get(key);
 }
 
 /**
@@ -132,14 +150,11 @@ function onWriteTargetKey(
   key: PropertyKey,
   atoms: KeyAtoms = targetToKeysToAtomItem
 ): void {
-  const keyToAtomItem = atoms.get(target)!;
-  if (!keyToAtomItem) {
-    return;
+  const table = atoms.get(target);
+  const atom = table && findAtom(table, key);
+  if (atom) {
+    onWriteAtom(atom);
   }
-  if (!keyToAtomItem.has(key)) {
-    return;
-  }
-  onWriteAtom(keyToAtomItem.get(key)!);
 }
 
 function onReadKeyPresence(target: Target, key: PropertyKey): void {
@@ -154,6 +169,23 @@ function onWriteKeyPresence(target: Target, key: PropertyKey): void {
   onWriteTargetKey(target, key, targetToKeysToPresenceAtom);
 }
 
+// A removed key's atoms that nothing observes are dropped: kept, every key a
+// long-lived object ever had would stay allocated, object keys included. A
+// later read creates them again.
+function releaseKey(target: Target, key: PropertyKey): void {
+  for (const atoms of [targetToKeysToAtomItem, targetToKeysToPresenceAtom]) {
+    const table = atoms.get(target);
+    const atom = table && findAtom(table, key);
+    if (atom && atom.observers.size === 0) {
+      if (isObjectKey(key)) {
+        table!.objectKeys!.delete(key);
+      } else {
+        table!.keys.delete(key);
+      }
+    }
+  }
+}
+
 /**
  * Notify Reactives that are observing the indices an array dropped when its
  * length was written: such a write does not go through the deleteProperty trap.
@@ -165,10 +197,11 @@ function onWriteDroppedIndices(target: Target, newLength: number): void {
   const isDropped = (key: PropertyKey) =>
     typeof key === "string" && Number(key) >= newLength && String(Number(key)) === key;
   for (const atoms of [targetToKeysToAtomItem, targetToKeysToPresenceAtom]) {
-    const keyToAtomItem = atoms.get(target);
-    if (keyToAtomItem) {
-      for (const key of [...keyToAtomItem.keys()].filter(isDropped)) {
+    const table = atoms.get(target);
+    if (table) {
+      for (const key of [...table.keys.keys()].filter(isDropped)) {
         onWriteTargetKey(target, key, atoms);
+        releaseKey(target, key);
       }
     }
   }
@@ -399,6 +432,7 @@ function basicProxyHandler<T extends Target>(shallow: boolean): ProxyHandler<T> 
       if (hadKey && ret) {
         onWriteKeyPresence(target, key);
         onWriteTargetKey(target, key);
+        releaseKey(target, key);
       }
       return ret;
     },
@@ -517,6 +551,9 @@ function delegateAndNotify(
     if (originalValue !== target[getterName](key)) {
       onWriteTargetKey(target, key);
     }
+    if (!hasKey) {
+      releaseKey(target, key);
+    }
     return ret;
   };
 }
@@ -534,6 +571,7 @@ function makeClearNotifier(target: Map<any, any> | Set<any>) {
     for (const key of allKeys) {
       onWriteTargetKey(target, key, targetToKeysToPresenceAtom);
       onWriteTargetKey(target, key);
+      releaseKey(target, key);
     }
   };
 }
