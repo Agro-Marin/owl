@@ -32,6 +32,7 @@ if (typeof Node !== "undefined") {
 }
 
 const NO_OP = () => {};
+const XMLNS_URI = "http://www.w3.org/2000/xmlns/";
 
 // toString mounts into a detached element, children included: nothing it
 // builds may reach a ref
@@ -217,7 +218,12 @@ function buildTree(
               idx: parseInt(attrValue, 10),
             });
           } else {
-            el.setAttribute(attrs[i].name, attrValue);
+            const ns = attrs[i].namespaceURI;
+            if (ns && ns !== XMLNS_URI) {
+              el.setAttributeNS(ns, attrName, attrValue);
+            } else {
+              el.setAttribute(attrName, attrValue);
+            }
           }
         }
         const classSources = info.filter(

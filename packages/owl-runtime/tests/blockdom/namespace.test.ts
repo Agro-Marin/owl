@@ -69,4 +69,15 @@ describe("namespace", () => {
     expect(one.namespaceURI).toBe("one");
     expect(two.namespaceURI).toBe("two");
   });
+
+  test("a prefixed static attribute keeps its namespace", () => {
+    const XLINK_URI = "http://www.w3.org/1999/xlink";
+    const block = createBlock(
+      `<svg xmlns="${SVG_URI}" xmlns:xlink="${XLINK_URI}"><use xlink:href="#a"/></svg>`
+    );
+    mount(block(), fixture);
+    const use = fixture.querySelector("use")!;
+    expect(use.getAttributeNS(XLINK_URI, "href")).toBe("#a");
+    expect(use.outerHTML).toBe(`<use xlink:href="#a"></use>`);
+  });
 });
