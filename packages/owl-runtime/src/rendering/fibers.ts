@@ -290,7 +290,6 @@ export class RootFiber extends Fiber {
     const node = this.node;
     this.locked = true;
     let current: Fiber | undefined = undefined;
-    let mountedFibers = this.mounted;
     try {
       // Step 1: calling all willPatch lifecycle hooks
       for (current of this.willPatch) {
@@ -310,37 +309,21 @@ export class RootFiber extends Fiber {
       // Step 2: patching the dom
       node._patch();
       this.locked = false;
-
-      // Step 4: calling all mounted lifecycle hooks
-      while ((current = mountedFibers.pop())) {
-        if (current.renderState & APPLIED_TO_DOM) {
-          for (let cb of current.node.mounted) {
-            cb();
-          }
-        }
-      }
-
-      // Step 5: calling all patched hooks
-      let patchedFibers = this.patched;
-      while ((current = patchedFibers.pop())) {
-        if (current.renderState & APPLIED_TO_DOM) {
-          for (let cb of current.node.patched) {
-            cb();
-          }
-        }
-      }
     } catch (e) {
-      // if mountedFibers is not empty, this means that a crash occured while
-      // calling the mounted hooks of some component. So, there may still be
-      // some component that have been mounted, but for which the mounted hooks
-      // have not been called. Here, we remove the willUnmount hooks for these
-      // specific component to prevent a worse situation (willUnmount being
-      // called even though mounted has not been called)
-      for (let fiber of mountedFibers) {
+      // the pass never reached the document: none of its onMounted runs, and
+      // neither does the onWillUnmount of a component it would have mounted
+      for (let fiber of this.mounted) {
         fiber.node.willUnmount = [];
       }
       this.locked = false;
       handleError({ fiber: current || this, error: e });
+      return;
+    }
+
+    // Step 3: calling all mounted, then all patched lifecycle hooks
+    const failed = callCommitHooks(this.mounted, "mounted");
+    if (failed !== null) {
+      callCommitHooks(this.patched, "patched", failed);
     }
   }
 
@@ -350,6 +333,68 @@ export class RootFiber extends Fiber {
       this.node.app.scheduler.flush();
     }
   }
+}
+
+/**
+ * Calls the onMounted (or onPatched) hooks of the fibers a commit applied,
+ * last registered first. A throwing hook is reported at once and the other
+ * components' hooks still run, so one failure does not leave the rest of the
+ * committed tree without its lifecycle (a Portal committing its content). The
+ * failing chain (the fibers handleError marked) is skipped and kept in the
+ * list, without onWillUnmount, for the commit of a recovering render. While an
+ * error is reported, the components still waiting for onMounted have no
+ * onWillUnmount, in case the error destroys the app.
+ *
+ * @returns null once an error destroyed the app, else whether a hook failed,
+ * which the onPatched call takes as `failed`
+ */
+function callCommitHooks(
+  fibers: Fiber[],
+  hook: "mounted" | "patched",
+  failed = false
+): boolean | null {
+  const mounting = hook === "mounted";
+  let skipped: Fiber[] | null = failed ? [] : null;
+  let current: Fiber | undefined;
+  while ((current = fibers.pop())) {
+    const node = current.node;
+    if (skipped && (!(current.renderState & APPLIED_TO_DOM) || fibersInError.has(current))) {
+      if (mounting) {
+        node.willUnmount = [];
+      }
+      skipped.push(current);
+      continue;
+    }
+    if (!(current.renderState & APPLIED_TO_DOM)) {
+      continue;
+    }
+    try {
+      for (let cb of node[hook]) {
+        cb();
+      }
+    } catch (e) {
+      skipped ||= [];
+      const waiting = mounting ? fibers.slice() : [];
+      const willUnmount = waiting.map((fiber) => fiber.node.willUnmount);
+      for (let fiber of waiting) {
+        fiber.node.willUnmount = [];
+      }
+      handleError({ fiber: current, error: e });
+      if (node.app.destroyed) {
+        return null;
+      }
+      for (let i = 0; i < waiting.length; i++) {
+        waiting[i].node.willUnmount = willUnmount[i];
+      }
+    }
+  }
+  if (!skipped) {
+    return false;
+  }
+  for (let i = skipped.length - 1; i >= 0; i--) {
+    fibers.push(skipped[i]);
+  }
+  return true;
 }
 
 type Position = "first-child" | "last-child";
@@ -444,16 +489,10 @@ export class MountFiber extends RootFiber {
 
       node.status = STATUS.MOUNTED;
       this.renderState |= APPLIED_TO_DOM;
-      let mountedFibers = this.mounted;
-      while ((current = mountedFibers.pop())) {
-        if (current.renderState & APPLIED_TO_DOM) {
-          for (let cb of current.node.mounted) {
-            cb();
-          }
-        }
-      }
     } catch (e) {
       handleError({ fiber: current as Fiber, error: e });
+      return;
     }
+    callCommitHooks(this.mounted, "mounted");
   }
 }

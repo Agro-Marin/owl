@@ -1124,6 +1124,8 @@ describe("can catch errors", () => {
         "ErrorComponent:willStart",
         "ErrorComponent:mounted",
         "boom",
+        "ErrorComponent:willUnmount",
+        "ErrorComponent:willDestroy",
         "ErrorBoundary:mounted",
         "Root:mounted",
       ]
@@ -1165,6 +1167,8 @@ describe("can catch errors", () => {
         "ErrorComponent:willStart",
         "ErrorComponent:mounted",
         "boom",
+        "ErrorComponent:willUnmount",
+        "ErrorComponent:willDestroy",
         "Root:mounted",
       ]
     `);
@@ -1225,6 +1229,8 @@ describe("can catch errors", () => {
         "Boom:willStart",
         "Boom:mounted",
         "boom",
+        "Boom:willUnmount",
+        "Boom:willDestroy",
         "C:mounted",
         "B:mounted",
         "A:mounted",
@@ -1288,8 +1294,10 @@ describe("can catch errors", () => {
         "ErrorComponent:willStart",
         "ErrorComponent:mounted",
         "boom",
-        "ErrorBoundary:mounted",
         "OK:mounted",
+        "ErrorComponent:willUnmount",
+        "ErrorComponent:willDestroy",
+        "ErrorBoundary:mounted",
         "Root:mounted",
       ]
     `);
@@ -1817,8 +1825,14 @@ describe("can catch errors", () => {
         "Boom:willStart",
         "Boom:mounted",
         "error",
+        "Child:mounted",
         "OtherChild:setup",
         "OtherChild:willStart",
+        "Child:willUnmount",
+        "Child:willDestroy",
+        "Boom:willUnmount",
+        "Boom:willDestroy",
+        "Parent:willDestroy",
         "OtherChild:mounted",
         "Root:mounted",
       ]
@@ -1902,6 +1916,7 @@ describe("can catch errors", () => {
         "Root:willPatch",
         "Boom:mounted",
         "error",
+        "Child:mounted",
         "OtherChild:setup",
         "OtherChild:willStart",
       ]
@@ -1913,6 +1928,7 @@ describe("can catch errors", () => {
     expect(steps.splice(0)).toMatchInlineSnapshot(`
       [
         "Root:willPatch",
+        "Child:willUnmount",
         "Child:willDestroy",
         "Boom:willUnmount",
         "Boom:willDestroy",
@@ -2304,4 +2320,112 @@ test("a component whose setup throws releases what the setup acquired", async ()
   value.set(1);
   await nextTick();
   expect(steps).toEqual(["effect 0", "willDestroy"]);
+});
+
+describe("a handled lifecycle error does not starve the other components", () => {
+  test("the onMounted of the components committed with a failing one still run", async () => {
+    class A extends Component {
+      static template = xml`<a>a</a>`;
+      setup() {
+        onMounted(() => logStep("A:mounted"));
+        onWillUnmount(() => logStep("A:willUnmount"));
+      }
+    }
+    class B extends Component {
+      static template = xml`<b>b</b>`;
+      setup() {
+        onMounted(() => {
+          logStep("B:mounted");
+          throw new Error("boom");
+        });
+      }
+    }
+    class Parent extends Component {
+      static components = { A, B };
+      static template = xml`<div><t t-if="this.state.show"><A/><B/></t></div>`;
+      state = proxy({ show: false });
+      setup() {
+        onMounted(() => logStep("Parent:mounted"));
+        onError((e) => logStep("error:" + e.message));
+      }
+    }
+    const parent = await mount(Parent, fixture);
+    steps.splice(0);
+    parent.state.show = true;
+    await nextTick();
+    expect(fixture.innerHTML).toBe("<div><a>a</a><b>b</b></div>");
+    expect(steps.splice(0)).toEqual(["B:mounted", "error:boom", "A:mounted"]);
+
+    parent.state.show = false;
+    await nextTick();
+    expect(fixture.innerHTML).toBe("<div></div>");
+    expect(steps.splice(0)).toEqual(["A:willUnmount"]);
+    expect(getConsoleOutput()).toEqual([]);
+  });
+
+  test("the onPatched of the components patched with a failing one still run", async () => {
+    class A extends Component {
+      static template = xml`<a t-out="this.props.v"/>`;
+      props = props();
+      setup() {
+        onPatched(() => logStep("A:patched"));
+      }
+    }
+    class B extends Component {
+      static template = xml`<b t-out="this.props.v"/>`;
+      props = props();
+      setup() {
+        onPatched(() => {
+          logStep("B:patched");
+          throw new Error("boom");
+        });
+      }
+    }
+    class Parent extends Component {
+      static components = { A, B };
+      static template = xml`<div><A v="this.state.v"/><B v="this.state.v"/></div>`;
+      state = proxy({ v: 1 });
+      setup() {
+        onError((e) => logStep("error:" + e.message));
+      }
+    }
+    const parent = await mount(Parent, fixture);
+    steps.splice(0);
+    parent.state.v = 2;
+    await nextTick();
+    expect(fixture.innerHTML).toBe("<div><a>2</a><b>2</b></div>");
+    expect(steps.splice(0)).toEqual(["B:patched", "error:boom", "A:patched"]);
+    expect(getConsoleOutput()).toEqual([]);
+  });
+
+  test("an onMounted error nobody handles still destroys the app before the next hook", async () => {
+    class A extends Component {
+      static template = xml`<a>a</a>`;
+      setup() {
+        onMounted(() => logStep("A:mounted"));
+        onWillUnmount(() => logStep("A:willUnmount"));
+      }
+    }
+    class B extends Component {
+      static template = xml`<b>b</b>`;
+      setup() {
+        onMounted(() => {
+          throw new Error("boom");
+        });
+      }
+    }
+    class Parent extends Component {
+      static components = { A, B };
+      static template = xml`<div><t t-if="this.state.show"><A/><B/></t></div>`;
+      state = proxy({ show: false });
+    }
+    const parent = await mount(Parent, fixture);
+    const app = parent.__owl__.app;
+    parent.state.show = true;
+    const error = await nextAppError(app);
+    expect(error.message).toBe("boom");
+    expect(app.destroyed).toBe(true);
+    expect(steps.splice(0)).toEqual([]);
+    expect(getConsoleOutput()).toEqual([]);
+  });
 });

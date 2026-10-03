@@ -37,6 +37,14 @@ There are important things to know:
   an error, and Owl will try looking for another error handler up the component
   tree.
 
+- an `onMounted` or `onPatched` callback that throws does not keep the other
+  components committed with it from their own: once the error is handled, their
+  `onMounted` (or `onPatched`) still runs. Only the failing component and its
+  ancestors in that render wait, without `onMounted`, for the error handler to
+  re-render them; a component that never got its `onMounted` gets no
+  `onWillUnmount` either. An error nobody handles destroys the application
+  before any other callback runs.
+
 ## Example
 
 For example, here is how we could implement a generic component `ErrorBoundary`

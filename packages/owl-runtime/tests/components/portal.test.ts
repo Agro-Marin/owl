@@ -646,3 +646,37 @@ test("a portal added by a re-render of a mounted host appears once that render i
   await nextTick();
   expect(target.innerHTML).toBe("<span>a</span><span>b</span>");
 });
+
+test("content is committed even when a later sibling's onMounted throws and is handled", async () => {
+  const target = makeOutside("portal-target-sibling-error");
+  target.dataset.testPortal = "1";
+  class Bad extends Component {
+    static template = xml`<b>bad</b>`;
+    setup() {
+      onMounted(() => {
+        throw new Error("boom");
+      });
+    }
+  }
+  class Dialog extends Component {
+    static components = { Portal, Bad };
+    static template = xml`<div class="dialog"><Portal target="this.target"><span>portaled</span></Portal><Bad/></div>`;
+    target = target;
+  }
+  class Parent extends Component {
+    static components = { Dialog };
+    static template = xml`<div><Dialog t-if="this.state.open"/></div>`;
+    state = proxy({ open: false });
+    errors: string[] = [];
+    setup() {
+      onError((e) => this.errors.push(e.message));
+    }
+  }
+  const parent = await mount(Parent, fixture);
+  parent.state.open = true;
+  await nextTick();
+  await nextTick();
+  expect(parent.errors).toEqual(["boom"]);
+  expect(fixture.innerHTML).toBe('<div><div class="dialog"><b>bad</b></div></div>');
+  expect(target.innerHTML).toBe("<span>portaled</span>");
+});

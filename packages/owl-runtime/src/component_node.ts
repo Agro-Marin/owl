@@ -305,7 +305,7 @@ export class ComponentNode extends Scope implements VNode<ComponentNode> {
       // itself, so we can simply patch the dom
       removalDepth++;
       try {
-        this.bdom!.patch(this.fiber!.bdom, false);
+        this.bdom!.patch(this.fiber!.bdom, true);
       } finally {
         removalDepth--;
       }
