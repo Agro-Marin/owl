@@ -102,7 +102,6 @@ class BlockDescription {
   data: string[] = [];
   dom?: Node;
   currentDom?: Element;
-  childNumber: number = 0;
   target: CodeTarget;
   type: BlockType;
   parentVar: string = "";
@@ -137,7 +136,7 @@ class BlockDescription {
     }
   }
 
-  generateExpr(expr: string): string {
+  generateExpr(expr?: string): string {
     if (this.type === "block") {
       const hasChildren = this.children.length;
       let params = this.data.length ? `[${this.data.join(", ")}]` : hasChildren ? "[]" : "";
@@ -151,7 +150,7 @@ class BlockDescription {
     } else if (this.type === "list") {
       return `list(c_block${this.id})`;
     }
-    return expr;
+    return expr!;
   }
 
   asXmlString() {
@@ -407,11 +406,7 @@ export class CodeGenerator {
     block.insert(anchor);
   }
 
-  createBlock(
-    parentBlock: BlockDescription | null,
-    type: BlockType,
-    ctx: Context
-  ): BlockDescription {
+  createBlock(parentBlock: BlockDescription | null, type: BlockType): BlockDescription {
     const hasRoot = this.target.hasRoot;
     const block = new BlockDescription(this.nextBlockId++, this.target, type, this.generateId);
     if (!hasRoot) {
@@ -430,7 +425,8 @@ export class CodeGenerator {
     return block;
   }
 
-  insertBlock(expression: string, block: BlockDescription, ctx: Context): void {
+  // a dom block or a list builds its own expression
+  insertBlock(block: BlockDescription, ctx: Context, expression?: string): void {
     let blockExpr = block.generateExpr(expression);
     if (block.parentVar) {
       let key = this.target.currentKey(ctx);
@@ -532,8 +528,8 @@ export class CodeGenerator {
     }
 
     if (!block || forceNewBlock) {
-      block = this.createBlock(block, "text", ctx);
-      this.insertBlock(`text(${toStringExpression(value)})`, block, ctx);
+      block = this.createBlock(block, "text");
+      this.insertBlock(block, ctx, `text(${toStringExpression(value)})`);
     } else {
       block.insert(xmlDoc.createTextNode(value));
     }
@@ -592,7 +588,7 @@ export class CodeGenerator {
     const isNewBlock = !block || forceNewBlock || ast.dynamicTag !== null || ast.ns;
     let codeIdx = this.target.code.length;
     if (isNewBlock) {
-      block = this.createBlock(block, "block", ctx);
+      block = this.createBlock(block, "block");
       this.blocks.push(block);
       if (ast.dynamicTag) {
         const tagExpr = this.generateId("tag");
@@ -748,7 +744,6 @@ export class CodeGenerator {
         const child = ast.content[i];
         const subCtx = createContext(ctx, {
           block,
-          index: block!.childNumber,
           forceNewBlock: false,
           tKeyExpr: ctx.tKeyExpr,
           nameSpace,
@@ -761,7 +756,7 @@ export class CodeGenerator {
     }
 
     if (isNewBlock) {
-      this.insertBlock(`${block!.blockName}(ddd)`, block!, ctx);
+      this.insertBlock(block!, ctx);
       if (block!.children.length && block!.hasDynamicChildren) {
         this.hoistChildDeclarations(block!, codeIdx);
       }
@@ -798,7 +793,7 @@ export class CodeGenerator {
 
   compileTOut(ast: ASTTOut, ctx: Context): string {
     let { block } = ctx;
-    block = this.createBlock(block, "html", ctx);
+    block = this.createBlock(block, "html");
     let blockStr;
     if (ast.expr === "0") {
       blockStr = this.compileZero(ast, ctx);
@@ -815,7 +810,7 @@ export class CodeGenerator {
       }
       blockStr = `safeOutput(${compileExpr(ast.expr)}, ${key}${defaultContent})`;
     }
-    this.insertBlock(blockStr, block, ctx);
+    this.insertBlock(block, ctx, blockStr);
     return block.varName;
   }
 
@@ -832,7 +827,7 @@ export class CodeGenerator {
     if (block) {
       block.hasDynamicChildren = true;
     }
-    block = isNewBlock ? this.createBlock(block, "multi", ctx) : block!;
+    block = isNewBlock ? this.createBlock(block, "multi") : block!;
     this.addLine(`if (${compileExpr(ast.condition)}) {`);
     this.compileTIfBranch(ast.content, block, ctx);
     if (ast.tElif) {
@@ -851,13 +846,13 @@ export class CodeGenerator {
         this.hoistChildDeclarations(block, codeIdx);
       }
       const args = block.children.map((c) => c.varName).join(", ");
-      this.insertBlock(`multi([${args}])`, block, ctx);
+      this.insertBlock(block, ctx, `multi([${args}])`);
     }
     return block.varName;
   }
 
   compileTForeach(ast: ASTTForEach, ctx: Context): string | null {
-    const block = ast.hasNoRepresentation ? null : this.createBlock(ctx.block, "list", ctx);
+    const block = ast.hasNoRepresentation ? null : this.createBlock(ctx.block, "list");
     const id = block ? block.id : this.generateId("_");
     this.target.loopLevel++;
     const loopVar = `i${this.target.loopLevel}`;
@@ -921,7 +916,7 @@ export class CodeGenerator {
     if (!block) {
       return null;
     }
-    this.insertBlock("l", block, ctx);
+    this.insertBlock(block, ctx);
     return block.varName;
   }
 
@@ -964,7 +959,7 @@ export class CodeGenerator {
         }
         return result;
       }
-      block = this.createBlock(block, "multi", ctx);
+      block = this.createBlock(block, "multi");
     }
     let index = 0;
     for (let i = 0, l = ast.content.length; i < l; i++) {
@@ -985,7 +980,7 @@ export class CodeGenerator {
         this.hoistChildDeclarations(block!, codeIdx);
       }
       const args = block!.children.map((c) => c.varName).join(", ");
-      this.insertBlock(`multi([${args}])`, block!, ctx);
+      this.insertBlock(block!, ctx, `multi([${args}])`);
     }
     return block!.varName;
   }
@@ -998,7 +993,7 @@ export class CodeGenerator {
       : [];
     const isDynamic = isInterpolated(ast.name);
     const subTemplate = isDynamic ? interpolate(ast.name) : toStringExpression(ast.name);
-    block = this.createBlock(block, "multi", ctx);
+    block = this.createBlock(block, "multi");
     if (ast.body) {
       const name = this.compileInNewTarget("callBody", ast.body, ctx);
       const zeroStr = this.generateId("lazyBlock");
@@ -1027,17 +1022,17 @@ export class CodeGenerator {
     const key = this.scopeKey(ctx, true);
     this.helpers.add("callTemplate");
     this.insertBlock(
-      `callTemplate(${subTemplate}, this, app, ${ctxExpr}, node, ${key})`,
       block,
-      ctx
+      ctx,
+      `callTemplate(${subTemplate}, this, app, ${ctxExpr}, node, ${key})`
     );
     return block.varName;
   }
 
   compileTCallBlock(ast: ASTTCallBlock, ctx: Context): string {
     let { block } = ctx;
-    block = this.createBlock(block, "multi", ctx);
-    this.insertBlock(compileExpr(ast.name), block, ctx);
+    block = this.createBlock(block, "multi");
+    this.insertBlock(block, ctx, compileExpr(ast.name));
     return block.varName;
   }
 
@@ -1270,8 +1265,8 @@ export class CodeGenerator {
       blockExpr = this.wrapWithEventCatcher(blockExpr, ast.on);
     }
 
-    block = this.createBlock(block, "multi", ctx);
-    this.insertBlock(blockExpr, block, ctx);
+    block = this.createBlock(block, "multi");
+    this.insertBlock(block, ctx, blockExpr);
     return block.varName;
   }
 
@@ -1331,8 +1326,8 @@ export class CodeGenerator {
       blockString = this.wrapWithEventCatcher(blockString, ast.on);
     }
 
-    block = this.createBlock(block, "multi", ctx);
-    this.insertBlock(blockString, block, ctx);
+    block = this.createBlock(block, "multi");
+    this.insertBlock(block, ctx, blockString);
     return block.varName;
   }
 
