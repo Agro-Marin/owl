@@ -87,7 +87,11 @@ What does **not** transfer:
 
 ## Lifecycle
 
-- The portal mounts when the target resolves to a valid element.
+- The portal mounts when the target resolves to a valid element and the
+  Portal itself is in the document. A Portal still waiting for the render
+  that creates it (a sibling's `onWillStart`, say) renders its content in
+  memory but leaves the target untouched; if that render is cancelled, the
+  content never appears.
 - The portal unmounts when the Portal component is destroyed, when the
   target signal flips to `null`, or when the target changes (the old
   mount is destroyed; a fresh mount is created at the new target).
@@ -133,7 +137,8 @@ container:
 On every effect run with a valid target, it builds a fresh sub-root,
 chains its scope and plugin manager onto the Portal's, installs an
 error handler that walks up the source-tree chain, then commits into
-the target. The cleanup tears the sub-root down before the next run.
+the target — at once if the Portal is mounted, otherwise from its
+`onMounted`. The cleanup tears the sub-root down before the next run.
 
 This is the same machinery [`<Suspense>`](suspense.md) uses internally;
 Portal is essentially Suspense without the fallback and with the target

@@ -4,6 +4,7 @@ import {
   proxy,
   Component,
   onError,
+  onMounted,
   onWillStart,
   Plugin,
   Portal,
@@ -568,4 +569,80 @@ test("a null or undefined target mounts nothing, also in dev mode", async () => 
   await nextTick();
   await nextTick();
   expect(target.innerHTML).toBe("<p>content</p>");
+});
+
+test("content waits for its host Portal to be in the document", async () => {
+  const target = makeOutside("portal-target-host");
+  target.dataset.testPortal = "1";
+  const slow = makeDeferred();
+  const steps: string[] = [];
+  class Slow extends Component {
+    static template = xml`<i>slow</i>`;
+    setup() {
+      onWillStart(() => slow);
+    }
+  }
+  class Content extends Component {
+    static template = xml`<span>portaled</span>`;
+    setup() {
+      onMounted(() => steps.push("content mounted"));
+    }
+  }
+  class Dialog extends Component {
+    static components = { Portal, Slow, Content };
+    static template = xml`<div class="dialog"><Portal target="this.target"><Content/></Portal><Slow/></div>`;
+    target = target;
+    setup() {
+      onMounted(() => steps.push("dialog mounted"));
+    }
+  }
+  class Parent extends Component {
+    static components = { Dialog };
+    static template = xml`<div><Dialog t-if="this.state.open"/></div>`;
+    state = proxy({ open: false });
+  }
+  const parent = await mount(Parent, fixture);
+  parent.state.open = true;
+  await nextTick();
+  await nextTick();
+  expect(target.innerHTML).toBe("");
+  expect(steps).toEqual([]);
+
+  parent.state.open = false;
+  await nextTick();
+  expect(target.innerHTML).toBe("");
+  expect(steps).toEqual([]);
+
+  parent.state.open = true;
+  await nextTick();
+  slow.resolve();
+  await nextTick();
+  await nextTick();
+  expect(fixture.innerHTML).toBe('<div><div class="dialog"><i>slow</i></div></div>');
+  expect(target.innerHTML).toBe("<span>portaled</span>");
+  expect(steps).toEqual(["content mounted", "dialog mounted"]);
+});
+
+test("a portal added by a re-render of a mounted host appears once that render is committed", async () => {
+  const target = makeOutside("portal-target-rerender");
+  target.dataset.testPortal = "1";
+  class Host extends Component {
+    static components = { Portal };
+    static template = xml`
+      <div>
+        <t t-foreach="this.items" t-as="item" t-key="item">
+          <Portal target="this.target"><span t-out="item"/></Portal>
+        </t>
+      </div>`;
+    target = target;
+    items = proxy(["a"]);
+  }
+  const host = await mount(Host, fixture);
+  await nextTick();
+  expect(target.innerHTML).toBe("<span>a</span>");
+
+  host.items.push("b");
+  await nextTick();
+  await nextTick();
+  expect(target.innerHTML).toBe("<span>a</span><span>b</span>");
 });

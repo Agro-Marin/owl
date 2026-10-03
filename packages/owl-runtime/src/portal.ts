@@ -4,6 +4,7 @@ import { useEffect } from "./hooks";
 import { onMounted, onWillDestroy } from "./lifecycle_hooks";
 import { props } from "./props";
 import { forwardErrorToParent } from "./rendering/error_handling";
+import { STATUS } from "./status";
 import { xml } from "./template_set";
 import { types as t } from "./types";
 
@@ -36,6 +37,7 @@ export class Portal extends Component {
     const portalProps = this.props;
     let root: ReturnType<typeof app.createRoot> | null = null;
     let mountedTarget: HTMLElement | null = null;
+    let committed = false;
 
     const tearDown = () => {
       if (root) {
@@ -69,7 +71,19 @@ export class Portal extends Component {
       } as any);
 
       mountedTarget = target;
-      root.mount(target, { position, allowDetached: true } as any);
+      committed = false;
+      // content found a target before its host is in the document (a pending
+      // render, possibly cancelled): it is rendered now, committed with it
+      if (portalNode.status === STATUS.MOUNTED) {
+        commit(position);
+      } else {
+        root.prepare();
+      }
+    };
+
+    const commit = (position?: "first-child") => {
+      committed = true;
+      root!.mount(mountedTarget!, { position, allowDetached: true } as any);
     };
 
     useEffect(() => {
@@ -94,6 +108,9 @@ export class Portal extends Component {
         typeof this.props.target === "string"
       ) {
         tearDown();
+      }
+      if (root && !committed) {
+        commit();
       }
       if (!root && typeof this.props.target === "string") {
         const target = resolveTarget(this.props.target);
