@@ -47,11 +47,11 @@ exports[`t-component > can use dynamic components (the class) if given (with dif
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { createComponent } = helpers;
+  let { keyOf, createComponent } = helpers;
   const comp1 = createComponent(app, null, false, false, false, []);
   
   return function template(ctx, node, key = "") {
-    const tKey_1 = ctx['this'].state.child;
+    const tKey_1 = keyOf(ctx['this'].state.child);
     const Comp1 = ctx['this'].myComponent;
     return toggler(tKey_1, toggler(Comp1, comp1({}, (Comp1).name + tKey_1 + key + \`__1\`, node, this, Comp1)));
   }
@@ -88,11 +88,11 @@ exports[`t-component > can use dynamic components (the class) if given 1`] = `
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { createComponent } = helpers;
+  let { keyOf, createComponent } = helpers;
   const comp1 = createComponent(app, null, false, false, false, []);
   
   return function template(ctx, node, key = "") {
-    const tKey_1 = ctx['this'].state.child;
+    const tKey_1 = keyOf(ctx['this'].state.child);
     const Comp1 = ctx['this'].myComponent;
     return toggler(tKey_1, toggler(Comp1, comp1({}, (Comp1).name + tKey_1 + key + \`__1\`, node, this, Comp1)));
   }

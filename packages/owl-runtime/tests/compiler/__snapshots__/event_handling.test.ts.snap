@@ -193,7 +193,7 @@ exports[`t-on > handler is bound to proper owner, part 4 1`] = `
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { prepareList, callTemplate, withKey } = helpers;
+  let { prepareList, callTemplate, withKey, keyOf } = helpers;
   
   return function template(ctx, node, key = "") {
     const ctx1 = ctx;
@@ -206,7 +206,8 @@ exports[`t-on > handler is bound to proper owner, part 4 1`] = `
       ctx[\`value_index\`] = i1;
       ctx[\`value_value\`] = v_block1[i1];
       const key1 = ctx['value'];
-      c_block1[i1] = withKey(callTemplate(\`sub\`, this, app, ctx, node, key + \`__1__\${key1}\`), key1);
+      const skey1 = keyOf(key1);
+      c_block1[i1] = withKey(callTemplate(\`sub\`, this, app, ctx, node, key + \`__1__\${skey1}\`), key1);
     }
     return list(c_block1);
   }
@@ -384,7 +385,7 @@ exports[`t-on > t-on modifiers (native listener) > t-on with prevent modifier in
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { prepareList, safeOutput, withKey } = helpers;
+  let { prepareList, safeOutput, withKey, keyOf } = helpers;
   const hdlr_fn1 = (ctx,_ev)=>ctx['onEdit'](ctx['project'].id,_ev);
   
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
@@ -397,8 +398,9 @@ exports[`t-on > t-on modifiers (native listener) > t-on with prevent modifier in
       let ctx = Object.create(ctx1);
       ctx[\`project\`] = k_block2[i1];
       const key1 = ctx['project'];
+      const skey1 = keyOf(key1);
       let hdlr1 = [hdlr_fn1, ctx, 8];
-      const b4 = safeOutput(ctx['project'].name, key + \`__1__\${key1}\`);
+      const b4 = safeOutput(ctx['project'].name, key + \`__1__\${skey1}\`);
       c_block2[i1] = withKey(block3([hdlr1], [b4]), key1);
     }
     const b2 = list(c_block2);

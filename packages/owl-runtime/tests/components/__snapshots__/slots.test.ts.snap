@@ -63,7 +63,7 @@ exports[`slots > a sub-template looping over a slot can be called twice 3`] = `
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { prepareList, callSlot, withKey } = helpers;
+  let { prepareList, callSlot, withKey, keyOf } = helpers;
   
   return function template(ctx, node, key = "") {
     const ctx1 = ctx;
@@ -76,7 +76,8 @@ exports[`slots > a sub-template looping over a slot can be called twice 3`] = `
       ctx[\`i_index\`] = i1;
       ctx[\`i_value\`] = v_block1[i1];
       const key1 = ctx['i'];
-      c_block1[i1] = withKey(callSlot(ctx, node, key + \`__\${key1}\`, 'default', false, {}), key1);
+      const skey1 = keyOf(key1);
+      c_block1[i1] = withKey(callSlot(ctx, node, key + \`__\${skey1}\`, 'default', false, {}), key1);
     }
     return list(c_block1);
   }
@@ -2002,7 +2003,7 @@ exports[`slots > slot called inside nested loops gets one component per outer it
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { prepareList, callSlot, withKey } = helpers;
+  let { prepareList, callSlot, withKey, keyOf } = helpers;
   
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   let block3 = createBlock(\`<p><block-child-0/></p>\`);
@@ -2018,6 +2019,7 @@ exports[`slots > slot called inside nested loops gets one component per outer it
       ctx[\`r_index\`] = i1;
       ctx[\`r_value\`] = v_block2[i1];
       const key1 = ctx['r'];
+      const skey1 = keyOf(key1);
       const ctx2 = ctx;
       const [k_block4, v_block4, l_block4, c_block4] = prepareList(['a']);
       for (let i2 = 0; i2 < l_block4; i2++) {
@@ -2028,7 +2030,8 @@ exports[`slots > slot called inside nested loops gets one component per outer it
         ctx[\`c_index\`] = i2;
         ctx[\`c_value\`] = v_block4[i2];
         const key2 = ctx['c'];
-        c_block4[i2] = withKey(callSlot(ctx, node, key + \`__\${key1}__\${key2}\`, 'cell', false, {}), key2);
+        const skey2 = keyOf(key2);
+        c_block4[i2] = withKey(callSlot(ctx, node, key + \`__\${skey1}__\${skey2}\`, 'cell', false, {}), key2);
       }
       const b4 = list(c_block4);
       c_block2[i1] = withKey(block3([], [b4]), key1);
@@ -2304,7 +2307,7 @@ exports[`slots > slot in t-foreach locations 2`] = `
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { prepareList, safeOutput, callSlot, withKey } = helpers;
+  let { prepareList, safeOutput, callSlot, withKey, keyOf } = helpers;
   
   let block2 = createBlock(\`<p><block-child-0/><block-child-1/></p>\`);
   
@@ -2319,8 +2322,9 @@ exports[`slots > slot in t-foreach locations 2`] = `
       ctx[\`elem_index\`] = i1;
       ctx[\`elem_value\`] = v_block1[i1];
       const key1 = ctx['elem_index'];
-      const b3 = safeOutput(ctx['elem'], key + \`__1__\${key1}\`);
-      const b4 = callSlot(ctx, node, key + \`__\${key1}\`, 'default', false, {});
+      const skey1 = keyOf(key1);
+      const b3 = safeOutput(ctx['elem'], key + \`__1__\${skey1}\`);
+      const b4 = callSlot(ctx, node, key + \`__\${skey1}\`, 'default', false, {});
       c_block1[i1] = withKey(block2([], [b3, b4]), key1);
     }
     return list(c_block1);
@@ -2463,13 +2467,13 @@ exports[`slots > slot under a t-key is recreated when the key changes 2`] = `
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { callSlot } = helpers;
+  let { keyOf, callSlot } = helpers;
   
   let block2 = createBlock(\`<i/>\`);
   
   return function template(ctx, node, key = "") {
     const b2 = block2();
-    const tKey_1 = ctx['this'].props.k;
+    const tKey_1 = keyOf(ctx['this'].props.k);
     const b3 = toggler(tKey_1, callSlot(ctx, node, tKey_1 + key, 'default', false, {}));
     return multi([b2, b3]);
   }
@@ -2638,7 +2642,7 @@ exports[`slots > slots are rendered with proper context, part 2 1`] = `
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { prepareList, safeOutput, markRaw, createComponent, withKey } = helpers;
+  let { prepareList, safeOutput, markRaw, createComponent, withKey, keyOf } = helpers;
   const comp1 = createComponent(app, \`Link\`, true, true, false, ["to"]);
   
   let block1 = createBlock(\`<div><u><block-child-0/></u></div>\`);
@@ -2657,7 +2661,8 @@ exports[`slots > slots are rendered with proper context, part 2 1`] = `
       let ctx = Object.create(ctx1);
       ctx[\`user\`] = k_block2[i1];
       const key1 = ctx['user'].id;
-      const b7 = comp1({to: '/user/'+ctx['user'].id,slots: markRaw({'default': {__render: slot1.bind(this), __ctx: ctx}})}, key + \`__2__\${key1}\`, node, this, null);
+      const skey1 = keyOf(key1);
+      const b7 = comp1({to: '/user/'+ctx['user'].id,slots: markRaw({'default': {__render: slot1.bind(this), __ctx: ctx}})}, key + \`__2__\${skey1}\`, node, this, null);
       c_block2[i1] = withKey(block3([], [b7]), key1);
     }
     const b2 = list(c_block2);
@@ -2686,7 +2691,7 @@ exports[`slots > slots are rendered with proper context, part 3 1`] = `
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { prepareList, safeOutput, markRaw, createComponent, withKey } = helpers;
+  let { prepareList, safeOutput, markRaw, createComponent, withKey, keyOf } = helpers;
   const comp1 = createComponent(app, \`Link\`, true, true, false, ["to"]);
   
   let block1 = createBlock(\`<div><u><block-child-0/></u></div>\`);
@@ -2703,8 +2708,9 @@ exports[`slots > slots are rendered with proper context, part 3 1`] = `
       let ctx = Object.create(ctx1);
       ctx[\`user\`] = k_block2[i1];
       const key1 = ctx['user'].id;
+      const skey1 = keyOf(key1);
       ctx["userdescr"] = 'User '+ctx['user'].name;
-      const b5 = comp1({to: '/user/'+ctx['user'].id,slots: markRaw({'default': {__render: slot1.bind(this), __ctx: ctx}})}, key + \`__2__\${key1}\`, node, this, null);
+      const b5 = comp1({to: '/user/'+ctx['user'].id,slots: markRaw({'default': {__render: slot1.bind(this), __ctx: ctx}})}, key + \`__2__\${skey1}\`, node, this, null);
       c_block2[i1] = withKey(block3([], [b5]), key1);
     }
     const b2 = list(c_block2);
@@ -2830,7 +2836,7 @@ exports[`slots > slots in t-foreach and re-rendering 1`] = `
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { prepareList, safeOutput, markRaw, createComponent, withKey } = helpers;
+  let { prepareList, safeOutput, markRaw, createComponent, withKey, keyOf } = helpers;
   const comp1 = createComponent(app, \`Child\`, true, true, false, []);
   
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
@@ -2847,7 +2853,8 @@ exports[`slots > slots in t-foreach and re-rendering 1`] = `
       ctx[\`n\`] = k_block2[i1];
       ctx[\`n_index\`] = i1;
       const key1 = ctx['n_index'];
-      c_block2[i1] = withKey(comp1({slots: markRaw({'default': {__render: slot1.bind(this), __ctx: ctx}})}, key + \`__2__\${key1}\`, node, this, null), key1);
+      const skey1 = keyOf(key1);
+      c_block2[i1] = withKey(comp1({slots: markRaw({'default': {__render: slot1.bind(this), __ctx: ctx}})}, key + \`__2__\${skey1}\`, node, this, null), key1);
     }
     const b2 = list(c_block2);
     return block1([], [b2]);
@@ -2875,7 +2882,7 @@ exports[`slots > slots in t-foreach in t-foreach 1`] = `
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { prepareList, safeOutput, markRaw, createComponent, withKey } = helpers;
+  let { prepareList, safeOutput, markRaw, createComponent, withKey, keyOf } = helpers;
   const comp1 = createComponent(app, \`Child\`, true, true, false, []);
   
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
@@ -2895,7 +2902,8 @@ exports[`slots > slots in t-foreach in t-foreach 1`] = `
       let ctx = Object.create(ctx1);
       ctx[\`node1\`] = k_block2[i1];
       const key1 = ctx['node1'].key;
-      const b5 = safeOutput(ctx['node1'].value, key + \`__1__\${key1}\`);
+      const skey1 = keyOf(key1);
+      const b5 = safeOutput(ctx['node1'].value, key + \`__1__\${skey1}\`);
       const b4 = block4([], [b5]);
       const ctx2 = ctx;
       const [k_block7, v_block7, l_block7, c_block7] = prepareList(ctx['node1'].nodes);
@@ -2903,7 +2911,8 @@ exports[`slots > slots in t-foreach in t-foreach 1`] = `
         let ctx = Object.create(ctx2);
         ctx[\`node2\`] = k_block7[i2];
         const key2 = ctx['node2'].key;
-        c_block7[i2] = withKey(comp1({slots: markRaw({'default': {__render: slot1.bind(this), __ctx: ctx}})}, key + \`__3__\${key1}__\${key2}\`, node, this, null), key2);
+        const skey2 = keyOf(key2);
+        c_block7[i2] = withKey(comp1({slots: markRaw({'default': {__render: slot1.bind(this), __ctx: ctx}})}, key + \`__3__\${skey1}__\${skey2}\`, node, this, null), key2);
       }
       const b7 = list(c_block7);
       const b6 = block6([], [b7]);
@@ -2934,7 +2943,7 @@ exports[`slots > slots in t-foreach with t-set and re-rendering 1`] = `
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { prepareList, safeOutput, markRaw, createComponent, withKey } = helpers;
+  let { prepareList, safeOutput, markRaw, createComponent, withKey, keyOf } = helpers;
   const comp1 = createComponent(app, \`Child\`, true, true, false, []);
   
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
@@ -2951,8 +2960,9 @@ exports[`slots > slots in t-foreach with t-set and re-rendering 1`] = `
       ctx[\`n\`] = k_block2[i1];
       ctx[\`n_index\`] = i1;
       const key1 = ctx['n_index'];
+      const skey1 = keyOf(key1);
       ctx["dummy"] = ctx['n_index'];
-      c_block2[i1] = withKey(comp1({slots: markRaw({'default': {__render: slot1.bind(this), __ctx: ctx}})}, key + \`__2__\${key1}\`, node, this, null), key1);
+      c_block2[i1] = withKey(comp1({slots: markRaw({'default': {__render: slot1.bind(this), __ctx: ctx}})}, key + \`__2__\${skey1}\`, node, this, null), key1);
     }
     const b2 = list(c_block2);
     return block1([], [b2]);
@@ -3034,7 +3044,7 @@ exports[`slots > t-out='0' inside nested loops gets one component per outer iter
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { prepareList, zero, withKey } = helpers;
+  let { prepareList, zero, withKey, keyOf } = helpers;
   
   let block2 = createBlock(\`<p><block-child-0/></p>\`);
   
@@ -3045,13 +3055,15 @@ exports[`slots > t-out='0' inside nested loops gets one component per outer iter
       let ctx = Object.create(ctx1);
       ctx[\`r\`] = k_block1[i1];
       const key1 = ctx['r'];
+      const skey1 = keyOf(key1);
       const ctx2 = ctx;
       const [k_block3, v_block3, l_block3, c_block3] = prepareList(['a']);
       for (let i2 = 0; i2 < l_block3; i2++) {
         let ctx = Object.create(ctx2);
         ctx[\`c\`] = k_block3[i2];
         const key2 = ctx['c'];
-        c_block3[i2] = withKey(ctx[zero]?.(node, key + \`__\${key1}__\${key2}\`) || text(""), key2);
+        const skey2 = keyOf(key2);
+        c_block3[i2] = withKey(ctx[zero]?.(node, key + \`__\${skey1}__\${skey2}\`) || text(""), key2);
       }
       const b3 = list(c_block3);
       c_block1[i1] = withKey(block2([], [b3]), key1);
@@ -3146,7 +3158,7 @@ exports[`slots > t-slot in recursive templates 1`] = `
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { safeOutput, prepareList, callTemplate, withKey, markRaw, createComponent } = helpers;
+  let { safeOutput, prepareList, callTemplate, withKey, keyOf, markRaw, createComponent } = helpers;
   const comp1 = createComponent(app, \`Wrapper\`, true, true, false, []);
   
   function slot1(ctx, node, key = "") {
@@ -3161,11 +3173,12 @@ exports[`slots > t-slot in recursive templates 1`] = `
       ctx[\`item_index\`] = i1;
       ctx[\`item_value\`] = v_block3[i1];
       const key1 = ctx['item'].name;
+      const skey1 = keyOf(key1);
       let b5, b6;
       if (!ctx['item'].children.length) {
-        b5 = safeOutput(ctx['item'].name, key + \`__2__\${key1}\`);
+        b5 = safeOutput(ctx['item'].name, key + \`__2__\${skey1}\`);
       } else {
-        b6 = callTemplate(\`_test_recursive_template\`, this, app, Object.assign(Object.create(ctx), {name: ctx['item'].name, items: ctx['item'].children}), node, key + \`__3__\${key1}\`);
+        b6 = callTemplate(\`_test_recursive_template\`, this, app, Object.assign(Object.create(ctx), {name: ctx['item'].name, items: ctx['item'].children}), node, key + \`__3__\${skey1}\`);
       }
       c_block3[i1] = withKey(multi([b5, b6]), key1);
     }

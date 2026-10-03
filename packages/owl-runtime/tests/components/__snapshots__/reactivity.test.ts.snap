@@ -87,7 +87,7 @@ exports[`computed with equals in components > a recompute with a shallow-equal r
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { safeOutput, prepareList, withKey } = helpers;
+  let { safeOutput, prepareList, withKey, keyOf } = helpers;
   
   let block1 = createBlock(\`<ul><block-child-0/><block-child-1/></ul>\`);
   let block4 = createBlock(\`<li><block-child-0/></li>\`);
@@ -100,7 +100,8 @@ exports[`computed with equals in components > a recompute with a shallow-equal r
       let ctx = Object.create(ctx1);
       ctx[\`todo\`] = k_block3[i1];
       const key1 = ctx['todo'].id;
-      const b5 = safeOutput(ctx['todo'].text, key + \`__2__\${key1}\`);
+      const skey1 = keyOf(key1);
+      const b5 = safeOutput(ctx['todo'].text, key + \`__2__\${skey1}\`);
       c_block3[i1] = withKey(block4([], [b5]), key1);
     }
     const b3 = list(c_block3);
@@ -113,7 +114,7 @@ exports[`reactive cleanup on component destruction > benchmark-like scenario: si
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { prepareList, createComponent, withKey } = helpers;
+  let { prepareList, createComponent, withKey, keyOf } = helpers;
   const comp1 = createComponent(app, \`TableRow\`, true, false, false, ["row","selected"]);
   
   let block1 = createBlock(\`<table><tbody><block-child-0/></tbody></table>\`);
@@ -125,7 +126,8 @@ exports[`reactive cleanup on component destruction > benchmark-like scenario: si
       let ctx = Object.create(ctx1);
       ctx[\`row\`] = k_block2[i1];
       const key1 = ctx['row'].id;
-      c_block2[i1] = withKey(comp1({row: ctx['row'],selected: ctx['this'].selectedId}, key + \`__1__\${key1}\`, node, this, null), key1);
+      const skey1 = keyOf(key1);
+      c_block2[i1] = withKey(comp1({row: ctx['row'],selected: ctx['this'].selectedId}, key + \`__1__\${skey1}\`, node, this, null), key1);
     }
     const b2 = list(c_block2);
     return block1([], [b2]);
@@ -188,7 +190,7 @@ exports[`reactive cleanup on component destruction > destroying multiple childre
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { prepareList, createComponent, withKey } = helpers;
+  let { prepareList, createComponent, withKey, keyOf } = helpers;
   const comp1 = createComponent(app, \`Row\`, true, false, false, ["id","selected"]);
   
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
@@ -200,7 +202,8 @@ exports[`reactive cleanup on component destruction > destroying multiple childre
       let ctx = Object.create(ctx1);
       ctx[\`row\`] = k_block2[i1];
       const key1 = ctx['row'];
-      c_block2[i1] = withKey(comp1({id: ctx['row'],selected: ctx['this'].selectedId}, key + \`__1__\${key1}\`, node, this, null), key1);
+      const skey1 = keyOf(key1);
+      c_block2[i1] = withKey(comp1({id: ctx['row'],selected: ctx['this'].selectedId}, key + \`__1__\${skey1}\`, node, this, null), key1);
     }
     const b2 = list(c_block2);
     return block1([], [b2]);

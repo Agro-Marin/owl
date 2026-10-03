@@ -194,6 +194,9 @@ class CodeTarget {
   indentLevel = 0;
   loopLevel = 0;
   loopCtxVars: string[] = [];
+  // loop levels whose key is concatenated into a string key: they get a
+  // `skey<level>` that tells object keys apart
+  stringKeyLevels: Set<number> = new Set();
   tSetVars: Map<string, number> = new Map();
   code: string[] = [];
   hasRoot = false;
@@ -232,11 +235,18 @@ class CodeTarget {
   }
 
   currentKey(ctx: Context) {
-    let key = this.loopLevel ? `key${this.loopLevel}` : "key";
-    if (ctx.tKeyExpr) {
-      key = `${ctx.tKeyExpr} + ${key}`;
+    if (!this.loopLevel) {
+      return ctx.tKeyExpr ? `${ctx.tKeyExpr} + key` : "key";
     }
-    return key;
+    if (ctx.tKeyExpr) {
+      return `${ctx.tKeyExpr} + ${this.stringKey(this.loopLevel)}`;
+    }
+    return `key${this.loopLevel}`;
+  }
+
+  stringKey(level: number): string {
+    this.stringKeyLevels.add(level);
+    return `skey${level}`;
   }
 }
 
@@ -867,18 +877,24 @@ export class CodeGenerator {
     if (!(ast.noFlags & ForEachNoFlag.Value)) {
       this.addLine(`ctx[\`${ast.elem}_value\`] = ${vals}[${loopVar}];`);
     }
-    this.define(`key${this.target.loopLevel}`, compileExpr(ast.key));
+    const level = this.target.loopLevel;
+    this.define(`key${level}`, compileExpr(ast.key));
+    const stringKeyIdx = this.target.code.length;
     if (this.dev) {
       // Throw error on duplicate keys in dev mode
       this.helpers.add("OwlError");
       this.addLine(
-        `if (keys${id}.has(String(key${this.target.loopLevel}))) { throw new OwlError(\`Got duplicate key in t-foreach: \${key${this.target.loopLevel}}\`)}`
+        `if (keys${id}.has(key${level})) { throw new OwlError(\`Got duplicate key in t-foreach: \${key${level}}\`)}`
       );
-      this.addLine(`keys${id}.add(String(key${this.target.loopLevel}));`);
+      this.addLine(`keys${id}.add(key${level});`);
     }
 
     const subCtx = createContext(ctx, { block, index: loopVar });
     this.compileAST(ast.body, subCtx);
+    if (this.target.stringKeyLevels.delete(level)) {
+      this.helpers.add("keyOf");
+      this.addLine(`const skey${level} = keyOf(key${level});`, stringKeyIdx);
+    }
     this.target.indentLevel--;
     this.target.loopLevel--;
     this.target.loopCtxVars.pop();
@@ -897,7 +913,8 @@ export class CodeGenerator {
 
   compileTKey(ast: ASTTKey, ctx: Context): string | null {
     const tKeyExpr = this.generateId("tKey_");
-    this.define(tKeyExpr, compileExpr(ast.expr));
+    this.helpers.add("keyOf");
+    this.define(tKeyExpr, `keyOf(${compileExpr(ast.expr)})`);
     ctx = createContext(ctx, {
       tKeyExpr,
       block: ctx.block,
@@ -1067,7 +1084,7 @@ export class CodeGenerator {
   scopeKey(ctx: Context, unique: boolean = false): string {
     let suffix = unique ? this.generateId("__") : "";
     for (let i = 1; i <= this.target.loopLevel; i++) {
-      suffix += `__\${key${i}}`;
+      suffix += `__\${${this.target.stringKey(i)}}`;
     }
     const key = suffix ? `key + \`${suffix}\`` : "key";
     return ctx.tKeyExpr ? `${ctx.tKeyExpr} + ${key}` : key;

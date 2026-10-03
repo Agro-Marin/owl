@@ -339,18 +339,48 @@ describe("list of components", () => {
     expect(getConsoleOutput()).toEqual([]);
   });
 
-  test("crash when using object as keys that serialize to the same string", async () => {
+  test("object keys are told apart by identity, components included", async () => {
+    const instances: any[] = [];
+    class Child extends Component {
+      static template = xml`<i t-out="this.props.item.n"/>`;
+      props = props();
+      setup() {
+        instances.push(this);
+      }
+    }
+
+    class Parent extends Component {
+      static template = xml`
+        <t t-foreach="this.state.items" t-as="item" t-key="item">
+          <Child item="item"/>
+        </t>
+      `;
+      static components = { Child };
+      state = proxy({ items: [{ n: 1 }, { n: 2 }] });
+    }
+
+    const parent = await mount(Parent, fixture, { test: true });
+    expect(fixture.innerHTML).toBe("<i>1</i><i>2</i>");
+    expect(instances.length).toBe(2);
+    parent.state.items = [parent.state.items[1], parent.state.items[0]];
+    await nextTick();
+    expect(fixture.innerHTML).toBe("<i>2</i><i>1</i>");
+    expect(instances.length).toBe(2);
+  });
+
+  test("crash on the same object used twice as a key in dev mode", async () => {
     class Child extends Component {
       static template = xml``;
     }
 
     class Parent extends Component {
       static template = xml`
-        <t t-foreach="[{}, {}]" t-as="item" t-key="item">
+        <t t-foreach="[this.obj, this.obj]" t-as="item" t-key="item">
           <Child/>
         </t>
       `;
       static components = { Child };
+      obj = {};
     }
 
     let error: any;

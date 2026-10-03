@@ -4,7 +4,7 @@ exports[`t-set > a t-set body holding a component can be output in a loop 1`] = 
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { LazyValue, createComponent, withDefault, prepareList, safeOutput, withKey } = helpers;
+  let { LazyValue, createComponent, withDefault, prepareList, safeOutput, withKey, keyOf } = helpers;
   const comp1 = createComponent(app, \`Child\`, true, false, false, []);
   
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
@@ -22,7 +22,8 @@ exports[`t-set > a t-set body holding a component can be output in a loop 1`] = 
       let ctx = Object.create(ctx1);
       ctx[\`n\`] = k_block3[i1];
       const key1 = ctx['n'];
-      c_block3[i1] = withKey(safeOutput(ctx['v'], key + \`__2__\${key1}\`), key1);
+      const skey1 = keyOf(key1);
+      c_block3[i1] = withKey(safeOutput(ctx['v'], key + \`__2__\${skey1}\`), key1);
     }
     const b3 = list(c_block3);
     return block1([], [b3]);
@@ -83,7 +84,7 @@ exports[`t-set > a t-set in an ended loop does not change scoping in a later loo
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { prepareList, withKey, safeOutput } = helpers;
+  let { prepareList, withKey, safeOutput, keyOf } = helpers;
   
   return function template(ctx, node, key = "") {
     const ctx1 = ctx;
@@ -92,6 +93,7 @@ exports[`t-set > a t-set in an ended loop does not change scoping in a later loo
       let ctx = Object.create(ctx1);
       ctx[\`j\`] = k_block1[i1];
       const key1 = ctx['j'];
+      const skey1 = keyOf(key1);
       const ctx2 = ctx;
       const [k_block3, v_block3, l_block3, c_block3] = prepareList([7]);
       for (let i2 = 0; i2 < l_block3; i2++) {
@@ -103,7 +105,7 @@ exports[`t-set > a t-set in an ended loop does not change scoping in a later loo
       }
       const b3 = list(c_block3);
       const b5 = text(\`[\`);
-      const b6 = safeOutput(ctx['x'], key + \`__1__\${key1}\`);
+      const b6 = safeOutput(ctx['x'], key + \`__1__\${skey1}\`);
       const b7 = text(\`]\`);
       c_block1[i1] = withKey(multi([b3, b5, b6, b7]), key1);
     }
@@ -116,7 +118,7 @@ exports[`t-set > a t-set in an ended loop does not change scoping in a later loo
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { prepareList, withKey, safeOutput } = helpers;
+  let { prepareList, withKey, safeOutput, keyOf } = helpers;
   
   return function template(ctx, node, key = "") {
     const ctx1 = ctx;
@@ -135,6 +137,7 @@ exports[`t-set > a t-set in an ended loop does not change scoping in a later loo
       let ctx = Object.create(ctx2);
       ctx[\`j\`] = k_block4[i1];
       const key1 = ctx['j'];
+      const skey1 = keyOf(key1);
       const ctx3 = ctx;
       const [k_block6, v_block6, l_block6, c_block6] = prepareList([7]);
       for (let i2 = 0; i2 < l_block6; i2++) {
@@ -146,7 +149,7 @@ exports[`t-set > a t-set in an ended loop does not change scoping in a later loo
       }
       const b6 = list(c_block6);
       const b8 = text(\`[\`);
-      const b9 = safeOutput(ctx['x'], key + \`__1__\${key1}\`);
+      const b9 = safeOutput(ctx['x'], key + \`__1__\${skey1}\`);
       const b10 = text(\`]\`);
       c_block4[i1] = withKey(multi([b6, b8, b9, b10]), key1);
     }
@@ -596,7 +599,7 @@ exports[`t-set > t-set outside modified in t-foreach 1`] = `
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { prepareList, safeOutput, withKey } = helpers;
+  let { prepareList, safeOutput, withKey, keyOf } = helpers;
   
   let block1 = createBlock(\`<div><block-child-0/><p>EndLoop: <block-child-1/></p></div>\`);
   let block3 = createBlock(\`<p>InLoop: <block-child-0/></p>\`);
@@ -610,7 +613,8 @@ exports[`t-set > t-set outside modified in t-foreach 1`] = `
       let ctx = Object.create(ctx1);
       ctx[\`val\`] = k_block2[i1];
       const key1 = ctx['val'];
-      const b4 = safeOutput(ctx['iter'], key + \`__1__\${key1}\`);
+      const skey1 = keyOf(key1);
+      const b4 = safeOutput(ctx['iter'], key + \`__1__\${skey1}\`);
       c_block2[i1] = withKey(block3([], [b4]), key1);
       ctx1["iter"] = ctx['iter']+1;
     }
@@ -625,7 +629,7 @@ exports[`t-set > t-set outside modified in t-foreach increment-after operator 1`
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { prepareList, safeOutput, withKey } = helpers;
+  let { prepareList, safeOutput, withKey, keyOf } = helpers;
   
   let block1 = createBlock(\`<div><block-child-0/><p>EndLoop: <block-child-1/></p></div>\`);
   let block3 = createBlock(\`<p>InLoop: <block-child-0/></p>\`);
@@ -639,7 +643,8 @@ exports[`t-set > t-set outside modified in t-foreach increment-after operator 1`
       let ctx = Object.create(ctx1);
       ctx[\`val\`] = k_block2[i1];
       const key1 = ctx['val'];
-      const b4 = safeOutput(ctx['iter'], key + \`__1__\${key1}\`);
+      const skey1 = keyOf(key1);
+      const b4 = safeOutput(ctx['iter'], key + \`__1__\${skey1}\`);
       c_block2[i1] = withKey(block3([], [b4]), key1);
       ctx1["iter"] = ctx['iter']++;
     }
@@ -654,7 +659,7 @@ exports[`t-set > t-set outside modified in t-foreach increment-before operator 1
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { prepareList, safeOutput, withKey } = helpers;
+  let { prepareList, safeOutput, withKey, keyOf } = helpers;
   
   let block1 = createBlock(\`<div><block-child-0/><p>EndLoop: <block-child-1/></p></div>\`);
   let block3 = createBlock(\`<p>InLoop: <block-child-0/></p>\`);
@@ -668,7 +673,8 @@ exports[`t-set > t-set outside modified in t-foreach increment-before operator 1
       let ctx = Object.create(ctx1);
       ctx[\`val\`] = k_block2[i1];
       const key1 = ctx['val'];
-      const b4 = safeOutput(ctx['iter'], key + \`__1__\${key1}\`);
+      const skey1 = keyOf(key1);
+      const b4 = safeOutput(ctx['iter'], key + \`__1__\${skey1}\`);
       c_block2[i1] = withKey(block3([], [b4]), key1);
       ctx1["iter"] = ++ctx['iter'];
     }
@@ -683,7 +689,7 @@ exports[`t-set > t-set should reuse variable if possible 1`] = `
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { prepareList, safeOutput, withKey } = helpers;
+  let { prepareList, safeOutput, withKey, keyOf } = helpers;
   
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   let block3 = createBlock(\`<div><span>v<block-child-0/></span></div>\`);
@@ -698,7 +704,8 @@ exports[`t-set > t-set should reuse variable if possible 1`] = `
       ctx[\`elem\`] = k_block2[i1];
       ctx[\`elem_index\`] = i1;
       const key1 = ctx['elem_index'];
-      const b4 = safeOutput(ctx['v'], key + \`__1__\${key1}\`);
+      const skey1 = keyOf(key1);
+      const b4 = safeOutput(ctx['v'], key + \`__1__\${skey1}\`);
       ctx1["v"] = ctx['elem'];
       c_block2[i1] = withKey(block3([], [b4]), key1);
     }

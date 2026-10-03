@@ -451,7 +451,7 @@ exports[`t-call > t-call in t-foreach and children component 1`] = `
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { prepareList, callTemplate, withKey } = helpers;
+  let { prepareList, callTemplate, withKey, keyOf } = helpers;
   
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
@@ -466,7 +466,8 @@ exports[`t-call > t-call in t-foreach and children component 1`] = `
       ctx[\`val_index\`] = i1;
       ctx[\`val_value\`] = v_block2[i1];
       const key1 = ctx['val'];
-      c_block2[i1] = withKey(callTemplate(\`__template__999\`, this, app, ctx, node, key + \`__1__\${key1}\`), key1);
+      const skey1 = keyOf(key1);
+      c_block2[i1] = withKey(callTemplate(\`__template__999\`, this, app, ctx, node, key + \`__1__\${skey1}\`), key1);
     }
     const b2 = list(c_block2);
     return block1([], [b2]);

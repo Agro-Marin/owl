@@ -531,7 +531,7 @@ exports[`t-model directive > t-model with dynamic number values on select option
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { modelExpr, toNumber, prepareList, safeOutput, withKey } = helpers;
+  let { modelExpr, toNumber, prepareList, safeOutput, withKey, keyOf } = helpers;
   
   let block1 = createBlock(\`<select block-handler-0="change"><block-child-0/></select>\`);
   let block3 = createBlock(\`<option block-attribute-0="value" block-attribute-1="selected"><block-child-0/></option>\`);
@@ -546,9 +546,10 @@ exports[`t-model directive > t-model with dynamic number values on select option
       let ctx = Object.create(ctx1);
       ctx[\`o\`] = k_block2[i1];
       const key1 = ctx['o'].value;
+      const skey1 = keyOf(key1);
       let attr1 = ctx['o'].value;
       let attr2 = bValue1 === ctx['o'].value;
-      const b4 = safeOutput(ctx['o'].value, key + \`__1__\${key1}\`);
+      const b4 = safeOutput(ctx['o'].value, key + \`__1__\${skey1}\`);
       c_block2[i1] = withKey(block3([attr1, attr2], [b4]), key1);
     }
     const b2 = list(c_block2);
@@ -629,7 +630,7 @@ exports[`t-model directive > t-model with dynamic values on select options in fo
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { modelExpr, toNumber, prepareList, safeOutput, withKey } = helpers;
+  let { modelExpr, toNumber, prepareList, safeOutput, withKey, keyOf } = helpers;
   
   let block1 = createBlock(\`<div><select block-handler-0="change"><block-child-0/></select></div>\`);
   let block3 = createBlock(\`<option block-attribute-0="value" block-attribute-1="selected"><block-child-0/></option>\`);
@@ -644,9 +645,10 @@ exports[`t-model directive > t-model with dynamic values on select options in fo
       let ctx = Object.create(ctx1);
       ctx[\`v\`] = k_block2[i1];
       const key1 = ctx['v'];
+      const skey1 = keyOf(key1);
       let attr1 = ctx['v'];
       let attr2 = bValue1 === ctx['v'];
-      const b4 = safeOutput(ctx['v'], key + \`__1__\${key1}\`);
+      const b4 = safeOutput(ctx['v'], key + \`__1__\${skey1}\`);
       c_block2[i1] = withKey(block3([attr1, attr2], [b4]), key1);
     }
     const b2 = list(c_block2);

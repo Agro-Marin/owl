@@ -525,7 +525,7 @@ exports[`refs > refs and t-key 1`] = `
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { createRef } = helpers;
+  let { keyOf, createRef } = helpers;
   const hdlr_fn1 = (ctx)=>ctx['this'].state.renderId++;
   
   let block2 = createBlock(\`<button block-handler-0="click"/>\`);
@@ -534,7 +534,7 @@ exports[`refs > refs and t-key 1`] = `
   return function template(ctx, node, key = "") {
     let hdlr1 = [hdlr_fn1, ctx];
     const b2 = block2([hdlr1]);
-    const tKey_1 = ctx['this'].state.renderId;
+    const tKey_1 = keyOf(ctx['this'].state.renderId);
     let ref1 = createRef(ctx['this'].root, node);
     const b3 = toggler(tKey_1, block3([ref1]));
     return multi([b2, b3]);

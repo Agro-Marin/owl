@@ -192,7 +192,7 @@ exports[`t-set > t-set body with a component, output in nested loops 1`] = `
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { prepareList, LazyValue, createComponent, withDefault, safeOutput, withKey } = helpers;
+  let { prepareList, LazyValue, createComponent, withDefault, safeOutput, withKey, keyOf } = helpers;
   const comp1 = createComponent(app, \`Cell\`, true, false, false, []);
   
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
@@ -209,14 +209,16 @@ exports[`t-set > t-set body with a component, output in nested loops 1`] = `
       let ctx = Object.create(ctx1);
       ctx[\`r\`] = k_block2[i1];
       const key1 = ctx['r'];
+      const skey1 = keyOf(key1);
       const ctx2 = ctx;
       const [k_block4, v_block4, l_block4, c_block4] = prepareList(['a']);
       for (let i2 = 0; i2 < l_block4; i2++) {
         let ctx = Object.create(ctx2);
         ctx[\`c\`] = k_block4[i2];
         const key2 = ctx['c'];
-        ctx[\`v\`] = new LazyValue(value1, ctx, this, node, key + \`__\${key1}__\${key2}\`);
-        c_block4[i2] = withKey(safeOutput(ctx['v'], key + \`__2__\${key1}__\${key2}\`), key2);
+        const skey2 = keyOf(key2);
+        ctx[\`v\`] = new LazyValue(value1, ctx, this, node, key + \`__\${skey1}__\${skey2}\`);
+        c_block4[i2] = withKey(safeOutput(ctx['v'], key + \`__2__\${skey1}__\${skey2}\`), key2);
       }
       const b4 = list(c_block4);
       c_block2[i1] = withKey(block3([], [b4]), key1);
