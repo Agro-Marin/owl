@@ -52,13 +52,13 @@ exports[`t-key > t-call under a t-key inside a node keeps its content 1`] = `
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { keyOf, callTemplate } = helpers;
+  let { keyOf, zero, callTemplate } = helpers;
   
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
   return function template(ctx, node, key = "") {
     const tKey_1 = keyOf(ctx['k']);
-    const b2 = toggler(tKey_1, callTemplate(\`sub\`, this, app, ctx, node, tKey_1 + key + \`__1\`));
+    const b2 = toggler(tKey_1, callTemplate(\`sub\`, this, app, Object.assign(Object.create(ctx), {[zero]: null}), node, tKey_1 + key + \`__1\`));
     return block1([], [b2]);
   }
 }"

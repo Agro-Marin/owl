@@ -781,12 +781,18 @@ export class CodeGenerator {
     this.addLine(`let ${block.children.map((c) => c.varName).join(", ")};`, codeIdx);
   }
 
-  compileZero(ctx: Context) {
+  compileZero(ast: ASTTOut, ctx: Context) {
     this.helpers.add("zero");
     const isMultiple = this.slotNames.has(zero);
     this.slotNames.add(zero);
     const key = this.scopeKey(ctx, isMultiple);
-    return `ctx[zero]?.(node, ${key}) || text("")`;
+    let defaultContent = `text("")`;
+    if (ast.body) {
+      const bodyAst: AST = { type: ASTType.Multi, content: ast.body };
+      const name = this.compileInNewTarget("defaultContent", bodyAst, ctx);
+      defaultContent = `${name}.call(this, ctx, node, ${key})`;
+    }
+    return `ctx[zero] ? ctx[zero](node, ${key}) : ${defaultContent}`;
   }
 
   compileTOut(ast: ASTTOut, ctx: Context): string {
@@ -794,7 +800,7 @@ export class CodeGenerator {
     block = this.createBlock(block, "html", ctx);
     let blockStr;
     if (ast.expr === "0") {
-      blockStr = this.compileZero(ctx);
+      blockStr = this.compileZero(ast, ctx);
     } else {
       // the key of this output site: a t-set body (LazyValue) output at several
       // sites, or once per loop iteration, renders its components under each
@@ -997,6 +1003,11 @@ export class CodeGenerator {
       this.define(zeroStr, `${name}.bind(this, ctx)`);
       this.helpers.add("zero");
       attrs.push(`[zero]: ${zeroStr}`);
+    } else if (!ast.context) {
+      // a call without a body must not let the called template see the 0 of
+      // the template that calls it
+      this.helpers.add("zero");
+      attrs.push(`[zero]: null`);
     }
 
     let ctxExpr: string;
@@ -1009,11 +1020,7 @@ export class CodeGenerator {
       const extra = attrs.length ? `, ${ctxString}` : "";
       ctxExpr = `Object.assign({}, ${dynCtxVar}, {this: ${dynCtxVar}}${extra})`;
     } else {
-      if (attrs.length === 0) {
-        ctxExpr = "ctx";
-      } else {
-        ctxExpr = `Object.assign(Object.create(ctx), ${ctxString})`;
-      }
+      ctxExpr = `Object.assign(Object.create(ctx), ${ctxString})`;
     }
     const key = this.scopeKey(ctx, true);
     this.helpers.add("callTemplate");

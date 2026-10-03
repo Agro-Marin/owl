@@ -47,13 +47,13 @@ exports[`slots > a sub-template looping over a slot can be called twice 2`] = `
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { callTemplate } = helpers;
+  let { zero, callTemplate } = helpers;
   
   let block1 = createBlock(\`<div><block-child-0/><block-child-1/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = callTemplate(\`sub\`, this, app, ctx, node, key + \`__1\`);
-    const b3 = callTemplate(\`sub\`, this, app, ctx, node, key + \`__2\`);
+    const b2 = callTemplate(\`sub\`, this, app, Object.assign(Object.create(ctx), {[zero]: null}), node, key + \`__1\`);
+    const b3 = callTemplate(\`sub\`, this, app, Object.assign(Object.create(ctx), {[zero]: null}), node, key + \`__2\`);
     return block1([], [b2, b3]);
   }
 }"
@@ -381,10 +381,10 @@ exports[`slots > can use t-call in default-content of t-slot 2`] = `
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { callSlot, callTemplate } = helpers;
+  let { callSlot, zero, callTemplate } = helpers;
   
   function defaultContent1(ctx, node, key = "") {
-    return callTemplate(\`__template__999\`, this, app, ctx, node, key + \`__1\`);
+    return callTemplate(\`__template__999\`, this, app, Object.assign(Object.create(ctx), {[zero]: null}), node, key + \`__1\`);
   }
   
   return function template(ctx, node, key = "") {
@@ -977,12 +977,12 @@ exports[`slots > mix of slots, t-call, t-call with body, and giving own props ch
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { callTemplate, markRaw, createComponent } = helpers;
+  let { zero, callTemplate, markRaw, createComponent } = helpers;
   const comp1 = createComponent(app, \`B\`, true, true, false, []);
   
   function slot1(ctx, node, key = "") {
     const b2 = text(\`[A]\`);
-    const b3 = callTemplate(\`__template__1002\`, this, app, ctx, node, key + \`__1\`);
+    const b3 = callTemplate(\`__template__1002\`, this, app, Object.assign(Object.create(ctx), {[zero]: null}), node, key + \`__1\`);
     return multi([b2, b3]);
   }
   
@@ -1025,13 +1025,13 @@ exports[`slots > mix of slots, t-call, t-call with body, and giving own props ch
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { callTemplate } = helpers;
+  let { zero, callTemplate } = helpers;
   
   return function template(ctx, node, key = "") {
     ctx = Object.create(ctx);
     const b2 = text(\`[sub1] \`);
     ctx["dummy"] = ctx['this'].validate;
-    const b3 = callTemplate(\`__template__1001\`, this, app, Object.assign(Object.create(ctx), {v: ctx['this'].props.number}), node, key + \`__1\`);
+    const b3 = callTemplate(\`__template__1001\`, this, app, Object.assign(Object.create(ctx), {v: ctx['this'].props.number, [zero]: null}), node, key + \`__1\`);
     return multi([b2, b3]);
   }
 }"
@@ -1848,13 +1848,13 @@ exports[`slots > slot and t-call 1`] = `
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { callTemplate, markRaw, createComponent } = helpers;
+  let { zero, callTemplate, markRaw, createComponent } = helpers;
   const comp1 = createComponent(app, \`Dialog\`, true, true, false, []);
   
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
   function slot1(ctx, node, key = "") {
-    return callTemplate(\`__template__999\`, this, app, ctx, node, key + \`__1\`);
+    return callTemplate(\`__template__999\`, this, app, Object.assign(Object.create(ctx), {[zero]: null}), node, key + \`__1\`);
   }
   
   return function template(ctx, node, key = "") {
@@ -2393,13 +2393,13 @@ exports[`slots > slot preserves properly parented relationship, even through t-c
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { callTemplate, markRaw, createComponent } = helpers;
+  let { zero, callTemplate, markRaw, createComponent } = helpers;
   const comp1 = createComponent(app, \`Child\`, true, true, false, []);
   
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
   function slot1(ctx, node, key = "") {
-    return callTemplate(\`sub\`, this, app, ctx, node, key + \`__1\`);
+    return callTemplate(\`sub\`, this, app, Object.assign(Object.create(ctx), {[zero]: null}), node, key + \`__1\`);
   }
   
   return function template(ctx, node, key = "") {
@@ -3063,7 +3063,7 @@ exports[`slots > t-out='0' inside nested loops gets one component per outer iter
         ctx[\`c\`] = k_block3[i2];
         const key2 = ctx['c'];
         const skey2 = keyOf(key2);
-        c_block3[i2] = withKey(ctx[zero]?.(node, key + \`__\${skey1}__\${skey2}\`) || text(""), key2);
+        c_block3[i2] = withKey(ctx[zero] ? ctx[zero](node, key + \`__\${skey1}__\${skey2}\`) : text(""), key2);
       }
       const b3 = list(c_block3);
       c_block1[i1] = withKey(block2([], [b3]), key1);
@@ -3158,7 +3158,7 @@ exports[`slots > t-slot in recursive templates 1`] = `
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { safeOutput, prepareList, callTemplate, withKey, keyOf, markRaw, createComponent } = helpers;
+  let { safeOutput, prepareList, zero, callTemplate, withKey, keyOf, markRaw, createComponent } = helpers;
   const comp1 = createComponent(app, \`Wrapper\`, true, true, false, []);
   
   function slot1(ctx, node, key = "") {
@@ -3178,7 +3178,7 @@ exports[`slots > t-slot in recursive templates 1`] = `
       if (!ctx['item'].children.length) {
         b5 = safeOutput(ctx['item'].name, key + \`__2__\${skey1}\`);
       } else {
-        b6 = callTemplate(\`_test_recursive_template\`, this, app, Object.assign(Object.create(ctx), {name: ctx['item'].name, items: ctx['item'].children}), node, key + \`__3__\${skey1}\`);
+        b6 = callTemplate(\`_test_recursive_template\`, this, app, Object.assign(Object.create(ctx), {name: ctx['item'].name, items: ctx['item'].children, [zero]: null}), node, key + \`__3__\${skey1}\`);
       }
       c_block3[i1] = withKey(multi([b5, b6]), key1);
     }
@@ -3353,13 +3353,13 @@ exports[`slots > t-slot within dynamic t-call 1`] = `
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { callTemplate, markRaw, createComponent } = helpers;
+  let { zero, callTemplate, markRaw, createComponent } = helpers;
   const comp1 = createComponent(app, \`Slotted\`, true, true, false, []);
   
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
   function slot1(ctx, node, key = "") {
-    return callTemplate((ctx['this'].tcallTemplate), this, app, ctx, node, key + \`__1\`);
+    return callTemplate((ctx['this'].tcallTemplate), this, app, Object.assign(Object.create(ctx), {[zero]: null}), node, key + \`__1\`);
   }
   
   return function template(ctx, node, key = "") {

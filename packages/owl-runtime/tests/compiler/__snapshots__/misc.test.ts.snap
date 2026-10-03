@@ -110,17 +110,17 @@ exports[`misc > global 1`] = `
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { prepareList, safeOutput, callTemplate, zero, withKey, keyOf } = helpers;
+  let { prepareList, safeOutput, zero, callTemplate, withKey, keyOf } = helpers;
   
   let block1 = createBlock(\`<div><block-child-0/><block-child-1/></div>\`);
   let block4 = createBlock(\`<span><block-child-0/></span>\`);
   
   function callBody1(ctx, node, key = "") {
     ctx = Object.create(ctx);
-    const b8 = callTemplate(\`_callee-uses-foo\`, this, app, Object.assign(Object.create(ctx), {foo: 'aaa'}), node, key + \`__2\`);
-    const b9 = callTemplate(\`_callee-uses-foo\`, this, app, ctx, node, key + \`__3\`);
+    const b8 = callTemplate(\`_callee-uses-foo\`, this, app, Object.assign(Object.create(ctx), {foo: 'aaa', [zero]: null}), node, key + \`__2\`);
+    const b9 = callTemplate(\`_callee-uses-foo\`, this, app, Object.assign(Object.create(ctx), {[zero]: null}), node, key + \`__3\`);
     ctx["foo"] = 'bbb';
-    const b10 = callTemplate(\`_callee-uses-foo\`, this, app, ctx, node, key + \`__4\`);
+    const b10 = callTemplate(\`_callee-uses-foo\`, this, app, Object.assign(Object.create(ctx), {[zero]: null}), node, key + \`__4\`);
     return multi([b8, b9, b10]);
   }
   
@@ -143,7 +143,7 @@ exports[`misc > global 1`] = `
       c_block2[i1] = withKey(multi([b4, b6]), key1);
     }
     const b2 = list(c_block2);
-    const b11 = callTemplate(\`_callee-asc-toto\`, this, app, ctx, node, key + \`__6\`);
+    const b11 = callTemplate(\`_callee-asc-toto\`, this, app, Object.assign(Object.create(ctx), {[zero]: null}), node, key + \`__6\`);
     return block1([], [b2, b11]);
   }
 }"
@@ -159,7 +159,7 @@ exports[`misc > global 2`] = `
   
   return function template(ctx, node, key = "") {
     let attr1 = 'agüero';
-    const b2 = ctx[zero]?.(node, key) || text("");
+    const b2 = ctx[zero] ? ctx[zero](node, key) : text("");
     return block1([attr1], [b2]);
   }
 }"
@@ -207,7 +207,7 @@ exports[`misc > other complex template 1`] = `
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { safeOutput, prepareList, callHandler, withKey, keyOf, createRef, callTemplate, createComponent } = helpers;
+  let { safeOutput, prepareList, callHandler, withKey, keyOf, createRef, zero, callTemplate, createComponent } = helpers;
   const hdlr_fn1 = (ctx, ev) => callHandler(ctx['selectProject'](ctx['project']), ctx, ev);
   const hdlr_fn2 = (ctx, ev) => callHandler(ctx['toggleSettingsMenu'], ctx, ev);
   const hdlr_fn3 = (ctx, ev) => callHandler(ctx['toggleMore'], ctx, ev);
@@ -335,7 +335,7 @@ exports[`misc > other complex template 1`] = `
       b22 = multi([b23, b27]);
     }
     if (ctx['load_infos']) {
-      b28 = callTemplate(\`LOAD_INFOS_TEMPLATE\`, this, app, ctx, node, key + \`__7\`);
+      b28 = callTemplate(\`LOAD_INFOS_TEMPLATE\`, this, app, Object.assign(Object.create(ctx), {[zero]: null}), node, key + \`__7\`);
     }
     if (ctx['message']) {
       const b30 = safeOutput(ctx['message'], key + \`__8\`);

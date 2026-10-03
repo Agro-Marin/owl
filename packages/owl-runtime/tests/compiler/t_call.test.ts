@@ -544,6 +544,23 @@ describe("t-call (template calling)", () => {
     expect(context.renderToString("main")).toBe("grandchild<p>Some content...</p>");
   });
 
+  test("a t-call without a body gives the called template an empty 0", () => {
+    const context = new TestContext();
+    context.addTemplate("inner", `<p><t t-out="0"/></p>`);
+    context.addTemplate("outer", `<div><t t-call="inner"/><t t-call="inner" a="1"/></div>`);
+    context.addTemplate("main", `<t t-call="outer">LEAK</t>`);
+
+    expect(context.renderToString("main")).toBe("<div><p></p><p></p></div>");
+  });
+
+  test("t-out=0 renders its default body when the t-call has none", () => {
+    const context = new TestContext();
+    context.addTemplate("sub", `<div><t t-out="0">fallback</t></div>`);
+    context.addTemplate("main", `<span><t t-call="sub"/><t t-call="sub">given</t></span>`);
+
+    expect(context.renderToString("main")).toBe("<span><div>fallback</div><div>given</div></span>");
+  });
+
   test("t-call with attributes", () => {
     const context = new TestContext();
     context.addTemplate("sub", `<span><t t-out="v1"/><t t-out="v2"/></span>`);

@@ -502,7 +502,7 @@ exports[`t-model directive > t-model on select with a dynamic option inside a t-
   let { zero } = helpers;
   
   return function template(ctx, node, key = "") {
-    return ctx[zero]?.(node, key) || text("");
+    return ctx[zero] ? ctx[zero](node, key) : text("");
   }
 }"
 `;

@@ -561,6 +561,10 @@ will result in:
 </div>
 ```
 
+A `t-call` without a body gives the sub template an empty `0`, even when the
+template making the call was itself called with a body. Like any `t-out`,
+`<t t-out="0">default</t>` renders its own body when there is no `0` to render.
+
 Note: by default, the rendering context for a sub template is simply the current
 rendering context. However, it may be useful to be able to specify a specific
 object as context. This can be done by using the `t-call-context` directive:
