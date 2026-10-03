@@ -29,7 +29,7 @@ interface SignalOptions<TValue, TElem = TValue> {
   equals?: Equals<TValue>;
 }
 
-function buildSignal<T>(value: T, set: (atom: Atom) => T, equals?: Equals<T>): Signal<T> {
+function buildSignal<T>(value: T, toRead: (value: T) => T, equals?: Equals<T>): Signal<T> {
   const atom: Atom & { type: "signal" } = {
     type: "signal",
     value,
@@ -37,7 +37,7 @@ function buildSignal<T>(value: T, set: (atom: Atom) => T, equals?: Equals<T>): S
   };
   const equalsFn = toEqualsFn(equals);
 
-  let readValue = set(atom);
+  let readValue = toRead(value);
   const readSignal = () => {
     onReadAtom(atom);
     return readValue;
@@ -48,12 +48,22 @@ function buildSignal<T>(value: T, set: (atom: Atom) => T, equals?: Equals<T>): S
     if (equalsFn(atom.value, newValue)) {
       return;
     }
+    // converted first: a value a collection signal cannot hold throws
+    // before the signal changes
+    readValue = toRead(newValue);
     atom.value = newValue;
-    readValue = set(atom);
     onWriteAtom(atom);
   };
 
   return readSignal;
+}
+
+function identity<T>(value: T): T {
+  return value;
+}
+
+function shallowProxy<T extends object>(value: T): T {
+  return proxifyTarget(value, true);
 }
 
 function triggerSignal(signal: Signal<any>): void {
@@ -71,14 +81,14 @@ function triggerSignal(signal: Signal<any>): void {
 function signalRef(): Signal<HTMLElement | null>;
 function signalRef<T extends Constructor<HTMLElement>>(type: T): Signal<InstanceType<T> | null>;
 function signalRef(): Signal<any> {
-  return buildSignal<any>(null, (atom) => atom.value);
+  return buildSignal<any>(null, identity);
 }
 
 function signalArray<T>(): Signal<T[]>;
 function signalArray<T>(initialValue: T[], options?: { equals?: Equals<T[]> }): Signal<T[]>;
 function signalArray<T>(initialValue: NoInfer<T>[], options: SignalOptions<T[], T>): Signal<T[]>;
 function signalArray<T>(initialValue: T[] = [], options: SignalOptions<T[], T> = {}): Signal<T[]> {
-  return buildSignal<T[]>(initialValue, (atom) => proxifyTarget(atom.value, true), options.equals);
+  return buildSignal<T[]>(initialValue, shallowProxy, options.equals);
 }
 
 function signalObject<T extends Record<PropertyKey, any>>(): Signal<T>;
@@ -94,11 +104,10 @@ function signalObject<T extends Record<PropertyKey, any>>(
   initialValue: T = {} as T,
   options: SignalOptions<T> = {}
 ): Signal<T> {
-  return buildSignal<T>(initialValue, (atom) => proxifyTarget(atom.value, true), options.equals);
+  return buildSignal<T>(initialValue, shallowProxy, options.equals);
 }
 
 interface MapSignalOptions<K, V> {
-  name?: string;
   keyType?: K;
   valueType?: V;
   /** Custom equality used by `set` to decide whether to notify (see Equals). */
@@ -108,7 +117,7 @@ interface MapSignalOptions<K, V> {
 function signalMap<K, V>(): Signal<Map<K, V>>;
 function signalMap<K, V>(
   initialValue: Map<K, V>,
-  options?: { name?: string; equals?: Equals<Map<K, V>> }
+  options?: { equals?: Equals<Map<K, V>> }
 ): Signal<Map<K, V>>;
 function signalMap<K, V>(
   initialValue: NoInfer<Map<K, V>>,
@@ -118,11 +127,7 @@ function signalMap<K, V>(
   initialValue: Map<K, V> = new Map(),
   options: MapSignalOptions<K, V> = {}
 ): Signal<Map<K, V>> {
-  return buildSignal<Map<K, V>>(
-    initialValue,
-    (atom) => proxifyTarget(atom.value, true),
-    options.equals
-  );
+  return buildSignal<Map<K, V>>(initialValue, shallowProxy, options.equals);
 }
 
 function signalSet<T>(): Signal<Set<T>>;
@@ -135,17 +140,13 @@ function signalSet<T>(
   initialValue: Set<T> = new Set(),
   options: SignalOptions<Set<T>, T> = {}
 ): Signal<Set<T>> {
-  return buildSignal<Set<T>>(
-    initialValue,
-    (atom) => proxifyTarget(atom.value, true),
-    options.equals
-  );
+  return buildSignal<Set<T>>(initialValue, shallowProxy, options.equals);
 }
 
 export function signal<T>(value: T, options?: { equals?: Equals<T> }): Signal<T>;
 export function signal<T>(value: NoInfer<T>, options: SignalOptions<T>): Signal<T>;
 export function signal<T>(value: T, options: SignalOptions<T> = {}): Signal<T> {
-  return buildSignal<T>(value, (atom) => atom.value, options.equals);
+  return buildSignal<T>(value, identity, options.equals);
 }
 signal.trigger = triggerSignal;
 signal.ref = signalRef;

@@ -170,6 +170,19 @@ describe("signal.Array", () => {
     expectSpy(e.spy, 2, { result: 1 });
   });
 
+  test("setting a value it cannot hold throws, every time, and changes nothing", async () => {
+    const list = signal.Array([1]);
+    const e = spyEffect(() => list());
+    e();
+    expect(() => list.set(null as any)).toThrow("Cannot make the given value reactive");
+    expect(() => list.set(null as any)).toThrow("Cannot make the given value reactive");
+    expect(list()).toEqual([1]);
+    list.set([2]);
+    await waitScheduler();
+    expect(e.spy).toHaveBeenCalledTimes(2);
+    expect(list()).toEqual([2]);
+  });
+
   test("truncating through length invalidates the dropped indices", async () => {
     const reactiveArray = signal.Array<number>([0, 1, 2]);
 
