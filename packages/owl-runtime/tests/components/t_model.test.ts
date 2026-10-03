@@ -1,5 +1,5 @@
 import { Component } from "../../src/component";
-import { computed, mount, proxy, signal, xml } from "../../src";
+import { App, computed, mount, onWillDestroy, proxy, signal, xml } from "../../src";
 import { editInput, makeTestFixture, nextTick, snapshotEverything } from "../helpers";
 import { compile } from "@odoo/owl-compiler";
 
@@ -12,6 +12,35 @@ beforeEach(() => {
 });
 
 describe("t-model directive", () => {
+  test("a destroyed component's t-model ignores events, as its t-on handlers do", async () => {
+    let child: any;
+    class Child extends Component {
+      static template = xml`<div><input class="model" t-model="this.text"/><input class="proxy" t-model.proxy="this.state.text"/></div>`;
+      text = signal("init");
+      state = proxy({ text: "init" });
+      setup() {
+        child = this;
+      }
+    }
+    class Parent extends Component {
+      static template = xml`<Child/>`;
+      static components = { Child };
+      setup() {
+        // the child is destroyed here, its dom still in the document
+        onWillDestroy(() => {
+          for (const input of fixture.querySelectorAll("input")) {
+            input.value = "late";
+            input.dispatchEvent(new Event("input"));
+          }
+        });
+      }
+    }
+    const app = new App();
+    await app.createRoot(Parent).mount(fixture);
+    app.destroy();
+    expect([child.text(), child.state.text]).toEqual(["init", "init"]);
+  });
+
   test("basic use, on an input", async () => {
     class SomeComponent extends Component {
       static template = xml`

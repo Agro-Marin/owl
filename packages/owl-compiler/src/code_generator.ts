@@ -667,7 +667,7 @@ export class CodeGenerator {
       } = ast.model;
 
       let readExpr: string;
-      let handlerCtx: string;
+      let handlerData: string;
       let valueCode = `ev.target.${targetAttr}`;
       valueCode = shouldTrim ? `${valueCode}.trim()` : valueCode;
       if (shouldNumberize) {
@@ -677,15 +677,17 @@ export class CodeGenerator {
       let handlerId: string;
       if (isProxy) {
         readExpr = compileExpr(expr);
-        handlerCtx = "ctx";
         handlerId = this.hoistHandler(`(ctx, ev) => { ${readExpr} = ${valueCode}; }`);
+        handlerData = `[${handlerId}, ctx]`;
       } else {
         const exprId = this.generateId("expr");
         this.helpers.add("modelExpr");
         this.define(exprId, `modelExpr(${compileExpr(expr)})`);
         readExpr = `${exprId}()`;
-        handlerCtx = exprId;
-        handlerId = this.hoistHandler(`(model, ev) => model.set(${valueCode})`);
+        // the model is the handler's extra argument: its context stays ctx,
+        // whose component must be mounted for the handler to run
+        handlerId = this.hoistHandler(`(ctx, ev, model) => model.set(${valueCode})`);
+        handlerData = `[${handlerId}, ctx, 0, ${exprId}]`;
       }
 
       let idx: number;
@@ -702,7 +704,7 @@ export class CodeGenerator {
         idx = block!.insertData(readExpr, "prop");
         attrs[`block-property-${idx}`] = targetAttr;
       }
-      idx = block!.insertData(`[${handlerId}, ${handlerCtx}]`, "hdlr");
+      idx = block!.insertData(handlerData, "hdlr");
       attrs[`block-handler-${idx}`] = eventType;
     }
 

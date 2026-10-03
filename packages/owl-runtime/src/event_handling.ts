@@ -4,7 +4,8 @@ import { EventModifier, OwlError, setCurrentEvent } from "@odoo/owl-core";
 export const mainEventHandler = (data: any, ev: Event, currentTarget?: EventTarget | null) => {
   // lets `useListener` skip an event older than the listener
   setCurrentEvent(ev);
-  // data is [handler, context, modifiers?]: see EventModifier
+  // data is [handler, context, modifiers?, extra?]: see EventModifier; extra
+  // is the model of a t-model handler
   const modifiers: number = data[2];
   if (modifiers) {
     if (modifiers & EventModifier.PREVENT_ANY) {
@@ -33,7 +34,7 @@ export const mainEventHandler = (data: any, ev: Event, currentTarget?: EventTarg
     const context = data[1];
     let node = context ? context.__owl__ : null;
     if (node ? node.status === STATUS.MOUNTED : true) {
-      handler(context, ev);
+      handler(context, ev, data[3]);
     }
   }
 };
