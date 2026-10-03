@@ -1,5 +1,11 @@
 import { EventModifier, OwlError } from "@odoo/owl-core";
-import { compileExpr, interpolate, isInterpolated, processExpr } from "./inline_expressions";
+import {
+  compileExpr,
+  escapeTemplateString,
+  interpolate,
+  isInterpolated,
+  processExpr,
+} from "./inline_expressions";
 import {
   AST,
   ASTComponent,
@@ -78,7 +84,7 @@ function isProp(tag: string, key: string): boolean {
  * sigils into the string if required
  */
 function toStringExpression(str: string) {
-  return `\`${str.replace(/\\/g, "\\\\").replace(/`/g, "\\`").replace(/\$\{/g, "\\${")}\``;
+  return `\`${escapeTemplateString(str)}\``;
 }
 
 // -----------------------------------------------------------------------------

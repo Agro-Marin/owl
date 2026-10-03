@@ -350,6 +350,20 @@ exports[`attributes > format value 1`] = `
 }"
 `;
 
+exports[`attributes > format value: the static parts are text, whatever they contain 1`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  
+  let block1 = createBlock(\`<div block-attribute-0="foo"/>\`);
+  
+  return function template(ctx, node, key = "") {
+    let attr1 = \`\\\\d+\\\`\\\${globalThis.__attfRan = true}-\${ctx['value']}\`;
+    return block1([attr1]);
+  }
+}"
+`;
+
 exports[`attributes > from object variables set previously 1`] = `
 "function anonymous(app, bdom, helpers
 ) {

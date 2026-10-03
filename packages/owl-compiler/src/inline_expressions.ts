@@ -503,17 +503,28 @@ export function isInterpolated(s: string): boolean {
   return HAS_INTERP_REGEXP.test(s);
 }
 
+/**
+ * Escapes a string so that it reads as itself inside a template literal.
+ */
+export function escapeTemplateString(str: string): string {
+  return str.replace(/\\/g, "\\\\").replace(/`/g, "\\`").replace(/\$\{/g, "\\${");
+}
+
 function replaceDynamicParts(s: string, replacer: (s: string) => string) {
   let matches = s.match(INTERP_REGEXP);
   if (matches && matches[0].length === s.length) {
     return `(${replacer(s.slice(2, matches[0][0] === "{" ? -2 : -1))})`;
   }
 
-  let r = s.replace(
-    INTERP_REGEXP,
-    (s) => "${" + replacer(s.slice(2, s[0] === "{" ? -2 : -1)) + "}"
-  );
-  return "`" + r + "`";
+  let r = "";
+  let last = 0;
+  for (const match of s.matchAll(INTERP_REGEXP)) {
+    const part = match[0];
+    r += escapeTemplateString(s.slice(last, match.index));
+    r += "${" + replacer(part.slice(2, part[0] === "{" ? -2 : -1)) + "}";
+    last = match.index! + part.length;
+  }
+  return "`" + r + escapeTemplateString(s.slice(last)) + "`";
 }
 export function interpolate(s: string): string {
   return replaceDynamicParts(s, compileExpr);

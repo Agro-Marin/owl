@@ -28,6 +28,34 @@ exports[`t-call (template calling) > a static name is a string, whatever it cont
 }"
 `;
 
+exports[`t-call (template calling) > an interpolated name keeps the text around its interpolations 1`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { callTemplate } = helpers;
+  
+  let block1 = createBlock(\`<div><block-child-0/></div>\`);
+  
+  return function template(ctx, node, key = "") {
+    const b2 = callTemplate(\`a\\\`b\\\\c.\${ctx['n']}\`, this, app, ctx, node, key + \`__1\`);
+    return block1([], [b2]);
+  }
+}"
+`;
+
+exports[`t-call (template calling) > an interpolated name keeps the text around its interpolations 2`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  
+  let block1 = createBlock(\`<span>ok</span>\`);
+  
+  return function template(ctx, node, key = "") {
+    return block1();
+  }
+}"
+`;
+
 exports[`t-call (template calling) > basic caller 1`] = `
 "function anonymous(app, bdom, helpers
 ) {

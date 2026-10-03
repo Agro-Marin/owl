@@ -178,6 +178,14 @@ describe("attributes", () => {
     expect(result).toBe(`<div foo="bar"></div>`);
   });
 
+  test("format value: the static parts are text, whatever they contain", () => {
+    (globalThis as any).__attfRan = false;
+    const template = `<div t-attf-foo="\\d+\`$\{globalThis.__attfRan = true}-{{value}}"/>`;
+    const result = renderToString(template, { value: "a" });
+    expect(result).toBe(`<div foo="\\d+\`$\{globalThis.__attfRan = true}-a"></div>`);
+    expect((globalThis as any).__attfRan).toBe(false);
+  });
+
   test("string interpolation, alternate syntax", () => {
     const template = `<div t-attf-foo="b#{value}r"/>`;
     const result = renderToString(template, { value: "a" });
