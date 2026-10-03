@@ -86,7 +86,7 @@ const STATIC_TOKEN_MAP: { [key: string]: TKind } = Object.assign(Object.create(n
 // note that the space after typeof is relevant. It makes sure that the formatted
 // expression has a space after typeof. Currently we don't support delete and void
 const OPERATORS =
-  "...,.,===,==,+,!==,!=,!,||,&&,>=,>,<=,<,??=,??,?.,?,-,*,/,%,typeof ,=>,=,;,in ,new ,|,&,^,~".split(
+  "...,.,===,==,++,+,!==,!=,!,||,&&,>=,>,<=,<,??=,??,?.,?,--,-,*,/,%,typeof ,=>,=,;,in ,new ,|,&,^,~".split(
     ","
   );
 
@@ -207,9 +207,14 @@ const OPERAND_PREFIXES = new Set<TKind>([
   "COLON",
 ]);
 
-// a / where an operand is expected starts a regular expression literal
+// a / where an operand is expected starts a regular expression literal; after
+// a ++ or a --, which a regular expression cannot follow, it is a division
 const tokenizeRegExp: Tokenizer = function (expr, previous) {
-  if (expr[0] !== "/" || (previous && !OPERAND_PREFIXES.has(previous.type))) {
+  if (
+    expr[0] !== "/" ||
+    (previous &&
+      (!OPERAND_PREFIXES.has(previous.type) || previous.value === "++" || previous.value === "--"))
+  ) {
     return false;
   }
   let inClass = false;

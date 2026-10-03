@@ -266,6 +266,16 @@ describe("expression evaluation", () => {
     expect(compileExpr("(a) / 2")).toBe("(ctx['a'])/2");
   });
 
+  test("a / after an operand is a division, a postfix ++ or -- included", () => {
+    expect(compileExpr("n++ / 2")).toBe("ctx['n']++/2");
+    expect(compileExpr("n--/2/m")).toBe("ctx['n']--/2/ctx['m']");
+    expect(compileExpr("a[0] / b")).toBe("ctx['a'][0]/ctx['b']");
+    expect(compileExpr("1 / b")).toBe("1/ctx['b']");
+    expect(compileExpr("`a/${b}` / 2")).toBe("`a/${ctx['b']}`/2");
+    expect(compileExpr("a.b / 2")).toBe("ctx['a'].b/2");
+    expect(compileExpr("x ? /a/ : /b/")).toBe("ctx['x']?/a/:/b/");
+  });
+
   test("word operators as object keys", () => {
     expect(compileExpr("({gt: 1, lt: a}).gt")).toBe("({gt:1,lt:ctx['a']}).gt");
     expect(compileExpr("{and, or}")).toBe("{and:ctx['and'],or:ctx['or']}");
