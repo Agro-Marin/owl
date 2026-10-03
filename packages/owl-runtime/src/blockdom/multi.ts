@@ -94,8 +94,7 @@ export class VMulti {
           vn1.patch(vn2, withBeforeRemove);
         } else {
           const afterNode = vn1.firstNode()!;
-          const anchor = document.createTextNode("");
-          anchors[i] = anchor;
+          const anchor = anchors[i] || (anchors[i] = document.createTextNode(""));
           nodeInsertBefore.call(parentEl, anchor, afterNode);
           if (withBeforeRemove) {
             vn1.beforeRemove();

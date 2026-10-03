@@ -88,4 +88,25 @@ describe("multi blocks", () => {
     mount(tree, fixture);
     expect(fixture.innerHTML).toBe("<div>foobar</div>");
   });
+
+  test("a slot emptied again reuses its anchor", () => {
+    const block = createBlock("<p>x</p>");
+    const tree = multi([block(), text("y")]);
+    mount(tree, fixture);
+    const createTextNode = document.createTextNode;
+    let created = 0;
+    document.createTextNode = function (this: Document, data: string) {
+      created++;
+      return createTextNode.call(this, data);
+    };
+    try {
+      for (let i = 0; i < 100; i++) {
+        patch(tree, multi([i % 2 ? block() : undefined, text("y")]));
+      }
+    } finally {
+      document.createTextNode = createTextNode;
+    }
+    expect(fixture.innerHTML).toBe("<p>x</p>y");
+    expect(created).toBe(1);
+  });
 });
