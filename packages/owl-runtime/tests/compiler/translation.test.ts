@@ -231,6 +231,27 @@ describe("translation support", () => {
     expect(seen).toEqual(["word", "word"]);
   });
 
+  test("attributes and .translate props are translated trimmed, as text is", async () => {
+    const seen: string[] = [];
+    class ChildComponent extends Component {
+      static template = xml`<span t-out="this.props.text"/>`;
+      props = props();
+    }
+    class SomeComponent extends Component {
+      static template = xml`<div title=" word " placeholder="  "><ChildComponent text.translate=" word "/></div>`;
+      static components = { ChildComponent };
+    }
+
+    await mount(SomeComponent, fixture, {
+      translateFn: (expr: string) => {
+        seen.push(expr);
+        return expr === "word" ? "mot" : expr;
+      },
+    });
+    expect(fixture.innerHTML).toBe('<div title=" mot " placeholder="  "><span> mot </span></div>');
+    expect(seen).toEqual(["word", "word"]);
+  });
+
   test("does not translate attributes and .translate props if disabled", async () => {
     class Child extends Component {
       static template = xml`<i t-out="this.props.text"/>`;

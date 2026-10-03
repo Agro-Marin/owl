@@ -634,7 +634,7 @@ export class CodeGenerator {
         }
       } else if (ctx.translate && this.translatableAttributes.includes(key)) {
         const attrTranslationCtx = ast.attrsTranslationCtx?.[key] || ctx.translationCtx;
-        attrs[key] = this.translateFn(ast.attrs[key], attrTranslationCtx);
+        attrs[key] = this.translate(ast.attrs[key], attrTranslationCtx);
       } else {
         expr = JSON.stringify(ast.attrs[key]);
         attrName = key;
@@ -1122,9 +1122,7 @@ export class CodeGenerator {
   ): string {
     if (name.endsWith(".translate")) {
       const attrTranslationCtx = attrsTranslationCtx?.[name] || ctx.translationCtx;
-      value = toStringExpression(
-        ctx.translate ? this.translateFn(value, attrTranslationCtx) : value
-      );
+      value = toStringExpression(ctx.translate ? this.translate(value, attrTranslationCtx) : value);
     } else {
       value = compileExpr(value);
     }
