@@ -1937,6 +1937,44 @@ describe("delete", () => {
   });
 });
 
+describe("writes", () => {
+  test("writing NaN over NaN notifies nobody, as for a signal", async () => {
+    const p = proxy({ x: NaN });
+    const map = proxy(new Map([["x", NaN]]));
+    const spy = vi.fn();
+    effect(() => spy(p.x, map.get("x")));
+    p.x = NaN;
+    map.set("x", NaN);
+    await waitScheduler();
+    expect(spy).toHaveBeenCalledTimes(1);
+  });
+
+  test("a write through a setter does not subscribe the writer to what the accessors read", async () => {
+    const p = proxy({
+      _x: 0,
+      get x() {
+        return this._x;
+      },
+      set x(value: number) {
+        this._x = value;
+      },
+    });
+    const source = signal(1);
+    const spy = vi.fn();
+    effect(() => {
+      p.x = source();
+      spy();
+    });
+    p._x = 42;
+    await waitScheduler();
+    expect(spy).toHaveBeenCalledTimes(1);
+    source.set(2);
+    await waitScheduler();
+    expect(spy).toHaveBeenCalledTimes(2);
+    expect(p._x).toBe(2);
+  });
+});
+
 describe("toRaw", () => {
   test("toRaw works as expected", () => {
     const obj = { value: 1 };

@@ -428,32 +428,11 @@ function basicProxyHandler<T extends Target>(shallow: boolean): ProxyHandler<T> 
       return proxifyTarget(value, false);
     },
     set(target, key, value, receiver) {
-      const hadKey = objectHasOwnProperty.call(target, key);
-      const originalValue = Reflect.get(target, key, receiver);
-      const ret = Reflect.set(target, key, toRaw(value), receiver);
-      const keyCreated = !hadKey && objectHasOwnProperty.call(target, key);
-      const valueChanged = originalValue !== Reflect.get(target, key, receiver);
-      if (keyCreated) {
-        onWriteKeyPresence(target, key);
-        // an index past the end grows the array without a length write
-        // going through this trap
-        if (key !== "length" && Array.isArray(target)) {
-          onWriteTargetKey(target, "length");
-        }
-      }
-      if (key === "length" && Array.isArray(target)) {
-        // While Array length may trigger the set trap, it's not actually set by this
-        // method but is updated behind the scenes, and the trap is not called with the
-        // new value. We disable the "same-value-optimization" for it because of that.
-        onWriteTargetKey(target, key);
-        if (target.length < (originalValue as number)) {
-          onWriteTargetKey(target, KEYCHANGES);
-          onWriteDroppedIndices(target, target.length, originalValue as number);
-        }
-      } else if (valueChanged) {
-        onWriteTargetKey(target, key);
-      }
-      return ret;
+      // a write subscribes nothing, though a getter or setter it runs reads
+      // through the proxy
+      return isObserving()
+        ? untrack(() => writeKey(target, key, value, receiver))
+        : writeKey(target, key, value, receiver);
     },
     deleteProperty(target, key) {
       const hadKey = objectHasOwnProperty.call(target, key);
@@ -475,6 +454,37 @@ function basicProxyHandler<T extends Target>(shallow: boolean): ProxyHandler<T> 
     },
   } as ProxyHandler<T>;
 }
+function writeKey(target: any, key: PropertyKey, value: any, receiver: any): boolean {
+  const hadKey = objectHasOwnProperty.call(target, key);
+  const originalValue = Reflect.get(target, key, receiver);
+  const ret = Reflect.set(target, key, toRaw(value), receiver);
+  if (!hadKey && objectHasOwnProperty.call(target, key)) {
+    onWriteKeyCreated(target, key);
+  }
+  if (key === "length" && Array.isArray(target)) {
+    // While Array length may trigger the set trap, it's not actually set by this
+    // method but is updated behind the scenes, and the trap is not called with the
+    // new value. We disable the "same-value-optimization" for it because of that.
+    onWriteTargetKey(target, key);
+    if (target.length < originalValue) {
+      onWriteTargetKey(target, KEYCHANGES);
+      onWriteDroppedIndices(target, target.length, originalValue);
+    }
+  } else if (!Object.is(originalValue, Reflect.get(target, key, receiver))) {
+    onWriteTargetKey(target, key);
+  }
+  return ret;
+}
+
+function onWriteKeyCreated(target: Target, key: PropertyKey): void {
+  onWriteKeyPresence(target, key);
+  // an index past the end grows the array without a length write going
+  // through the set trap
+  if (key !== "length" && Array.isArray(target)) {
+    onWriteTargetKey(target, "length");
+  }
+}
+
 // Array methods a proxy array replaces. Those that write several keys run as
 // one batch: an immediate computation sees the array before or after the
 // call, not in between. Those that search an item by identity also find the
@@ -628,7 +638,7 @@ function delegateAndNotify(
     if (hadKey !== hasKey) {
       onWriteKeyPresence(target, key);
     }
-    if (originalValue !== target[getterName](key)) {
+    if (!Object.is(originalValue, target[getterName](key))) {
       onWriteTargetKey(target, key);
     }
     if (!hasKey) {
