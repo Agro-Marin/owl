@@ -34,7 +34,7 @@ export const blockDom = {
 };
 export { App, mount } from "./app";
 export { xml, TemplateSet, globalTemplates } from "./template_set";
-export type { TemplateSetConfig } from "./template_set";
+export type { TemplateCompiler, TemplateSetConfig } from "./template_set";
 export { Component } from "./component";
 export type { ComponentConstructor } from "./component";
 export { ErrorBoundary } from "./error_boundary";

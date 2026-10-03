@@ -1,5 +1,5 @@
 import { getScope, OwlError } from "@odoo/owl-core";
-import { compile, CustomDirectives, Template, TemplateFunction } from "@odoo/owl-compiler";
+import type { compile, CustomDirectives, Template, TemplateFunction } from "@odoo/owl-compiler";
 import { createBlock, html, list, multi, text, toggler } from "./blockdom";
 import { helpers } from "./rendering/template_helpers";
 import { ComponentNode } from "./component_node";
@@ -16,7 +16,13 @@ export interface TemplateSetConfig {
   globalValues?: object;
 }
 
+export interface TemplateCompiler {
+  compile: typeof compile;
+  parseXML: (xml: string) => Document;
+}
+
 export class TemplateSet {
+  static compiler: TemplateCompiler | null = null;
   static registerTemplate(name: string, fn: TemplateFunction) {
     globalTemplates[name] = fn;
   }
@@ -106,14 +112,27 @@ export class TemplateSet {
     return this.templates[cacheKey];
   }
 
-  private _compileTemplate(name: string, template: string | Element): ReturnType<typeof compile> {
-    throw new OwlError(`Unable to compile a template. Please use owl full build instead`);
+  _compileTemplate(name: string, template: string | Element): TemplateFunction {
+    if (!TemplateSet.compiler) {
+      throw new OwlError(`Unable to compile a template. Please use owl full build instead`);
+    }
+    return TemplateSet.compiler.compile(template, {
+      name,
+      dev: this.dev,
+      translateFn: this.translateFn,
+      translatableAttributes: this.translatableAttributes,
+      customDirectives: this.customDirectives,
+      hasGlobalValues: this.hasGlobalValues,
+    });
   }
 
   private _parseXML(xml: string): Document {
-    throw new OwlError(
-      `Unable to parse XML templates. Please use owl full build instead, or pass a Document instance.`
-    );
+    if (!TemplateSet.compiler) {
+      throw new OwlError(
+        `Unable to parse XML templates. Please use owl full build instead, or pass a Document instance.`
+      );
+    }
+    return TemplateSet.compiler.parseXML(xml);
   }
 }
 
