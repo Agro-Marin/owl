@@ -18,22 +18,30 @@ export interface ValidationContext {
   withKey(key: PropertyKey): ValidationContext;
 }
 
-function safeReplacer(knownObjects: any[], _key: string, value: any): any {
-  if (typeof value === "function") {
-    return value.name || "[Function]";
-  }
-  if (value && typeof value === "object") {
-    const ctor = value.constructor;
-    if (ctor && ctor !== Object && ctor !== Array) {
-      return `[Instance of ${ctor.name || "anonymous"}]`;
+// A JSON.stringify replacer that prints a value seen twice in full, and only
+// a value that contains itself as "[Circular]": `ancestors` is the path from
+// the root to the object being serialized (the replacer's `this`).
+function makeSafeReplacer() {
+  const ancestors: object[] = [];
+  return function (this: object, _key: string, value: any): any {
+    if (typeof value === "function") {
+      return value.name || "[Function]";
     }
-
-    if (knownObjects.includes(value)) {
-      return `[Known object]`;
+    if (value && typeof value === "object") {
+      const ctor = value.constructor;
+      if (ctor && ctor !== Object && ctor !== Array) {
+        return `[Instance of ${ctor.name || "anonymous"}]`;
+      }
+      while (ancestors.length && ancestors[ancestors.length - 1] !== this) {
+        ancestors.pop();
+      }
+      if (ancestors.includes(value)) {
+        return "[Circular]";
+      }
+      ancestors.push(value);
     }
-    knownObjects.push(value);
-  }
-  return value;
+    return value;
+  };
 }
 
 export function assertType(
@@ -43,8 +51,7 @@ export function assertType(
 ): void {
   const issues = validateType(value, validation);
   if (issues.length) {
-    const knownObjects: any[] = [];
-    const issueStrings = JSON.stringify(issues, safeReplacer.bind(null, knownObjects), 2);
+    const issueStrings = JSON.stringify(issues, makeSafeReplacer(), 2);
     throw new OwlError(`${errorMessage}\n${issueStrings}`);
   }
 }

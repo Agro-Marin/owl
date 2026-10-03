@@ -1,4 +1,5 @@
 import { atomSymbol, type ReactiveValue } from "./computations";
+import { OwlError } from "./owl_error";
 import { ValidationContext, ValidationIssue } from "./validation";
 
 export type Constructor<T = any> = { new (...args: any[]): T };
@@ -207,7 +208,10 @@ function applyDefaultsRec(value: any, type: any): any {
     }
     value = factory();
   }
-  const inner = type[innerTypeSymbol] || type;
+  let inner = type;
+  while (typeof inner === "function" && inner[innerTypeSymbol]) {
+    inner = inner[innerTypeSymbol];
+  }
   if (typeof inner !== "function" || !value || typeof value !== "object") {
     return value;
   }
@@ -318,7 +322,7 @@ function customValidator<T>(
   validator: (value: StripBrands<T>) => boolean,
   errorMessage: string = "value does not match custom validation"
 ): Type<StripBrands<T>> {
-  return makeType(function validateCustom(context: ValidationContext) {
+  const validate = makeType(function validateCustom(context: ValidationContext) {
     const typeIssues: ValidationIssue[] = [];
     context.withIssues(typeIssues).validate(type);
     if (typeIssues.length) {
@@ -329,6 +333,8 @@ function customValidator<T>(
       context.addIssue({ message: errorMessage });
     }
   });
+  validate[innerTypeSymbol] = type;
+  return validate;
 }
 
 function functionType(): Type<(...parameters: any[]) => any>;
@@ -588,9 +594,24 @@ function ref(): Type<HTMLElement | null>;
 function ref<T extends Constructor<HTMLElement>>(type: T): Type<InstanceType<T> | null>;
 function ref(type?: any): any {
   if (typeof HTMLElement === "undefined") {
-    throw new Error("Cannot use ref in a non-DOM environment");
+    throw new OwlError("Cannot use ref in a non-DOM environment");
   }
-  return union([literalType(null), instanceType(type || HTMLElement)]);
+  return union([literalType(null), elementType(type || HTMLElement)]);
+}
+
+// instanceOf for an element that may come from another document (an iframe):
+// it is an instance of that window's class of the same name
+function elementType(constructor: Constructor): Type<HTMLElement> {
+  return makeType(function validateElement(context: ValidationContext) {
+    const value = context.value;
+    const realmConstructor = value?.ownerDocument?.defaultView?.[constructor.name];
+    if (
+      !(value instanceof constructor) &&
+      !(typeof realmConstructor === "function" && value instanceof realmConstructor)
+    ) {
+      context.addIssue({ message: `value is not an instance of '${constructor.name}'` });
+    }
+  });
 }
 
 export const types = {

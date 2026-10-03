@@ -946,7 +946,7 @@ test("assert wrong object and circular reference", () => {
     "received": {
       "circular": {
         "a": {
-          "circle": "[Known object]"
+          "circle": "[Circular]"
         }
       }
     },
@@ -985,12 +985,12 @@ test("assertType path is not hidden", () => {
     "message": "value does not match union type",
     "subIssues": [
       {
-        "received": "[Known object]",
+        "received": {},
         "path": "v",
         "message": "value is not a string"
       },
       {
-        "received": "[Known object]",
+        "received": {},
         "path": "v",
         "message": "value is not a number"
       }
@@ -1288,4 +1288,26 @@ describe("toShape", () => {
     const shape = t.and([first, second]).toShape();
     expect(shape.v).toBe(second.toShape().v);
   });
+});
+
+test("applyDefaults sees through customValidator", () => {
+  const shape = t.object({ a: t.number().optional(1) });
+  const custom = t.customValidator(shape, () => true);
+  expect(applyDefaults({}, custom)).toEqual({ a: 1 });
+  expect(applyDefaults({}, custom.optional())).toEqual({ a: 1 });
+  expect(applyDefaults([{}], t.array(custom))).toEqual([{ a: 1 }]);
+});
+
+test("assertType prints a value met twice in full", () => {
+  const shared = { x: 1 };
+  expect(() => assertType({ a: shared, b: shared }, t.object({ c: t.number() }))).toThrow(
+    `"received": {
+      "a": {
+        "x": 1
+      },
+      "b": {
+        "x": 1
+      }
+    }`
+  );
 });

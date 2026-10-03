@@ -298,3 +298,15 @@ describe("use()", () => {
     expect(shared.items()).toEqual([]);
   });
 });
+
+test("deleting an absent item notifies no reader", async () => {
+  const resource = new Resource<string>().add("a");
+  let runs = 0;
+  effect(() => {
+    resource.items();
+    runs++;
+  });
+  resource.delete("b");
+  await waitScheduler();
+  expect(runs).toBe(1);
+});

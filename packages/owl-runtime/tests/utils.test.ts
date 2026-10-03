@@ -1,4 +1,5 @@
 import { batched, EventBus, htmlEscape, markup, validateTarget } from "../src/utils";
+import { types as t, validateType } from "@odoo/owl-core";
 import { nextMicroTick } from "./helpers";
 
 describe("event bus behaviour", () => {
@@ -181,4 +182,18 @@ test("htmlEscape escapes every special character, each occurrence", () => {
     "&amp;&amp;&lt;&lt;&gt;&gt;&#x27;&#x27;&quot;&quot;&#x60;&#x60;"
   );
   expect(htmlEscape(null).toString()).toBe("null");
+});
+
+test("ref accepts an element of another document's window", () => {
+  const iframe = document.createElement("iframe");
+  document.body.appendChild(iframe);
+  try {
+    const el = iframe.contentDocument!.createElement("div");
+    expect(el instanceof HTMLElement).toBe(false);
+    expect(validateType(el, t.ref())).toEqual([]);
+    expect(validateType(el, t.ref(HTMLDivElement))).toEqual([]);
+    expect(validateType(el, t.ref(HTMLSpanElement))).not.toEqual([]);
+  } finally {
+    iframe.remove();
+  }
 });

@@ -67,8 +67,11 @@ export class Registry<T> {
       );
     }
     if (this._validation) {
-      const info = this._name ? ` (registry '${this._name}', key: '${key}')` : ` (key: '${key}')`;
-      assertType(value, this._validation, `Registry entry does not match the type${info}`);
+      assertType(
+        value,
+        this._validation,
+        `Registry entry does not match the type (registry '${this._name}', key: '${key}')`
+      );
     }
     return untrack(() => {
       const map = this._map();

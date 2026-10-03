@@ -53,9 +53,17 @@ export class Resource<T> {
   }
 
   delete(item: Item<T>): Resource<T> {
-    const items = untrack(this._items).filter(([seq, val]) => val !== item);
-    this._items.set(items);
+    this._remove((entry) => entry[1] === item);
     return this;
+  }
+
+  private _remove(match: (entry: Entry<T>) => boolean): void {
+    untrack(() => {
+      const entries = this._items();
+      if (entries.some(match)) {
+        this._items.set(entries.filter((entry) => !match(entry)));
+      }
+    });
   }
 
   clear() {
@@ -69,9 +77,7 @@ export class Resource<T> {
   use(item: Item<T>, options: ResourceAddOptions = {}): Resource<T> {
     const scope = useScope();
     const entry = this._add(item, options);
-    scope.onDestroy(() => {
-      this._items.set(untrack(this._items).filter((e) => e !== entry));
-    });
+    scope.onDestroy(() => this._remove((e) => e === entry));
     return this;
   }
 }
