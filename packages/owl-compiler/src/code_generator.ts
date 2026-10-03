@@ -560,22 +560,15 @@ export class CodeGenerator {
     });
     const modifiersCode = mask ? `, ${mask}` : "";
 
-    const compiled = compileExpr(handler);
+    const { expr: compiled, arrow } = processExpr(handler);
     if (!compiled.trim()) {
       return `[null, ctx${modifiersCode}]`;
     }
 
     let hoistedExpr: string;
-    const arrowMatch = compiled.match(/^(\([^)]*\))\s*=>/);
-    const bareArrowMatch = !arrowMatch && compiled.match(/^([a-zA-Z_$][a-zA-Z0-9_$]*)\s*=>/);
-
-    if (arrowMatch) {
-      const inner = arrowMatch[1].slice(1, -1).trim();
-      const rest = compiled.slice(arrowMatch[0].length);
-      hoistedExpr = inner ? `(ctx,${inner})=>${rest}` : `(ctx)=>${rest}`;
-    } else if (bareArrowMatch) {
-      const rest = compiled.slice(bareArrowMatch[0].length);
-      hoistedExpr = `(ctx,${bareArrowMatch[1]})=>${rest}`;
+    if (arrow) {
+      const params = arrow.params ? `ctx,${arrow.params}` : "ctx";
+      hoistedExpr = `${arrow.isAsync ? "async " : ""}(${params})=>${arrow.body}`;
     } else {
       this.helpers.add("callHandler");
       hoistedExpr = `(ctx, ev) => callHandler(${compiled}, ctx, ev)`;

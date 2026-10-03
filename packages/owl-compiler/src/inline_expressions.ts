@@ -28,7 +28,7 @@ import { OwlError } from "@odoo/owl-core";
 //------------------------------------------------------------------------------
 
 const RESERVED_WORDS = new Set(
-  "true,false,NaN,null,undefined,debugger,console,window,in,instanceof,new,function,return,eval,void,Math,RegExp,Array,Object,Date,__globals__".split(
+  "true,false,NaN,null,undefined,debugger,console,window,in,instanceof,new,function,return,eval,void,async,await,Math,RegExp,Array,Object,Date,__globals__".split(
     ","
   )
 );
@@ -84,9 +84,11 @@ const STATIC_TOKEN_MAP: { [key: string]: TKind } = Object.assign(Object.create(n
 // note that the space after typeof is relevant. It makes sure that the formatted
 // expression has a space after typeof. Currently we don't support delete and void
 const OPERATORS =
-  "...,.,===,==,+,!==,!=,!,||,&&,>=,>,<=,<,?,-,*,/,%,typeof ,=>,=,;,in ,new ,|,&,^,~".split(",");
+  "...,.,===,==,+,!==,!=,!,||,&&,>=,>,<=,<,??=,??,?.,?,-,*,/,%,typeof ,=>,=,;,in ,new ,|,&,^,~".split(
+    ","
+  );
 
-type Tokenizer = (expr: string) => Token | false;
+type Tokenizer = (expr: string, previous: Token | undefined) => Token | false;
 
 let tokenizeString: Tokenizer = function (expr) {
   let s = expr[0];
@@ -176,16 +178,55 @@ let tokenizeNumber: Tokenizer = function (expr) {
 const SYMBOL_RE = /^[\p{ID_Start}_$][\p{ID_Continue}$\u200C\u200D]*/u;
 const IDENTIFIER_CHAR_RE = /[\p{ID_Continue}$\u200C\u200D]/u;
 
-let tokenizeSymbol: Tokenizer = function (expr) {
+const OBJECT_KEY_END_RE = /^\s*[:,}]/;
+
+let tokenizeSymbol: Tokenizer = function (expr, previous) {
   const match = SYMBOL_RE.exec(expr);
   if (!match) {
     return false;
   }
   const s = match[0];
-  if (s in WORD_REPLACEMENT) {
+  // a word operator in key position ({gt: 1}, {and}) is a key
+  const isKey =
+    (previous?.type === "LEFT_BRACE" || previous?.type === "COMMA") &&
+    OBJECT_KEY_END_RE.test(expr.slice(s.length));
+  if (s in WORD_REPLACEMENT && !isKey) {
     return { type: "OPERATOR", value: WORD_REPLACEMENT[s], size: s.length };
   }
   return { type: "SYMBOL", value: s };
+};
+
+const OPERAND_PREFIXES = new Set<TKind>([
+  "OPERATOR",
+  "LEFT_BRACE",
+  "LEFT_BRACKET",
+  "LEFT_PAREN",
+  "COMMA",
+  "COLON",
+]);
+
+// a / where an operand is expected starts a regular expression literal
+const tokenizeRegExp: Tokenizer = function (expr, previous) {
+  if (expr[0] !== "/" || (previous && !OPERAND_PREFIXES.has(previous.type))) {
+    return false;
+  }
+  let inClass = false;
+  let i = 1;
+  for (; expr[i] !== "/" || inClass; i++) {
+    const char = expr[i];
+    if (!char || char === "\n") {
+      throw new OwlError("Invalid expression");
+    }
+    if (char === "\\") {
+      i++;
+    } else if (char === "[") {
+      inClass = true;
+    } else if (char === "]") {
+      inClass = false;
+    }
+  }
+  const flags = /^[a-z]*/.exec(expr.slice(i + 1))![0];
+  return { type: "VALUE", value: expr.slice(0, i + 1 + flags.length) };
 };
 
 const tokenizeStatic: Tokenizer = function (expr) {
@@ -203,6 +244,10 @@ const tokenizeProperty: Tokenizer = function (expr) {
 
 const tokenizeOperator: Tokenizer = function (expr) {
   for (let op of OPERATORS) {
+    if (op === "?." && /\d/.test(expr[2])) {
+      // a?.5:1 is a ternary
+      continue;
+    }
     if (op.endsWith(" ")) {
       const word = op.slice(0, -1);
       const next = expr[word.length] || "";
@@ -220,6 +265,7 @@ const tokenizeOperator: Tokenizer = function (expr) {
 
 const TOKENIZERS = [
   tokenizeString,
+  tokenizeRegExp,
   tokenizeNumber,
   tokenizeOperator,
   tokenizeSymbol,
@@ -248,9 +294,10 @@ export function tokenize(expr: string): Token[] {
     while (token) {
       current = current.trim();
       if (current) {
-        const isProperty = result[result.length - 1]?.value === ".";
+        const previous = result[result.length - 1];
+        const isProperty = previous?.value === "." || previous?.value === "?.";
         for (let tokenizer of isProperty ? PROPERTY_TOKENIZERS : TOKENIZERS) {
-          token = tokenizer(current);
+          token = tokenizer(current, previous);
           if (token) {
             result.push(token);
             current = current.slice(token.size || token.value.length);
@@ -309,12 +356,65 @@ const paddedValues = new Map([
   ["in ", " in "],
   ["instanceof", " instanceof "],
   ["void", "void "],
+  ["async", "async "],
+  ["await", "await "],
 ]);
+
+function render(tokens: Token[]): string {
+  return tokens.map((t) => paddedValues.get(t.value) || t.value).join("");
+}
 
 interface ProcessedExpr {
   expr: string;
   freeVariables: string[] | null;
   variables: string[];
+  // the parts of an expression that is a whole arrow function
+  arrow: { isAsync: boolean; params: string; body: string } | null;
+}
+
+const LEFT_GROUPS = new Set<TKind>(["LEFT_BRACE", "LEFT_BRACKET", "LEFT_PAREN"]);
+const RIGHT_GROUPS = new Set<TKind>(["RIGHT_BRACE", "RIGHT_BRACKET", "RIGHT_PAREN"]);
+
+/**
+ * Turns the parameters of the parenthesized arrow parameter list that ends at
+ * `end` into locals, default values aside, and returns the index of its "(".
+ */
+function bindArrowParams(tokens: Token[], end: number, scope: Set<string>): number {
+  let depth = 0;
+  let start = end;
+  for (; start >= 0; start--) {
+    const type = tokens[start].type;
+    if (RIGHT_GROUPS.has(type)) {
+      depth++;
+    } else if (LEFT_GROUPS.has(type) && !--depth) {
+      break;
+    }
+  }
+  const levels = [{ inDefault: false, base: false }];
+  for (let k = start + 1; k < end; k++) {
+    const t = tokens[k];
+    const level = levels[levels.length - 1];
+    if (LEFT_GROUPS.has(t.type)) {
+      levels.push({ inDefault: level.inDefault, base: level.inDefault });
+    } else if (RIGHT_GROUPS.has(t.type)) {
+      levels.pop();
+    } else if (t.type === "COMMA") {
+      level.inDefault = level.base;
+    } else if (t.type === "OPERATOR" && t.value === "=") {
+      level.inDefault = true;
+    } else if (t.type === "SYMBOL" && t.varName && !level.inDefault) {
+      scope.add(t.varName);
+    }
+  }
+  // a default value may read an earlier parameter
+  for (let k = start + 1; k < end; k++) {
+    const t = tokens[k];
+    if (t.type === "SYMBOL" && t.varName && scope.has(t.varName)) {
+      t.value = `_${t.varName}`;
+      t.isLocal = true;
+    }
+  }
+  return start;
 }
 
 function collectVariables(tokens: Token[], start: number): string[] {
@@ -349,6 +449,7 @@ export function processExpr(expr: string, seededLocals?: Set<string>): Processed
   let i = 0;
   let stack = []; // to track last opening (, [ or {
   let topLevelArrowIndex = -1;
+  let topLevelParams: [number, number] | null = null;
 
   function isLocal(name: string) {
     return scopeStack.some((s) => s.vars.has(name));
@@ -419,7 +520,10 @@ export function processExpr(expr: string, seededLocals?: Set<string>): Processed
           nextToken = tokens[i + 1];
         }
 
-        if (prevToken.type === "OPERATOR" && prevToken.value === ".") {
+        if (
+          prevToken.type === "OPERATOR" &&
+          (prevToken.value === "." || prevToken.value === "?.")
+        ) {
           isVar = false;
         } else if (prevToken.type === "LEFT_BRACE" || prevToken.type === "COMMA") {
           if (nextToken && nextToken.type === "COLON") {
@@ -446,25 +550,19 @@ export function processExpr(expr: string, seededLocals?: Set<string>): Processed
     if (nextToken && nextToken.type === "OPERATOR" && nextToken.value === "=>") {
       const newScope = new Set<string>();
       let paramStart = i;
+      let params: [number, number] = [i, i + 1];
       if (token.type === "RIGHT_PAREN") {
-        let j = i - 1;
-        while (j > 0 && tokens[j].type !== "LEFT_PAREN") {
-          if (tokens[j].type === "SYMBOL" && tokens[j].originalValue) {
-            newScope.add(tokens[j].originalValue!);
-            tokens[j].value = `_${tokens[j].originalValue}`;
-            tokens[j].isLocal = true;
-          }
-          j--;
-        }
-        paramStart = j;
+        paramStart = bindArrowParams(tokens, i, newScope);
+        params = [paramStart + 1, i];
       } else {
         // Single param without parens (e => ...): token.value is still the
         // raw identifier here, before the isVar block below transforms it.
         // The isVar block will then see isLocal=true and prefix with _.
         newScope.add(token.value);
       }
-      if (paramStart === 0) {
+      if (paramStart === 0 || (paramStart === 1 && tokens[0].value === "async")) {
         topLevelArrowIndex = i + 1;
+        topLevelParams = params;
       }
       // record current stack depth so we know when this scope expires
       scopeStack.push({ vars: newScope, depth: stack.length, ternaries: 0 });
@@ -488,8 +586,20 @@ export function processExpr(expr: string, seededLocals?: Set<string>): Processed
       ? null
       : collectVariables(tokens, topLevelArrowIndex + 1).filter((v) => v !== "this");
 
-  const compiled = tokens.map((t) => paddedValues.get(t.value) || t.value).join("");
-  return { expr: compiled, freeVariables, variables: collectVariables(tokens, 0) };
+  const arrow =
+    topLevelArrowIndex === -1
+      ? null
+      : {
+          isAsync: tokens[0].value === "async",
+          params: render(tokens.slice(...topLevelParams!)),
+          body: render(tokens.slice(topLevelArrowIndex + 1)),
+        };
+  return {
+    expr: render(tokens),
+    freeVariables,
+    variables: collectVariables(tokens, 0),
+    arrow,
+  };
 }
 
 export function compileExpr(expr: string, seededLocals?: Set<string>): string {

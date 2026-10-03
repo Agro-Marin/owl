@@ -250,6 +250,44 @@ describe("expression evaluation", () => {
     expect(compileExpr("f(x => ({a: x, b: x}), x)")).toBe("ctx['f'](_x=>({a:_x,b:_x}),ctx['x'])");
   });
 
+  test("optional chaining and nullish coalescing are not ternaries", () => {
+    expect(compileExpr("c ? y => y?.length : y")).toBe("ctx['c']?_y=>_y?.length:ctx['y']");
+    expect(compileExpr("c ? y => y ?? 1 : y")).toBe("ctx['c']?_y=>_y??1:ctx['y']");
+    expect(compileExpr("a?.b?.[c]?.(d)")).toBe("ctx['a']?.b?.[ctx['c']]?.(ctx['d'])");
+    expect(compileExpr("a?.in")).toBe("ctx['a']?.in");
+    expect(compileExpr("a ??= b")).toBe("ctx['a']??=ctx['b']");
+    expect(compileExpr("a?.5:1")).toBe("ctx['a']?.5:1");
+  });
+
+  test("regular expression literals", () => {
+    expect(compileExpr("/ab/.test(s)")).toBe("/ab/.test(ctx['s'])");
+    expect(compileExpr("s.replace(/[/x]\\s+/gi, '')")).toBe("ctx['s'].replace(/[/x]\\s+/gi,'')");
+    expect(compileExpr("a / b / c")).toBe("ctx['a']/ctx['b']/ctx['c']");
+    expect(compileExpr("(a) / 2")).toBe("(ctx['a'])/2");
+  });
+
+  test("word operators as object keys", () => {
+    expect(compileExpr("({gt: 1, lt: a}).gt")).toBe("({gt:1,lt:ctx['a']}).gt");
+    expect(compileExpr("{and, or}")).toBe("{and:ctx['and'],or:ctx['or']}");
+    expect(compileExpr("a gt b")).toBe("ctx['a']>ctx['b']");
+  });
+
+  test("async arrow functions", () => {
+    expect(compileExpr("async () => { await this.f(); }")).toBe(
+      "async ()=>{await ctx['this'].f();}"
+    );
+    expect(compileExpr("async x => await f(x)")).toBe("async _x=>await ctx['f'](_x)");
+    expect(processExpr("async (a) => f(a, b)").freeVariables).toEqual(["f", "b"]);
+  });
+
+  test("arrow parameters with default values", () => {
+    expect(compileExpr("(a = f()) => a")).toBe("(_a=ctx['f']())=>_a");
+    expect(compileExpr("(a, b = g(a, c)) => a + b + c")).toBe(
+      "(_a,_b=ctx['g'](_a,ctx['c']))=>_a+_b+ctx['c']"
+    );
+    expect(compileExpr("({x, y: [z]} = d) => x + z")).toBe("({x:_x,y:[_z]}=ctx['d'])=>_x+_z");
+  });
+
   test("arrow functions: not yet supported", () => {
     expect(compileExpr("(e => e)(e)")).toBe("(_e=>_e)(ctx['e'])");
   });

@@ -32,6 +32,27 @@ describe("t-on", () => {
     expect(a).toBe(3);
   });
 
+  test("an async arrow handler", async () => {
+    const steps: string[] = [];
+    const template = `<button t-on-click="async () => { await this.wait(); this.log('done'); }">Click</button>`;
+    const fixture = mountToFixture(template, {
+      wait: () => Promise.resolve(),
+      log: (s: string) => steps.push(s),
+    });
+    fixture.querySelector("button")!.click();
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(steps).toEqual(["done"]);
+  });
+
+  test("an arrow handler with a computed default parameter", () => {
+    const seen: any[] = [];
+    const template = `<button t-on-click="(ev, n = this.base + 1) => this.log(ev.type, n)">Click</button>`;
+    const fixture = mountToFixture(template, { base: 1, log: (...a: any[]) => seen.push(a) });
+    fixture.querySelector("button")!.click();
+    expect(seen).toEqual([["click", 2]]);
+  });
+
   test("receive event in first argument", () => {
     expect.assertions(2);
     const template = `<button t-on-click="add">Click</button>`;

@@ -1,5 +1,35 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`t-on > an arrow handler with a computed default parameter 1`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  const hdlr_fn1 = (ctx,_ev,_n=ctx['this'].base+1)=>ctx['this'].log(_ev.type,_n);
+  
+  let block1 = createBlock(\`<button block-handler-0="click">Click</button>\`);
+  
+  return function template(ctx, node, key = "") {
+    let hdlr1 = [hdlr_fn1, ctx];
+    return block1([hdlr1]);
+  }
+}"
+`;
+
+exports[`t-on > an async arrow handler 1`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  const hdlr_fn1 = async (ctx)=>{await ctx['this'].wait();ctx['this'].log('done');};
+  
+  let block1 = createBlock(\`<button block-handler-0="click">Click</button>\`);
+  
+  return function template(ctx, node, key = "") {
+    let hdlr1 = [hdlr_fn1, ctx];
+    return block1([hdlr1]);
+  }
+}"
+`;
+
 exports[`t-on > can bind event handler 1`] = `
 "function anonymous(app, bdom, helpers
 ) {
