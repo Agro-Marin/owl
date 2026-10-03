@@ -460,11 +460,11 @@ exports[`t-call > t-call in t-foreach and children component 1`] = `
     const [k_block2, v_block2, l_block2, c_block2] = prepareList(['a','b','c']);
     for (let i1 = 0; i1 < l_block2; i1++) {
       let ctx = Object.create(ctx1);
-      ctx[\`val\`] = k_block2[i1];
-      ctx[\`val_first\`] = i1 === 0;
-      ctx[\`val_last\`] = i1 === k_block2.length - 1;
-      ctx[\`val_index\`] = i1;
-      ctx[\`val_value\`] = v_block2[i1];
+      ctx["val"] = k_block2[i1];
+      ctx["val_first"] = i1 === 0;
+      ctx["val_last"] = i1 === k_block2.length - 1;
+      ctx["val_index"] = i1;
+      ctx["val_value"] = v_block2[i1];
       const key1 = ctx['val'];
       const skey1 = keyOf(key1);
       c_block2[i1] = withKey(callTemplate(\`__template__999\`, this, app, Object.assign(Object.create(ctx), {[zero]: null}), node, key + \`__1__\${skey1}\`), key1);
@@ -683,7 +683,7 @@ exports[`t-call > t-call-context: ComponentNode is not looked up in the context 
   return function template(ctx, node, key = "") {
     let ref1 = createRef(ctx['this'].myRef, node);
     const b2 = block2([ref1]);
-    const b7 = comp1({prop: (ctx['this'].method).bind(this),slots: markRaw({'default': {__render: slot1.bind(this), __ctx: ctx}})}, key + \`__2\`, node, this, null);
+    const b7 = comp1({prop: (ctx['this'].method).bind(this),slots: markRaw({"default": {__render: slot1.bind(this), __ctx: ctx}})}, key + \`__2\`, node, this, null);
     return multi([b2, b7]);
   }
 }"
@@ -696,7 +696,7 @@ exports[`t-call > t-call-context: ComponentNode is not looked up in the context 
   let { callSlot } = helpers;
   
   return function template(ctx, node, key = "") {
-    return callSlot(ctx, node, key, 'default', false, {});
+    return callSlot(ctx, node, key, "default", false, {});
   }
 }"
 `;
@@ -728,7 +728,7 @@ exports[`t-call > t-call-context: slots don't make component available again whe
   return function template(ctx, node, key = "") {
     ctx = Object.create(ctx);
     ctx["dummy"] = 0;
-    const props1 = {slots: markRaw({'default': {__render: slot1.bind(this), __ctx: ctx}})};
+    const props1 = {slots: markRaw({"default": {__render: slot1.bind(this), __ctx: ctx}})};
     return comp1(props1, key + \`__2\`, node, this, null);
   }
 }"
@@ -741,7 +741,7 @@ exports[`t-call > t-call-context: slots don't make component available again whe
   let { callSlot } = helpers;
   
   return function template(ctx, node, key = "") {
-    return callSlot(ctx, node, key, 'default', false, {});
+    return callSlot(ctx, node, key, "default", false, {});
   }
 }"
 `;

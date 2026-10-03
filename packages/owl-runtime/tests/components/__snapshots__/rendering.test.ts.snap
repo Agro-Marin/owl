@@ -105,7 +105,7 @@ exports[`render loop detection > wide re-render under an uncommitted root is not
     const keys2 = new Set();
     for (let i1 = 0; i1 < l_block2; i1++) {
       let ctx = Object.create(ctx1);
-      ctx[\`i\`] = k_block2[i1];
+      ctx["i"] = k_block2[i1];
       const key1 = ctx['i'];
       const skey1 = keyOf(key1);
       if (keys2.has(key1)) { throw new OwlError(\`Got duplicate key in t-foreach: \${key1}\`)}

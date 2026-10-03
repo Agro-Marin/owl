@@ -138,7 +138,7 @@ exports[`white space handling > whitespace in pre tags is kept under t-if and t-
     const [k_block2, v_block2, l_block2, c_block2] = prepareList([1]);
     for (let i1 = 0; i1 < l_block2; i1++) {
       let ctx = Object.create(ctx1);
-      ctx[\`i\`] = k_block2[i1];
+      ctx["i"] = k_block2[i1];
       const key1 = ctx['i'];
       c_block2[i1] = withKey(text(\`a   b\`), key1);
     }

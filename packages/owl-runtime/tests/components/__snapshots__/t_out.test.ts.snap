@@ -4,7 +4,7 @@ exports[`components in t-out > simple list 1`] = `
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { prepareList, LazyValue, createComponent, withDefault, safeOutput, withKey, keyOf } = helpers;
+  let { prepareList, LazyValue, createComponent, safeOutput, withKey, keyOf } = helpers;
   const comp1 = createComponent(app, \`Child\`, true, false, false, []);
   
   function value1(ctx, node, key = "") {
@@ -16,10 +16,10 @@ exports[`components in t-out > simple list 1`] = `
     const [k_block1, v_block1, l_block1, c_block1] = prepareList([1,2]);
     for (let i1 = 0; i1 < l_block1; i1++) {
       let ctx = Object.create(ctx1);
-      ctx[\`n\`] = k_block1[i1];
+      ctx["n"] = k_block1[i1];
       const key1 = ctx['n'];
       const skey1 = keyOf(key1);
-      ctx[\`blabla\`] = new LazyValue(value1, ctx, this, node, key + \`__\${skey1}\`);
+      ctx["blabla"] = new LazyValue(value1, ctx, this, node, key + \`__\${skey1}\`);
       c_block1[i1] = withKey(safeOutput(ctx['blabla'], key + \`__2__\${skey1}\`), key1);
     }
     return list(c_block1);

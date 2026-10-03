@@ -702,7 +702,7 @@ exports[`props validation > can validate through slots 1`] = `
   }
   
   return function template(ctx, node, key = "") {
-    const props2 = {slots: markRaw({'default': {__render: slot1.bind(this), __ctx: ctx}})};
+    const props2 = {slots: markRaw({"default": {__render: slot1.bind(this), __ctx: ctx}})};
     return comp2(props2, key + \`__2\`, node, this, null);
   }
 }"
@@ -715,7 +715,7 @@ exports[`props validation > can validate through slots 2`] = `
   let { callSlot } = helpers;
   
   return function template(ctx, node, key = "") {
-    return callSlot(ctx, node, key, 'default', false, {});
+    return callSlot(ctx, node, key, "default", false, {});
   }
 }"
 `;

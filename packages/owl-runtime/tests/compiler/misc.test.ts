@@ -297,3 +297,42 @@ test("a template compiled while another is being generated leaves its names alon
   blockDom.mount(render.call({}, { x: 1, y: 2, z: 3, __owl__: {} }, {}), fixture);
   expect(fixture.innerHTML).toBe("<div><b>1</b><b>2</b><i>word</i><u>3</u></div>");
 });
+
+describe("names taken from the template are data in the generated code", () => {
+  beforeEach(() => {
+    (globalThis as any).__nameRan = false;
+  });
+  afterEach(() => {
+    expect((globalThis as any).__nameRan).toBe(false);
+  });
+
+  test("t-set name", () => {
+    expect(renderToString(`<t t-set="a&quot;b" t-value="1"/><t t-set="c\`d"><b/></t>ok`)).toBe(
+      "ok"
+    );
+  });
+
+  test("t-as", () => {
+    const template = `<t t-foreach="[1]" t-as="\${globalThis.__nameRan = true}" t-key="1">x</t>`;
+    expect(renderToString(template)).toBe("x");
+  });
+
+  test("slot names and slot scope", () => {
+    const context = new TestContext();
+    context.addTemplate(
+      "t",
+      `<t t-call-slot="it's" v="1"/><Child><t t-set-slot="it's" t-slot-scope="s&quot;">x</t></Child>`
+    );
+    expect(() => context.getTemplate("t")).not.toThrow();
+  });
+
+  test("template name", () => {
+    const fn = compile(`<div/>`, {
+      name: "x\nglobalThis.__nameRan = true;//",
+      hasGlobalValues: false,
+    });
+    fn({}, blockDom, helpers);
+    const internal = compile(`<div/>`, { name: "__x y", hasGlobalValues: false });
+    expect(() => internal({}, blockDom, helpers)).not.toThrow();
+  });
+});

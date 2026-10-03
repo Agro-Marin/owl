@@ -98,7 +98,7 @@ exports[`computed with equals in components > a recompute with a shallow-equal r
     const [k_block3, v_block3, l_block3, c_block3] = prepareList(ctx['this'].visible());
     for (let i1 = 0; i1 < l_block3; i1++) {
       let ctx = Object.create(ctx1);
-      ctx[\`todo\`] = k_block3[i1];
+      ctx["todo"] = k_block3[i1];
       const key1 = ctx['todo'].id;
       const skey1 = keyOf(key1);
       const b5 = safeOutput(ctx['todo'].text, key + \`__2__\${skey1}\`);
@@ -124,7 +124,7 @@ exports[`reactive cleanup on component destruction > benchmark-like scenario: si
     const [k_block2, v_block2, l_block2, c_block2] = prepareList(ctx['this'].rows());
     for (let i1 = 0; i1 < l_block2; i1++) {
       let ctx = Object.create(ctx1);
-      ctx[\`row\`] = k_block2[i1];
+      ctx["row"] = k_block2[i1];
       const key1 = ctx['row'].id;
       const skey1 = keyOf(key1);
       c_block2[i1] = withKey(comp1({row: ctx['row'],selected: ctx['this'].selectedId}, key + \`__1__\${skey1}\`, node, this, null), key1);
@@ -200,7 +200,7 @@ exports[`reactive cleanup on component destruction > destroying multiple childre
     const [k_block2, v_block2, l_block2, c_block2] = prepareList(ctx['this'].rows());
     for (let i1 = 0; i1 < l_block2; i1++) {
       let ctx = Object.create(ctx1);
-      ctx[\`row\`] = k_block2[i1];
+      ctx["row"] = k_block2[i1];
       const key1 = ctx['row'];
       const skey1 = keyOf(key1);
       c_block2[i1] = withKey(comp1({id: ctx['row'],selected: ctx['this'].selectedId}, key + \`__1__\${skey1}\`, node, this, null), key1);

@@ -29,7 +29,7 @@ exports[`t-esc is deprecated > t-esc on a component is its default slot, as t-ou
   }
   
   return function template(ctx, node, key = "") {
-    const b3 = comp1({slots: markRaw({'default': {__render: slot1.bind(this), __ctx: ctx}})}, key + \`__2\`, node, this, null);
+    const b3 = comp1({slots: markRaw({"default": {__render: slot1.bind(this), __ctx: ctx}})}, key + \`__2\`, node, this, null);
     return block1([], [b3]);
   }
 }"
@@ -44,7 +44,7 @@ exports[`t-esc is deprecated > t-esc on a component is its default slot, as t-ou
   let block1 = createBlock(\`<b>[<block-child-0/>]</b>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = callSlot(ctx, node, key, 'default', false, {});
+    const b2 = callSlot(ctx, node, key, "default", false, {});
     return block1([], [b2]);
   }
 }"
@@ -214,7 +214,7 @@ exports[`t-out > t-out bdom 1`] = `
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { LazyValue, withDefault, safeOutput } = helpers;
+  let { LazyValue, safeOutput } = helpers;
   
   let block1 = createBlock(\`<div><span><block-child-0/></span></div>\`);
   let block2 = createBlock(\`<ol>set</ol>\`);
@@ -225,7 +225,7 @@ exports[`t-out > t-out bdom 1`] = `
   
   return function template(ctx, node, key = "") {
     ctx = Object.create(ctx);
-    ctx[\`var\`] = new LazyValue(value1, ctx, this, node, key);
+    ctx["var"] = new LazyValue(value1, ctx, this, node, key);
     const b3 = safeOutput(ctx['var'], key + \`__1\`);
     return block1([], [b3]);
   }
@@ -257,7 +257,7 @@ exports[`t-out > t-out default body that does not start with a block 1`] = `
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { safeOutput, LazyValue, withDefault } = helpers;
+  let { safeOutput, LazyValue } = helpers;
   
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   let block3 = createBlock(\`<b>1</b>\`);
@@ -265,7 +265,7 @@ exports[`t-out > t-out default body that does not start with a block 1`] = `
   
   function defaultContent1(ctx, node, key = "") {
     ctx = Object.create(ctx);
-    ctx[\`y\`] = new LazyValue(value1, ctx, this, node, key);
+    ctx["y"] = new LazyValue(value1, ctx, this, node, key);
     return block4();
   }
   
@@ -420,7 +420,7 @@ exports[`t-out > t-out switch markup on bdom 1`] = `
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { LazyValue, withDefault, safeOutput } = helpers;
+  let { LazyValue, safeOutput } = helpers;
   
   let block1 = createBlock(\`<div><block-child-0/><block-child-1/></div>\`);
   let block2 = createBlock(\`<ol>set</ol>\`);
@@ -434,7 +434,7 @@ exports[`t-out > t-out switch markup on bdom 1`] = `
   return function template(ctx, node, key = "") {
     ctx = Object.create(ctx);
     let b3, b5;
-    ctx[\`bdom\`] = new LazyValue(value1, ctx, this, node, key);
+    ctx["bdom"] = new LazyValue(value1, ctx, this, node, key);
     if (ctx['hasBdom']) {
       const b4 = safeOutput(ctx['bdom'], key + \`__1\`);
       b3 = block3([], [b4]);

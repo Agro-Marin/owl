@@ -538,11 +538,11 @@ exports[`t-call (template calling) > recursive template, part 2 2`] = `
     const [k_block3, v_block3, l_block3, c_block3] = prepareList(ctx['node'].children||[]);
     for (let i1 = 0; i1 < l_block3; i1++) {
       let ctx = Object.create(ctx1);
-      ctx[\`subtree\`] = k_block3[i1];
-      ctx[\`subtree_first\`] = i1 === 0;
-      ctx[\`subtree_last\`] = i1 === k_block3.length - 1;
-      ctx[\`subtree_index\`] = i1;
-      ctx[\`subtree_value\`] = v_block3[i1];
+      ctx["subtree"] = k_block3[i1];
+      ctx["subtree_first"] = i1 === 0;
+      ctx["subtree_last"] = i1 === k_block3.length - 1;
+      ctx["subtree_index"] = i1;
+      ctx["subtree_value"] = v_block3[i1];
       const key1 = ctx['subtree_index'];
       const skey1 = keyOf(key1);
       c_block3[i1] = withKey(callTemplate(\`nodeTemplate\`, this, app, Object.assign(Object.create(ctx), {node: ctx['subtree'], [zero]: null}), node, key + \`__2__\${skey1}\`), key1);
@@ -582,11 +582,11 @@ exports[`t-call (template calling) > recursive template, part 3 2`] = `
     const [k_block3, v_block3, l_block3, c_block3] = prepareList(ctx['node'].children||[]);
     for (let i1 = 0; i1 < l_block3; i1++) {
       let ctx = Object.create(ctx1);
-      ctx[\`subtree\`] = k_block3[i1];
-      ctx[\`subtree_first\`] = i1 === 0;
-      ctx[\`subtree_last\`] = i1 === k_block3.length - 1;
-      ctx[\`subtree_index\`] = i1;
-      ctx[\`subtree_value\`] = v_block3[i1];
+      ctx["subtree"] = k_block3[i1];
+      ctx["subtree_first"] = i1 === 0;
+      ctx["subtree_last"] = i1 === k_block3.length - 1;
+      ctx["subtree_index"] = i1;
+      ctx["subtree_value"] = v_block3[i1];
       const key1 = ctx['subtree_index'];
       const skey1 = keyOf(key1);
       c_block3[i1] = withKey(callTemplate(\`nodeTemplate\`, this, app, Object.assign(Object.create(ctx), {node: ctx['subtree'], [zero]: null}), node, key + \`__2__\${skey1}\`), key1);
@@ -629,11 +629,11 @@ exports[`t-call (template calling) > recursive template, part 4: with t-set recu
     const [k_block4, v_block4, l_block4, c_block4] = prepareList(ctx['node'].children||[]);
     for (let i1 = 0; i1 < l_block4; i1++) {
       let ctx = Object.create(ctx1);
-      ctx[\`subtree\`] = k_block4[i1];
-      ctx[\`subtree_first\`] = i1 === 0;
-      ctx[\`subtree_last\`] = i1 === k_block4.length - 1;
-      ctx[\`subtree_index\`] = i1;
-      ctx[\`subtree_value\`] = v_block4[i1];
+      ctx["subtree"] = k_block4[i1];
+      ctx["subtree_first"] = i1 === 0;
+      ctx["subtree_last"] = i1 === k_block4.length - 1;
+      ctx["subtree_index"] = i1;
+      ctx["subtree_value"] = v_block4[i1];
       const key1 = ctx['subtree_index'];
       const skey1 = keyOf(key1);
       c_block4[i1] = withKey(callTemplate(\`nodeTemplate\`, this, app, Object.assign(Object.create(ctx), {node: ctx['subtree'], recursive_idx: ctx['recursive_idx'], [zero]: null}), node, key + \`__3__\${skey1}\`), key1);
@@ -655,7 +655,7 @@ exports[`t-call (template calling) > root t-call with body: t-foreach 1`] = `
     const [k_block2, v_block2, l_block2, c_block2] = prepareList([1]);
     for (let i1 = 0; i1 < l_block2; i1++) {
       let ctx = Object.create(ctx1);
-      ctx[\`i\`] = k_block2[i1];
+      ctx["i"] = k_block2[i1];
       const key1 = ctx['i'];
       c_block2[i1] = withKey(text(\`1\`), key1);
     }
@@ -1117,11 +1117,11 @@ exports[`t-call (template calling) > t-call with t-set inside and outside 1`] = 
     const [k_block2, v_block2, l_block2, c_block2] = prepareList(ctx['list']);
     for (let i1 = 0; i1 < l_block2; i1++) {
       let ctx = Object.create(ctx1);
-      ctx[\`v\`] = k_block2[i1];
-      ctx[\`v_first\`] = i1 === 0;
-      ctx[\`v_last\`] = i1 === k_block2.length - 1;
-      ctx[\`v_index\`] = i1;
-      ctx[\`v_value\`] = v_block2[i1];
+      ctx["v"] = k_block2[i1];
+      ctx["v_first"] = i1 === 0;
+      ctx["v_last"] = i1 === k_block2.length - 1;
+      ctx["v_index"] = i1;
+      ctx["v_value"] = v_block2[i1];
       const key1 = ctx['v_index'];
       const skey1 = keyOf(key1);
       ctx["val"] = ctx['v'].val;
@@ -1178,11 +1178,11 @@ exports[`t-call (template calling) > t-call with t-set inside and outside. 2 2`]
     const [k_block2, v_block2, l_block2, c_block2] = prepareList(ctx['list']);
     for (let i1 = 0; i1 < l_block2; i1++) {
       let ctx = Object.create(ctx1);
-      ctx[\`v\`] = k_block2[i1];
-      ctx[\`v_first\`] = i1 === 0;
-      ctx[\`v_last\`] = i1 === k_block2.length - 1;
-      ctx[\`v_index\`] = i1;
-      ctx[\`v_value\`] = v_block2[i1];
+      ctx["v"] = k_block2[i1];
+      ctx["v_first"] = i1 === 0;
+      ctx["v_last"] = i1 === k_block2.length - 1;
+      ctx["v_index"] = i1;
+      ctx["v_value"] = v_block2[i1];
       const key1 = ctx['v_index'];
       const skey1 = keyOf(key1);
       ctx["val"] = ctx['v'].val;

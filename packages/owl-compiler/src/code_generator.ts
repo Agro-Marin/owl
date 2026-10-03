@@ -308,11 +308,8 @@ export class CodeGenerator {
     this.ast = ast;
     this.templateName = options.name;
     if (options.name) {
-      if (options.name.startsWith("__")) {
-        this.target.name = options.name;
-      } else {
-        this.target.name = `template_${options.name.replace(/[^a-zA-Z0-9_$]/g, "_")}`;
-      }
+      const name = options.name.replace(/[^a-zA-Z0-9_$]/g, "_");
+      this.target.name = options.name.startsWith("__") ? name : `template_${name}`;
     }
     if (options.hasGlobalValues) {
       this.helpers.add("__globals__");
@@ -336,7 +333,8 @@ export class CodeGenerator {
       mainCode.push(`let { ${[...this.helpers].join(", ")} } = helpers;`);
     }
     if (this.templateName) {
-      mainCode.push(`// Template name: "${this.templateName}"`);
+      const name = JSON.stringify(this.templateName).replace(/[\u2028\u2029]/g, " ");
+      mainCode.push(`// Template name: ${name}`);
     }
 
     for (let { id, expr } of this.staticDefs) {
@@ -870,18 +868,19 @@ export class CodeGenerator {
     this.addLine(`for (let ${loopVar} = 0; ${loopVar} < ${l}; ${loopVar}++) {`);
     this.target.indentLevel++;
     this.addLine(`let ctx = Object.create(${ctxVar});`);
-    this.addLine(`ctx[\`${ast.elem}\`] = ${keys}[${loopVar}];`);
+    const loopVarName = (suffix: string) => JSON.stringify(ast.elem + suffix);
+    this.addLine(`ctx[${loopVarName("")}] = ${keys}[${loopVar}];`);
     if (!(ast.noFlags & ForEachNoFlag.First)) {
-      this.addLine(`ctx[\`${ast.elem}_first\`] = ${loopVar} === 0;`);
+      this.addLine(`ctx[${loopVarName("_first")}] = ${loopVar} === 0;`);
     }
     if (!(ast.noFlags & ForEachNoFlag.Last)) {
-      this.addLine(`ctx[\`${ast.elem}_last\`] = ${loopVar} === ${keys}.length - 1;`);
+      this.addLine(`ctx[${loopVarName("_last")}] = ${loopVar} === ${keys}.length - 1;`);
     }
     if (!(ast.noFlags & ForEachNoFlag.Index)) {
-      this.addLine(`ctx[\`${ast.elem}_index\`] = ${loopVar};`);
+      this.addLine(`ctx[${loopVarName("_index")}] = ${loopVar};`);
     }
     if (!(ast.noFlags & ForEachNoFlag.Value)) {
-      this.addLine(`ctx[\`${ast.elem}_value\`] = ${vals}[${loopVar}];`);
+      this.addLine(`ctx[${loopVarName("_value")}] = ${vals}[${loopVar}];`);
     }
     const level = this.target.loopLevel;
     this.define(`key${level}`, compileExpr(ast.key));
@@ -1034,56 +1033,35 @@ export class CodeGenerator {
   }
 
   compileTSet(ast: ASTTSet, ctx: Context): null {
-    const expr = ast.value ? compileExpr(ast.value) : "null";
-    const isOuterScope = this.target.loopLevel === 0;
-    const defLevel = this.target.tSetVars.get(ast.name);
-    const isReassignment = defLevel !== undefined && this.target.loopLevel > defLevel;
+    let value: string;
     if (ast.body) {
       this.helpers.add("LazyValue");
       const bodyAst: AST = { type: ASTType.Multi, content: ast.body };
       const name = this.compileInNewTarget("value", bodyAst, ctx);
-      let value = `new LazyValue(${name}, ctx, this, node, ${this.scopeKey(ctx)})`;
-      if (ast.value) {
-        value = `withDefault(${expr}, ${value})`;
-      }
-      this.helpers.add("withDefault");
-      if (isReassignment) {
-        const ctxVar = this.target.loopCtxVars[defLevel];
-        this.addLine(`${ctxVar}[\`${ast.name}\`] = ${value};`);
-      } else if (isOuterScope) {
-        this.target.needsScopeProtection = true;
-        this.addLine(`ctx[\`${ast.name}\`] = ${value};`);
-        this.target.tSetVars.set(ast.name, 0);
-      } else {
-        this.addLine(`ctx[\`${ast.name}\`] = ${value};`);
-        this.target.tSetVars.set(ast.name, this.target.loopLevel);
-      }
+      value = `new LazyValue(${name}, ctx, this, node, ${this.scopeKey(ctx)})`;
+    } else if (ast.defaultValue) {
+      value = toStringExpression(
+        ctx.translate ? this.translate(ast.defaultValue, ctx.translationCtx) : ast.defaultValue
+      );
     } else {
-      let value: string;
-      if (ast.defaultValue) {
-        const defaultValue = toStringExpression(
-          ctx.translate ? this.translate(ast.defaultValue, ctx.translationCtx) : ast.defaultValue
-        );
-        if (ast.value) {
-          this.helpers.add("withDefault");
-          value = `withDefault(${expr}, ${defaultValue})`;
-        } else {
-          value = defaultValue;
-        }
-      } else {
-        value = expr;
-      }
-      if (isReassignment) {
-        const ctxVar = this.target.loopCtxVars[defLevel];
-        this.addLine(`${ctxVar}["${ast.name}"] = ${value};`);
-      } else if (isOuterScope) {
+      value = ast.value ? compileExpr(ast.value) : "null";
+    }
+    if (ast.value && (ast.body || ast.defaultValue)) {
+      this.helpers.add("withDefault");
+      value = `withDefault(${compileExpr(ast.value)}, ${value})`;
+    }
+
+    const name = JSON.stringify(ast.name);
+    const level = this.target.loopLevel;
+    const defLevel = this.target.tSetVars.get(ast.name);
+    if (defLevel !== undefined && level > defLevel) {
+      this.addLine(`${this.target.loopCtxVars[defLevel]}[${name}] = ${value};`);
+    } else {
+      if (!level) {
         this.target.needsScopeProtection = true;
-        this.addLine(`ctx["${ast.name}"] = ${value};`);
-        this.target.tSetVars.set(ast.name, 0);
-      } else {
-        this.addLine(`ctx["${ast.name}"] = ${value};`);
-        this.target.tSetVars.set(ast.name, this.target.loopLevel);
       }
+      this.addLine(`ctx[${name}] = ${value};`);
+      this.target.tSetVars.set(ast.name, level);
     }
     return null;
   }
@@ -1209,7 +1187,7 @@ export class CodeGenerator {
         }
         const scope = ast.slots[slotName].scope;
         if (scope) {
-          params.push(`__scope: "${scope}"`);
+          params.push(`__scope: ${JSON.stringify(scope)}`);
         }
         if (ast.slots[slotName].attrs) {
           params.push(
@@ -1221,7 +1199,7 @@ export class CodeGenerator {
           );
         }
         const slotInfo = `{${params.join(", ")}}`;
-        slotStr.push(`'${slotName}': ${slotInfo}`);
+        slotStr.push(`${JSON.stringify(slotName)}: ${slotInfo}`);
       }
       slotDef = `{${slotStr.join(", ")}}`;
     }
@@ -1316,7 +1294,7 @@ export class CodeGenerator {
       isMultiple = true;
       slotName = interpolate(ast.name);
     } else {
-      slotName = "'" + ast.name + "'";
+      slotName = JSON.stringify(ast.name);
       isMultiple = isMultiple || this.slotNames.has(ast.name);
       this.slotNames.add(ast.name);
     }

@@ -4,7 +4,7 @@ exports[`t-ref > a lazy t-set body used as a string does not bind its refs 1`] =
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { LazyValue, createRef, withDefault } = helpers;
+  let { LazyValue, createRef } = helpers;
   
   let block1 = createBlock(\`<b block-ref="0">x</b>\`);
   let block2 = createBlock(\`<span block-attribute-0="title"/>\`);
@@ -16,7 +16,7 @@ exports[`t-ref > a lazy t-set body used as a string does not bind its refs 1`] =
   
   return function template(ctx, node, key = "") {
     ctx = Object.create(ctx);
-    ctx[\`v\`] = new LazyValue(value1, ctx, this, node, key);
+    ctx["v"] = new LazyValue(value1, ctx, this, node, key);
     let attr1 = ctx['v'];
     return block2([attr1]);
   }
@@ -102,7 +102,7 @@ exports[`t-ref > refs in a loop 1`] = `
     const [k_block2, v_block2, l_block2, c_block2] = prepareList(ctx['items']);
     for (let i1 = 0; i1 < l_block2; i1++) {
       let ctx = Object.create(ctx1);
-      ctx[\`item\`] = k_block2[i1];
+      ctx["item"] = k_block2[i1];
       const key1 = ctx['item'].id;
       const skey1 = keyOf(key1);
       const tKey_1 = keyOf(ctx['item'].id);

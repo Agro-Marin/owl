@@ -130,7 +130,7 @@ exports[`event handling > objects from scope are properly captured by t-on 1`] =
     const [k_block2, v_block2, l_block2, c_block2] = prepareList(ctx['this'].items);
     for (let i1 = 0; i1 < l_block2; i1++) {
       let ctx = Object.create(ctx1);
-      ctx[\`item\`] = k_block2[i1];
+      ctx["item"] = k_block2[i1];
       const key1 = ctx['item'];
       let hdlr1 = [hdlr_fn1, ctx];
       c_block2[i1] = withKey(block3([hdlr1]), key1);
@@ -173,7 +173,7 @@ exports[`event handling > t-on with handler bound to dynamic argument on a t-for
     const [k_block2, v_block2, l_block2, c_block2] = prepareList(ctx['this'].items);
     for (let i1 = 0; i1 < l_block2; i1++) {
       let ctx = Object.create(ctx1);
-      ctx[\`item\`] = k_block2[i1];
+      ctx["item"] = k_block2[i1];
       const key1 = ctx['item'];
       let hdlr1 = [hdlr_fn1, ctx];
       c_block2[i1] = withKey(block3([hdlr1]), key1);
@@ -206,7 +206,7 @@ exports[`event handling > unnamed slot should call the event only once 1`] = `
   
   return function template(ctx, node, key = "") {
     const hdlr1 = [hdlr_fn1, ctx];
-    return catcher1(comp1({slots: markRaw({'named': {__render: slot1.bind(this), __ctx: ctx}, 'default': {__render: slot2.bind(this), __ctx: ctx}})}, key + \`__1\`, node, this, null), [hdlr1]);
+    return catcher1(comp1({slots: markRaw({"named": {__render: slot1.bind(this), __ctx: ctx}, "default": {__render: slot2.bind(this), __ctx: ctx}})}, key + \`__1\`, node, this, null), [hdlr1]);
   }
 }"
 `;
@@ -218,8 +218,8 @@ exports[`event handling > unnamed slot should call the event only once 2`] = `
   let { callSlot } = helpers;
   
   return function template(ctx, node, key = "") {
-    const b2 = callSlot(ctx, node, key, 'named', false, {});
-    const b3 = callSlot(ctx, node, key, 'default', false, {});
+    const b2 = callSlot(ctx, node, key, "named", false, {});
+    const b3 = callSlot(ctx, node, key, "default", false, {});
     return multi([b2, b3]);
   }
 }"
