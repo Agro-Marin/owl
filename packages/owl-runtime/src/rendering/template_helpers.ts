@@ -1,6 +1,8 @@
 import {
   atomSymbol,
   computed,
+  debug,
+  debugLog,
   markRaw,
   OwlError,
   ReadonlyReactiveValue,
@@ -373,6 +375,12 @@ function createComponent<P extends Record<string, any>>(
     }
     if (node) {
       if (arePropsDifferent(node.props, props) || parentFiber.deep || node.forceNextRender) {
+        if (debug.fiber) {
+          debugLog(
+            "fiber",
+            `update ${node.componentName}: ${node.forceNextRender ? "forced" : parentFiber.deep ? "deep render" : "props changed"}${node.willUpdateProps.length ? `, ${node.willUpdateProps.length} willUpdateProps` : ""}`
+          );
+        }
         node.forceNextRender = false;
         const hooks = node.willUpdateProps;
         const fiber = makeChildFiber(node, parentFiber);
@@ -422,6 +430,8 @@ function createComponent<P extends Record<string, any>>(
           for (const f of node.propsUpdated) f();
           fiber.render();
         }
+      } else if (debug.fiber) {
+        debugLog("fiber", `keep ${node.componentName}: props unchanged`);
       }
     } else {
       // new component

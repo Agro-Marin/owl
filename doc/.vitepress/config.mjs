@@ -26,6 +26,7 @@ const owlSidebar = [
       { text: "Component", link: "/v3/owl/reference/component" },
       { text: "Computed Values", link: "/v3/owl/reference/computed_values" },
       { text: "Concurrency Model", link: "/v3/owl/reference/concurrency_model" },
+      { text: "Debug Logging", link: "/v3/owl/reference/debug_logging" },
       { text: "Effects", link: "/v3/owl/reference/effects" },
       { text: "Error Boundary", link: "/v3/owl/reference/error_boundary" },
       { text: "Error Handling", link: "/v3/owl/reference/error_handling" },

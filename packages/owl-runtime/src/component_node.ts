@@ -2,6 +2,8 @@ import {
   ComputationAtom,
   ComputationState,
   createComputation,
+  debug,
+  debugLog,
   disposeComputation,
   getCurrentComputation,
   OwlError,
@@ -71,8 +73,16 @@ export class ComponentNode extends Scope implements VNode<ComponentNode> {
     this.signalComputation = createComputation(
       () => this.render(false),
       false,
-      ComputationState.EXECUTED
+      ComputationState.EXECUTED,
+      false,
+      `render ${C.name}`
     );
+    if (debug.lifecycle) {
+      debugLog(
+        "lifecycle",
+        `setup ${C.name}${parent ? ` (child of ${parent.componentName})` : " (root)"}`
+      );
+    }
     this.props = props;
     const previousComputation = getCurrentComputation();
     setComputation(undefined);
@@ -119,11 +129,17 @@ export class ComponentNode extends Scope implements VNode<ComponentNode> {
       fiber.root!.mounted.push(fiber);
     }
     const component = this.component;
+    if (debug.lifecycle) {
+      debugLog("lifecycle", `willStart ${this.componentName}: ${this.willStart.length} hook(s)`);
+    }
     try {
       await Promise.all(untrack(() => this.willStart.map((f) => f.call(component))));
     } catch (e) {
       handleHookRejection(this, e);
       return;
+    }
+    if (debug.lifecycle) {
+      debugLog("lifecycle", `willStart ${this.componentName} settled`);
     }
     if (this.status === STATUS.NEW && this.fiber === fiber) {
       fiber.render();
@@ -204,6 +220,12 @@ export class ComponentNode extends Scope implements VNode<ComponentNode> {
     // MOUNTED, rendering, running its effects): the error is rethrown once the
     // destruction is complete
     let failure: { error: unknown } | null = null;
+    if (debug.lifecycle) {
+      debugLog(
+        "lifecycle",
+        `destroy ${this.componentName}${this.status === STATUS.MOUNTED ? `, ${this.willUnmount.length} willUnmount` : " (never mounted)"}`
+      );
+    }
     if (this.status === STATUS.MOUNTED) {
       for (let cb of this.willUnmount) {
         try {

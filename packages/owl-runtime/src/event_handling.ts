@@ -1,5 +1,5 @@
 import { STATUS } from "./status";
-import { EventModifier, OwlError, setCurrentEvent } from "@odoo/owl-core";
+import { debug, debugLog, EventModifier, OwlError, setCurrentEvent } from "@odoo/owl-core";
 
 export const mainEventHandler = (data: any, ev: Event, currentTarget?: EventTarget | null) => {
   // lets `useListener` skip an event older than the listener
@@ -15,6 +15,9 @@ export const mainEventHandler = (data: any, ev: Event, currentTarget?: EventTarg
       ev.stopPropagation();
     }
     if (modifiers & EventModifier.SELF && ev.target !== currentTarget) {
+      if (debug.event) {
+        debugLog("event", `${ev.type}: skipped by .self, not from its own element`);
+      }
       return;
     }
     if (modifiers & EventModifier.PREVENT) {
@@ -33,7 +36,15 @@ export const mainEventHandler = (data: any, ev: Event, currentTarget?: EventTarg
     }
     const context = data[1];
     let node = context ? context.__owl__ : null;
-    if (node ? node.status === STATUS.MOUNTED : true) {
+    const live = node ? node.status === STATUS.MOUNTED : true;
+    if (debug.event) {
+      debugLog(
+        "event",
+        `${ev.type} on ${(currentTarget as Element | null)?.nodeName ?? "?"}: ${live ? "handled" : "dropped, component not mounted"} by ${node ? node.componentName : "a handler"}`,
+        ev
+      );
+    }
+    if (live) {
       handler(context, ev, data[3]);
     }
   }

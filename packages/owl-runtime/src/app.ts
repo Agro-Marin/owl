@@ -3,6 +3,8 @@ import { ComponentConstructor } from "./component";
 import { ComponentNode } from "./component_node";
 import { GetProps } from "./props";
 import {
+  debug,
+  debugLog,
   makeAbortError,
   OwlError,
   PluginConstructor,
@@ -131,6 +133,9 @@ export class App extends TemplateSet {
   ): Root<T> {
     if (this.destroyed) {
       throw new OwlError("Cannot create a root in a destroyed app");
+    }
+    if (debug.lifecycle) {
+      debugLog("lifecycle", `create root ${Root.name}${this.name ? ` in app ${this.name}` : ""}`);
     }
     const props = config.props || ({} as any);
     let resolve!: (value: any) => void;
@@ -288,6 +293,12 @@ export class App extends TemplateSet {
   }
 
   destroy() {
+    if (debug.lifecycle) {
+      debugLog(
+        "lifecycle",
+        `destroy app${this.name ? ` ${this.name}` : ""}, ${this.roots.size} root(s)`
+      );
+    }
     let failure: { error: unknown } | null = null;
     for (let root of this.roots) {
       try {

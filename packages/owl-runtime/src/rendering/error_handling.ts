@@ -1,4 +1,4 @@
-import { isAbortError } from "@odoo/owl-core";
+import { debug, debugLog, isAbortError } from "@odoo/owl-core";
 import type { ComponentNode } from "../component_node";
 import { STATUS } from "../status";
 import type { Fiber } from "./fibers";
@@ -89,6 +89,15 @@ export function handleError(params: ErrorParams) {
   };
 
   const result = invokeErrorHandlers(node, error, finalize);
+  if (debug.error) {
+    debugLog(
+      "error",
+      result.handled
+        ? `${node!.componentName}: error handled by an ancestor's onError`
+        : `${node!.componentName}: error not handled, the app is destroyed`,
+      error
+    );
+  }
   if (!result.handled) {
     finalize();
     app._handleError(result.error);
@@ -106,6 +115,15 @@ export function handleError(params: ErrorParams) {
 // is rethrown, to surface as an unhandled rejection.
 export function handleHookRejection(node: ComponentNode, error: any) {
   if (node.status > STATUS.MOUNTED) {
+    if (debug.error) {
+      debugLog(
+        "error",
+        isAbortError(error)
+          ? `${node.componentName}: abort after destroy, dropped`
+          : `${node.componentName}: rejection after destroy, rethrown`,
+        error
+      );
+    }
     if (isAbortError(error)) {
       return;
     }

@@ -1,3 +1,4 @@
+import { debug, debugLog } from "@odoo/owl-core";
 import { fibersInError } from "./error_handling";
 import { APPLIED_TO_DOM, Fiber, RootFiber } from "./fibers";
 import { STATUS } from "../status";
@@ -29,6 +30,12 @@ export class Scheduler {
   }
 
   addFiber(fiber: Fiber) {
+    if (debug.scheduler) {
+      debugLog(
+        "scheduler",
+        `schedule ${fiber.root!.node.componentName}, ${this.tasks.size + 1} task(s)`
+      );
+    }
     this.tasks.add(fiber.root!);
     Scheduler.active.add(this);
   }
@@ -41,6 +48,13 @@ export class Scheduler {
     if (this.delayedRenders.length) {
       let renders = this.delayedRenders;
       this.delayedRenders = [];
+      if (debug.scheduler) {
+        debugLog(
+          "scheduler",
+          `resume ${renders.length} delayed render(s)`,
+          renders.map((f) => f.node.componentName)
+        );
+      }
       for (let f of renders) {
         if (f.root && f.node.status !== STATUS.DESTROYED && f.node.fiber === f) {
           f.render();
@@ -63,6 +77,9 @@ export class Scheduler {
     this.processing = true;
     this.frame = 0;
     let failed = false;
+    if (debug.scheduler) {
+      debugLog("scheduler", `frame, ${this.tasks.size} task(s)`);
+    }
     for (let fiber of this.tasks) {
       if (fiber.root !== fiber) {
         this.tasks.delete(fiber);
@@ -71,19 +88,34 @@ export class Scheduler {
       // superseded: another render (a slot of this app rendered by a
       // component of another one) patched the node and cleared its fiber
       if (fiber.node.fiber !== fiber) {
+        if (debug.scheduler) {
+          debugLog("scheduler", `drop ${fiber.node.componentName}: superseded`);
+        }
         this.tasks.delete(fiber);
         continue;
       }
       // a failed pass never completes; its node keeps the fiber, so the next
       // render reuses it and schedules it again
       if (fibersInError.has(fiber)) {
+        if (debug.scheduler) {
+          debugLog("scheduler", `drop ${fiber.node.componentName}: failed`);
+        }
         this.tasks.delete(fiber);
         failed = true;
         continue;
       }
       if (fiber.node.status === STATUS.DESTROYED) {
+        if (debug.scheduler) {
+          debugLog("scheduler", `drop ${fiber.node.componentName}: destroyed`);
+        }
         this.tasks.delete(fiber);
         continue;
+      }
+      if (debug.scheduler && fiber.counter !== 0) {
+        debugLog(
+          "scheduler",
+          `wait ${fiber.node.componentName}: ${fiber.counter} render(s) pending`
+        );
       }
       if (fiber.counter === 0) {
         fiber.complete();

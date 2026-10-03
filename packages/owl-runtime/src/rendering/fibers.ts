@@ -1,4 +1,11 @@
-import { ComputationState, OwlError, removeSources, runTracked } from "@odoo/owl-core";
+import {
+  ComputationState,
+  debug,
+  debugLog,
+  OwlError,
+  removeSources,
+  runTracked,
+} from "@odoo/owl-core";
 import { BDom, mount, type MountTarget } from "../blockdom";
 import type { ComponentNode } from "../component_node";
 import { STATUS } from "../status";
@@ -41,6 +48,12 @@ export function makeRootFiber(node: ComponentNode): Fiber {
     // root, many sibling subtrees may legitimately re-render once each, and a
     // shared counter would add those up and flag a loop where there is none.
     current.renderState += 2; // bump the recycle count held in bits 1+
+    if (debug.fiber) {
+      debugLog(
+        "fiber",
+        `re-render ${node.componentName} before its commit (recycle ${current.renderState >> 1})`
+      );
+    }
     // lock root fiber because canceling children fibers may destroy components,
     // which means any arbitrary code can be run in onWillDestroy, which may
     // trigger new renderings
@@ -213,6 +226,12 @@ export class Fiber {
           } else {
             // the ancestor's app flushes its delayed renders once that
             // ancestor has rendered; it may not be this fiber's app
+            if (debug.fiber) {
+              debugLog(
+                "fiber",
+                `delay ${this.node.componentName}: ${root.node.componentName} is rendering`
+              );
+            }
             root.node.app.scheduler.delayedRenders.push(this);
             return;
           }
@@ -251,6 +270,7 @@ export class Fiber {
       removeSources(node.signalComputation);
       node.signalComputation.state = ComputationState.EXECUTED;
       this.phase = FiberPhase.RENDERING;
+      const start = debug.fiber ? performance.now() : 0;
       // the error is handled while the render is still the current
       // computation, as onError handlers have always run
       this.bdom = runTracked(node.signalComputation, () => {
@@ -265,6 +285,12 @@ export class Fiber {
       });
       const newCounter = root.counter - 1;
       root.counter = newCounter;
+      if (debug.fiber) {
+        debugLog(
+          "fiber",
+          `render ${node.componentName} in ${(performance.now() - start).toFixed(2)} ms, ${newCounter} left in ${root.node.componentName}'s pass`
+        );
+      }
       if (newCounter === 0) {
         scheduler.flush();
       }
@@ -290,6 +316,12 @@ export class RootFiber extends Fiber {
     const node = this.node;
     this.locked = true;
     let current: Fiber | undefined = undefined;
+    if (debug.fiber) {
+      debugLog(
+        "fiber",
+        `commit ${node.componentName}: ${this.willPatch.length} willPatch, ${this.mounted.length} mounted, ${this.patched.length} patched`
+      );
+    }
     try {
       // Step 1: calling all willPatch lifecycle hooks
       for (current of this.willPatch) {
@@ -367,6 +399,9 @@ function callCommitHooks(
     }
     if (!(current.renderState & APPLIED_TO_DOM)) {
       continue;
+    }
+    if (debug.lifecycle && node[hook].length) {
+      debugLog("lifecycle", `${hook} ${node.componentName}: ${node[hook].length} hook(s)`);
     }
     try {
       for (let cb of node[hook]) {
@@ -459,6 +494,9 @@ export class MountFiber extends RootFiber {
 
   private _mount() {
     let current: Fiber | undefined = this;
+    if (debug.fiber) {
+      debugLog("fiber", `mount ${this.node.componentName}`, this.target);
+    }
     try {
       const node = this.node;
       node.children = this.childrenMap;
