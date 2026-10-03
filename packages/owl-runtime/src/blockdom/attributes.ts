@@ -163,6 +163,16 @@ function toKebabCase(prop: string): string {
 
 const IMPORTANT_RE = /\s*!\s*important\s*$/i;
 
+type StyleObj = { [prop: string]: string };
+
+function holdsStyleProp(style: CSSStyleDeclaration, prop: string, value: string): boolean {
+  const important = IMPORTANT_RE.test(value);
+  return (
+    style.getPropertyPriority(prop) === (important ? "important" : "") &&
+    style.getPropertyValue(prop) === (important ? value.replace(IMPORTANT_RE, "") : value)
+  );
+}
+
 function setStyleProp(style: CSSStyleDeclaration, prop: string, value: string) {
   if (IMPORTANT_RE.test(value)) {
     style.setProperty(prop, value.replace(IMPORTANT_RE, ""), "important");
@@ -171,8 +181,8 @@ function setStyleProp(style: CSSStyleDeclaration, prop: string, value: string) {
   }
 }
 
-function toStyleObj(expr: string | { [prop: string]: any }): { [prop: string]: string } {
-  const result: { [prop: string]: string } = {};
+function toStyleObj(expr: string | { [prop: string]: any }): StyleObj {
+  const result: StyleObj = {};
   switch (typeof expr) {
     case "string": {
       const str = expr;
@@ -319,15 +329,15 @@ export function setStyle(this: HTMLElement, val: any) {
 }
 
 export function updateStyle(this: HTMLElement, val: any, oldVal: any) {
-  oldVal = oldVal === "" ? {} : toStyleObj(oldVal);
-  val = val === "" ? {} : toStyleObj(val);
-  const style = this.style;
+  patchStyle(this, oldVal === "" ? {} : toStyleObj(oldVal), val === "" ? {} : toStyleObj(val));
+}
+
+function patchStyle(el: HTMLElement, oldVal: StyleObj, val: StyleObj) {
+  const style = el.style;
   // Properties are applied in declaration order. Re-setting a shorthand (e.g.
-  // `background`, `margin`) resets the longhands it covers, so once any property
-  // has been re-applied we must also re-apply every following property, even if
-  // its value is unchanged, otherwise an earlier shorthand silently clobbers it.
-  // Removing a longhand clears what an unchanged shorthand had set for it, so a
-  // removal re-applies everything too.
+  // `background`, `margin`) resets the longhands it covers, and removing a
+  // longhand clears what a shorthand had set for it: once anything changed, an
+  // unchanged property is re-applied if the element no longer holds its value.
   let changed = false;
   for (let prop in oldVal) {
     if (!(prop in val)) {
@@ -336,12 +346,13 @@ export function updateStyle(this: HTMLElement, val: any, oldVal: any) {
     }
   }
   for (let prop in val) {
-    if (changed || val[prop] !== oldVal[prop]) {
-      setStyleProp(style, prop, val[prop]);
+    const value = val[prop];
+    if (value !== oldVal[prop] || (changed && !holdsStyleProp(style, prop, value))) {
+      setStyleProp(style, prop, value);
       changed = true;
     }
   }
   if (!style.cssText) {
-    removeAttribute.call(this, "style");
+    removeAttribute.call(el, "style");
   }
 }

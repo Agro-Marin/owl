@@ -279,6 +279,40 @@ describe("style", () => {
     expect(div.style.marginTop).toBe("1px");
   });
 
+  test("a changed property re-applies only the following ones it overwrote", async () => {
+    const block = createBlock('<div block-attribute-0="style"></div>');
+    const style = (x: number) => ({
+      left: `${x}px`,
+      top: "5px",
+      width: "10px",
+      color: "red !important",
+      zIndex: 3,
+      marginTop: "4px",
+    });
+    const tree = block([style(0)]);
+    mount(tree, fixture);
+    const div = fixture.firstChild as HTMLElement;
+    const setProperty = div.style.setProperty;
+    let calls = 0;
+    div.style.setProperty = function (this: CSSStyleDeclaration, ...args: any[]) {
+      calls++;
+      return setProperty.apply(this, args as any);
+    };
+    for (let i = 1; i <= 100; i++) {
+      patch(tree, block([style(i)]));
+    }
+    expect(calls).toBe(100);
+    expect(div.getAttribute("style")).toBe(
+      "left: 100px; top: 5px; width: 10px; color: red !important; z-index: 3; margin-top: 4px;"
+    );
+
+    calls = 0;
+    const { marginTop, ...rest } = style(1);
+    patch(tree, block([{ ...rest, margin: "2px", marginTop }]));
+    expect(calls).toBe(3);
+    expect(div.style.marginTop).toBe("4px");
+  });
+
   test("a custom property keeps its case", async () => {
     const block = createBlock('<div block-attribute-0="style"></div>');
     mount(block([{ "--mainColor": "red" }]), fixture);
