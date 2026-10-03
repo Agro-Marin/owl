@@ -70,6 +70,9 @@ export interface ComputationAtom<T = any> extends Atom<T> {
   // the disposers of the effects created while this computation ran: they
   // last until it runs again or is disposed
   owned: Set<() => void> | null;
+  // the effect that created this one, if any: due in the same flush, it runs
+  // first, and its run disposes the child it recreates
+  owner?: ComputationAtom;
 }
 
 export const atomSymbol = Symbol("Atom");
@@ -173,12 +176,20 @@ function updateEach(computations: ComputationAtom[]): unknown[] | null {
   let errors: unknown[] | null = null;
   for (let i = 0; i < computations.length; i++) {
     try {
-      updateComputation(computations[i]);
+      updateOwnerFirst(computations[i]);
     } catch (error) {
       (errors ||= []).push(error);
     }
   }
   return errors;
+}
+
+function updateOwnerFirst(computation: ComputationAtom) {
+  const owner = computation.owner;
+  if (owner && owner.state !== ComputationState.EXECUTED) {
+    updateOwnerFirst(owner);
+  }
+  updateComputation(computation);
 }
 
 function rethrow(errors: unknown[] | null) {

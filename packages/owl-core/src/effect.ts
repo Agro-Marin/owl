@@ -17,6 +17,8 @@ export function immediateEffect<T>(fn: () => T) {
   return createEffect(fn, true);
 }
 
+const effects = new WeakSet<ComputationAtom>();
+
 function createEffect<T>(fn: () => T, immediate: boolean) {
   let disposed = false;
   const computation = createComputation(
@@ -60,7 +62,11 @@ function createEffect<T>(fn: () => T, immediate: boolean) {
   const parent = getCurrentComputation();
   if (parent) {
     (parent.owned ??= new Set()).add(cleanupEffect);
+    if (effects.has(parent)) {
+      computation.owner = parent;
+    }
   }
+  effects.add(computation);
 
   // Remove sources and unsubscribe
   function cleanupEffect() {

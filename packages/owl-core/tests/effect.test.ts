@@ -277,6 +277,22 @@ describe("effect", () => {
     });
   });
 
+  test("a parent due in the same flush runs before its child, which never runs stale", async () => {
+    const a = signal(0);
+    const b = signal(0);
+    const seen: string[] = [];
+    effect(() => {
+      const parentValue = b();
+      effect(() => {
+        seen.push(`parent=${parentValue} a=${a()}`);
+      });
+    });
+    a.set(1);
+    b.set(1);
+    await waitScheduler();
+    expect(seen).toEqual(["parent=0 a=0", "parent=1 a=1"]);
+  });
+
   describe("effects created by a computed", () => {
     test("last until the computed recomputes, and do not count as its observers", async () => {
       const n = signal(0);
