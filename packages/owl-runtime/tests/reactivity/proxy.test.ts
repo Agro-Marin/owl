@@ -1307,6 +1307,21 @@ describe("Collections", () => {
       await waitScheduler();
       expectSpy(spy, 3, [1]);
     });
+
+    test("ES2025 set methods work on a reactive set, and observe its membership", async () => {
+      // the ES2025 methods are not in the lib the tests compile against
+      const set: any = proxy(new Set([1, 2]));
+      const other = proxy(new Set([2, 3]));
+      const spy = vi.fn();
+      effect(() => spy([...set.union(other)], set.isSubsetOf(new Set([1, 2, 3]))));
+      expectSpy(spy, 1, [[1, 2, 3], true]);
+      set.add(4);
+      await waitScheduler();
+      expectSpy(spy, 2, [[1, 2, 4, 3], false]);
+      other.add(5);
+      await waitScheduler();
+      expectSpy(spy, 3, [[1, 2, 4, 3, 5], false]);
+    });
   });
 
   describe("WeakSet", () => {
@@ -1323,6 +1338,33 @@ describe("Collections", () => {
   });
 
   describe("Map", () => {
+    test("iterating the keys of a map ignores a value change", async () => {
+      const map = proxy(new Map([["a", 1]]));
+      const keysSpy = vi.fn();
+      const valuesSpy = vi.fn();
+      effect(() => keysSpy([...map.keys()]));
+      effect(() => valuesSpy([...map.values()]));
+      map.set("a", 2);
+      await waitScheduler();
+      expectSpy(keysSpy, 1, [["a"]]);
+      expectSpy(valuesSpy, 2, [[2]]);
+      map.set("b", 3);
+      await waitScheduler();
+      expectSpy(keysSpy, 2, [["a", "b"]]);
+    });
+
+    test("set() stores the raw value, as an object property write does", async () => {
+      const obj = { a: 1 };
+      const map = proxy(new Map<string, any>());
+      map.set("k", proxy(obj));
+      expect(toRaw(map).get("k")).toBe(obj);
+      const spy = vi.fn();
+      effect(() => spy(map.get("k").a));
+      map.set("k", obj);
+      await waitScheduler();
+      expectSpy(spy, 1, [1]);
+    });
+
     test("iterating entries yields plain pairs whose contents are reactive", async () => {
       const map = proxy(new Map([[{ id: 1 }, { v: 1 }]]));
       const spy = vi.fn();

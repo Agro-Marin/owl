@@ -531,16 +531,20 @@ function makeIteratorObserver(
   // only subscribe the reader to atoms no write can ever reach
   const yieldsEntries =
     methodName === "entries" || (methodName === Symbol.iterator && target instanceof Map);
+  // a Set's keys, or a Map's, change only by being added or removed, which
+  // the key list notifies: only a Map's values need their keys' atoms
+  const readsValues = target instanceof Map && methodName !== "keys";
   return function* () {
     onReadTargetKey(target, KEYCHANGES);
-    const keys = target.keys();
-    for (const item of target[methodName]()) {
-      const key = keys.next().value;
-      onReadTargetKey(target, key);
+    for (const entry of target.entries()) {
+      if (readsValues) {
+        onReadTargetKey(target, entry[0]);
+      }
+      const item = yieldsEntries ? entry : methodName === "keys" ? entry[0] : entry[1];
       if (shallow) {
         yield item;
       } else if (yieldsEntries) {
-        yield [possiblyReactive(item[0], false), possiblyReactive(item[1], false)];
+        yield [possiblyReactive(entry[0], false), possiblyReactive(entry[1], false)];
       } else {
         yield possiblyReactive(item, false);
       }
@@ -556,10 +560,13 @@ function makeIteratorObserver(
  * @param callback @see proxy
  */
 function makeForEachObserver(target: any, shallow: boolean) {
+  const readsValues = target instanceof Map;
   return function forEach(forEachCb: (val: any, key: any, target: any) => void, thisArg: any) {
     onReadTargetKey(target, KEYCHANGES);
     target.forEach(function (val: any, key: any, targetObj: any) {
-      onReadTargetKey(target, key);
+      if (readsValues) {
+        onReadTargetKey(target, key);
+      }
       forEachCb.call(
         thisArg,
         possiblyReactive(val, shallow),
@@ -567,6 +574,17 @@ function makeForEachObserver(target: any, shallow: boolean) {
         possiblyReactive(targetObj, shallow)
       );
     }, thisArg);
+  };
+}
+/**
+ * Creates a version of an ES2025 Set method (union, isSubsetOf...) that reads
+ * the whole membership of the set. Its result is a fresh, plain Set or a
+ * boolean. A reactive `other` is read through its proxy, and so observed too.
+ */
+function makeSetOperation(method: Function, target: Set<any>) {
+  return (other: any) => {
+    onReadTargetKey(target, KEYCHANGES);
+    return method.call(target, other);
   };
 }
 /**
@@ -588,7 +606,7 @@ function delegateAndNotify(
     key = toRaw(key);
     const hadKey = target.has(key);
     const originalValue = target[getterName](key);
-    const ret = target[setterName](key, value);
+    const ret = target[setterName](key, toRaw(value));
     const hasKey = target.has(key);
     if (hadKey !== hasKey) {
       onWriteKeyPresence(target, key);
@@ -633,6 +651,23 @@ const setMethods: [PropertyKey, MethodFactory][] = [
   ["forEach", (target, shallow) => makeForEachObserver(target, shallow)],
   ["clear", (target) => makeClearNotifier(target)],
 ];
+// ES2025 Set methods, where the engine has them
+const setOperations = (
+  [
+    "difference",
+    "intersection",
+    "isDisjointFrom",
+    "isSubsetOf",
+    "isSupersetOf",
+    "symmetricDifference",
+    "union",
+  ] as const
+)
+  .filter((name) => name in Set.prototype)
+  .map((name): [PropertyKey, MethodFactory] => [
+    name,
+    (target) => makeSetOperation((Set.prototype as any)[name], target),
+  ]);
 const weakMapMethods: [PropertyKey, MethodFactory][] = [
   ["has", (target, shallow) => makeKeyObserver("has", target, shallow)],
   ["get", (target, shallow) => makeKeyObserver("get", target, shallow)],
@@ -646,7 +681,7 @@ const weakMapMethods: [PropertyKey, MethodFactory][] = [
  * set observes the key it is asked about, `add` notifies it.
  */
 const methodFactories: Record<CollectionRawType, Map<PropertyKey, MethodFactory>> = {
-  Set: new Map(setMethods),
+  Set: new Map([...setMethods, ...setOperations]),
   Map: new Map([...setMethods, ...weakMapMethods]),
   WeakMap: new Map(weakMapMethods),
 };
