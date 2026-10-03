@@ -374,6 +374,7 @@ function parseTDebugLog(node: Element, ctx: ParsingContext): AST | null {
 const ROOT_SVG_TAGS = new Set(["svg", "g", "path"]);
 
 const ATT_DIRECTIVE_RE = /^t-att(f?-.+)?$/;
+const T_MODEL_MODIFIERS = new Set(["lazy", "trim", "number", "proxy"]);
 
 function parseDOMNode(node: Element, ctx: ParsingContext): AST | null {
   const { tagName } = node;
@@ -408,7 +409,7 @@ function parseDOMNode(node: Element, ctx: ParsingContext): AST | null {
     if (attr.startsWith("t-on-")) {
       on = on || {};
       on[attr.slice(5)] = value;
-    } else if (attr.startsWith("t-model")) {
+    } else if (attr === "t-model" || attr.startsWith("t-model.")) {
       if (!["input", "select", "textarea"].includes(tagName)) {
         throw new OwlError(
           "The t-model directive only works with <input>, <textarea> and <select>"
@@ -419,10 +420,16 @@ function parseDOMNode(node: Element, ctx: ParsingContext): AST | null {
       const isSelect = tagName === "select";
       const isCheckboxInput = isInput && typeAttr === "checkbox";
       const isRadioInput = isInput && typeAttr === "radio";
-      const hasTrimMod = attr.includes(".trim");
-      const hasLazyMod = hasTrimMod || attr.includes(".lazy");
-      const hasNumberMod = attr.includes(".number");
-      const hasProxyMod = attr.includes(".proxy");
+      const modifiers = attr.split(".").slice(1);
+      for (const modifier of modifiers) {
+        if (!T_MODEL_MODIFIERS.has(modifier)) {
+          throw new OwlError(`Unknown t-model modifier: '${modifier}'`);
+        }
+      }
+      const hasTrimMod = modifiers.includes("trim");
+      const hasLazyMod = hasTrimMod || modifiers.includes("lazy");
+      const hasNumberMod = modifiers.includes("number");
+      const hasProxyMod = modifiers.includes("proxy");
       const eventType = isRadioInput ? "click" : isSelect || hasLazyMod ? "change" : "input";
 
       model = {
@@ -534,7 +541,12 @@ function parseTForEach(node: Element, ctx: ParsingContext): AST | null {
   const html = node.outerHTML;
   const collection = node.getAttribute("t-foreach")!;
   node.removeAttribute("t-foreach");
-  const elem = node.getAttribute("t-as") || "";
+  const elem = node.getAttribute("t-as");
+  if (!elem) {
+    throw new OwlError(
+      `Directive t-foreach should always be used with t-as (expression: t-foreach="${collection}")`
+    );
+  }
   node.removeAttribute("t-as");
   const key = node.getAttribute("t-key");
   if (!key) {
@@ -1041,8 +1053,8 @@ function normalizeTIf(el: Element) {
   for (let i = 0, ilen = tbranch.length; i < ilen; i++) {
     let node = tbranch[i];
     let prevElem = node.previousElementSibling!;
-    let pattr = (name: string) => prevElem.getAttribute(name);
-    let nattr = (name: string) => +!!node.getAttribute(name);
+    let pattr = (name: string) => prevElem.hasAttribute(name);
+    let nattr = (name: string) => +node.hasAttribute(name);
     if (prevElem && (pattr("t-if") || pattr("t-elif"))) {
       if (pattr("t-foreach")) {
         throw new OwlError(

@@ -1482,6 +1482,29 @@ describe("qweb parser", () => {
     expect(() => parse(`<MyComponent><div t-set-slot="name">foo</div></MyComponent>`)).toThrow();
   });
 
+  test("a branch carrying two conditional directives throws, empty values included", async () => {
+    expect(() => parse(`<t t-if="a">A</t><t t-else="" t-if="b">B</t>`)).toThrow(
+      "Only one conditional branching directive is allowed per node"
+    );
+    expect(() => parse(`<t t-if="a">A</t><t t-elif="b" t-else="">B</t>`)).toThrow(
+      "Only one conditional branching directive is allowed per node"
+    );
+  });
+
+  test("t-foreach without t-as throws", async () => {
+    expect(() => parse(`<t t-foreach="[1]" t-key="1">x</t>`)).toThrow(
+      `Directive t-foreach should always be used with t-as (expression: t-foreach="[1]")`
+    );
+  });
+
+  test("t-model rejects an unknown modifier or a longer directive name", async () => {
+    expect(() => parse(`<input t-model.lazzy="x"/>`)).toThrow("Unknown t-model modifier: 'lazzy'");
+    expect(() => parse(`<input t-model.trimmed="x"/>`)).toThrow(
+      "Unknown t-model modifier: 'trimmed'"
+    );
+    expect(() => parse(`<input t-modelx="x"/>`)).toThrow("Unknown QWeb directive: 't-modelx'");
+  });
+
   test("t-call and t-call-slot reject a directive they would turn into a variable", async () => {
     expect(() => parse(`<t t-call="sub" t-ref="r"/>`)).toThrow(
       "Unsupported directive 't-ref' on a t-call node"
