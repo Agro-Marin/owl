@@ -3,7 +3,9 @@ import {
   attrsSetter,
   attrsUpdater,
   createAttrUpdater,
+  makeAttrsUpdaters,
   makeSharedClassUpdaters,
+  makeSharedStyleUpdaters,
   setClass,
   setStyle,
   updateClass,
@@ -122,7 +124,8 @@ interface DynamicInfo {
   isOnlyChild?: boolean;
   name?: string;
   event?: string;
-  sharedClass?: ReturnType<typeof makeSharedClassUpdaters>;
+  sharedClass?: Updater<HTMLElement>;
+  sharedStyle?: Updater<HTMLElement>;
 }
 
 interface IntermediateTree {
@@ -225,6 +228,16 @@ function buildTree(
           const sharedClass = makeSharedClassUpdaters(staticClass ? staticClass.split(/\s+/) : []);
           for (const source of classSources) {
             source.sharedClass = sharedClass;
+          }
+        }
+        const styleSources = info.filter(
+          (i) => i.type === "attributes" || (i.type === "attribute" && i.name === "style")
+        );
+        const staticStyle = (el as Element).getAttribute("style")?.trim();
+        if (styleSources.length > 1 || (styleSources.length && staticStyle)) {
+          const nextStyleSource = makeSharedStyleUpdaters(staticStyle || "");
+          for (const source of styleSources) {
+            source.sharedStyle = nextStyleSource();
           }
         }
       }
@@ -416,7 +429,9 @@ function updateCtx(ctx: BlockCtx, tree: IntermediateTree) {
         let updater: any;
         let setter: any;
         if (info.sharedClass) {
-          setter = updater = info.sharedClass.classUpdater;
+          setter = updater = info.sharedClass;
+        } else if (info.sharedStyle) {
+          setter = updater = info.sharedStyle;
         } else if (info.name === "class") {
           setter = setClass;
           updater = updateClass;
@@ -436,7 +451,10 @@ function updateCtx(ctx: BlockCtx, tree: IntermediateTree) {
         break;
       }
       case "attributes": {
-        const shared = info.sharedClass;
+        const { sharedClass, sharedStyle } = info;
+        const shared =
+          (sharedClass || sharedStyle) &&
+          makeAttrsUpdaters(sharedClass || updateClass, sharedStyle || updateStyle);
         ctx.locations.push({
           idx: info.idx,
           refIdx: info.refIdx!,

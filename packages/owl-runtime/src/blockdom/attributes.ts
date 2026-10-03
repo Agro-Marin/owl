@@ -48,24 +48,34 @@ function toAttrs(attrs: any): { [name: string]: any } {
   return !attrs ? NO_ATTRS : isArray(attrs) ? { [attrs[0]]: attrs[1] } : attrs;
 }
 
-type ClassUpdater = (this: HTMLElement, val: any, oldVal: any) => void;
-
-function makeAttrsUpdaters(updateClassFn: ClassUpdater): {
+export function makeAttrsUpdaters(
+  updateClassFn: Updater<HTMLElement>,
+  updateStyleFn: Updater<HTMLElement>
+): {
   attrsSetter: Setter<HTMLElement>;
   attrsUpdater: Updater<HTMLElement>;
 } {
+  function updateAttr(el: HTMLElement, name: string, val: any, oldVal: any) {
+    if (name === "class") {
+      updateClassFn.call(el, val, oldVal);
+    } else if (name === "style") {
+      updateStyleFn.call(el, val, oldVal);
+    } else {
+      setAttribute.call(el, name, val);
+    }
+  }
   function attrsUpdater(this: HTMLElement, attrs: any, oldAttrs: any) {
     const next = toAttrs(attrs);
     const prev = toAttrs(oldAttrs);
     for (const name in prev) {
       if (!(name in next)) {
-        updateAttr(this, name, undefined, prev[name], updateClassFn);
+        updateAttr(this, name, undefined, prev[name]);
       }
     }
     for (const name in next) {
       const val = next[name];
       if (val !== prev[name]) {
-        updateAttr(this, name, val, prev[name], updateClassFn);
+        updateAttr(this, name, val, prev[name]);
       }
     }
   }
@@ -75,23 +85,7 @@ function makeAttrsUpdaters(updateClassFn: ClassUpdater): {
   return { attrsSetter, attrsUpdater };
 }
 
-function updateAttr(
-  el: HTMLElement,
-  name: string,
-  val: any,
-  oldVal: any,
-  updateClassFn: ClassUpdater
-) {
-  if (name === "class") {
-    updateClassFn.call(el, val, oldVal);
-  } else if (name === "style") {
-    updateStyle.call(el, val, oldVal);
-  } else {
-    setAttribute.call(el, name, val);
-  }
-}
-
-export const { attrsSetter, attrsUpdater } = makeAttrsUpdaters(updateClass);
+export const { attrsSetter, attrsUpdater } = makeAttrsUpdaters(updateClass, updateStyle);
 
 type ClassExpr = string | number | boolean | String | ClassExpr[] | { [c: string]: any };
 
@@ -313,7 +307,7 @@ export function makeSharedClassUpdaters(staticClasses: string[]) {
       }
     }
   }
-  return { classUpdater, ...makeAttrsUpdaters(classUpdater) };
+  return classUpdater;
 }
 
 // ---------------------------------------------------------------------------
@@ -335,19 +329,21 @@ export function updateStyle(this: HTMLElement, val: any, oldVal: any) {
 function patchStyle(el: HTMLElement, oldVal: StyleObj, val: StyleObj) {
   const style = el.style;
   // Properties are applied in declaration order. Re-setting a shorthand (e.g.
-  // `background`, `margin`) resets the longhands it covers, and removing a
-  // longhand clears what a shorthand had set for it: once anything changed, an
-  // unchanged property is re-applied if the element no longer holds its value.
-  let changed = false;
+  // `background`, `margin`) resets the longhands it covers: once a property
+  // changed, an unchanged one after it is re-applied if the element no longer
+  // holds its value. Removing a property re-applies all of them, as a removed
+  // shorthand clears longhands that some engines (jsdom) still report.
+  let removed = false;
   for (let prop in oldVal) {
     if (!(prop in val)) {
       style.removeProperty(prop);
-      changed = true;
+      removed = true;
     }
   }
+  let changed = false;
   for (let prop in val) {
     const value = val[prop];
-    if (value !== oldVal[prop] || (changed && !holdsStyleProp(style, prop, value))) {
+    if (removed || value !== oldVal[prop] || (changed && !holdsStyleProp(style, prop, value))) {
       setStyleProp(style, prop, value);
       changed = true;
     }
@@ -355,4 +351,38 @@ function patchStyle(el: HTMLElement, oldVal: StyleObj, val: StyleObj) {
   if (!style.cssText) {
     removeAttribute.call(el, "style");
   }
+}
+
+// An element whose style several sources write (a static style plus
+// t-att-style, t-att-style plus t-att) keeps one layer per source, each over
+// the ones before it and all over the static style, and is patched with their
+// merge: a source dropping a property restores what a layer below sets.
+const styleLayers = new WeakMap<Element, { layers: StyleObj[]; applied: StyleObj }>();
+
+export function makeSharedStyleUpdaters(staticStyle: string): () => Updater<HTMLElement> {
+  const base = toStyleObj(staticStyle);
+  let sources = 0;
+  return () => {
+    const layer = ++sources;
+    return function styleUpdater(this: HTMLElement, val: any) {
+      let state = styleLayers.get(this);
+      if (!state) {
+        state = { layers: [base], applied: base };
+        styleLayers.set(this, state);
+      }
+      const layers = state.layers;
+      layers[layer] = toStyleObj(val);
+      // a property a later layer sets again moves to its declaration order
+      const merged: StyleObj = {};
+      for (let i = 0; i < layers.length; i++) {
+        const props = layers[i];
+        for (const prop in props) {
+          delete merged[prop];
+          merged[prop] = props[prop];
+        }
+      }
+      patchStyle(this, state.applied, merged);
+      state.applied = merged;
+    };
+  };
 }

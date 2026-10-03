@@ -320,3 +320,50 @@ describe("style", () => {
     expect(div.style.getPropertyValue("--mainColor")).toBe("red");
   });
 });
+
+describe("a style written by several sources", () => {
+  function check(template: string, steps: any[][]) {
+    const block = createBlock(template);
+    const tree = block(steps[0]);
+    mount(tree, fixture);
+    for (const data of steps.slice(1)) {
+      patch(tree, block(data));
+      const fresh = makeTestFixture();
+      mount(block(data), fresh);
+      const cssText = (el: Element) => (el.firstChild as HTMLElement).style.cssText;
+      expect(cssText(fixture)).toBe(cssText(fresh));
+      fresh.remove();
+    }
+    return fixture.firstChild as HTMLElement;
+  }
+
+  test("a dynamic style dropping a property restores the static one", async () => {
+    const div = check('<div style="color: red; width: 1px" block-attribute-0="style"></div>', [
+      ["color: blue"],
+      [""],
+      [{ color: "green", width: "2px" }],
+      [undefined],
+    ]);
+    expect(div.getAttribute("style")).toBe("color: red; width: 1px;");
+  });
+
+  test("a t-att style dropping a property restores the static one", async () => {
+    const div = check('<div style="color: red" block-attributes="0"></div>', [
+      [{ style: "color: blue" }],
+      [{}],
+      [["style", "color: green"]],
+      [null],
+    ]);
+    expect(div.style.color).toBe("red");
+  });
+
+  test("t-att over t-att-style: the later source wins, and dropping it restores the earlier", async () => {
+    const div = check('<div block-attribute-0="style" block-attributes="1"></div>', [
+      ["color: red", { style: "color: blue" }],
+      ["color: red", {}],
+      ["color: red; width: 1px", { style: "color: blue; margin-top: 3px" }],
+      ["", { style: "color: blue; margin-top: 3px" }],
+    ]);
+    expect(div.getAttribute("style")).toBe("color: blue; margin-top: 3px;");
+  });
+});

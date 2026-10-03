@@ -341,6 +341,11 @@ It can also be combined with a normal static style attribute:
 <!-- result: <div style="color: red; font-size: 20px;"></div> -->
 ```
 
+A dynamic value overrides a static property of the same name, and the static
+value comes back when the dynamic one stops setting it. The same holds between
+`t-att-style` and a `style` key given by `t-att`, the one written last on the
+element winning.
+
 String values are supported as well:
 
 ```xml
