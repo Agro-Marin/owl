@@ -75,7 +75,8 @@ export interface ComputationAtom<T = any> extends Atom<T> {
   owned: Set<() => void> | null;
   // the effect that created this one, if any: due in the same flush, it runs
   // first, and its run disposes the child it recreates
-  owner?: ComputationAtom;
+  owner: ComputationAtom | null;
+  isEffect: boolean;
 }
 
 export const atomSymbol = Symbol("Atom");
@@ -111,6 +112,8 @@ export function createComputation(
     isDerived,
     immediate,
     owned: null,
+    owner: null,
+    isEffect: false,
   };
 }
 

@@ -4,7 +4,7 @@ import {
   disposeOwned,
   getCurrentComputation,
   removeSources,
-  untrack,
+  setComputation,
   updateComputation,
   createComputation,
 } from "./computations";
@@ -17,8 +17,6 @@ export function immediateEffect<T>(fn: () => T) {
   return createEffect(fn, true);
 }
 
-const effects = new WeakSet<ComputationAtom>();
-
 function createEffect<T>(fn: () => T, immediate: boolean) {
   let disposed = false;
   const computation = createComputation(
@@ -30,7 +28,7 @@ function createEffect<T>(fn: () => T, immediate: boolean) {
       let failure: { error: unknown } | null = null;
       if (computation.value || computation.owned) {
         try {
-          untrack(() => unsubscribeEffect(computation));
+          unsubscribeUntracked(computation);
         } catch (error) {
           // the run still happens: skipping it would leave the effect
           // subscribed to nothing, dead for good
@@ -42,7 +40,7 @@ function createEffect<T>(fn: () => T, immediate: boolean) {
         // disposed by its own run: what it read, created or returned after
         // the dispose is released too
         computation.value = result;
-        untrack(() => unsubscribeEffect(computation));
+        unsubscribeUntracked(computation);
         return undefined;
       }
       if (failure) {
@@ -62,11 +60,11 @@ function createEffect<T>(fn: () => T, immediate: boolean) {
   const parent = getCurrentComputation();
   if (parent) {
     (parent.owned ??= new Set()).add(cleanupEffect);
-    if (effects.has(parent)) {
+    if (parent.isEffect) {
       computation.owner = parent;
     }
   }
-  effects.add(computation);
+  computation.isEffect = true;
 
   // Remove sources and unsubscribe
   function cleanupEffect() {
@@ -79,7 +77,7 @@ function createEffect<T>(fn: () => T, immediate: boolean) {
     // sources of whatever computation happens to be active when dispose() is
     // called. See test "dispose called inside another effect: cleanup's atom
     // reads do not leak to outer".
-    untrack(() => unsubscribeEffect(computation));
+    unsubscribeUntracked(computation);
   }
 
   try {
@@ -90,6 +88,16 @@ function createEffect<T>(fn: () => T, immediate: boolean) {
     throw error;
   }
   return cleanupEffect;
+}
+
+function unsubscribeUntracked(effect: ComputationAtom) {
+  const previousComputation = getCurrentComputation();
+  setComputation(undefined);
+  try {
+    unsubscribeEffect(effect);
+  } finally {
+    setComputation(previousComputation);
+  }
 }
 
 // Releases everything even when a cleanup throws, then rethrows the first
