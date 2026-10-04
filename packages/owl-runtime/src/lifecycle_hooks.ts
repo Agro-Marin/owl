@@ -16,27 +16,27 @@ export function onWillUpdateProps(
   function swapped(this: any, s: ComponentNode, nextProps: any) {
     return fn.call(this, nextProps, s);
   }
-  scope.willUpdateProps.push(scope.decorate(swapped, "onWillUpdateProps"));
+  scope.addHook("willUpdateProps", scope.decorate(swapped, "onWillUpdateProps"));
 }
 
 export function onMounted(fn: (scope: ComponentNode) => void | any) {
   const scope = getComponentScope();
-  scope.mounted.push(scope.decorate(fn, "onMounted"));
+  scope.addHook("mounted", scope.decorate(fn, "onMounted"));
 }
 
 export function onWillPatch(fn: (scope: ComponentNode) => any | void) {
   const scope = getComponentScope();
-  scope.willPatch.unshift(scope.decorate(fn, "onWillPatch"));
+  scope.addHook("willPatch", scope.decorate(fn, "onWillPatch"), true);
 }
 
 export function onPatched(fn: (scope: ComponentNode) => void | any) {
   const scope = getComponentScope();
-  scope.patched.push(scope.decorate(fn, "onPatched"));
+  scope.addHook("patched", scope.decorate(fn, "onPatched"));
 }
 
 export function onWillUnmount(fn: (scope: ComponentNode) => void | any) {
   const scope = getComponentScope();
-  scope.willUnmount.unshift(scope.decorate(fn, "onWillUnmount"));
+  scope.addHook("willUnmount", scope.decorate(fn, "onWillUnmount"), true);
 }
 
 type OnErrorCallback = (error: any) => void | any;

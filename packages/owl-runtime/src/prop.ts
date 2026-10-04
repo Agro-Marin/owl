@@ -30,7 +30,7 @@ export function staticProp(key: string, type?: any): any {
         : `Invalid prop '${key}' in '${node.componentName}'`;
       assertType(usesDefault ? value : propValue, type, message);
     }
-    node.willUpdateProps.push((nextProps: Record<string, any>) => {
+    node.addHook("willUpdateProps", (nextProps: Record<string, any>) => {
       const current = node.props[key] === undefined ? node.defaultProps?.[key] : node.props[key];
       if (nextProps[key] !== current) {
         throw new OwlError(

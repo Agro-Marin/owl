@@ -52,7 +52,7 @@ function makeProps(type?: any): Props<{}> {
   const node = getComponentScope();
   if (!type) {
     const view = new PropsView(node);
-    node.propsUpdated.push(() => view.update());
+    node.addHook("propsUpdated", () => view.update());
     return new Proxy(view, viewHandler) as any;
   }
   const { app, componentName } = node;
@@ -98,7 +98,7 @@ function makeProps(type?: any): Props<{}> {
     signals.push(s);
     Reflect.defineProperty(result, key, { enumerable: true, configurable: true, get: s });
   }
-  node.propsUpdated.push(() => {
+  node.addHook("propsUpdated", () => {
     for (let i = 0; i < keys.length; i++) {
       signals[i].set(resolveValue(node.props, keys[i]));
     }
@@ -121,7 +121,7 @@ function makeProps(type?: any): Props<{}> {
 
     const validation = types.object(type);
     assertType(node.props, validation, `Invalid component props (${componentName})`);
-    node.willUpdateProps.push((np: Record<string, any>) => {
+    node.addHook("willUpdateProps", (np: Record<string, any>) => {
       assertType(np, validation, `Invalid component props (${componentName})`);
     });
   }

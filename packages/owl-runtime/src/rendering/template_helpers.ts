@@ -14,7 +14,7 @@ import { App } from "../app";
 import { BDom, createCatcher, multi, RefCallback, text, toggler } from "../blockdom";
 import { html } from "../blockdom/index";
 import { Component } from "../component";
-import { ComponentNode } from "../component_node";
+import { ComponentNode, NO_CHILDREN } from "../component_node";
 import { Markup } from "../utils";
 import { handleHookRejection } from "./error_handling";
 import { Fiber, makeChildFiber } from "./fibers";
@@ -454,6 +454,9 @@ function createComponent<P extends Record<string, any>>(
       node = new ComponentNode(C, props, app, ctx, key);
       if (signals) {
         propSignals.set(node, signals);
+      }
+      if (children === NO_CHILDREN) {
+        children = ctx.children = Object.create(null);
       }
       children[key] = node;
       const fiber = new Fiber(node, parentFiber);

@@ -25,6 +25,19 @@ import { STATUS } from "./status";
 // -----------------------------------------------------------------------------
 
 type LifecycleHook = Function;
+type HookKind =
+  | "willUpdateProps"
+  | "propsUpdated"
+  | "willUnmount"
+  | "mounted"
+  | "willPatch"
+  | "patched";
+
+// Shared by every node until it registers a hook of a kind, or a child: most
+// components register few hooks, and a leaf has no child. Frozen, so a write
+// that bypasses addHook or createComponent fails loudly.
+const NO_HOOKS: LifecycleHook[] = Object.freeze([]) as any;
+export const NO_CHILDREN: { [key: string]: ComponentNode } = Object.freeze(Object.create(null));
 
 export class ComponentNode extends Scope implements VNode<ComponentNode> {
   fiber: Fiber | null = null;
@@ -35,19 +48,20 @@ export class ComponentNode extends Scope implements VNode<ComponentNode> {
   parentKey: string | null;
   props: Record<string, any>;
   defaultProps: Record<string, any> | null = null;
-  renderFn!: Function;
+  templateFn!: Function;
+  renderCtx!: { this: Component; __owl__: ComponentNode };
   parent: ComponentNode | null;
-  children: { [key: string]: ComponentNode } = Object.create(null);
+  children: { [key: string]: ComponentNode } = NO_CHILDREN;
 
-  willUpdateProps: LifecycleHook[] = [];
+  willUpdateProps: LifecycleHook[] = NO_HOOKS;
   // Fired right after `props` is applied to `node.props` on a parent re-render,
   // so reactive prop notifications happen once the new values are observable
   // (after user `onWillUpdateProps` hooks, including async ones, have run).
-  propsUpdated: LifecycleHook[] = [];
-  willUnmount: LifecycleHook[] = [];
-  mounted: LifecycleHook[] = [];
-  willPatch: LifecycleHook[] = [];
-  patched: LifecycleHook[] = [];
+  propsUpdated: LifecycleHook[] = NO_HOOKS;
+  willUnmount: LifecycleHook[] = NO_HOOKS;
+  mounted: LifecycleHook[] = NO_HOOKS;
+  willPatch: LifecycleHook[] = NO_HOOKS;
+  patched: LifecycleHook[] = NO_HOOKS;
   signalComputation: ComputationAtom;
   // t-refs bound to an element hosted by this component: a signal mapped to its
   // atom (so the element can be read without subscribing), a set-like ref to
@@ -90,10 +104,11 @@ export class ComponentNode extends Scope implements VNode<ComponentNode> {
     scopeStack.push(this);
     this.collectingWillStart = true;
     try {
-      this.component = new C(this);
-      const ctx = { this: this.component, __owl__: this };
-      this.renderFn = app.getTemplate(C.template).bind(this.component, ctx, this);
-      this.component.setup();
+      const component = new C(this);
+      this.component = component;
+      this.renderCtx = { this: component, __owl__: this };
+      this.templateFn = app.getTemplate(C.template);
+      component.setup();
     } catch (e) {
       // nothing will ever reference this node: what its setup acquired is
       // released, and the setup error is the one reported
@@ -104,6 +119,25 @@ export class ComponentNode extends Scope implements VNode<ComponentNode> {
       this.collectingWillStart = false;
       scopeStack.pop();
       setComputation(previousComputation);
+    }
+  }
+
+  renderFn() {
+    return this.templateFn.call(this.component, this.renderCtx, this);
+  }
+
+  /**
+   * Registers a lifecycle callback, last (or first, for the hooks that run in
+   * reverse registration order).
+   */
+  addHook(kind: HookKind, fn: LifecycleHook, first = false) {
+    const hooks = this[kind];
+    if (hooks === NO_HOOKS) {
+      this[kind] = [fn];
+    } else if (first) {
+      hooks.unshift(fn);
+    } else {
+      hooks.push(fn);
     }
   }
 

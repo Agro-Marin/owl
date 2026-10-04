@@ -213,7 +213,7 @@ export class App extends TemplateSet {
       // `if (node.mounted.length)` check sees it and registers the fiber in
       // root.mounted. Without this ordering the callback would never fire for
       // the commit-after-prepare sequence.
-      node.mounted.push(() => {
+      node.addHook("mounted", () => {
         resolve(node.component);
         handlers!.shift();
       });
