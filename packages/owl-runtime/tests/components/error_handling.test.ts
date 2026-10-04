@@ -2354,7 +2354,7 @@ describe("errors of a destroyed component", () => {
       load.reject(new Error("load failed"));
       await nextTick();
     });
-    expect(unhandled).toEqual(["Error: load failed"]);
+    expect(unhandled).toEqual([]);
     expect(caught).toEqual([]);
     expect(parent.__owl__.app.destroyed).toBe(false);
 
@@ -2391,7 +2391,7 @@ describe("errors of a destroyed component", () => {
       load.reject(new Error("load failed"));
       await nextTick();
     });
-    expect(unhandled).toEqual(["Error: load failed"]);
+    expect(unhandled).toEqual([]);
     expect(caught).toEqual([]);
     expect(parent.__owl__.app.destroyed).toBe(false);
   });

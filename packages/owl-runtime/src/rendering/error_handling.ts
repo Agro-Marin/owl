@@ -110,24 +110,21 @@ export function handleError(params: ErrorParams) {
 }
 
 // An onWillStart or onWillUpdateProps rejection. Once its component is
-// destroyed nobody waits for it: it must neither reach the living ancestors'
-// handlers nor tear the app down, so an abort is dropped and any other error
-// is rethrown, to surface as an unhandled rejection.
+// destroyed nobody waits for it: the error is dropped. It must not reach the
+// living ancestors' handlers (they may have handled it already, through the
+// instance it was created for, and rendered the instance this one was) nor
+// tear the app down, nor surface as an unhandled rejection - an error dialog
+// for work nobody consumes.
 export function handleHookRejection(node: ComponentNode, error: any) {
   if (node.status > STATUS.MOUNTED) {
     if (debug.error) {
       debugLog(
         "error",
-        isAbortError(error)
-          ? `${node.componentName}: abort after destroy, dropped`
-          : `${node.componentName}: rejection after destroy, rethrown`,
+        `${node.componentName}: ${isAbortError(error) ? "abort" : "rejection"} after destroy, dropped`,
         error
       );
     }
-    if (isAbortError(error)) {
-      return;
-    }
-    throw error;
+    return;
   }
   handleError({ node, error });
 }

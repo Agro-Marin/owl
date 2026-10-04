@@ -194,12 +194,14 @@ means:
 - the promise chain settles and is garbage-collected normally;
 - you see `AbortError` in DevTools rather than a silently-stopped coroutine.
 
-The `onWillStart` and `onWillUpdateProps` hook runners catch `AbortError`
-silently when the scope is dead — nothing reaches `onError`. Any other
-rejection of a dead component does not reach `onError` either, nor does it
-tear the app down: nobody waits for that component any more, so the error
-is rethrown and surfaces as an unhandled promise rejection. If you want to
-handle the abort explicitly, wrap the body in `try/catch` and check
+The `onWillStart` and `onWillUpdateProps` hook runners drop a rejection that
+arrives once the component is dead — an `AbortError` or any other error. Nobody
+waits for that component any more: the error reaches no `onError`, does not tear
+the app down and is not reported as an unhandled rejection (an error recovery
+that recreates a component often destroys the new instance before the promise it
+shares with the old one rejects, after a handler dealt with that error). The
+`error` [debug channel](debug_logging.md) logs each one. If you want to handle
+the abort explicitly, wrap the body in `try/catch` and check
 `err.name === "AbortError"`.
 
 ## Running Code in a Captured Scope
