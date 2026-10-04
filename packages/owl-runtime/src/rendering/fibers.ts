@@ -65,7 +65,7 @@ export function makeRootFiber(node: ComponentNode): Fiber {
     root.setCounter(root.counter + rendered - cancelFibers(current.children));
     root.locked = false;
     current.children = [];
-    current.childrenMap = {};
+    current.childrenMap = null;
     current.bdom = null;
     current.phase = FiberPhase.NEW;
     if (root instanceof MountFiber && root.prepared) {
@@ -186,7 +186,7 @@ export class Fiber {
   renderState = 0;
   deep: boolean = false;
   phase: FiberPhase = FiberPhase.NEW;
-  childrenMap: ComponentNode["children"] = {};
+  childrenMap: ComponentNode["childMap"] = null;
 
   constructor(node: ComponentNode, parent: Fiber | null) {
     this.node = node;
@@ -221,7 +221,7 @@ export class Fiber {
           // finished (counter 0) or failed render pass survives that pass.
           if (
             (root.counter === 0 || fibersInError.has(root)) &&
-            (!prev.parent || prev.parentKey! in current.fiber.childrenMap)
+            (!prev.parent || !!current.fiber.childrenMap?.has(prev.parentKey!))
           ) {
             current = root.node;
           } else {
@@ -518,7 +518,7 @@ export class MountFiber extends RootFiber {
     }
     try {
       const node = this.node;
-      node.children = this.childrenMap;
+      node.childMap = this.childrenMap;
       (node.app.constructor as any).validateTarget(this.target!, {
         attached: !this.allowDetached,
       });

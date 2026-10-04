@@ -33,11 +33,9 @@ type HookKind =
   | "willPatch"
   | "patched";
 
-// Shared by every node until it registers a hook of a kind, or a child: most
-// components register few hooks, and a leaf has no child. Frozen, so a write
-// that bypasses addHook or createComponent fails loudly.
+// Shared by every node until it registers a hook of a kind: most components
+// register few hooks. Frozen, so a write that bypasses addHook fails loudly.
 const NO_HOOKS: LifecycleHook[] = Object.freeze([]) as any;
-export const NO_CHILDREN: { [key: string]: ComponentNode } = Object.freeze(Object.create(null));
 
 export class ComponentNode extends Scope implements VNode<ComponentNode> {
   fiber: Fiber | null = null;
@@ -51,7 +49,11 @@ export class ComponentNode extends Scope implements VNode<ComponentNode> {
   templateFn!: Function;
   renderCtx!: { this: Component; __owl__: ComponentNode };
   parent: ComponentNode | null;
-  children: { [key: string]: ComponentNode } = NO_CHILDREN;
+  // the child nodes by key, null until the first one. A Map rather than an
+  // object: a key is a string built by the render, and a new key on an object
+  // is interned in the engine's string table, several times the cost of a Map
+  // entry
+  childMap: Map<string, ComponentNode> | null = null;
 
   willUpdateProps: LifecycleHook[] = NO_HOOKS;
   // Fired right after `props` is applied to `node.props` on a parent re-render,
@@ -120,6 +122,13 @@ export class ComponentNode extends Scope implements VNode<ComponentNode> {
       scopeStack.pop();
       setComputation(previousComputation);
     }
+  }
+
+  /**
+   * The child nodes by key, as a new plain object.
+   */
+  get children(): { [key: string]: ComponentNode } {
+    return this.childMap ? Object.fromEntries(this.childMap) : {};
   }
 
   renderFn() {
@@ -231,7 +240,7 @@ export class ComponentNode extends Scope implements VNode<ComponentNode> {
   }
 
   cancel() {
-    delete this.parent!.children[this.parentKey!];
+    this.parent!.childMap?.delete(this.parentKey!);
     this._destroy();
   }
 
@@ -278,9 +287,9 @@ export class ComponentNode extends Scope implements VNode<ComponentNode> {
     if (removalDepth && this.trackedRefs) {
       (removed ||= []).push(this);
     }
-    for (let childKey in this.children) {
+    for (const child of this.childMap?.values() || []) {
       try {
-        this.children[childKey]._destroy();
+        child._destroy();
       } catch (error) {
         failure ||= { error };
       }
@@ -353,8 +362,7 @@ export class ComponentNode extends Scope implements VNode<ComponentNode> {
     if (this.bdom === this.fiber!.bdom) {
       // If the error was handled by some child component, we need to find it to
       // apply its change
-      for (let k in this.children) {
-        const child = this.children[k];
+      for (const child of this.childMap?.values() || []) {
         child.updateDom();
       }
       // this component did not re-render: its fiber is the committed pass's,
@@ -364,7 +372,7 @@ export class ComponentNode extends Scope implements VNode<ComponentNode> {
       // if we get here, this is the component that handled the error and rerendered
       // itself, so we can simply patch the dom: what the new render dropped is
       // destroyed by the patch, and must leave the children map with it
-      this.children = this.fiber!.childrenMap;
+      this.childMap = this.fiber!.childrenMap;
       removalDepth++;
       try {
         this.bdom!.patch(this.fiber!.bdom, true);
@@ -393,7 +401,7 @@ export class ComponentNode extends Scope implements VNode<ComponentNode> {
     bdom.mount(parent, anchor);
     this.status = STATUS.MOUNTED;
     this.fiber!.renderState |= APPLIED_TO_DOM;
-    this.children = this.fiber!.childrenMap;
+    this.childMap = this.fiber!.childrenMap;
     this.fiber = null;
   }
 
@@ -440,14 +448,9 @@ export class ComponentNode extends Scope implements VNode<ComponentNode> {
     }
   }
   _patch() {
-    let hasChildren = false;
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    for (let _k in this.children) {
-      hasChildren = true;
-      break;
-    }
+    const hasChildren = !!this.childMap?.size;
     const fiber = this.fiber!;
-    this.children = fiber.childrenMap;
+    this.childMap = fiber.childrenMap;
     removalDepth++;
     try {
       this.bdom!.patch(fiber.bdom!, hasChildren);

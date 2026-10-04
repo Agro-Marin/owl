@@ -14,7 +14,7 @@ import { App } from "../app";
 import { BDom, createCatcher, multi, RefCallback, text, toggler } from "../blockdom";
 import { html } from "../blockdom/index";
 import { Component } from "../component";
-import { ComponentNode, NO_CHILDREN } from "../component_node";
+import { ComponentNode } from "../component_node";
 import { Markup } from "../utils";
 import { handleHookRejection } from "./error_handling";
 import { Fiber, makeChildFiber } from "./fibers";
@@ -319,6 +319,70 @@ function modelExpr(value: any) {
   return value;
 }
 
+/**
+ * Re-renders an existing child with new props, once its onWillUpdateProps
+ * hooks have run (and settled, when one returns a promise). Kept out of the
+ * createComponent closure: its own closures would make every call of that
+ * closure, a new child included, allocate a context.
+ */
+function updateChild(node: ComponentNode, props: Record<string, any>, parentFiber: Fiber) {
+  if (debug.fiber) {
+    debugLog(
+      "fiber",
+      `update ${node.componentName}: ${node.forceNextRender ? "forced" : parentFiber.deep ? "deep render" : "props changed"}${node.willUpdateProps.length ? `, ${node.willUpdateProps.length} willUpdateProps` : ""}`
+    );
+  }
+  node.forceNextRender = false;
+  const hooks = node.willUpdateProps;
+  const fiber = makeChildFiber(node, parentFiber);
+  node.fiber = fiber;
+  const parentRoot = parentFiber.root!;
+  if (node.willPatch.length) parentRoot.willPatch.push(fiber);
+  if (node.patched.length) parentRoot.patched.push(fiber);
+  let promises: Promise<any>[] | undefined;
+  if (hooks.length) {
+    // Defaults must reach the hooks but must NOT be stored on node.props:
+    // otherwise the next arePropsDifferent call sees ghost diffs on default
+    // keys and re-renders on every parent render. Consumers (`props.static`/`props`)
+    // already resolve defaults lazily from raw node.props.
+    let nextProps = props;
+    const defaultProps = node.defaultProps;
+    if (defaultProps) {
+      nextProps = Object.assign({}, props);
+      for (const k in defaultProps) {
+        if (nextProps[k] === undefined) {
+          nextProps[k] = defaultProps[k];
+        }
+      }
+    }
+    const component = node.component;
+    untrack(() => {
+      for (const f of hooks) {
+        const r = f.call(component, nextProps);
+        if (r && typeof r.then === "function") {
+          (promises ||= []).push(r);
+        }
+      }
+    });
+  }
+  if (promises) {
+    const p = promises.length === 1 ? promises[0] : Promise.all(promises);
+    p.then(
+      () => {
+        if (fiber !== node.fiber) return;
+        node.props = props;
+        for (const f of node.propsUpdated) f();
+        fiber.render();
+      },
+      (error) => handleHookRejection(node, error)
+    );
+  } else {
+    node.props = props;
+    for (const f of node.propsUpdated) f();
+    fiber.render();
+  }
+}
+
 function createComponent<P extends Record<string, any>>(
   app: App,
   name: string | null,
@@ -358,8 +422,7 @@ function createComponent<P extends Record<string, any>>(
   const initiateRender = ComponentNode.prototype.initiateRender;
 
   return (props: P, key: string, ctx: ComponentNode, parent: any, C: any) => {
-    let children = ctx.children;
-    let node: any = children[key];
+    let node: any = ctx.childMap?.get(key);
     if (isDynamic && node && node.component.constructor !== C) {
       node = undefined;
     }
@@ -375,61 +438,7 @@ function createComponent<P extends Record<string, any>>(
     }
     if (node) {
       if (arePropsDifferent(node.props, props) || parentFiber.deep || node.forceNextRender) {
-        if (debug.fiber) {
-          debugLog(
-            "fiber",
-            `update ${node.componentName}: ${node.forceNextRender ? "forced" : parentFiber.deep ? "deep render" : "props changed"}${node.willUpdateProps.length ? `, ${node.willUpdateProps.length} willUpdateProps` : ""}`
-          );
-        }
-        node.forceNextRender = false;
-        const hooks = node.willUpdateProps;
-        const fiber = makeChildFiber(node, parentFiber);
-        node.fiber = fiber;
-        const parentRoot = parentFiber.root!;
-        if (node.willPatch.length) parentRoot.willPatch.push(fiber);
-        if (node.patched.length) parentRoot.patched.push(fiber);
-        let promises: Promise<any>[] | undefined;
-        if (hooks.length) {
-          // Defaults must reach the hooks but must NOT be stored on node.props:
-          // otherwise the next arePropsDifferent call sees ghost diffs on default
-          // keys and re-renders on every parent render. Consumers (`props.static`/`props`)
-          // already resolve defaults lazily from raw node.props.
-          let nextProps = props;
-          const defaultProps = node.defaultProps;
-          if (defaultProps) {
-            nextProps = Object.assign({}, props) as P;
-            for (const k in defaultProps) {
-              if ((nextProps as any)[k] === undefined) {
-                (nextProps as any)[k] = defaultProps[k];
-              }
-            }
-          }
-          const component = node.component;
-          untrack(() => {
-            for (const f of hooks) {
-              const r = f.call(component, nextProps);
-              if (r && typeof r.then === "function") {
-                (promises ||= []).push(r);
-              }
-            }
-          });
-        }
-        if (promises) {
-          const p = promises.length === 1 ? promises[0] : Promise.all(promises);
-          p.then(
-            () => {
-              if (fiber !== node.fiber) return;
-              node.props = props;
-              for (const f of node.propsUpdated) f();
-              fiber.render();
-            },
-            (error) => handleHookRejection(node, error)
-          );
-        } else {
-          node.props = props;
-          for (const f of node.propsUpdated) f();
-          fiber.render();
-        }
+        updateChild(node, props, parentFiber);
       } else if (debug.fiber) {
         debugLog("fiber", `keep ${node.componentName}: props unchanged`);
       }
@@ -455,10 +464,7 @@ function createComponent<P extends Record<string, any>>(
       if (signals) {
         propSignals.set(node, signals);
       }
-      if (children === NO_CHILDREN) {
-        children = ctx.children = Object.create(null);
-      }
-      children[key] = node;
+      (ctx.childMap ||= new Map()).set(key, node);
       const fiber = new Fiber(node, parentFiber);
       if (node.willStart.length) {
         initiateRender.call(node, fiber);
@@ -470,7 +476,7 @@ function createComponent<P extends Record<string, any>>(
         fiber.render();
       }
     }
-    parentFiber.childrenMap[key] = node;
+    (parentFiber.childrenMap ||= new Map()).set(key, node);
     return node;
   };
 }
