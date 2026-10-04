@@ -106,6 +106,44 @@ effect(() => {
 s.set(4); // the effect runs again and logs 2
 ```
 
+## Selectors
+
+A list that highlights its selected row reads the selection once per row: with
+`row.id === this.state.selected` in each row, every row depends on
+`selected`, and a selection change renders all of them. `selector(source)`
+returns a function `isSelected(key)` that a row reads instead: a computation
+reading `isSelected(key)` depends on the answer for that key only, so a change
+from `a` to `b` notifies the readers of `a` and of `b`, no other.
+
+```js
+class List extends Component {
+  static template = xml`
+    <ul><Row t-foreach="this.rows" t-as="row" t-key="row.id"
+             row="row" isSelected="this.isSelected"/></ul>`;
+  static components = { Row };
+  state = proxy({ selected: null });
+  isSelected = selector(() => this.state.selected);
+}
+
+class Row extends Component {
+  static template = xml`
+    <li t-att-class="{ on: this.props.isSelected(this.props.row.id) }"
+        t-out="this.props.row.label"/>`;
+  props = props();
+}
+```
+
+Selecting another row renders two `Row`s and not the list. The rows must be
+components (or read the selector in a computation of their own): a list that
+reads `isSelected(row.id)` for every row in its own template depends on every
+key, and renders as a whole.
+
+Keys are compared with `Object.is`. A read outside any computation answers
+without subscribing; inside a `batch`, it already sees a source change made
+earlier in the batch. Like `computed`, a selector is disposed with the scope it
+is created in (pass `{ detached: true }` to keep it), after which it keeps its
+last answer and tracks nothing.
+
 ## Async Computed Values
 
 > **Experimental.** `asyncComputed` is still shaking out; the exact API

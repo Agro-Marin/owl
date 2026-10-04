@@ -55,6 +55,7 @@ export {
   markRaw,
   observe,
   proxy,
+  selector,
   signal,
   toRaw,
   untrack,
@@ -64,6 +65,7 @@ export {
   type Equals,
   type ReactiveValue,
   type ReadonlyReactiveValue,
+  type SelectorOptions,
   type Signal,
 } from "@odoo/owl-core";
 export { useEffect, useListener, useOnChange, useApp } from "./hooks";

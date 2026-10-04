@@ -31,7 +31,7 @@ Each primitive has its own reference page:
   covered there too.
 - **[Computed values](computed_values.md)** — lazily-evaluated derived values
   that track their dependencies and recompute on demand, plus the asynchronous
-  `asyncComputed`.
+  `asyncComputed` and the keyed `selector`.
 - **[Proxies](proxies.md)** — reactive objects where reading a property
   subscribes to it and writing notifies subscribers, with deep wrapping.
 - **[Effects](effects.md)** — functions that re-run when their reactive

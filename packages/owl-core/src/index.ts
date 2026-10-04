@@ -41,6 +41,9 @@ export { signal, type Signal } from "./signal";
 // Reactivity: computed
 export { computed } from "./computed";
 
+// Reactivity: selector
+export { selector, type SelectorOptions } from "./selector";
+
 // Reactivity: effect
 export { effect, immediateEffect, type EffectOptions } from "./effect";
 
