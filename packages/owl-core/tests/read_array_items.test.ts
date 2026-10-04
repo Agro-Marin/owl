@@ -19,7 +19,7 @@ describe("readArrayItems", () => {
     const items = readArrayItems(array);
     expect(items).not.toBe(array);
     expect(items[0]).toBe(array[0]);
-    expect(toRaw(items[0])).toBe(inner);
+    expect(toRaw(items[0] as object)).toBe(inner);
     expect(items.slice(1)).toEqual([2, "a", null]);
   });
 
@@ -36,7 +36,7 @@ describe("readArrayItems", () => {
 
   test("hands out a frozen array's items raw, as its get trap must", () => {
     const item = { id: 1 };
-    const array = proxy(Object.freeze([item]));
+    const array = proxy(Object.freeze([item]) as { id: number }[]);
     expect(array[0]).toBe(item);
     expect(readArrayItems(array)[0]).toBe(item);
   });
