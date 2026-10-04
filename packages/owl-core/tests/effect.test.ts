@@ -235,6 +235,31 @@ describe("effect", () => {
     expect(seen).toEqual([[], [50, 60], [10, 20]]);
   });
 
+  test("a computed recomputed by a run invalidates a source that run read: the run settles it", async () => {
+    // c was disposed while d still read it: d stays up to date, c goes stale
+    // and stops following s. The effect reads d, then c untracked, whose
+    // recompute (s changed meanwhile) invalidates d after the effect read it.
+    const s = signal(1);
+    const t = signal(0);
+    const c = computed(() => s());
+    const d = computed(() => c() * 10);
+    const seen: number[] = [];
+    effect(() => {
+      t();
+      seen.push(d() + untrack(() => c()));
+    });
+    expect(seen).toEqual([11]);
+    disposeComputation((c as any)[atomSymbol]);
+    s.set(2);
+    t.set(1);
+    await waitScheduler();
+    expect(seen).toEqual([11, 12]);
+    // d was settled at the end of that run: it still propagates
+    s.set(3);
+    await waitScheduler();
+    expect(seen).toEqual([11, 12, 33]);
+  });
+
   test("effects, signals, stuff", async () => {
     const s1 = signal(1);
     const s2 = signal(0);

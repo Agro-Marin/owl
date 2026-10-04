@@ -1,4 +1,3 @@
-import { batched } from "./batched";
 import { debug, debugLog } from "./debug";
 
 export interface ReadonlyReactiveValue<TRead> {
@@ -187,9 +186,11 @@ let currentComputation: ComputationAtom | undefined;
 // a computation being pulled lazily is unobserved while it recomputes — so
 // the flush re-checks before disposing.
 let pendingDisposals = new Set<ComputationAtom>();
-// Bumped by every write: a run during which it did not move wrote nothing, so
-// it cannot have invalidated one of its own sources.
-let writeCount = 0;
+// Bumped by every write that invalidates an up-to-date computation: a run
+// during which it did not move cannot have invalidated one of its own sources.
+// (A computed notifying its readers of a new value on recompute does not move
+// it: those readers were invalidated already, when the computed was.)
+let invalidations = 0;
 
 export function createComputation(
   compute: () => any,
@@ -385,7 +386,6 @@ export function withObserver<T>(observer: ComputationAtom, fn: () => T): T {
 }
 
 export function onWriteAtom(atom: Atom) {
-  writeCount++;
   if (debug.reactivity) {
     const names = observerNames(atom);
     debugLog("reactivity", `write, ${names.length} observer(s)`, names);
@@ -393,6 +393,7 @@ export function onWriteAtom(atom: Atom) {
   for (let link = atom.subs; link !== undefined; link = link.nextSub) {
     const ctx = link.sub;
     if (ctx.state === ComputationState.EXECUTED) {
+      invalidations++;
       if (ctx.isDerived) {
         markDownstream(ctx);
       } else if (ctx.immediate) {
@@ -412,7 +413,11 @@ export function onWriteAtom(atom: Atom) {
     immediateObservers = [];
     errors = updateEach(toRun);
   }
-  batchProcessEffects();
+  // scheduled by every write, even one that queued nothing: the flush keeps
+  // its place among the microtasks of the tick that wrote first
+  if (!flushScheduled) {
+    scheduleFlush();
+  }
   rethrow(errors);
 }
 
@@ -470,7 +475,7 @@ function updateOwnerFirst(computation: ComputationAtom) {
   // the topmost ancestor due in the same queue, idle and stale: its run
   // disposes every effect below it, this one included
   let first: ComputationAtom | null = null;
-  for (let owner = computation.owner; owner; owner = owner.owner) {
+  for (let owner = computation.owner; owner !== null; owner = owner.owner) {
     if (
       owner.state !== ComputationState.EXECUTED &&
       !owner.running &&
@@ -497,8 +502,18 @@ function rethrow(errors: unknown[] | null) {
   }
 }
 
-const batchProcessEffects = batched(processEffects);
+let flushScheduled = false;
+
+// Intentionally Promise-based: errors thrown by the flush surface as unhandled
+// promise rejections, which vitest's `onUnhandledError` hook intercepts (see
+// tests/effect.test.ts using `IntentionalTestError`).
+function scheduleFlush() {
+  flushScheduled = true;
+  Promise.resolve().then(processEffects);
+}
+
 function processEffects() {
+  flushScheduled = false;
   const pending = observers;
   observers = [];
   if (debug.effect) {
@@ -565,7 +580,7 @@ export function updateComputation(computation: ComputationAtom) {
       return;
     }
   }
-  const writesBefore = writeCount;
+  const invalidationsBefore = invalidations;
   computation.running = true;
   if (computation.isEffect ? debug.effect : computation.isDerived && debug.computed) {
     debugLog(computation.isEffect ? "effect" : "computed", `run ${computation.name}`);
@@ -580,7 +595,7 @@ export function updateComputation(computation: ComputationAtom) {
   } finally {
     computation.running = false;
     try {
-      if (writeCount !== writesBefore) {
+      if (invalidations !== invalidationsBefore) {
         settleDerivedSources(computation);
       }
     } finally {
@@ -727,8 +742,13 @@ export function disposeOwned(computation: ComputationAtom) {
   }
 }
 
+// the derived computations markDownstream has yet to visit (it calls no user
+// code, so one stack serves every call)
+const downstream: ComputationAtom[] = [];
+
 function markDownstream(computation: ComputationAtom) {
-  const stack: ComputationAtom[] = [computation];
+  const stack = downstream;
+  stack.push(computation);
   let current: ComputationAtom | undefined;
   while ((current = stack.pop())) {
     for (let link = current.subs; link !== undefined; link = link.nextSub) {
