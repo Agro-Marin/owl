@@ -40,7 +40,10 @@ function createElementHandler(
     config.mainEventHandler(data, ev, currentTarget);
   }
 
-  const options: AddEventListenerOptions = { capture, passive };
+  // a dictionary costs the browser twice a boolean to read, on every element:
+  // only a passive listener needs one (an element is never window, document or
+  // body, the targets where an unspecified passive defaults to true)
+  const options: AddEventListenerOptions | boolean = passive ? { capture, passive } : capture;
 
   function setup(this: HTMLElement, data: any) {
     (this as any)[eventKey] = data;
