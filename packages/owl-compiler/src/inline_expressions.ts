@@ -570,11 +570,13 @@ export function processExpr(
     let isVar = token.type === "SYMBOL" && !token.isKeyword && !RESERVED_WORDS.has(token.value);
     if (isVar) {
       if (prevToken) {
-        // normalize missing tokens: {a} should be equivalent to {a:a}
+        // normalize missing tokens: {a} should be equivalent to {a:a}, and the
+        // pattern {a = 1} to {a:a = 1}
         if (
           groupType === "LEFT_BRACE" &&
           isLeftSeparator(prevToken) &&
-          isRightSeparator(nextToken)
+          (isRightSeparator(nextToken) ||
+            (nextToken?.type === "OPERATOR" && nextToken.value === "="))
         ) {
           tokens.splice(i + 1, 0, { type: "COLON", value: ":" }, { ...token });
           nextToken = tokens[i + 1];

@@ -115,6 +115,17 @@ describe("expression evaluation", () => {
     expect(compileExpr("x++ + y")).toBe("ctx['x']++ +ctx['y']");
   });
 
+  test("a destructured parameter's shorthand default keeps its key", () => {
+    const run = (expr: string, ...args: any[]) =>
+      new Function("ctx", `return (${compileExpr(expr)})`)({ z: 9 })(...args);
+    expect(compileExpr("({y = 0}) => y")).toBe("({y:_y=0})=>_y");
+    expect(run("({y = 0}) => y", { y: 5 })).toBe(5);
+    expect(run("({y = 0}) => y", {})).toBe(0);
+    expect(run("({y = z}) => y", {})).toBe(9);
+    expect(run("(a, {y = 0}) => a + y", 1, { y: 3 })).toBe(4);
+    expect(run("({ y = 0, ...rest }) => [y, rest]", { y: 5, a: 7 })).toEqual([5, { a: 7 }]);
+  });
+
   test("parenthesis", () => {
     expect(compileExpr("(1)")).toBe("(1)");
     expect(compileExpr("a*(1 +3)")).toBe("ctx['a']*(1+3)");
