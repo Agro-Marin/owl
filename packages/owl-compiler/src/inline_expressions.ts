@@ -68,7 +68,8 @@ interface Token {
   replace?: Function;
   isLocal?: boolean;
   templateVars?: string[];
-  // `async` before an arrow, `await` in an async arrow's body
+  // `async` before an arrow, `await` in an async arrow's body, `const`, `let`
+  // or `var` in an arrow's block body
   isKeyword?: boolean;
 }
 
@@ -90,13 +91,28 @@ const OPERATORS =
     ","
   );
 
-type Tokenizer = (expr: string, previous: Token | undefined) => Token | false;
+type Tokenizer = (
+  expr: string,
+  previous: Token | undefined,
+  beforePrevious?: Token | undefined
+) => Token | false;
 
 let tokenizeString: Tokenizer = function (expr) {
   let s = expr[0];
   let start = s;
   if (s !== "'" && s !== '"' && s !== "`") {
     return false;
+  }
+  if (start === "`") {
+    const end = findTemplateEnd(expr, 0);
+    const value = expr.slice(0, end + 1);
+    return {
+      type: "TEMPLATE_STRING",
+      value,
+      replace(replacer: (expr: string) => string) {
+        return replaceInterpolations(value, replacer);
+      },
+    };
   }
   let i = 1;
   let cur;
@@ -117,17 +133,25 @@ let tokenizeString: Tokenizer = function (expr) {
     throw new OwlError("Invalid expression");
   }
   s += start;
-  if (start === "`") {
-    return {
-      type: "TEMPLATE_STRING",
-      value: s,
-      replace(replacer: (expr: string) => string) {
-        return replaceInterpolations(s, replacer);
-      },
-    };
-  }
   return { type: "VALUE", value: s };
 };
+
+/**
+ * Returns the index of the backtick that closes the template literal opened at
+ * `start`, past the interpolations, which may hold template literals themselves.
+ */
+function findTemplateEnd(str: string, start: number): number {
+  for (let i = start + 1; i < str.length; i++) {
+    if (str[i] === "\\") {
+      i++;
+    } else if (str[i] === "`") {
+      return i;
+    } else if (str.startsWith("${", i)) {
+      i = findClosingBrace(str, i + 2);
+    }
+  }
+  throw new OwlError("Invalid expression");
+}
 
 function replaceInterpolations(template: string, replacer: (expr: string) => string): string {
   let result = "";
@@ -157,6 +181,8 @@ function findClosingBrace(str: string, start: number): number {
           i++;
         }
       }
+    } else if (char === "`") {
+      i = findTemplateEnd(str, i);
     } else if (char === "{") {
       depth++;
     } else if (char === "}") {
@@ -207,12 +233,22 @@ const OPERAND_PREFIXES = new Set<TKind>([
   "COLON",
 ]);
 
+// the keywords an operand follows: `void /x/` is a regular expression, but
+// `a.void / 2` a division
+const OPERAND_KEYWORDS = new Set(["void", "return"]);
+
 // a / where an operand is expected starts a regular expression literal; after
 // a ++ or a --, which a regular expression cannot follow, it is a division
-const tokenizeRegExp: Tokenizer = function (expr, previous) {
+const tokenizeRegExp: Tokenizer = function (expr, previous, beforePrevious) {
+  const afterKeyword =
+    previous?.type === "SYMBOL" &&
+    OPERAND_KEYWORDS.has(previous.value) &&
+    beforePrevious?.value !== "." &&
+    beforePrevious?.value !== "?.";
   if (
     expr[0] !== "/" ||
     (previous &&
+      !afterKeyword &&
       (!OPERAND_PREFIXES.has(previous.type) || previous.value === "++" || previous.value === "--"))
   ) {
     return false;
@@ -304,7 +340,7 @@ export function tokenize(expr: string): Token[] {
         const previous = result[result.length - 1];
         const isProperty = previous?.value === "." || previous?.value === "?.";
         for (let tokenizer of isProperty ? PROPERTY_TOKENIZERS : TOKENIZERS) {
-          token = tokenizer(current, previous);
+          token = tokenizer(current, previous, result[result.length - 2]);
           if (token) {
             result.push(token);
             current = current.slice(token.size || token.value.length);
@@ -371,8 +407,12 @@ function render(tokens: Token[]): string {
     const value = t.isKeyword ? t.value + " " : paddedValues.get(t.value) || t.value;
     // tokens are joined without spaces: `a + +b` must not read as `a++b`, nor
     // `n + ++m` as `n++ + m`
+    // nor `return x` as `returnx`
     const last = code[code.length - 1];
-    if ((last === "+" || last === "-") && value[0] === last) {
+    if (
+      ((last === "+" || last === "-") && value[0] === last) ||
+      (last && IDENTIFIER_CHAR_RE.test(last) && IDENTIFIER_CHAR_RE.test(value[0]))
+    ) {
       code += " ";
     }
     code += value;
@@ -431,6 +471,109 @@ function bindArrowParams(tokens: Token[], end: number, scope: Set<string>): numb
     }
   }
   return start;
+}
+
+const DECLARATION_KEYWORDS = new Set(["const", "let", "var"]);
+
+/**
+ * Turns the names the declarations of the arrow block body opened at `start`
+ * bind into locals, wherever they are in it, and marks their keywords.
+ */
+function bindBlockDeclarations(tokens: Token[], start: number, scope: Set<string>) {
+  let depth = 0;
+  for (let k = start + 1; k < tokens.length && depth >= 0; k++) {
+    const t = tokens[k];
+    if (LEFT_GROUPS.has(t.type)) {
+      depth++;
+    } else if (RIGHT_GROUPS.has(t.type)) {
+      depth--;
+    } else if (
+      !depth &&
+      t.type === "SYMBOL" &&
+      DECLARATION_KEYWORDS.has(t.value) &&
+      (tokens[k + 1]?.type === "SYMBOL" ||
+        tokens[k + 1]?.type === "LEFT_BRACE" ||
+        tokens[k + 1]?.type === "LEFT_BRACKET")
+    ) {
+      t.isKeyword = true;
+      k = bindDeclarators(tokens, k + 1, scope);
+    }
+  }
+}
+
+/**
+ * Adds the names bound by the declarators starting at `start` (`a = 1, {b, c:
+ * d = 2} = e, [f]`) to `scope`, and returns the index of their last token.
+ */
+function bindDeclarators(tokens: Token[], start: number, scope: Set<string>): number {
+  let depth = 0;
+  let inValue = false;
+  let k = start;
+  for (; k < tokens.length; k++) {
+    const t = tokens[k];
+    if (LEFT_GROUPS.has(t.type)) {
+      if (!depth && !inValue) {
+        k = bindPattern(tokens, k, scope);
+      } else {
+        depth++;
+      }
+    } else if (RIGHT_GROUPS.has(t.type)) {
+      if (!depth--) {
+        return k - 1;
+      }
+    } else if (depth) {
+      continue;
+    } else if (t.type === "COMMA") {
+      inValue = false;
+    } else if (t.type === "OPERATOR" && t.value === "=") {
+      inValue = true;
+    } else if (t.type === "OPERATOR" && t.value === ";") {
+      return k;
+    } else if (t.type === "SYMBOL" && !inValue) {
+      scope.add(t.value);
+    }
+  }
+  return k;
+}
+
+/**
+ * Adds the names bound by the destructuring pattern opened at `start` to
+ * `scope`, default values and computed keys aside, and returns the index of
+ * its closing token.
+ */
+function bindPattern(tokens: Token[], start: number, scope: Set<string>): number {
+  const levels: { inExpr: boolean; base: boolean; isObject: boolean }[] = [];
+  let k = start;
+  for (; k < tokens.length; k++) {
+    const t = tokens[k];
+    const level = levels[levels.length - 1];
+    if (LEFT_GROUPS.has(t.type)) {
+      // a "[" in key position of an object pattern is a computed key
+      const prev = tokens[k - 1].type;
+      const inExpr =
+        !!level &&
+        (level.inExpr || (level.isObject && (prev === "LEFT_BRACE" || prev === "COMMA")));
+      levels.push({ inExpr, base: inExpr, isObject: t.type === "LEFT_BRACE" });
+    } else if (RIGHT_GROUPS.has(t.type)) {
+      levels.pop();
+      if (!levels.length) {
+        return k;
+      }
+    } else if (t.type === "COMMA") {
+      level.inExpr = level.base;
+    } else if (t.type === "OPERATOR" && t.value === "=") {
+      level.inExpr = true;
+    } else if (
+      t.type === "SYMBOL" &&
+      !level.inExpr &&
+      tokens[k + 1]?.type !== "COLON" &&
+      tokens[k - 1].value !== "." &&
+      tokens[k - 1].value !== "?."
+    ) {
+      scope.add(t.value);
+    }
+  }
+  return k;
 }
 
 /**
@@ -522,7 +665,15 @@ export function processExpr(
 
     switch (token.type) {
       case "LEFT_BRACE":
-        stack.push(prevToken?.value === "=>" ? "BLOCK" : token.type);
+        if (prevToken?.value === "=>") {
+          stack.push("BLOCK");
+          const scope = scopeStack[scopeStack.length - 1];
+          if (scope) {
+            bindBlockDeclarations(tokens, i, scope.vars);
+          }
+        } else {
+          stack.push(token.type);
+        }
         break;
       case "LEFT_BRACKET":
       case "LEFT_PAREN":
@@ -554,7 +705,12 @@ export function processExpr(
         break;
       }
       case "OPERATOR":
-        if (token.value === "?") {
+        if (token.value === ";") {
+          // a statement ends the concise arrows of the block body it is in
+          while (innermostScopeAtDepth()) {
+            scopeStack.pop();
+          }
+        } else if (token.value === "?") {
           const scope = innermostScopeAtDepth();
           if (scope) {
             scope.ternaries++;

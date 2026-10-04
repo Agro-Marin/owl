@@ -309,6 +309,13 @@ describe("expression evaluation", () => {
     expect(compileExpr("x ? /a/ : /b/")).toBe("ctx['x']?/a/:/b/");
   });
 
+  test("a / after void or return starts a regular expression, unless they are properties", () => {
+    expect(compileExpr("void /x/.test(y)")).toBe("void /x/.test(ctx['y'])");
+    expect(compileExpr("() => { return /x/.test(y) }")).toBe("()=>{return/x/.test(ctx['y'])}");
+    expect(compileExpr("a.void / 2 / b")).toBe("ctx['a'].void /2/ctx['b']");
+    expect(compileExpr("a?.return / b")).toBe("ctx['a']?.return/ctx['b']");
+  });
+
   test("word operators as object keys", () => {
     expect(compileExpr("({gt: 1, lt: a}).gt")).toBe("({gt:1,lt:ctx['a']}).gt");
     expect(compileExpr("{and, or}")).toBe("{and:ctx['and'],or:ctx['or']}");
@@ -344,6 +351,26 @@ describe("expression evaluation", () => {
     expect(compileExpr("({x, y: [z]} = d) => x + z")).toBe("({x:_x,y:[_z]}=ctx['d'])=>_x+_z");
   });
 
+  test("an arrow's block body: return, declarations and statements", () => {
+    const run = (expr: string, ...args: any[]) =>
+      new Function("ctx", `return (${compileExpr(expr)})`)({ x: 1, y: 2, q: "Q" })(...args);
+    expect(compileExpr("() => { return x }")).toBe("()=>{return ctx['x']}");
+    expect(run("() => { return x }")).toBe(1);
+    expect(compileExpr("() => { const a = 1; return a + x }")).toBe(
+      "()=>{const _a=1;return _a+ctx['x']}"
+    );
+    expect(run("() => { let a = 1; a += y; return a }")).toBe(3);
+    expect(run("(p) => { const a = p, b = a * 2; return [a, b, x] }", 5)).toEqual([5, 10, 1]);
+    expect(
+      run("(o) => { const {a, b: c = x, ...r} = o; return [a, c, r] }", { a: 1, z: 2 })
+    ).toEqual([1, 1, { z: 2 }]);
+    expect(run("(o) => { const [a, [b = y] = []] = o; return a + b }", [10])).toBe(12);
+    expect(run("() => { const f = () => a; const a = 3; return f() }")).toBe(3);
+    // a statement ends the concise arrows before it
+    expect(run("() => { const f = q => q; return q }")).toBe("Q");
+    expect(compileExpr("() => ({const: 1, let: x})")).toBe("()=>({const:1,let:ctx['x']})");
+  });
+
   test("arrow functions: not yet supported", () => {
     expect(compileExpr("(e => e)(e)")).toBe("(_e=>_e)(ctx['e'])");
   });
@@ -375,6 +402,15 @@ describe("expression evaluation", () => {
     expect(compileExpr("`${f({x})}`")).toBe("`${ctx['f']({x:ctx['x']})}`");
     expect(compileExpr("`${ {a: b}.a } and ${'}'}`")).toBe("`${{a:ctx['b']}.a} and ${'}'}`");
     expect(compileExpr("`\\${a}`")).toBe("`\\${a}`");
+  });
+
+  test("template strings nested in an interpolation", () => {
+    expect(compileExpr("`a${`b${x}`}`")).toBe("`a${`b${ctx['x']}`}`");
+    expect(compileExpr("`a${x ? `<${t}>` : ''}b` + z")).toBe(
+      "`a${ctx['x']?`<${ctx['t']}>`:''}b`+ctx['z']"
+    );
+    expect(compileExpr("`${'`'}${y}`")).toBe("`${'`'}${ctx['y']}`");
+    expect(compileExpr("x => `${x}${`${x}`}`")).toBe("_x=>`${_x}${`${_x}`}`");
   });
 
   test("template strings", () => {
