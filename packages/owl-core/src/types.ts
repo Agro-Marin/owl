@@ -72,6 +72,15 @@ type MemberShape<M> = M extends { toShape(): infer S } ? S : never;
 // `t.and(...)` exposes a single shape like a plain object schema. Overlapping
 // keys intersect at the type level (the runtime merge lets later members win).
 type MergedShape<T extends any[]> = UnionToIntersection<MemberShape<T[number]>>;
+// The value of an intersection: each member's value, intersected. A member's
+// value is boxed first, or UnionToIntersection would also split the member's
+// own union - an optional member's `V | undefined` - and yield never.
+type IntersectionValue<T extends any[]> =
+  UnionToIntersection<
+    T[number] extends infer M ? (M extends any ? { value: StripBrands<M> } : never) : never
+  > extends { value: infer V }
+    ? V
+    : never;
 
 type IsAny<T> = 0 extends 1 & T ? true : false;
 type HasDefault<T> = IsAny<T> extends true ? false : T extends { [hasDefault]: any } ? true : false;
@@ -362,9 +371,7 @@ function instanceType<T extends Constructor>(constructor: T): Type<InstanceType<
   });
 }
 
-function intersection<T extends any[]>(
-  types: T
-): ShapeType<MergedShape<T>, UnionToIntersection<StripBrands<T[number]>>> {
+function intersection<T extends any[]>(types: T): ShapeType<MergedShape<T>, IntersectionValue<T>> {
   const validate = makeType(function validateIntersection(context: ValidationContext) {
     for (const type of types) {
       context.validate(type);
@@ -466,7 +473,7 @@ function objectType(): ShapeType<Record<string, any>, Record<string, any>>;
 function objectType<const Keys extends string[]>(
   keys: Keys
 ): ShapeType<Keys, ResolveOptionalEntries<KeyedObject<Keys>>>;
-function objectType<Shape extends {}>(): ShapeType<Shape, ResolveOptionalEntries<Shape>>;
+function objectType<Shape extends {}>(): ShapeType<{}, ResolveOptionalEntries<Shape>>;
 function objectType<Shape extends {}>(
   shape: Shape
 ): ShapeType<Shape, ResolveOptionalEntries<Shape>>;

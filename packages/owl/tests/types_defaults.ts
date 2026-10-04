@@ -133,3 +133,15 @@ assertEq<typeof fromComposedSchema.props.sticky, boolean | undefined>();
 
 void [ok1, ok2, ok3, ok4, ko1, ko2, ko3, ko4, _staticPropCheck, _configCheck, _registryCheck];
 void [fromObjectSchema, fromComposedSchema];
+
+// t.and over an optional member intersects the members' values; the optional
+// member's `undefined` does not turn the intersection into never
+const WithOptional = t.and([t.object({ a: t.number() }).optional(), t.object({ b: t.string() })]);
+declare const andValue: Parameters<typeof checkAnd>[0];
+declare function checkAnd(value: import("../src").StripBrands<typeof WithOptional>): void;
+assertEq<typeof andValue, { a: number } & { b: string }>();
+
+// t.object<Shape>() validates an object without checking its keys: it carries
+// no shape, and toShape() says so
+const Unchecked = t.object<{ a: ReturnType<typeof t.number> }>();
+assertEq<ReturnType<typeof Unchecked.toShape>, {}>();
