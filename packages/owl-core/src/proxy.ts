@@ -492,6 +492,9 @@ class BasicHandler implements ProxyHandler<any> {
       onWriteKeyPresence(target, key);
       onWriteTargetKey(target, key);
       releaseKey(target, key);
+      if (Array.isArray(target)) {
+        onWriteItems(target);
+      }
     }
     return ret;
   }
@@ -510,12 +513,14 @@ class BasicHandler implements ProxyHandler<any> {
 function writeKey(target: any, key: PropertyKey, value: any, receiver: any): boolean {
   const hadKey = objectHasOwnProperty.call(target, key);
   const originalValue = Reflect.get(target, key, receiver);
-  const originalLength = Array.isArray(target) ? target.length : 0;
+  const isArray = Array.isArray(target);
+  const originalLength = isArray ? target.length : 0;
   const ret = Reflect.set(target, key, toRaw(value), receiver);
-  if (!hadKey && objectHasOwnProperty.call(target, key)) {
+  const created = !hadKey && objectHasOwnProperty.call(target, key);
+  if (created) {
     onWriteKeyCreated(target, key, originalLength);
   }
-  if (key === "length" && Array.isArray(target)) {
+  if (key === "length" && isArray) {
     // While Array length may trigger the set trap, it's not actually set by this
     // method but is updated behind the scenes, and the trap is not called with the
     // new value. We disable the "same-value-optimization" for it because of that.
@@ -524,10 +529,71 @@ function writeKey(target: any, key: PropertyKey, value: any, receiver: any): boo
       onWriteTargetKey(target, KEYCHANGES);
       onWriteDroppedIndices(target, target.length, originalValue);
     }
+    onWriteItems(target);
   } else if (!Object.is(originalValue, Reflect.get(target, key, receiver))) {
     onWriteTargetKey(target, key);
+    if (isArray) {
+      onWriteItems(target);
+    }
+  } else if (created && isArray) {
+    onWriteItems(target);
   }
   return ret;
+}
+
+// An array's items, as one atom: read by a loop that reads them all at once
+// (readArrayItems), notified by any write of an index or of the length.
+const itemsAtoms = new WeakMap<Target, Atom>();
+
+function onWriteItems(target: Target): void {
+  const atom = itemsAtoms.get(target);
+  if (atom !== undefined) {
+    onWriteAtom(atom);
+  }
+}
+
+/**
+ * The items of `array`, a proxy() of an array, read at once: one subscription
+ * for the whole array instead of one per index, and each object item handed
+ * out as its proxy, as an index read through the proxy would. For any other
+ * array (a raw one, a collection signal's shallow value, an observe() view)
+ * the array itself, to be read as usual.
+ */
+export function readArrayItems<T>(array: T[]): T[] {
+  const raw = targets.get(array) as T[] | undefined;
+  if (raw === undefined || deepProxies.get(raw) !== array) {
+    return array;
+  }
+  if (isObserving()) {
+    let atom = itemsAtoms.get(raw);
+    if (atom === undefined) {
+      atom = createAtom(undefined, "key");
+      itemsAtoms.set(raw, atom);
+    }
+    onReadAtom(atom);
+  }
+  // the get trap hands out a frozen array's items raw (a proxy invariant)
+  if (Object.isFrozen(raw)) {
+    return raw.slice();
+  }
+  const length = raw.length;
+  const items = new Array(length);
+  for (let i = 0; i < length; i++) {
+    items[i] = deepItem(raw[i]);
+  }
+  return items;
+}
+
+// what the get trap of a deep proxy hands out for `value`
+function deepItem(value: any): any {
+  if (typeof value !== "object" || value === null) {
+    return value;
+  }
+  const reactive = deepProxies.get(value);
+  if (reactive ? skipped.has(value) : !canBeMadeReactive(value)) {
+    return value;
+  }
+  return reactive ?? proxifyTarget(value, false);
 }
 
 function onWriteKeyCreated(target: Target, key: PropertyKey, originalLength: number): void {

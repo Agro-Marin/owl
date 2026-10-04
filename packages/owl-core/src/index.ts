@@ -11,7 +11,7 @@ export { batched } from "./batched";
 export { Scope, scopeStack, getScope, useScope, isAbortError, makeAbortError } from "./scope";
 
 // Reactivity: proxy
-export { proxy, observe, markRaw, toRaw } from "./proxy";
+export { proxy, observe, markRaw, toRaw, readArrayItems } from "./proxy";
 
 // Reactivity: computations (core tracking primitives)
 export {

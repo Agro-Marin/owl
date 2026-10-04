@@ -5,6 +5,7 @@ import {
   debugLog,
   markRaw,
   OwlError,
+  readArrayItems,
   ReadonlyReactiveValue,
   signal,
   Signal,
@@ -97,8 +98,8 @@ function prepareList(collection: unknown): [unknown[], unknown[], number, undefi
   let values: unknown[];
 
   if (Array.isArray(collection)) {
-    keys = collection;
-    values = collection;
+    keys = readArrayItems(collection);
+    values = keys;
   } else if (collection instanceof Map) {
     keys = [...collection.keys()];
     values = [...collection.values()];
