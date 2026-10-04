@@ -91,6 +91,11 @@ test("the scope channel traces a finalize", () => {
   expect(lines).toEqual(["scope: TestScope: finalize, 1 destroy callback(s), 0 computation(s)"]);
 });
 
+test("setDebug ignores empty entries of a string", () => {
+  expect(() => setDebug("")).not.toThrow();
+  expect(() => setDebug("effect,")).not.toThrow();
+});
+
 test("setDebug rejects an unknown channel", () => {
   expect(() => setDebug(["fibre"])).toThrow('Unknown debug channel "fibre"');
 });

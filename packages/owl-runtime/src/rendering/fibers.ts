@@ -2,6 +2,7 @@ import {
   ComputationState,
   debug,
   debugLog,
+  debugNow,
   OwlError,
   removeSources,
   runTracked,
@@ -270,7 +271,7 @@ export class Fiber {
       removeSources(node.signalComputation);
       node.signalComputation.state = ComputationState.EXECUTED;
       this.phase = FiberPhase.RENDERING;
-      const start = debug.fiber ? performance.now() : 0;
+      const start = debug.fiber ? debugNow() : -1;
       // the error is handled while the render is still the current
       // computation, as onError handlers have always run
       this.bdom = runTracked(node.signalComputation, () => {
@@ -288,7 +289,7 @@ export class Fiber {
       if (debug.fiber) {
         debugLog(
           "fiber",
-          `render ${node.componentName} in ${(performance.now() - start).toFixed(2)} ms, ${newCounter} left in ${root.node.componentName}'s pass`
+          `render ${node.componentName}${start < 0 ? "" : ` in ${(debugNow() - start).toFixed(2)} ms`}, ${newCounter} left in ${root.node.componentName}'s pass`
         );
       }
       if (newCounter === 0) {

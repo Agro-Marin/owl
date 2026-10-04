@@ -220,3 +220,17 @@ describe("event handling", () => {
     expect(clickCount).toBe(2);
   });
 });
+
+test("a handler receives the event alone, with no trailing argument", async () => {
+  let received: unknown[] = [];
+  class Comp extends Component {
+    static template = xml`<button t-on-click="(...args) => this.onClick(...args)">x</button>`;
+    onClick(...args: unknown[]) {
+      received = args;
+    }
+  }
+  await mount(Comp, fixture);
+  fixture.querySelector("button")!.click();
+  expect(received.length).toBe(1);
+  expect(received[0]).toBeInstanceOf(Event);
+});

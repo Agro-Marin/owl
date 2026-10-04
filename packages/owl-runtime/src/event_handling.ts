@@ -45,7 +45,13 @@ export const mainEventHandler = (data: any, ev: Event, currentTarget?: EventTarg
       );
     }
     if (live) {
-      handler(context, ev, data[3]);
+      // only a t-model handler carries its model: any other handler gets
+      // exactly (context, event)
+      if (data.length > 3) {
+        handler(context, ev, data[3]);
+      } else {
+        handler(context, ev);
+      }
     }
   }
 };

@@ -44,6 +44,7 @@ export { effect, immediateEffect, type EffectOptions } from "./effect";
 export {
   debug,
   debugLog,
+  debugNow,
   DEBUG_CHANNELS,
   setDebug,
   setDebugSink,

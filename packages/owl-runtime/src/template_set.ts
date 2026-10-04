@@ -1,4 +1,4 @@
-import { debug, debugLog, getScope, OwlError } from "@odoo/owl-core";
+import { debug, debugLog, debugNow, getScope, OwlError } from "@odoo/owl-core";
 import type { compile, CustomDirectives, Template, TemplateFunction } from "@odoo/owl-compiler";
 import { createBlock, html, list, multi, text, toggler } from "./blockdom";
 import { helpers } from "./rendering/template_helpers";
@@ -95,14 +95,14 @@ export class TemplateSet {
         throw new OwlError(`Missing template: "${name}"${extraInfo}`);
       }
       const isFn = typeof rawTemplate === "function" && !(rawTemplate instanceof Element);
-      const start = debug.template ? performance.now() : 0;
+      const start = debug.template ? debugNow() : -1;
       const templateFn = isFn ? rawTemplate : this._compileTemplate(name, rawTemplate);
       if (debug.template) {
         debugLog(
           "template",
           isFn
             ? `${name}: precompiled`
-            : `${name}: compiled in ${(performance.now() - start).toFixed(2)} ms, ${String(templateFn).length} chars`
+            : `${name}: compiled${start < 0 ? "" : ` in ${(debugNow() - start).toFixed(2)} ms`}, ${String(templateFn).length} chars`
         );
       }
       // first add a function to lazily get the template, in case there is a

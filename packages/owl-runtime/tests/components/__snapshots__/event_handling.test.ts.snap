@@ -1,5 +1,20 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`a handler receives the event alone, with no trailing argument 1`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  const hdlr_fn1 = (ctx,..._args)=>ctx['this'].onClick(..._args);
+  
+  let block1 = createBlock(\`<button block-handler-0="click">x</button>\`);
+  
+  return function template(ctx, node, key = "") {
+    let hdlr1 = [hdlr_fn1, ctx];
+    return block1([hdlr1]);
+  }
+}"
+`;
+
 exports[`event handling > Invalid handler throws an error 1`] = `
 "function anonymous(app, bdom, helpers
 ) {

@@ -75,7 +75,8 @@ export class ComponentNode extends Scope implements VNode<ComponentNode> {
       false,
       ComputationState.EXECUTED,
       false,
-      `render ${C.name}`
+      // a string per component: built only while its name can be logged
+      debug.reactivity || debug.effect ? `render ${C.name}` : ""
     );
     if (debug.lifecycle) {
       debugLog(

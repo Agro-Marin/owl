@@ -63,7 +63,10 @@ export function setDebug(channels: boolean | string | readonly string[]): void {
         ? DEBUG_CHANNELS
         : []
       : typeof channels === "string"
-        ? channels.split(",").map((channel) => channel.trim())
+        ? channels
+            .split(",")
+            .map((channel) => channel.trim())
+            .filter(Boolean)
         : channels;
   for (const channel of wanted) {
     if (!(DEBUG_CHANNELS as readonly string[]).includes(channel)) {
@@ -79,6 +82,11 @@ export function setDebug(channels: boolean | string | readonly string[]): void {
 
 export function setDebugSink(newSink: DebugSink | null): void {
   sink = newSink || consoleSink;
+}
+
+// A timestamp for a duration in a log line, where performance may be missing.
+export function debugNow(): number {
+  return typeof performance === "undefined" ? Date.now() : performance.now();
 }
 
 export function debugLog(channel: DebugChannel, message: string, ...details: unknown[]): void {
