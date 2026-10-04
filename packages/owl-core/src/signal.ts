@@ -32,6 +32,10 @@ interface SignalOptions<TValue, TElem = TValue> {
 function buildSignal<T>(value: T, toRead: (value: T) => T, equals?: Equals<T>): Signal<T> {
   const atom = createAtom(value, "signal");
   const equalsFn = toEqualsFn(equals);
+  // with the default equality its readers may compare the value they read to
+  // the current one (a write reverted in a batch changed nothing); a custom
+  // equality, `false` included, decides alone
+  const comparable = equals === undefined;
 
   let readValue = toRead(value);
   const readSignal = () => {
@@ -48,7 +52,7 @@ function buildSignal<T>(value: T, toRead: (value: T) => T, equals?: Equals<T>): 
     // before the signal changes
     readValue = toRead(newValue);
     atom.value = newValue;
-    onWriteAtom(atom);
+    onWriteAtom(atom, comparable);
   };
 
   return readSignal;

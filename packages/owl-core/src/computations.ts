@@ -70,6 +70,9 @@ export class Link {
   nextSub: Link | undefined;
   // what dep.activeLink pointed at before this run pointed it here
   rollback: Link | undefined;
+  // dep's value when sub read it: a signal written back to that value since
+  // (a write and its revert in one batch) has not changed for sub
+  seen: unknown;
 
   constructor(
     dep: Atom,
@@ -88,6 +91,7 @@ export class Link {
     this.prevSub = prevSub;
     this.nextSub = undefined;
     this.rollback = rollback;
+    this.seen = dep.value;
   }
 }
 
@@ -317,6 +321,7 @@ function track(dep: Atom, sub: ComputationAtom, tail: Link | undefined) {
     if (next.dep === dep) {
       // read in the same order as by the previous run
       next.version = version;
+      next.seen = dep.value;
       next.rollback = active;
       dep.activeLink = next;
       sub.depsTail = next;
@@ -357,6 +362,7 @@ function track(dep: Atom, sub: ComputationAtom, tail: Link | undefined) {
 // Moves a link the previous run read to the position of the current read.
 function reuse(link: Link, sub: ComputationAtom, tail: Link | undefined, version: number) {
   link.version = version;
+  link.seen = link.dep.value;
   const next = tail !== undefined ? tail.nextDep : sub.deps;
   if (link !== next) {
     const prevDep = link.prevDep;
@@ -420,7 +426,13 @@ export function withObserver<T>(observer: ComputationAtom, fn: () => T): T {
   }
 }
 
-export function onWriteAtom(atom: Atom) {
+/**
+ * Notifies the observers of `atom`. A `comparable` write (a signal's set) makes
+ * them check, when they are next pulled, whether the value still differs from
+ * the one they read; any other write (a trigger, a proxy key, a recomputed
+ * computed) makes them run again.
+ */
+export function onWriteAtom(atom: Atom, comparable: boolean = false) {
   if (debug.reactivity) {
     const names = observerNames(atom);
     debugLog("reactivity", `write, ${names.length} observer(s)`, names);
@@ -442,7 +454,10 @@ export function onWriteAtom(atom: Atom) {
         observers.push(ctx);
       }
     }
-    ctx.state = ComputationState.STALE;
+    ctx.state =
+      comparable && ctx.state !== ComputationState.STALE && !ctx.notifiesWithoutRecompute
+        ? ComputationState.PENDING
+        : ComputationState.STALE;
     // (an atom observed only through stale links is unobserved, but staying a
     // candidate a little longer costs nothing: the flush re-checks)
     if (ctx.isDerived && ctx.subs === undefined) {
@@ -602,6 +617,11 @@ export function updateComputation(computation: ComputationAtom) {
     for (let link = computation.deps; link !== undefined; link = link.nextDep) {
       const source = link.dep as ComputationAtom;
       if (!source.isDerived) {
+        // only a comparable (signal) write leaves an atom's reader pending
+        if (!Object.is(link.seen, source.value)) {
+          computation.state = ComputationState.STALE;
+          break;
+        }
         continue;
       }
       updateComputation(source);

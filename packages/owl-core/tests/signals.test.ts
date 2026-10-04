@@ -1,4 +1,5 @@
-import { immediateEffect, shallowEqual, signal } from "../src";
+import { computed, immediateEffect, shallowEqual, signal } from "../src";
+import { batch } from "../src/computations";
 import { expectSpy, spyEffect, waitScheduler } from "./helpers";
 
 test("signal can be created and read", () => {
@@ -678,5 +679,52 @@ describe("equals option", () => {
     other.set(5);
     await waitScheduler();
     expectSpy(e.spy, 1);
+  });
+});
+
+describe("a write reverted in a batch", () => {
+  test("re-runs nothing: the readers find the value they read", () => {
+    const a = signal(0);
+    let computes = 0;
+    let runs = 0;
+    const double = computed(
+      () => {
+        computes++;
+        return a() * 2;
+      },
+      { detached: true }
+    );
+    immediateEffect(() => {
+      double();
+      runs++;
+    });
+    batch(() => {
+      a.set(5);
+      a.set(0);
+    });
+    expect([computes, runs]).toEqual([1, 1]);
+    batch(() => {
+      a.set(5);
+    });
+    expect([computes, runs]).toEqual([2, 2]);
+  });
+
+  test("still notifies with a custom equality, and on a trigger", () => {
+    const always = signal(0, { equals: false });
+    const list = signal([1]);
+    let runs = 0;
+    immediateEffect(() => {
+      always();
+      list();
+      runs++;
+    });
+    batch(() => {
+      always.set(1);
+      always.set(0);
+    });
+    expect(runs).toBe(2);
+    list().push(2);
+    signal.trigger(list);
+    expect(runs).toBe(3);
   });
 });

@@ -257,7 +257,8 @@ describe("dependency tracking", () => {
       expect(render.state).toBe(ComputationState.EXECUTED);
       s();
       s.set(1);
-      expect(render.state).toBe(ComputationState.STALE);
+      // a signal write leaves its readers pending a check of the value
+      expect(render.state).toBe(ComputationState.PENDING);
     });
     expect(observersOf(atomOf(t))).toEqual([]);
     expect(sourcesOf(render)).toEqual([atomOf(s)]);
@@ -286,7 +287,7 @@ describe("dependency tracking", () => {
     expect(observersOf(atomOf(s))).toEqual([render]);
     expect(atomOf(t).subs).toBeUndefined();
     s.set(4);
-    expect(render.state).toBe(ComputationState.STALE);
+    expect(render.state).toBe(ComputationState.PENDING);
   });
 
   test("a computed a detached computation stops reading is collected by the next write", async () => {

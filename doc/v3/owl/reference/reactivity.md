@@ -78,3 +78,16 @@ a.set(10);
 b.set(20);
 // only one re-run after the microtask — logs 30, not 12 then 30
 ```
+
+A signal written and then set back to the value its readers saw, before they
+run, changed nothing for them: they neither recompute nor re-run.
+
+```js
+a.set(5);
+a.set(10);
+// the effect does not run again: `a` is still 10 for it
+```
+
+This holds for signals with the default equality. A signal created with a
+custom `equals` (including `equals: false`), and `signal.trigger(s)`, notify
+their readers unconditionally.
