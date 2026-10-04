@@ -1533,4 +1533,50 @@ describe("plugin start failures and lookups", () => {
     rpc.reject(new Error("network down"));
     await expect(app.pluginManager.ready).resolves.toBeUndefined();
   });
+
+  test("a host re-providing a parent's plugin in a waiting batch gets the clear error, not the parent's instance", async () => {
+    const rpc = makeDeferred<void>();
+    class Session extends Plugin {
+      static sequence = 10;
+      setup() {
+        onWillStart(() => rpc);
+      }
+    }
+    class Shared extends Plugin {
+      static id = "shared";
+      level = "app";
+    }
+    class LocalShared extends Plugin {
+      static id = "shared";
+      level = "local";
+    }
+    let hostError = "";
+    let childLevel = "";
+    class Child extends Component {
+      static template = xml`<span/>`;
+      setup() {
+        childLevel = (plugin(Shared) as any).level;
+      }
+    }
+    class Host extends Component {
+      static template = xml`<Child/>`;
+      static components = { Child };
+      setup() {
+        providePlugins([Session, LocalShared]);
+        try {
+          plugin(Shared);
+        } catch (e: any) {
+          hostError = e.message;
+        }
+      }
+    }
+    const fixture = makeTestFixture();
+    const app = new App({ plugins: [Shared] });
+    const mounted = app.createRoot(Host).mount(fixture);
+    expect(hostError).toMatch(/^Plugin "shared" is not started yet/);
+    rpc.resolve();
+    await mounted;
+    expect(childLevel).toBe("local");
+    app.destroy();
+  });
 });

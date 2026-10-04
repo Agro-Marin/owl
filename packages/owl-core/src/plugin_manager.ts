@@ -195,13 +195,17 @@ export class PluginManager extends Scope {
   }
 
   /**
-   * The manager, up the parent chain, whose batch holding `id` still waits for
-   * an earlier batch's onWillStart.
+   * Whether the nearest manager, up the parent chain, that provides `id` has
+   * not started it yet: its batch still waits for an earlier batch's
+   * onWillStart.
    */
   isPending(id: string): boolean {
     for (let manager: PluginManager | null = this; manager; manager = manager.parent) {
       if (manager.pending.has(id)) {
         return true;
+      }
+      if (Object.hasOwn(manager.plugins, id)) {
+        return false;
       }
     }
     return false;
