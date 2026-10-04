@@ -11,7 +11,7 @@ export { batched } from "./batched";
 export { Scope, scopeStack, getScope, useScope, isAbortError, makeAbortError } from "./scope";
 
 // Reactivity: proxy
-export { proxy, observe, markRaw, toRaw, proxifyTarget } from "./proxy";
+export { proxy, observe, markRaw, toRaw } from "./proxy";
 
 // Reactivity: computations (core tracking primitives)
 export {
@@ -24,16 +24,11 @@ export {
   ComputationState,
   atomSymbol,
   createComputation,
-  onReadAtom,
-  onWriteAtom,
   getCurrentComputation,
   setComputation,
-  updateComputation,
   runTracked,
   removeSources,
   disposeComputation,
-  disposeOwned,
-  withObserver,
 } from "./computations";
 
 // Reactivity: signal
