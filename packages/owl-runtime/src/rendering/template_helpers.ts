@@ -371,14 +371,14 @@ function updateChild(node: ComponentNode, props: Record<string, any>, parentFibe
       () => {
         if (fiber !== node.fiber) return;
         node.props = props;
-        for (const f of node.propsUpdated) f();
+        for (const view of node.propsUpdated) view.update();
         fiber.render();
       },
       (error) => handleHookRejection(node, error)
     );
   } else {
     node.props = props;
-    for (const f of node.propsUpdated) f();
+    for (const view of node.propsUpdated) view.update();
     fiber.render();
   }
 }

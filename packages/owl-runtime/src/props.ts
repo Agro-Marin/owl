@@ -52,7 +52,7 @@ function makeProps(type?: any): Props<{}> {
   const node = getComponentScope();
   if (!type) {
     const view = new PropsView(node);
-    node.addHook("propsUpdated", () => view.update());
+    node.addHook("propsUpdated", view);
     return new Proxy(view, viewHandler) as any;
   }
   const { app, componentName } = node;
@@ -98,10 +98,12 @@ function makeProps(type?: any): Props<{}> {
     signals.push(s);
     Reflect.defineProperty(result, key, { enumerable: true, configurable: true, get: s });
   }
-  node.addHook("propsUpdated", () => {
-    for (let i = 0; i < keys.length; i++) {
-      signals[i].set(resolveValue(node.props, keys[i]));
-    }
+  node.addHook("propsUpdated", {
+    update() {
+      for (let i = 0; i < keys.length; i++) {
+        signals[i].set(resolveValue(node.props, keys[i]));
+      }
+    },
   });
 
   if (app.dev) {
@@ -145,6 +147,13 @@ function getKeys(node: ComponentNode): string[] {
   return keys;
 }
 
+// The per-key signals of a view, in an object whose prototype chain is one
+// empty null-prototype object: no inherited key, yet unlike Object.create(null)
+// V8 keeps it in fast mode, and the views of a component class, reading the
+// same keys, share its shape.
+const SignalTable = function () {} as unknown as new () => Record<string, Signal<any>>;
+SignalTable.prototype = Object.create(null);
+
 // A schema-less view has no fixed key set: a key gets its signal on first read,
 // present or not, so a reader of a key that appears or disappears is notified.
 // The key set itself is read behind a version signal and cached until the props
@@ -153,7 +162,7 @@ function getKeys(node: ComponentNode): string[] {
 // every trap answers for it, so its fields are never observable.
 class PropsView {
   node: ComponentNode;
-  signals: Record<string, Signal<any>> = Object.create(null);
+  signals = new SignalTable();
   keys: string[] | null = null;
   keyLookup: Set<string> | null = null;
   keysDefaults = 0;

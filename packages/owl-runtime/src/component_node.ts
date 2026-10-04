@@ -25,6 +25,8 @@ import { STATUS } from "./status";
 // -----------------------------------------------------------------------------
 
 type LifecycleHook = Function;
+// a props view, told to refresh once a parent render applied new props
+export type PropsListener = { update(): void };
 type HookKind =
   | "willUpdateProps"
   | "propsUpdated"
@@ -59,7 +61,7 @@ export class ComponentNode extends Scope implements VNode<ComponentNode> {
   // Fired right after `props` is applied to `node.props` on a parent re-render,
   // so reactive prop notifications happen once the new values are observable
   // (after user `onWillUpdateProps` hooks, including async ones, have run).
-  propsUpdated: LifecycleHook[] = NO_HOOKS;
+  propsUpdated: PropsListener[] = NO_HOOKS as any;
   willUnmount: LifecycleHook[] = NO_HOOKS;
   mounted: LifecycleHook[] = NO_HOOKS;
   willPatch: LifecycleHook[] = NO_HOOKS;
@@ -139,10 +141,10 @@ export class ComponentNode extends Scope implements VNode<ComponentNode> {
    * Registers a lifecycle callback, last (or first, for the hooks that run in
    * reverse registration order).
    */
-  addHook(kind: HookKind, fn: LifecycleHook, first = false) {
-    const hooks = this[kind];
+  addHook<K extends HookKind>(kind: K, fn: this[K][number], first = false) {
+    const hooks: any[] = this[kind];
     if (hooks === NO_HOOKS) {
-      this[kind] = [fn];
+      (this as any)[kind] = [fn];
     } else if (first) {
       hooks.unshift(fn);
     } else {
