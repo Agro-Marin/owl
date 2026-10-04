@@ -503,22 +503,20 @@ function onWriteKeyCreated(target: Target, key: PropertyKey, originalLength: num
 // call, not in between. Those that search an item by identity also find the
 // raw object of an item they read as its proxy.
 const arrayMethods = new Map<Function, Function>();
-for (const name of [
-  "copyWithin",
-  "fill",
-  "pop",
-  "push",
-  "reverse",
-  "shift",
-  "sort",
-  "splice",
-  "unshift",
-] as const) {
+for (const name of ["copyWithin", "fill", "reverse", "sort"] as const) {
   const method = Array.prototype[name] as Function;
   arrayMethods.set(method, function (this: unknown[], ...args: unknown[]) {
-    // the length and items a mutator reads are its own business, not reads of
-    // the caller: tracked, an effect that only pushes would re-run on every
-    // push of another, and two of them would re-run each other forever
+    return batch(() => method.apply(this, args));
+  });
+}
+// The methods that change the length read it, and the items they shift, as
+// their own business, not as reads of the caller: tracked, an effect that only
+// pushes would re-run on every push of another, and two of them would re-run
+// each other forever. The others stay tracked: a sort reads the items its
+// comparator orders, and its caller depends on them (as in Vue).
+for (const name of ["pop", "push", "shift", "splice", "unshift"] as const) {
+  const method = Array.prototype[name] as Function;
+  arrayMethods.set(method, function (this: unknown[], ...args: unknown[]) {
     return batch(() => untrack(() => method.apply(this, args)));
   });
 }

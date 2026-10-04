@@ -1,6 +1,7 @@
 import { vi, type Mock } from "vitest";
 import {
   Component,
+  computed,
   effect,
   markRaw,
   mount,
@@ -2656,6 +2657,33 @@ describe("array mutators do not subscribe their caller", () => {
       await waitScheduler();
     }
     expect([runsA, runsB]).toEqual([1, 1]);
+  });
+
+  test("an in-place sort stays tracked: a change of what its comparator reads re-sorts", async () => {
+    const state = proxy({
+      records: [
+        { a: 1, b: 2 },
+        { a: 2, b: 1 },
+      ],
+      key: "a" as "a" | "b",
+    });
+    let runs = 0;
+    effect(() => {
+      runs++;
+      state.records.sort((x, y) => x[state.key] - y[state.key]);
+    });
+    state.key = "b";
+    await waitScheduler();
+    expect(runs).toBe(2);
+    expect(toRaw(state.records).map((r) => `${r.a}${r.b}`)).toEqual(["21", "12"]);
+  });
+
+  test("a computed of a sorted array recomputes when an item changes", async () => {
+    const items: number[] = proxy([3, 1, 2]);
+    const min = computed(() => items.sort((x, y) => x - y)[0]);
+    expect(min()).toBe(1);
+    items[1] = -5;
+    expect(min()).toBe(-5);
   });
 
   test("an effect that reads the array after mutating it still tracks what it read", async () => {
