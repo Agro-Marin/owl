@@ -33,12 +33,12 @@ function createEffect<T>(fn: () => T, immediate: boolean, options?: EffectOption
     () => {
       // A stored cleanup function (computation.value) or nested child effects
       // (computation.owned) are disposed before the re-run, untracked so
-      // they do not become sources of this effect. updateComputation handles
-      // the effect's own sources.
+      // they do not become sources of this effect. runTracked handles the
+      // effect's own sources: those it reads again keep their subscription.
       let failure: { error: unknown } | null = null;
       if (computation.value || computation.owned) {
         try {
-          unsubscribeUntracked(computation);
+          releaseUntracked(computation);
         } catch (error) {
           // the run still happens: skipping it would leave the effect
           // subscribed to nothing, dead for good
@@ -50,7 +50,8 @@ function createEffect<T>(fn: () => T, immediate: boolean, options?: EffectOption
         // disposed by its own run: what it read, created or returned after
         // the dispose is released too
         computation.value = result;
-        unsubscribeUntracked(computation);
+        removeSources(computation);
+        releaseUntracked(computation);
         return undefined;
       }
       if (failure) {
@@ -94,15 +95,20 @@ function createEffect<T>(fn: () => T, immediate: boolean, options?: EffectOption
       debugLog("effect", `dispose ${computation.name}`);
     }
     disposed = true;
-    parent?.owned?.delete(cleanupEffect);
+    if (parent !== undefined && parent.owned !== null) {
+      parent.owned.delete(cleanupEffect);
+    }
     // Mark as executed so a queued re-run (scheduled by an earlier signal
     // write in the same microtick) is skipped by updateComputation.
     computation.state = ComputationState.EXECUTED;
+    removeSources(computation);
     // Untracked so the user cleanup function's atom reads do not attach as
     // sources of whatever computation happens to be active when dispose() is
     // called. See test "dispose called inside another effect: cleanup's atom
     // reads do not leak to outer".
-    unsubscribeUntracked(computation);
+    if (computation.value || computation.owned) {
+      releaseUntracked(computation);
+    }
   }
 
   try {
@@ -115,11 +121,13 @@ function createEffect<T>(fn: () => T, immediate: boolean, options?: EffectOption
   return cleanupEffect;
 }
 
-function unsubscribeUntracked(effect: ComputationAtom) {
+// Runs the cleanup function and disposes the child effects of `effect`, with
+// no computation tracking their reads.
+function releaseUntracked(effect: ComputationAtom) {
   const previousComputation = getCurrentComputation();
   setComputation(undefined);
   try {
-    unsubscribeEffect(effect);
+    release(effect);
   } finally {
     setComputation(previousComputation);
   }
@@ -127,8 +135,7 @@ function unsubscribeUntracked(effect: ComputationAtom) {
 
 // Releases everything even when a cleanup throws, then rethrows the first
 // error: a cleanup that throws must not keep the effect's children alive.
-function unsubscribeEffect(effect: ComputationAtom) {
-  removeSources(effect);
+function release(effect: ComputationAtom) {
   let failure: { error: unknown } | null = null;
   try {
     runCleanup(effect);

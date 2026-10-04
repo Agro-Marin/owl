@@ -260,6 +260,30 @@ describe("effect", () => {
     expect(seen).toEqual([11, 12, 33]);
   });
 
+  test("an effect with a cleanup keeps its subscriptions, and its turn, across re-runs", async () => {
+    const s = signal(0);
+    const t = signal(0);
+    const order: string[] = [];
+    effect(() => {
+      s();
+      t();
+      order.push("first");
+      return () => {};
+    });
+    effect(() => {
+      s();
+      order.push("second");
+    });
+    t.set(1);
+    await waitScheduler();
+    expect(order).toEqual(["first", "second", "first"]);
+    order.length = 0;
+    s.set(1);
+    await waitScheduler();
+    expect(order).toEqual(["first", "second"]);
+    expect(observersOf((s as any)[atomSymbol]).length).toBe(2);
+  });
+
   test("effects, signals, stuff", async () => {
     const s1 = signal(1);
     const s2 = signal(0);
