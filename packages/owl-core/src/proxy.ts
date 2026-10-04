@@ -110,17 +110,23 @@ function getTargetKeyAtom(target: Target, key: PropertyKey, atoms: KeyAtoms = it
     }
     return atom;
   }
-  let table = atoms.keys.get(target);
-  if (table === undefined) {
-    table = new Map();
-    atoms.keys.set(target, table);
-  }
+  const table = getKeyAtoms(target, atoms);
   let atom = table.get(key);
   if (atom === undefined) {
     atom = createAtom(undefined, "key");
     table.set(key, atom);
   }
   return atom;
+}
+
+// the atoms of the property keys of `target`, created on first use
+function getKeyAtoms(target: Target, atoms: KeyAtoms): Map<PropertyKey, Atom> {
+  let table = atoms.keys.get(target);
+  if (table === undefined) {
+    table = new Map();
+    atoms.keys.set(target, table);
+  }
+  return table;
 }
 
 function findAtom(target: Target, key: PropertyKey, atoms: KeyAtoms): Atom | undefined {
@@ -285,7 +291,7 @@ export function proxifyTarget<T extends Target>(target: T, shallow: boolean): T 
   } else if (target instanceof WeakMap) {
     handler = collectionsProxyHandler(target as unknown as Collection, "WeakMap", shallow);
   } else {
-    handler = shallow ? shallowHandler : deepHandler;
+    handler = new BasicHandler(shallow);
   }
   const proxy = new Proxy(target, handler as ProxyHandler<T>) as Reactive<T>;
 
@@ -420,63 +426,87 @@ function isIterator(value: any): value is Iterator<any> {
 }
 
 /**
- * Creates a basic proxy handler for regular objects and arrays.
- *
- * @param callback @see proxy
- * @returns a proxy handler object
+ * The handler of a regular object or array proxy. One per proxy: the traps
+ * find the atoms of its target's keys through `keyAtoms` (looked up once)
+ * instead of a WeakMap lookup per read.
  */
-function basicProxyHandler<T extends Target>(shallow: boolean): ProxyHandler<T> {
-  return {
-    get(target, key, receiver) {
-      onReadTargetKey(target, key);
-      const value = Reflect.get(target, key, receiver);
-      if (typeof value === "function") {
-        return arrayMethods.get(value) ?? value;
+class BasicHandler implements ProxyHandler<any> {
+  shallow: boolean;
+  // the value atoms of the target's keys
+  keyAtoms: Map<PropertyKey, Atom> | undefined;
+
+  constructor(shallow: boolean) {
+    this.shallow = shallow;
+    this.keyAtoms = undefined;
+  }
+
+  get(target: any, key: PropertyKey, receiver: any): any {
+    // a read nobody observes subscribes nothing, and creates no atom for its
+    // key: a model building its records outside any render reads thousands
+    if (isObserving()) {
+      let table = this.keyAtoms;
+      if (table === undefined) {
+        table = this.keyAtoms = getKeyAtoms(target, itemAtoms);
       }
-      // Fast path: signal-based proxies and primitive values don't need wrapping
-      if (shallow || typeof value !== "object" || value === null) {
-        return value;
+      let atom = table.get(key);
+      if (atom === undefined) {
+        atom = createAtom(undefined, "key");
+        table.set(key, atom);
       }
-      // the proxy an object read before already has spares the checks
-      // proxifyTarget would make (twice) to find it
-      const reactive = deepProxies.get(value);
-      if (reactive ? skipped.has(value) : !canBeMadeReactive(value)) {
-        return value;
-      }
-      // non-writable non-configurable properties cannot be made proxy
-      const desc = Object.getOwnPropertyDescriptor(target, key);
-      if (desc && !desc.writable && !desc.configurable) {
-        return value;
-      }
-      return reactive ?? proxifyTarget(value, false);
-    },
-    set(target, key, value, receiver) {
-      // a write subscribes nothing, though a getter or setter it runs reads
-      // through the proxy
-      return isObserving()
-        ? untrack(() => writeKey(target, key, value, receiver))
-        : writeKey(target, key, value, receiver);
-    },
-    deleteProperty(target, key) {
-      const hadKey = objectHasOwnProperty.call(target, key);
-      const ret = Reflect.deleteProperty(target, key);
-      if (hadKey && ret) {
-        onWriteKeyPresence(target, key);
-        onWriteTargetKey(target, key);
-        releaseKey(target, key);
-      }
-      return ret;
-    },
-    ownKeys(target) {
-      onReadTargetKey(target, KEYCHANGES);
-      return Reflect.ownKeys(target);
-    },
-    has(target, key) {
-      onReadKeyPresence(target, key);
-      return Reflect.has(target, key);
-    },
-  } as ProxyHandler<T>;
+      onReadAtom(atom);
+    }
+    const value = Reflect.get(target, key, receiver);
+    if (typeof value === "function") {
+      return arrayMethods.get(value) ?? value;
+    }
+    // Fast path: signal-based proxies and primitive values don't need wrapping
+    if (this.shallow || typeof value !== "object" || value === null) {
+      return value;
+    }
+    // the proxy an object read before already has spares the checks
+    // proxifyTarget would make (twice) to find it
+    const reactive = deepProxies.get(value);
+    if (reactive ? skipped.has(value) : !canBeMadeReactive(value)) {
+      return value;
+    }
+    // non-writable non-configurable properties cannot be made proxy
+    const desc = Object.getOwnPropertyDescriptor(target, key);
+    if (desc && !desc.writable && !desc.configurable) {
+      return value;
+    }
+    return reactive ?? proxifyTarget(value, false);
+  }
+
+  set(target: any, key: PropertyKey, value: any, receiver: any): boolean {
+    // a write subscribes nothing, though a getter or setter it runs reads
+    // through the proxy
+    return isObserving()
+      ? untrack(() => writeKey(target, key, value, receiver))
+      : writeKey(target, key, value, receiver);
+  }
+
+  deleteProperty(target: any, key: PropertyKey): boolean {
+    const hadKey = objectHasOwnProperty.call(target, key);
+    const ret = Reflect.deleteProperty(target, key);
+    if (hadKey && ret) {
+      onWriteKeyPresence(target, key);
+      onWriteTargetKey(target, key);
+      releaseKey(target, key);
+    }
+    return ret;
+  }
+
+  ownKeys(target: any): ArrayLike<string | symbol> {
+    onReadTargetKey(target, KEYCHANGES);
+    return Reflect.ownKeys(target);
+  }
+
+  has(target: any, key: PropertyKey): boolean {
+    onReadKeyPresence(target, key);
+    return Reflect.has(target, key);
+  }
 }
+
 function writeKey(target: any, key: PropertyKey, value: any, receiver: any): boolean {
   const hadKey = objectHasOwnProperty.call(target, key);
   const originalValue = Reflect.get(target, key, receiver);
@@ -543,9 +573,9 @@ for (const name of ["includes", "indexOf", "lastIndexOf"] as const) {
   });
 }
 
-// the traps only use the target they are given: one handler per flavor
-const deepHandler = basicProxyHandler(false);
-const shallowHandler = basicProxyHandler(true);
+// what the collection handlers inherit the traps they do not override from
+const deepHandler = new BasicHandler(false);
+const shallowHandler = new BasicHandler(true);
 
 /**
  * Creates a function that will observe the key that is passed to it when called
