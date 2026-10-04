@@ -7,7 +7,7 @@ import {
   signal,
   Signal,
 } from "@odoo/owl-core";
-import { getComponentScope } from "./component_node";
+import { type ComponentNode, getComponentScope } from "./component_node";
 import { staticProp } from "./prop";
 import { types } from "./types";
 
@@ -50,13 +50,18 @@ const defaultsVersions = new WeakMap<object, number>();
 
 function makeProps(type?: any): Props<{}> {
   const node = getComponentScope();
+  if (!type) {
+    const view = new PropsView(node);
+    node.propsUpdated.push(() => view.update());
+    return new Proxy(view, viewHandler) as any;
+  }
   const { app, componentName } = node;
 
   // defaults declared in the schema (.optional(value)). Factories are resolved once
   // per component instance, so the value identity is stable across prop
   // updates of that instance.
   let defaults: Record<string, any> | null = null;
-  if (type && !Array.isArray(type)) {
+  if (!Array.isArray(type)) {
     for (const key in type) {
       const factory = getDefault(type[key]);
       if (factory) {
@@ -85,125 +90,154 @@ function makeProps(type?: any): Props<{}> {
     return value;
   }
 
-  const signals: Record<string, Signal<any>> = Object.create(null);
-
-  if (type) {
-    const keys: string[] = Array.isArray(type) ? type : Object.keys(type);
-    const result = Object.create(null);
-    for (const key of keys) {
-      signals[key] = signal(resolveValue(node.props, key));
-      Reflect.defineProperty(result, key, {
-        enumerable: true,
-        configurable: true,
-        get: signals[key],
-      });
+  const keys: string[] = Array.isArray(type) ? type : Object.keys(type);
+  const signals: Signal<any>[] = [];
+  const result = Object.create(null);
+  for (const key of keys) {
+    const s = signal(resolveValue(node.props, key));
+    signals.push(s);
+    Reflect.defineProperty(result, key, { enumerable: true, configurable: true, get: s });
+  }
+  node.propsUpdated.push(() => {
+    for (let i = 0; i < keys.length; i++) {
+      signals[i].set(resolveValue(node.props, keys[i]));
     }
-    node.propsUpdated.push(() => {
-      for (const key of keys) {
-        signals[key].set(resolveValue(node.props, key));
-      }
-    });
+  });
 
-    if (app.dev) {
-      if (defaults) {
-        const defaultedShape: Record<string, any> = {};
-        for (const key in type) {
-          if (key in defaults) {
-            defaultedShape[key] = type[key];
-          }
+  if (app.dev) {
+    if (defaults) {
+      const defaultedShape: Record<string, any> = {};
+      for (const key in type) {
+        if (key in defaults) {
+          defaultedShape[key] = type[key];
         }
-        assertType(
-          defaults,
-          types.object(defaultedShape),
-          `Invalid component default props (${componentName})`
-        );
       }
-
-      const validation = types.object(type);
-      assertType(node.props, validation, `Invalid component props (${componentName})`);
-      node.willUpdateProps.push((np: Record<string, any>) => {
-        assertType(np, validation, `Invalid component props (${componentName})`);
-      });
+      assertType(
+        defaults,
+        types.object(defaultedShape),
+        `Invalid component default props (${componentName})`
+      );
     }
-    // read-only like the schema-less view: a new key throws, not only a declared one
-    return Object.preventExtensions(result);
+
+    const validation = types.object(type);
+    assertType(node.props, validation, `Invalid component props (${componentName})`);
+    node.willUpdateProps.push((np: Record<string, any>) => {
+      assertType(np, validation, `Invalid component props (${componentName})`);
+    });
+  }
+  // read-only like the schema-less view: a new key throws, not only a declared one
+  return Object.preventExtensions(result);
+}
+
+function getKeys(node: ComponentNode): string[] {
+  const props = node.props;
+  const keys: string[] = [];
+  for (const k in props) {
+    if (k.charCodeAt(0) !== 1) {
+      keys.push(k);
+    }
+  }
+  for (const k in node.defaultProps) {
+    if (!(k in props)) {
+      keys.push(k);
+    }
+  }
+  return keys;
+}
+
+// A schema-less view has no fixed key set: a key gets its signal on first read,
+// present or not, so a reader of a key that appears or disappears is notified.
+// The key set itself is read behind a version signal and cached until the props
+// or the declared defaults change; both are built on the first read of the key
+// set, which most components never make. The view is the proxy's target, and
+// every trap answers for it, so its fields are never observable.
+class PropsView {
+  node: ComponentNode;
+  signals: Record<string, Signal<any>> = Object.create(null);
+  keys: string[] | null = null;
+  keyLookup: Set<string> | null = null;
+  keysDefaults = 0;
+  keySet: Signal<number> | null = null;
+  keysVersion = 0;
+
+  constructor(node: ComponentNode) {
+    this.node = node;
   }
 
-  const getKeys = (props: Record<string, any>) => {
-    const keys: string[] = [];
-    for (const k in props) {
-      if (k.charCodeAt(0) !== 1) {
-        keys.push(k);
+  resolve(key: string) {
+    const node = this.node;
+    const value = node.props[key];
+    if (value === undefined) {
+      const declared = node.defaultProps;
+      if (declared && key in declared) {
+        return declared[key];
       }
     }
-    for (const k in node.defaultProps) {
-      if (!(k in props)) {
-        keys.push(k);
-      }
-    }
-    return keys;
-  };
+    return value;
+  }
 
-  // a schema-less view has no fixed key set: a key gets its signal on first
-  // read, present or not, so a reader of a key that appears or disappears is
-  // notified; the key set itself is read behind a version signal, and cached
-  // until the props or the declared defaults change
-  let keys = getKeys(node.props);
-  let keyLookup: Set<string> | null = null;
-  let keysDefaults = defaultsVersions.get(node) || 0;
-  let version = 0;
-  const keySet = signal(version);
-  const currentKeys = () => {
-    const defaultsVersion = defaultsVersions.get(node) || 0;
-    if (keysDefaults !== defaultsVersion) {
-      keys = getKeys(node.props);
-      keyLookup = null;
-      keysDefaults = defaultsVersion;
+  read(key: string) {
+    return (this.signals[key] ||= signal(this.resolve(key)))();
+  }
+
+  // the key set as a reader sees it: subscribes to its changes
+  currentKeys(): string[] {
+    (this.keySet ||= signal(this.keysVersion))();
+    return this.refreshKeys();
+  }
+
+  refreshKeys(): string[] {
+    const defaultsVersion = defaultsVersions.get(this.node) || 0;
+    if (!this.keys || this.keysDefaults !== defaultsVersion) {
+      this.keys = getKeys(this.node);
+      this.keyLookup = null;
+      this.keysDefaults = defaultsVersion;
     }
-    return keys;
-  };
-  node.propsUpdated.push(() => {
+    return this.keys;
+  }
+
+  hasKey(key: string) {
+    const keys = this.currentKeys();
+    return (this.keyLookup ||= new Set(keys)).has(key);
+  }
+
+  update() {
+    const signals = this.signals;
     for (const key in signals) {
-      signals[key].set(resolveValue(node.props, key));
+      signals[key].set(this.resolve(key));
     }
-    const nextKeys = getKeys(node.props);
-    const previousKeys = currentKeys();
+    // nobody read the key set yet: there is no one to notify
+    if (!this.keySet) {
+      return;
+    }
+    const previousKeys = this.refreshKeys();
+    const nextKeys = getKeys(this.node);
     if (
       nextKeys.length !== previousKeys.length ||
       nextKeys.some((key, i) => key !== previousKeys[i])
     ) {
-      keys = nextKeys;
-      keyLookup = null;
-      keySet.set(++version);
+      this.keys = nextKeys;
+      this.keyLookup = null;
+      this.keySet.set(++this.keysVersion);
     }
-  });
-  const read = (key: string) => (signals[key] ||= signal(resolveValue(node.props, key)))();
-  const hasKey = (key: string) => {
-    keySet();
-    return (keyLookup ||= new Set(currentKeys())).has(key);
-  };
-  return new Proxy(Object.create(null), {
-    get(target, key) {
-      return typeof key === "string" ? read(key) : Reflect.get(target, key);
-    },
-    has(target, key) {
-      return typeof key === "string" ? hasKey(key) : Reflect.has(target, key);
-    },
-    ownKeys() {
-      keySet();
-      return currentKeys();
-    },
-    getOwnPropertyDescriptor(_target, key) {
-      if (typeof key === "string" && hasKey(key)) {
-        return { value: read(key), enumerable: true, configurable: true, writable: false };
-      }
-      return undefined;
-    },
-    set: () => false,
-    defineProperty: () => false,
-    deleteProperty: () => false,
-  });
+  }
 }
+
+const viewHandler: ProxyHandler<PropsView> = {
+  get: (view, key) => (typeof key === "string" ? view.read(key) : undefined),
+  has: (view, key) => typeof key === "string" && view.hasKey(key),
+  ownKeys: (view) => view.currentKeys(),
+  getOwnPropertyDescriptor(view, key) {
+    if (typeof key === "string" && view.hasKey(key)) {
+      return { value: view.read(key), enumerable: true, configurable: true, writable: false };
+    }
+    return undefined;
+  },
+  getPrototypeOf: () => null,
+  set: () => false,
+  defineProperty: () => false,
+  deleteProperty: () => false,
+};
 
 export const useProps = Object.assign(makeProps, { static: staticProp }) as PropsFunction;
 

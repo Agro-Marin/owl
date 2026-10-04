@@ -1199,6 +1199,49 @@ describe("schema-less view key set", () => {
     expect(fixture.innerHTML).toBe("<span>b</span>");
   });
 
+  test("a key list first read after the keys changed is the current one, then followed", async () => {
+    class Child extends Component {
+      static template = xml`<span t-out="this.show() ? this.c() : '-'"/>`;
+      props = props();
+      show = signal(false);
+      c = computed(() => Object.keys(this.props).join(","));
+    }
+    class Parent extends Component {
+      static components = { Child };
+      static template = xml`<Child t-props="this.p()"/>`;
+      p = signal<any>({ a: 1 });
+    }
+    const parent = await mount(Parent, fixture);
+    expect(fixture.innerHTML).toBe("<span>-</span>");
+    const child = Object.values(parent.__owl__.children)[0].component as Child;
+
+    parent.p.set({ b: 2 });
+    await nextTick();
+    child.show.set(true);
+    await nextTick();
+    expect(fixture.innerHTML).toBe("<span>b</span>");
+
+    parent.p.set({ b: 2, c: 3 });
+    await nextTick();
+    expect(fixture.innerHTML).toBe("<span>b,c</span>");
+  });
+
+  test("a schema-less view has no prototype and no symbol-keyed property", async () => {
+    let view: any;
+    class Child extends Component {
+      static template = xml`<span/>`;
+      props = (view = props());
+    }
+    await mount(Child, fixture);
+    expect(Object.getPrototypeOf(view)).toBe(null);
+    expect(view instanceof Object).toBe(false);
+    expect(view[Symbol.iterator]).toBe(undefined);
+    expect(Symbol.toStringTag in view).toBe(false);
+    expect(Reflect.ownKeys(view)).toEqual([]);
+    expect(Object.getOwnPropertyDescriptor(view, "node")).toBe(undefined);
+    expect("signals" in view).toBe(false);
+  });
+
   test("a view created before the schema view resolves its defaults", async () => {
     let hookView: any;
     class Child extends Component {
