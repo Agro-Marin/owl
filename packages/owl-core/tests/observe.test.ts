@@ -24,6 +24,52 @@ describe("observe", () => {
     expect(calls).toBe(2);
   });
 
+  test("a callback reading the view again stays subscribed to what it read", () => {
+    const seen: [number, number][] = [];
+    const state: { a: number; b: number } = observe({ a: 1, b: 1 }, () =>
+      seen.push([state.a, state.b])
+    );
+    void state.a;
+    state.a = 2;
+    expect(seen).toEqual([[2, 1]]);
+    state.b = 2;
+    expect(seen).toEqual([
+      [2, 1],
+      [2, 2],
+    ]);
+    state.a = 3;
+    expect(seen).toEqual([
+      [2, 1],
+      [2, 2],
+      [3, 2],
+    ]);
+    state.b = 3;
+    expect(seen).toEqual([
+      [2, 1],
+      [2, 2],
+      [3, 2],
+      [3, 3],
+    ]);
+  });
+
+  test("a callback reading part of the view drops what it did not read again", () => {
+    let calls = 0;
+    const state: { a: number; b: number } = observe({ a: 1, b: 1 }, () => {
+      calls++;
+      void state.b;
+    });
+    void state.a;
+    state.a = 2;
+    expect(calls).toBe(1);
+    state.a = 3;
+    expect(calls).toBe(1);
+    void state.a;
+    state.b = 2;
+    expect(calls).toBe(2);
+    state.a = 4;
+    expect(calls).toBe(2);
+  });
+
   test("observes nested objects read through the view", () => {
     let calls = 0;
     const state = observe({ inner: { value: 1 } }, () => calls++);

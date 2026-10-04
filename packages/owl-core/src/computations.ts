@@ -267,15 +267,24 @@ export function onReadAtom(atom: Atom) {
       track(atom, sub, tail);
     }
   }
-  if (currentObserver !== undefined && currentObserver !== sub) {
-    const observed = (currentObserver.observed ??= new Set());
+  const observer = currentObserver;
+  if (observer !== undefined && observer !== sub) {
+    if (observer.running) {
+      // its callback reads the view again: a run of its own, tracked as one
+      const tail = observer.depsTail;
+      if (tail === undefined || tail.dep !== atom) {
+        track(atom, observer, tail);
+      }
+      return;
+    }
+    const observed = (observer.observed ??= observedSources(observer));
     if (!observed.has(atom)) {
       observed.add(atom);
-      const tail = currentObserver.depsTail;
+      const tail = observer.depsTail;
       const link = new Link(
         atom,
-        currentObserver,
-        currentObserver.version,
+        observer,
+        observer.version,
         tail,
         undefined,
         atom.subsTail,
@@ -284,9 +293,9 @@ export function onReadAtom(atom: Atom) {
       if (tail !== undefined) {
         tail.nextDep = link;
       } else {
-        currentObserver.deps = link;
+        observer.deps = link;
       }
-      currentObserver.depsTail = link;
+      observer.depsTail = link;
       appendSub(atom, link);
     }
   }
@@ -721,9 +730,15 @@ function endTracking(computation: ComputationAtom) {
     link.dep.activeLink = link.rollback;
     link.rollback = undefined;
   }
-  if (computation.observed && computation.deps === undefined) {
-    computation.observed = null;
+  computation.observed = null;
+}
+
+function observedSources(observer: ComputationAtom): Set<Atom> {
+  const result = new Set<Atom>();
+  for (let link = observer.deps; link !== undefined; link = link.nextDep) {
+    result.add(link.dep);
   }
+  return result;
 }
 
 export function removeSources(computation: ComputationAtom) {
