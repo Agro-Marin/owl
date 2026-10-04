@@ -29,6 +29,7 @@ export {
   runTracked,
   removeSources,
   disposeComputation,
+  hasObservers,
   observersOf,
   sourcesOf,
   type Link,

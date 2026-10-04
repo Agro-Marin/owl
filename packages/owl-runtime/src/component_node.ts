@@ -96,6 +96,9 @@ export class ComponentNode extends Scope implements VNode<ComponentNode> {
       // a string per component: built only while its name can be logged
       debug.reactivity || debug.effect ? `render ${C.name}` : ""
     );
+    // its compute schedules the render, which tracks (and reuses the links of
+    // the previous render)
+    this.signalComputation.tracksElsewhere = true;
     if (debug.lifecycle) {
       debugLog(
         "lifecycle",

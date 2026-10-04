@@ -1,6 +1,10 @@
 import {
   atomSymbol,
+  ComputationState,
   computed,
+  createComputation,
+  hasObservers,
+  runTracked,
   effect,
   immediateEffect,
   observe,
@@ -11,6 +15,7 @@ import {
   type Atom,
   type ComputationAtom,
 } from "../src";
+import { updateComputation } from "../src/computations";
 import { waitScheduler } from "./helpers";
 
 const atomOf = (reactive: any): ComputationAtom => reactive[atomSymbol];
@@ -239,5 +244,67 @@ describe("dependency tracking", () => {
         signals[Math.floor(random() * signals.length)].set(Math.floor(random() * 100));
       }
     }
+  });
+
+  test("a write does not reach a running computation through a source it has yet to read again", () => {
+    const s = signal(0);
+    const t = signal(0);
+    let runs = 0;
+    const render = createComputation(() => runs++, false, ComputationState.EXECUTED);
+    runTracked(render, () => s() + t());
+    runTracked(render, () => {
+      t.set(1);
+      expect(render.state).toBe(ComputationState.EXECUTED);
+      s();
+      s.set(1);
+      expect(render.state).toBe(ComputationState.STALE);
+    });
+    expect(observersOf(atomOf(t))).toEqual([]);
+    expect(sourcesOf(render)).toEqual([atomOf(s)]);
+  });
+
+  test("a computation that tracks elsewhere: running it detaches its sources, which the tracking run reuses", () => {
+    const s = signal(1);
+    const t = signal(2);
+    let runs = 0;
+    const render = createComputation(() => runs++, false, ComputationState.EXECUTED);
+    render.tracksElsewhere = true;
+    runTracked(render, () => s() + t());
+    const sLink = atomOf(s).subs;
+    expect(observersOf(atomOf(s))).toEqual([render]);
+
+    render.state = ComputationState.STALE;
+    updateComputation(render);
+    expect(runs).toBe(1);
+    expect(observersOf(atomOf(s))).toEqual([]);
+    expect(hasObservers(atomOf(t))).toBe(false);
+    s.set(3);
+    expect(render.state).toBe(ComputationState.EXECUTED);
+
+    runTracked(render, () => s());
+    expect(atomOf(s).subs).toBe(sLink);
+    expect(observersOf(atomOf(s))).toEqual([render]);
+    expect(atomOf(t).subs).toBeUndefined();
+    s.set(4);
+    expect(render.state).toBe(ComputationState.STALE);
+  });
+
+  test("a computed a detached computation stops reading is collected by the next write", async () => {
+    const s = signal(1);
+    const c = computed(() => s() * 2);
+    const render = createComputation(() => {}, false, ComputationState.EXECUTED);
+    render.tracksElsewhere = true;
+    runTracked(render, () => c());
+    render.state = ComputationState.STALE;
+    updateComputation(render);
+    expect(hasObservers(atomOf(c))).toBe(false);
+    expect(observersOf(atomOf(c))).toEqual([]);
+    runTracked(render, () => s());
+    expect(atomOf(c).subs).toBeUndefined();
+    // the next write makes it a disposal candidate, disposed at the flush
+    s.set(2);
+    await waitScheduler();
+    expect(sourcesOf(atomOf(c))).toEqual([]);
+    expect(c()).toBe(4);
   });
 });

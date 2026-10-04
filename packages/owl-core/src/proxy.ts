@@ -8,6 +8,7 @@ import {
   ComputationState,
   createAtom,
   createComputation,
+  hasObservers,
   untrack,
   withObserver,
 } from "./computations";
@@ -189,7 +190,7 @@ function releaseKey(target: Target, key: PropertyKey): void {
 
 function releaseKeyAtom(target: Target, key: PropertyKey, atoms: KeyAtoms): void {
   const atom = findAtom(target, key, atoms);
-  if (atom !== undefined && atom.subs === undefined) {
+  if (atom !== undefined && !hasObservers(atom)) {
     if (isObjectKey(key)) {
       atoms.objectKeys.get(target)!.delete(key);
     } else {

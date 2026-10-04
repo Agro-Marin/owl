@@ -1,12 +1,4 @@
-import {
-  ComputationState,
-  debug,
-  debugLog,
-  debugNow,
-  OwlError,
-  removeSources,
-  runTracked,
-} from "@odoo/owl-core";
+import { ComputationState, debug, debugLog, debugNow, OwlError, runTracked } from "@odoo/owl-core";
 import { BDom, mount, type MountTarget } from "../blockdom";
 import type { ComponentNode } from "../component_node";
 import { STATUS } from "../status";
@@ -265,10 +257,9 @@ export class Fiber {
         return;
       }
       // A render is marked EXECUTED while it runs, so that writing a value it
-      // already read schedules a re-render. Its previous subscriptions must go
-      // first: kept, a write to a value the last render read but this one
-      // writes before reading would schedule a re-render on every render.
-      removeSources(node.signalComputation);
+      // already read schedules a re-render. A value the last render read and
+      // this one has not read yet does not: runTracked leaves that link stale
+      // until the render reads it again (and drops it if it does not).
       node.signalComputation.state = ComputationState.EXECUTED;
       this.phase = FiberPhase.RENDERING;
       const start = debug.fiber ? debugNow() : -1;

@@ -11,6 +11,7 @@ import {
   shallowEqual,
   signal,
   proxy,
+  untrack,
   xml,
 } from "../../src";
 import { atomSymbol, Atom, observersOf } from "@odoo/owl-core";
@@ -696,6 +697,84 @@ describe("computed with equals in components", () => {
     list.todos.push({ id: 4, text: "d", done: false });
     await nextTick();
     expect(fixture.innerHTML).toBe("<ul><li>a</li><li>d</li></ul>");
+    expect(renders).toBe(2);
+  });
+});
+
+describe("render subscriptions", () => {
+  test("a re-render keeps the subscriptions it reads again, and drops the others", async () => {
+    const shown = signal(true);
+    const a = signal("a");
+    const b = signal("b");
+    class Root extends Component {
+      static template = xml`<t t-out="this.a()"/><t t-if="this.shown()" t-out="this.b()"/>`;
+      a = a;
+      b = b;
+      shown = shown;
+    }
+    await mount(Root, fixture);
+    const aAtom: Atom = (a as any)[atomSymbol];
+    const bAtom: Atom = (b as any)[atomSymbol];
+    const link = aAtom.subs;
+    expect(observersOf(aAtom).length).toBe(1);
+    expect(observersOf(bAtom).length).toBe(1);
+
+    shown.set(false);
+    await nextTick();
+    expect(fixture.innerHTML).toBe("a");
+    expect(aAtom.subs).toBe(link);
+    expect(observersOf(bAtom).length).toBe(0);
+    expect(bAtom.subs).toBeUndefined();
+
+    b.set("B");
+    a.set("A");
+    await nextTick();
+    expect(fixture.innerHTML).toBe("A");
+    expect(aAtom.subs).toBe(link);
+  });
+
+  test("a render writing a value the previous render read, before reading it, schedules no render", async () => {
+    const s = signal(0);
+    const other = signal(0);
+    let renders = 0;
+    class Root extends Component {
+      static template = xml`<t t-out="this.tick()"/><t t-out="this.s()"/><t t-out="this.other()"/>`;
+      s = s;
+      other = other;
+      tick() {
+        renders++;
+        if (renders > 1) {
+          s.set(untrack(s) + 1);
+        }
+        return "";
+      }
+    }
+    await mount(Root, fixture);
+    expect(fixture.innerHTML).toBe("00");
+    other.set(1);
+    await nextTick();
+    expect(fixture.innerHTML).toBe("11");
+    await nextTick();
+    expect(renders).toBe(2);
+  });
+
+  test("a write between a render's scheduling and the render schedules nothing more", async () => {
+    const s = signal(0);
+    let renders = 0;
+    class Root extends Component {
+      static template = xml`<t t-out="this.count()"/>`;
+      count() {
+        renders++;
+        return s();
+      }
+    }
+    await mount(Root, fixture);
+    s.set(1);
+    await Promise.resolve();
+    s.set(2);
+    s.set(3);
+    await nextTick();
+    expect(fixture.innerHTML).toBe("3");
     expect(renders).toBe(2);
   });
 });

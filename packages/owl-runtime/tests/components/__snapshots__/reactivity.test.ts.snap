@@ -509,3 +509,47 @@ exports[`reading reactive state in setup should work as expected 2`] = `
   }
 }"
 `;
+
+exports[`render subscriptions > a re-render keeps the subscriptions it reads again, and drops the others 1`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { safeOutput } = helpers;
+  
+  return function template(ctx, node, key = "") {
+    let b2, b3;
+    b2 = safeOutput(ctx['this'].a(), key, "__1");
+    if (ctx['this'].shown()) {
+      b3 = safeOutput(ctx['this'].b(), key, "__2");
+    }
+    return multi([b2, b3]);
+  }
+}"
+`;
+
+exports[`render subscriptions > a render writing a value the previous render read, before reading it, schedules no render 1`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { safeOutput } = helpers;
+  
+  return function template(ctx, node, key = "") {
+    const b2 = safeOutput(ctx['this'].tick(), key, "__1");
+    const b3 = safeOutput(ctx['this'].s(), key, "__2");
+    const b4 = safeOutput(ctx['this'].other(), key, "__3");
+    return multi([b2, b3, b4]);
+  }
+}"
+`;
+
+exports[`render subscriptions > a write between a render's scheduling and the render schedules nothing more 1`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { safeOutput } = helpers;
+  
+  return function template(ctx, node, key = "") {
+    return safeOutput(ctx['this'].count(), key, "__1");
+  }
+}"
+`;

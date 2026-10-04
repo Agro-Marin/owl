@@ -1,6 +1,6 @@
 import { debug, debugLog } from "./debug";
 import { OwlError } from "./owl_error";
-import { ComputationAtom, disposeComputation } from "./computations";
+import { ComputationAtom, disposeComputation, hasObservers } from "./computations";
 import { STATUS, StatusValue } from "./status";
 import type { PluginManager } from "./plugin_manager";
 
@@ -244,7 +244,7 @@ export abstract class Scope {
 // disposed component takes its unobserved computeds along).
 function disposeUnobserved(computations: ComputationAtom[]): void {
   for (const computation of computations) {
-    if (computation.subs === undefined) {
+    if (!hasObservers(computation)) {
       disposeComputation(computation);
     }
   }

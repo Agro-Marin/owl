@@ -116,6 +116,11 @@ export interface ComputationAtom<T = any> extends Atom<T> {
   // whether this run pointed the activeLink of the sources it has yet to read
   // again at their old links (done once, at its first out-of-order read)
   prepared: boolean;
+  // A component's render computation: its compute only schedules the render,
+  // which tracks through runTracked later. Running the compute detaches its
+  // sources instead of dropping them: a write no longer reaches it through
+  // them, and the render reuses those it reads again.
+  tracksElsewhere: boolean;
   // the atoms an observe() view subscribed it to: it subscribes while another
   // computation runs, so it cannot use activeLink to skip a repeated read
   observed: Set<Atom> | null;
@@ -143,13 +148,33 @@ export function createAtom<T, K extends string>(value: T, type: K): Atom<T> & { 
   return { type, value, subs: undefined, subsTail: undefined, activeLink: undefined };
 }
 
+// A link stamped with an older run than its observer's last one was not read
+// by that run (yet, if it is running): a write does not go through it.
+function isLive(link: Link): boolean {
+  return link.version === link.sub.version;
+}
+
+/**
+ * Whether a computation observes `atom`.
+ */
+export function hasObservers(atom: Atom): boolean {
+  for (let link = atom.subs; link !== undefined; link = link.nextSub) {
+    if (isLive(link)) {
+      return true;
+    }
+  }
+  return false;
+}
+
 /**
  * The computations observing `atom`, oldest subscription first.
  */
 export function observersOf(atom: Atom): ComputationAtom[] {
   const result: ComputationAtom[] = [];
   for (let link = atom.subs; link !== undefined; link = link.nextSub) {
-    result.push(link.sub);
+    if (isLive(link)) {
+      result.push(link.sub);
+    }
   }
   return result;
 }
@@ -210,6 +235,7 @@ export function createComputation(
     depsTail: undefined,
     version: 0,
     prepared: false,
+    tracksElsewhere: false,
     observed: null,
     state,
     immediate,
@@ -393,6 +419,11 @@ export function onWriteAtom(atom: Atom) {
   for (let link = atom.subs; link !== undefined; link = link.nextSub) {
     const ctx = link.sub;
     if (ctx.state === ComputationState.EXECUTED) {
+      if (link.version !== ctx.version) {
+        // a running render has yet to read it again, a scheduled one has
+        // detached it: as if it were not subscribed
+        continue;
+      }
       invalidations++;
       if (ctx.isDerived) {
         markDownstream(ctx);
@@ -403,6 +434,8 @@ export function onWriteAtom(atom: Atom) {
       }
     }
     ctx.state = ComputationState.STALE;
+    // (an atom observed only through stale links is unobserved, but staying a
+    // candidate a little longer costs nothing: the flush re-checks)
     if (ctx.isDerived && ctx.subs === undefined) {
       pendingDisposals.add(ctx);
     }
@@ -532,7 +565,7 @@ function processEffects() {
       // re-subscribed to the candidate. Disposing an unobserved derived is
       // safe: it is already STALE, so a later read fully recomputes it and
       // re-subscribes to whatever it reads.
-      if (computation.subs === undefined) {
+      if (!hasObservers(computation)) {
         if (debug.computed) {
           debugLog("computed", `dispose unobserved ${computation.name}`);
         }
@@ -586,7 +619,9 @@ export function updateComputation(computation: ComputationAtom) {
     debugLog(computation.isEffect ? "effect" : "computed", `run ${computation.name}`);
   }
   try {
-    computation.value = runTracked(computation, computation.compute);
+    computation.value = computation.tracksElsewhere
+      ? detachAndRun(computation)
+      : runTracked(computation, computation.compute);
   } catch (error) {
     if (debug.error) {
       debugLog("error", `${computation.name} threw`, error);
@@ -603,6 +638,22 @@ export function updateComputation(computation: ComputationAtom) {
       // throw, and runs again when one of those changes.
       computation.state = ComputationState.EXECUTED;
     }
+  }
+}
+
+// Runs the compute of a computation that tracks elsewhere, untracked: its
+// links go stale (a new version), and wait for the run that tracks.
+function detachAndRun(computation: ComputationAtom) {
+  computation.version++;
+  const previousComputation = currentComputation;
+  const previousObserver = currentObserver;
+  currentComputation = undefined;
+  currentObserver = undefined;
+  try {
+    return computation.compute();
+  } finally {
+    currentComputation = previousComputation;
+    currentObserver = previousObserver;
   }
 }
 
@@ -698,7 +749,7 @@ export function disposeComputation(computation: ComputationAtom) {
     unlinkSub(link);
     // Recursively dispose derived computations that lost all observers.
     const derived = link.dep as ComputationAtom;
-    if (derived.isDerived && derived.subs === undefined) {
+    if (derived.isDerived && !hasObservers(derived)) {
       try {
         disposeComputation(derived);
       } catch (error) {
@@ -758,7 +809,7 @@ function markDownstream(computation: ComputationAtom) {
       if (observer.isDerived && observer.subs === undefined) {
         pendingDisposals.add(observer);
       }
-      if (observer.state) {
+      if (observer.state || link.version !== observer.version) {
         continue;
       }
       observer.state = observer.notifiesWithoutRecompute
