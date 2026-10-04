@@ -321,6 +321,25 @@ function modelExpr(value: any) {
 }
 
 /**
+ * Renders again a child whose render was cancelled with its parent's pass, for
+ * the props it already has: node.props only ever holds props whose
+ * onWillUpdateProps hooks have settled, so they do not run a second time.
+ */
+function rerenderChild(node: ComponentNode, props: Record<string, any>, parentFiber: Fiber) {
+  if (debug.fiber) {
+    debugLog("fiber", `render ${node.componentName} again: its pending render was cancelled`);
+  }
+  node.forceNextRender = false;
+  const fiber = makeChildFiber(node, parentFiber);
+  node.fiber = fiber;
+  const parentRoot = parentFiber.root!;
+  if (node.willPatch.length) parentRoot.willPatch.push(fiber);
+  if (node.patched.length) parentRoot.patched.push(fiber);
+  node.props = props;
+  fiber.render();
+}
+
+/**
  * Re-renders an existing child with new props, once its onWillUpdateProps
  * hooks have run (and settled, when one returns a promise). Kept out of the
  * createComponent closure: its own closures would make every call of that
@@ -330,7 +349,7 @@ function updateChild(node: ComponentNode, props: Record<string, any>, parentFibe
   if (debug.fiber) {
     debugLog(
       "fiber",
-      `update ${node.componentName}: ${node.forceNextRender ? "forced" : parentFiber.deep ? "deep render" : "props changed"}${node.willUpdateProps.length ? `, ${node.willUpdateProps.length} willUpdateProps` : ""}`
+      `update ${node.componentName}: ${parentFiber.deep ? "deep render" : "props changed"}${node.willUpdateProps.length ? `, ${node.willUpdateProps.length} willUpdateProps` : ""}`
     );
   }
   node.forceNextRender = false;
@@ -438,8 +457,10 @@ function createComponent<P extends Record<string, any>>(
       }
     }
     if (node) {
-      if (arePropsDifferent(node.props, props) || parentFiber.deep || node.forceNextRender) {
+      if (arePropsDifferent(node.props, props) || parentFiber.deep) {
         updateChild(node, props, parentFiber);
+      } else if (node.forceNextRender) {
+        rerenderChild(node, props, parentFiber);
       } else if (debug.fiber) {
         debugLog("fiber", `keep ${node.componentName}: props unchanged`);
       }

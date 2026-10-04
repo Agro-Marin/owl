@@ -58,6 +58,55 @@ exports[`Cascading renders after microtaskTick 3`] = `
 }"
 `;
 
+exports[`a child re-rendered because its parent's pass was cancelled runs onWillUpdateProps once per new props 1`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { createComponent, safeOutput } = helpers;
+  const comp1 = createComponent(app, \`Fast\`, true, false, false, ["value"]);
+  const comp2 = createComponent(app, \`Slow\`, true, false, false, ["value"]);
+  
+  let block1 = createBlock(\`<div><block-child-0/><block-child-1/><i><block-child-2/></i></div>\`);
+  
+  return function template(ctx, node, key = "") {
+    const b2 = comp1({value: ctx['this'].state.value}, key + \`__1\`, node, this, null);
+    const b3 = comp2({value: ctx['this'].state.value}, key + \`__2\`, node, this, null);
+    const b4 = safeOutput(ctx['this'].state.other, key, "__3");
+    return block1([], [b2, b3, b4]);
+  }
+}"
+`;
+
+exports[`a child re-rendered because its parent's pass was cancelled runs onWillUpdateProps once per new props 2`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { safeOutput } = helpers;
+  
+  let block1 = createBlock(\`<span><block-child-0/></span>\`);
+  
+  return function template(ctx, node, key = "") {
+    const b2 = safeOutput(ctx['this'].props.value, key, "__1");
+    return block1([], [b2]);
+  }
+}"
+`;
+
+exports[`a child re-rendered because its parent's pass was cancelled runs onWillUpdateProps once per new props 3`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { safeOutput } = helpers;
+  
+  let block1 = createBlock(\`<b><block-child-0/></b>\`);
+  
+  return function template(ctx, node, key = "") {
+    const b2 = safeOutput(ctx['this'].props.value, key, "__1");
+    return block1([], [b2]);
+  }
+}"
+`;
+
 exports[`a render delayed by a rendering ancestor of another app resumes when that app renders 1`] = `
 "function anonymous(app, bdom, helpers
 ) {

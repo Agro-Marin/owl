@@ -3203,13 +3203,13 @@ test("rendering parent twice, with different props on child and stuff", async ()
   `);
   expect(fixture.innerHTML).toBe("1");
 
-  // trigger a render, but keep the props for child the same
+  // trigger a render, but keep the props for child the same: the child
+  // renders again, its onWillUpdateProps already ran for these props
   render(parent);
   await nextTick();
   expect(fixture.innerHTML).toBe("2");
   expect(steps.splice(0)).toMatchInlineSnapshot(`
     [
-      "Child:willUpdateProps",
       "Parent:willPatch",
       "Child:willPatch",
       "Child:patched",
@@ -4525,4 +4525,46 @@ test("a single render below a rendering ancestor of another app is delayed too",
   await nextTick();
   await nextTick();
   expect(fixture.innerHTML).toBe("<div><span>2</span><p>2</p></div>");
+});
+
+test("a child re-rendered because its parent's pass was cancelled runs onWillUpdateProps once per new props", async () => {
+  const def = makeDeferred();
+  const updates: number[] = [];
+  class Fast extends Component {
+    static template = xml`<span><t t-out="this.props.value"/></span>`;
+    props = props();
+    setup() {
+      onWillUpdateProps((next) => {
+        updates.push(next.value);
+      });
+    }
+  }
+  class Slow extends Component {
+    static template = xml`<b><t t-out="this.props.value"/></b>`;
+    props = props();
+    setup() {
+      onWillUpdateProps(() => def);
+    }
+  }
+  class Parent extends Component {
+    static template = xml`<div><Fast value="this.state.value"/><Slow value="this.state.value"/><i t-out="this.state.other"/></div>`;
+    static components = { Fast, Slow };
+    state = proxy({ value: 1, other: "a" });
+  }
+  const parent = await mount(Parent, fixture);
+  parent.state.value = 2;
+  await nextTick();
+  // Fast rendered with 2, the pass waits for Slow
+  expect(updates).toEqual([2]);
+  parent.state.other = "b";
+  await nextTick();
+  def.resolve();
+  await nextTick();
+  expect(fixture.innerHTML).toBe("<div><span>2</span><b>2</b><i>b</i></div>");
+  // the cancelled pass applied value 2 to Fast already: rendering it again
+  // needs no second onWillUpdateProps for the same props
+  expect(updates).toEqual([2]);
+  parent.state.value = 3;
+  await nextTick();
+  expect(updates).toEqual([2, 3]);
 });
