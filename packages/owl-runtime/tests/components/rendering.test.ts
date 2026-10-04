@@ -568,3 +568,28 @@ describe("render loop detection", () => {
     expect(getConsoleOutput()).toEqual([]);
   });
 });
+
+test("node.renderFn can be wrapped during setup and the original called unbound", async () => {
+  const steps: string[] = [];
+  class Comp extends Component {
+    static template = xml`<span t-out="this.state.n"/>`;
+    state = proxy({ n: 1 });
+    setup() {
+      // the shape of Odoo's onWillRender / onRendered (web/core/utils/render_hooks.js)
+      const node: any = this.__owl__;
+      const render = node.renderFn;
+      node.renderFn = (...args: any[]) => {
+        steps.push("willRender");
+        const bdom = render(...args);
+        steps.push("rendered");
+        return bdom;
+      };
+    }
+  }
+  const comp = await mount(Comp, fixture);
+  expect(fixture.innerHTML).toBe("<span>1</span>");
+  comp.state.n = 2;
+  await nextTick();
+  expect(fixture.innerHTML).toBe("<span>2</span>");
+  expect(steps).toEqual(["willRender", "rendered", "willRender", "rendered"]);
+});

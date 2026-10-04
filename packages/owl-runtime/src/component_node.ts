@@ -48,8 +48,10 @@ export class ComponentNode extends Scope implements VNode<ComponentNode> {
   parentKey: string | null;
   props: Record<string, any>;
   defaultProps: Record<string, any> | null = null;
-  templateFn!: Function;
-  renderCtx!: { this: Component; __owl__: ComponentNode };
+  // an own function, callable unbound: Odoo's onWillRender / onRendered
+  // (web/core/utils/render_hooks.js) and HOOT wrap it during setup and call the
+  // saved original without `this`
+  renderFn!: () => BDom;
   parent: ComponentNode | null;
   // the child nodes by key, null until the first one. A Map rather than an
   // object: a key is a string built by the render, and a new key on an object
@@ -113,8 +115,9 @@ export class ComponentNode extends Scope implements VNode<ComponentNode> {
     try {
       const component = new C(this);
       this.component = component;
-      this.renderCtx = { this: component, __owl__: this };
-      this.templateFn = app.getTemplate(C.template);
+      this.renderFn = app
+        .getTemplate(C.template)
+        .bind(component, { this: component, __owl__: this }, this);
       component.setup();
     } catch (e) {
       // nothing will ever reference this node: what its setup acquired is
@@ -134,10 +137,6 @@ export class ComponentNode extends Scope implements VNode<ComponentNode> {
    */
   get children(): { [key: string]: ComponentNode } {
     return this.childMap ? Object.fromEntries(this.childMap) : {};
-  }
-
-  renderFn() {
-    return this.templateFn.call(this.component, this.renderCtx, this);
   }
 
   /**
