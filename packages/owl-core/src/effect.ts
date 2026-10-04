@@ -135,15 +135,17 @@ function releaseUntracked(effect: ComputationAtom) {
 
 // Releases everything even when a cleanup throws, then rethrows the first
 // error: a cleanup that throws must not keep the effect's children alive.
+// The children go first: created by this effect's run, they may use what its
+// own cleanup tears down.
 function release(effect: ComputationAtom) {
   let failure: { error: unknown } | null = null;
   try {
-    runCleanup(effect);
+    disposeOwned(effect);
   } catch (error) {
     failure = { error };
   }
   try {
-    disposeOwned(effect);
+    runCleanup(effect);
   } catch (error) {
     failure ||= { error };
   }

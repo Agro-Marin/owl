@@ -3,6 +3,7 @@ import {
   computed,
   disposeComputation,
   effect,
+  immediateEffect,
   observersOf,
   proxy,
   signal,
@@ -842,5 +843,27 @@ describe("effects created by a scoped computed", () => {
     dep.set(2);
     await waitScheduler();
     expect(runs).toBe(2);
+  });
+});
+
+describe("cleanup order", () => {
+  test("the cleanups of an effect's children run before its own, on a re-run and on dispose", () => {
+    const a = signal(0);
+    const log: string[] = [];
+    const dispose = immediateEffect(() => {
+      a();
+      log.push("outer:run");
+      immediateEffect(() => {
+        log.push("inner:run");
+        return () => log.push("inner:cleanup");
+      });
+      return () => log.push("outer:cleanup");
+    });
+    log.length = 0;
+    a.set(1);
+    expect(log).toEqual(["inner:cleanup", "outer:cleanup", "outer:run", "inner:run"]);
+    log.length = 0;
+    dispose();
+    expect(log).toEqual(["inner:cleanup", "outer:cleanup"]);
   });
 });
