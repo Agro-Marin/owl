@@ -53,6 +53,7 @@ needs. Here is a list of all Owl specific directives:
 | `t-component`, `t-props`                    | [Defining a sub component](component.md#sub-components)         |
 | `t-ref`                                     | [Setting a reference to a dom node or a sub component](refs.md) |
 | `t-key`                                     | [Defining a key (to help virtual dom reconciliation)](#loops)   |
+| `t-memo`                                    | [Skipping unchanged list items](#memoized-list-items)           |
 | `t-on-*`                                    | [Event handling](event_handling.md)                             |
 | `t-call-slot`, `t-set-slot`, `t-slot-scope` | [Rendering a slot](slots.md)                                    |
 | `t-model`                                   | [Form bindings](form_bindings.md)                               |
@@ -482,8 +483,8 @@ Then, the template could look like this:
 ```
 
 The `t-key` directive is useful for lists (`t-foreach`). A key should be
-a unique number or string (objects will not work: they will be cast to the
-`"[object Object]"` string, which is obviously not unique).
+unique within the list: a number, a string, or an object (compared by identity,
+never confused with a string key).
 
 Also, the key can be set on a `p` tag or on a wrapping `t` tag. The following
 variations are equivalent:
@@ -502,16 +503,35 @@ variations are equivalent:
 children. If it is missing, Owl throws `"Directive t-foreach should always
 be used with a t-key!"` — there is no fallback to the index.
 
-Note: the `t-foreach` directive only accepts arrays (lists) or objects. It does
-not work with other iterables, such as `Set`. However, it is only a matter of
-using the `...` javascript operator. For example:
+Note: `t-foreach` accepts arrays, objects (their keys), `Map`s (their keys,
+with the values in `<name>_value`) and any other iterable, such as a `Set`.
+
+#### Memoized list items
+
+On a re-render, every item of a `t-foreach` runs its part of the template
+again. `t-memo` lets an item keep its previous content when nothing it depends
+on changed. It goes on the element carrying `t-foreach` and `t-key`, and lists
+the item's dependencies as an array:
 
 ```xml
-<t t-foreach="[...items]" t-as="item">...</t>
+<tr t-foreach="this.rows" t-as="row" t-key="row.id"
+    t-memo="[row.label, row.id === this.selectedId]"
+    t-att-class="{ selected: row.id === this.selectedId }">
+  <td t-out="row.label"/>
+</tr>
 ```
 
-The `...` operator will convert the `Set` (or any other iterables) into a list,
-which will work with Owl QWeb.
+When the array has the same values as on the item's previous render (compared
+one by one, with `Object.is`), the item is not rendered again: its content and
+its DOM stay as they are, and its event handlers keep the values they captured
+then. Anything the item shows must therefore appear in the array; a value read
+inside the item and missing from it does not update the item, nor make the
+component re-render.
+
+The item must be made of elements, text and `t-out` only: Owl rejects a
+`t-memo` item containing a component, a slot or a `t-call` (a skipped item
+would not render them), or a `t-set` writing a variable of the enclosing scope
+(a skipped item would not write it).
 
 ### Sub Templates
 

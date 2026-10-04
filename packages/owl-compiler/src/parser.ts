@@ -105,6 +105,7 @@ export interface ASTTForEach extends BaseAST {
   body: AST;
   noFlags: number;
   key: string;
+  memo?: string;
 }
 
 export interface ASTTKey extends BaseAST {
@@ -571,10 +572,23 @@ function parseTForEach(node: Element, ctx: ParsingContext): AST | null {
     );
   }
   node.removeAttribute("t-key");
+  const memo = node.getAttribute("t-memo");
+  node.removeAttribute("t-memo");
   const body = parseNode(node, ctx);
 
   if (!body) {
     return null;
+  }
+  if (memo !== null) {
+    // a memoized item keeps its previous vnode without running its body: a
+    // component, slot or called template inside would not be visited, and its
+    // owner would destroy it as no longer rendered
+    const directive = unvisitableDirective(body);
+    if (body.hasNoRepresentation || directive) {
+      throw new OwlError(
+        `t-memo needs an item made of elements, text and t-out only (expression: t-foreach="${collection}" t-memo="${memo}"${directive ? `, found ${directive}` : ""})`
+      );
+    }
   }
 
   // a called template reads the loop variables from the context
@@ -593,10 +607,48 @@ function parseTForEach(node: Element, ctx: ParsingContext): AST | null {
     key,
     noFlags,
   };
+  if (memo !== null) {
+    ast.memo = memo;
+  }
   if (body.hasNoRepresentation) {
     ast.hasNoRepresentation = true;
   }
   return ast;
+}
+
+const UNVISITABLE: Partial<Record<ASTType, string>> = {
+  [ASTType.TComponent]: "a component",
+  [ASTType.TCall]: "t-call",
+  [ASTType.TCallSlot]: "t-slot",
+  [ASTType.TCallBlock]: "t-call-block",
+};
+
+// walks every nested object, so that a branch kept outside `content` (t-elif,
+// a t-out or t-set body) is searched too
+function unvisitableDirective(value: any): string | null {
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      const found = unvisitableDirective(item);
+      if (found) {
+        return found;
+      }
+    }
+    return null;
+  }
+  if (!value || typeof value !== "object") {
+    return null;
+  }
+  const found = typeof value.type === "number" && UNVISITABLE[value.type as ASTType];
+  if (found) {
+    return found;
+  }
+  for (const key in value) {
+    const inner = unvisitableDirective(value[key]);
+    if (inner) {
+      return inner;
+    }
+  }
+  return null;
 }
 
 function parseTKey(node: Element, ctx: ParsingContext): AST | null {

@@ -261,6 +261,8 @@ export class Fiber {
       // this one has not read yet does not: runTracked leaves that link stale
       // until the render reads it again (and drops it if it does not).
       node.signalComputation.state = ComputationState.EXECUTED;
+      node.previousMemos = node.memos;
+      node.memos = null;
       this.phase = FiberPhase.RENDERING;
       const start = debug.fiber ? debugNow() : -1;
       // the error is handled while the render is still the current

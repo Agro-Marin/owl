@@ -206,6 +206,8 @@ class CodeTarget {
   // `skey<level>` that tells object keys apart
   stringKeyLevels: Set<number> = new Set();
   tSetVars: Map<string, number> = new Map();
+  // the loop levels whose item is memoized: a memo hit skips the item's body
+  memoLevels: number[] = [];
   code: string[] = [];
   hasRoot = false;
   deferReturn = false;
@@ -879,6 +881,18 @@ export class CodeGenerator {
   compileTForeach(ast: ASTTForEach, ctx: Context): string | null {
     const block = ast.hasNoRepresentation ? null : this.createBlock(ctx.block, "list");
     const id = block ? block.id : this.generateId("_");
+    let memo: string | null = null;
+    if (ast.memo !== undefined && block) {
+      // one site per list instance: a list inside a loop, or in a template
+      // called several times, gets the keys of its position
+      memo = this.generateId("memo");
+      this.helpers.add("memoPrevious");
+      this.helpers.add("memoKeep");
+      this.helpers.add("memoHit");
+      this.define(`${memo}_site`, this.scopeKey(ctx, true));
+      this.define(`${memo}_previous`, `memoPrevious(node, ${memo}_site)`);
+      this.define(`${memo}_next`, `new Map()`);
+    }
     this.target.loopLevel++;
     const loopVar = `i${this.target.loopLevel}`;
     const ctxVar = this.generateId("ctx");
@@ -916,7 +930,13 @@ export class CodeGenerator {
     const keyIdx = this.target.code.length;
 
     const subCtx = createContext(ctx, { block, index: loopVar });
+    if (memo) {
+      this.target.memoLevels.push(level);
+    }
     this.compileAST(ast.body, subCtx);
+    if (memo) {
+      this.target.memoLevels.pop();
+    }
     // the body is compiled: whether its keys need the string form is known
     const keyLines: string[] = [];
     let uniqueKey = `key${level}`;
@@ -935,6 +955,20 @@ export class CodeGenerator {
         `keys${id}.add(${uniqueKey});`
       );
     }
+    if (memo) {
+      const vnodes = `c_block${id}`;
+      const entry = `{ deps: deps${level}, vnodes: ${vnodes}, index: ${loopVar} }`;
+      keyLines.push(
+        `const deps${level} = ${compileExpr(ast.memo!)};`,
+        `const hit${level} = memoHit(${memo}_previous, ${uniqueKey}, deps${level});`,
+        `if (hit${level} !== undefined) {`,
+        `  ${vnodes}[${loopVar}] = hit${level}.vnodes[hit${level}.index];`,
+        `  ${memo}_next.set(${uniqueKey}, ${entry});`,
+        `  continue;`,
+        `}`
+      );
+      this.addLine(`${memo}_next.set(${uniqueKey}, ${entry});`);
+    }
     keyLines.forEach((line, i) => this.addLine(line, keyIdx + i));
     this.target.indentLevel--;
     this.target.loopLevel--;
@@ -945,6 +979,9 @@ export class CodeGenerator {
       }
     }
     this.addLine(`}`);
+    if (memo) {
+      this.addLine(`memoKeep(node, ${memo}_site, ${memo}_next);`);
+    }
     if (!block) {
       return null;
     }
@@ -1091,6 +1128,11 @@ export class CodeGenerator {
     const level = this.target.loopLevel;
     const defLevel = this.target.tSetVars.get(ast.name);
     if (defLevel !== undefined && level > defLevel) {
+      if (this.target.memoLevels.some((memoLevel) => memoLevel > defLevel)) {
+        throw new OwlError(
+          `t-set="${ast.name}" inside a t-memo item writes a variable of an enclosing scope, and a memo hit would skip the write`
+        );
+      }
       this.addLine(`${this.target.loopCtxVars[defLevel]}[${name}] = ${value};`);
     } else {
       if (!level) {

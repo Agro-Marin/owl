@@ -18,6 +18,7 @@ import { BDom, RefCallback, VNode } from "./blockdom";
 import { Component, ComponentConstructor } from "./component";
 import { fibersInError, handleError, handleHookRejection } from "./rendering/error_handling";
 import { APPLIED_TO_DOM, Fiber, FiberPhase, makeRootFiber, MountFiber } from "./rendering/fibers";
+import type { MemoSite } from "./rendering/template_helpers";
 import { STATUS } from "./status";
 
 // -----------------------------------------------------------------------------
@@ -77,6 +78,10 @@ export class ComponentNode extends Scope implements VNode<ComponentNode> {
   // sweepRefs.
   trackedRefs: Map<any, { value: HTMLElement | null } | Set<HTMLElement>> | null = null;
   refCallbacks: WeakMap<object, RefCallback> | null = null;
+  // the t-memo sites of the render in progress, and of the render before it: a
+  // site the current render does not reach is dropped with the previous one
+  memos: Map<string, MemoSite> | null = null;
+  previousMemos: Map<string, MemoSite> | null = null;
 
   constructor(
     C: ComponentConstructor,
