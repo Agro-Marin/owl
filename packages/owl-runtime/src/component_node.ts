@@ -322,9 +322,14 @@ export class ComponentNode extends Scope implements VNode<ComponentNode> {
         const child = this.children[k];
         child.updateDom();
       }
+      // this component did not re-render: its fiber is the committed pass's,
+      // and kept, every later render of it would be dropped as superseded
+      this.fiber = null;
     } else {
       // if we get here, this is the component that handled the error and rerendered
-      // itself, so we can simply patch the dom
+      // itself, so we can simply patch the dom: what the new render dropped is
+      // destroyed by the patch, and must leave the children map with it
+      this.children = this.fiber!.childrenMap;
       removalDepth++;
       try {
         this.bdom!.patch(this.fiber!.bdom, true);

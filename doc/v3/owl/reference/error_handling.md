@@ -41,9 +41,12 @@ There are important things to know:
   components committed with it from their own: once the error is handled, their
   `onMounted` (or `onPatched`) still runs. Only the failing component and its
   ancestors in that render wait, without `onMounted`, for the error handler to
-  re-render them; a component that never got its `onMounted` gets no
-  `onWillUnmount` either. An error nobody handles destroys the application
-  before any other callback runs.
+  re-render them, and get both their `onMounted` and, later, their
+  `onWillUnmount` when the recovering render is committed; a component that
+  never gets its `onMounted` gets no `onWillUnmount` either. A component the
+  recovering render removes is destroyed with it, and is set up anew if a
+  later render shows it again. An error nobody handles destroys the
+  application before any other callback runs.
 
 ## Example
 

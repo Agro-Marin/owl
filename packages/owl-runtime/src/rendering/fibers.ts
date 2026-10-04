@@ -292,7 +292,13 @@ export class Fiber {
         );
       }
       if (newCounter === 0) {
-        scheduler.flush();
+        if (fibersInError.has(root)) {
+          // the pass failed: the renders it delayed wait for the frame that
+          // drops it, after its handlers had their chance to re-render
+          scheduler.requestFrame();
+        } else {
+          scheduler.flush();
+        }
       }
     }
   }
@@ -367,6 +373,10 @@ export class RootFiber extends Fiber {
   }
 }
 
+// The onWillUnmount hooks of a component skipped by a failed commit, held
+// until the commit of the recovering render calls its onMounted.
+const deferredWillUnmount = new WeakMap<ComponentNode, Function[]>();
+
 /**
  * Calls the onMounted (or onPatched) hooks of the fibers a commit applied,
  * last registered first. A throwing hook is reported at once and the other
@@ -391,14 +401,22 @@ function callCommitHooks(
   while ((current = fibers.pop())) {
     const node = current.node;
     if (skipped && (!(current.renderState & APPLIED_TO_DOM) || fibersInError.has(current))) {
-      if (mounting) {
+      if (mounting && node.willUnmount.length) {
+        deferredWillUnmount.set(node, node.willUnmount);
         node.willUnmount = [];
       }
       skipped.push(current);
       continue;
     }
-    if (!(current.renderState & APPLIED_TO_DOM)) {
+    if (!(current.renderState & APPLIED_TO_DOM) || node.status === STATUS.DESTROYED) {
       continue;
+    }
+    if (mounting) {
+      const deferred = deferredWillUnmount.get(node);
+      if (deferred) {
+        deferredWillUnmount.delete(node);
+        node.willUnmount = deferred;
+      }
     }
     if (debug.lifecycle && node[hook].length) {
       debugLog("lifecycle", `${hook} ${node.componentName}: ${node[hook].length} hook(s)`);
