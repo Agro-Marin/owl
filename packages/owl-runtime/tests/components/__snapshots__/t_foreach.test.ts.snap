@@ -175,6 +175,51 @@ exports[`list of components > dev mode: a body without components keeps the list
 }"
 `;
 
+exports[`list of components > dev mode: keys a t-set body output in the loop shares are duplicates 1`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { LazyValue, createComponent, prepareList, safeOutput, withKey, keyOf, OwlError } = helpers;
+  const comp1 = createComponent(app, \`Child\`, true, false, false, []);
+  
+  function value1(ctx, node, key = "") {
+    const props1 = {};
+    return comp1(props1, key + \`__1\`, node, this, null);
+  }
+  
+  return function template(ctx, node, key = "") {
+    ctx = Object.create(ctx);
+    ctx["v"] = new LazyValue(value1, ctx, this, node, key);
+    const ctx1 = ctx;
+    const [k_block2, v_block2, l_block2, c_block2] = prepareList(ctx['this'].items);
+    const keys2 = new Set();
+    for (let i1 = 0; i1 < l_block2; i1++) {
+      let ctx = Object.create(ctx1);
+      ctx["item"] = k_block2[i1];
+      const key1 = ctx['item'];
+      const skey1 = keyOf(key1);
+      if (keys2.has(skey1)) { throw new OwlError(\`Got duplicate key in t-foreach: \${key1}\`)}
+      keys2.add(skey1);
+      c_block2[i1] = withKey(safeOutput(ctx['v'], key, "__2", 1, key1), key1);
+    }
+    return list(c_block2);
+  }
+}"
+`;
+
+exports[`list of components > dev mode: keys a t-set body output in the loop shares are duplicates 2`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  
+  let block1 = createBlock(\`<i>child</i>\`);
+  
+  return function template(ctx, node, key = "") {
+    return block1();
+  }
+}"
+`;
+
 exports[`list of components > dev mode: keys the list tells apart but the components share are duplicates 1`] = `
 "function anonymous(app, bdom, helpers
 ) {

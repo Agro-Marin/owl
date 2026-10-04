@@ -811,6 +811,13 @@ export class CodeGenerator {
       const level = this.target.loopLevel;
       let keyArgs: string;
       if (level <= MAX_LAZY_LOOP_KEYS) {
+        if (this.dev) {
+          // safeOutput stringifies the loop keys of a LazyValue: the dev duplicate
+          // key check must compare that form
+          for (let i = 1; i <= level; i++) {
+            this.target.stringKey(i);
+          }
+        }
         const loopKeys = Array.from({ length: level }, (_, i) => `, key${i + 1}`).join("");
         keyArgs = `${keyExpr}, "${site}"${level ? `, ${level}${loopKeys}` : ""}`;
       } else {

@@ -500,7 +500,8 @@ export function processExpr(
 
   const tokens = tokenize(expr);
   let i = 0;
-  let stack = []; // to track last opening (, [ or {
+  // the open groups: "(", "[", "{", and "BLOCK" for the "{" of an arrow's block body
+  const stack: (TKind | "BLOCK")[] = [];
   let topLevelArrowIndex = -1;
   let topLevelParams: [number, number] | null = null;
 
@@ -521,6 +522,8 @@ export function processExpr(
 
     switch (token.type) {
       case "LEFT_BRACE":
+        stack.push(prevToken?.value === "=>" ? "BLOCK" : token.type);
+        break;
       case "LEFT_BRACKET":
       case "LEFT_PAREN":
         stack.push(token.type);

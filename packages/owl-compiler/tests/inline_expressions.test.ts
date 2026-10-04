@@ -124,6 +124,16 @@ describe("expression evaluation", () => {
     expect(run("({y = z}) => y", {})).toBe(9);
     expect(run("(a, {y = 0}) => a + y", 1, { y: 3 })).toBe(4);
     expect(run("({ y = 0, ...rest }) => [y, rest]", { y: 5, a: 7 })).toEqual([5, { a: 7 }]);
+    expect(run("({a: {b = 1}}) => b", { a: {} })).toBe(1);
+    expect(run("([a = 1]) => a", [])).toBe(1);
+  });
+
+  test("an assignment that starts an arrow's block body is not a shorthand default", () => {
+    expect(compileExpr("() => { z = 1, w = 2 }")).toBe("()=>{ctx['z']=1,ctx['w']=2}");
+    expect(compileExpr("x => { a = x }")).toBe("_x=>{ctx['a']=_x}");
+    const ctx: any = {};
+    new Function("ctx", `return (${compileExpr("() => { z = 1, w = 2 }")})`)(ctx)();
+    expect(ctx).toEqual({ z: 1, w: 2 });
   });
 
   test("parenthesis", () => {

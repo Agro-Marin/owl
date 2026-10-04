@@ -1563,6 +1563,7 @@ describe("qweb parser", () => {
       [`<t t-elif="c">X</t>`, "t-elif on a <t>"],
       [`<t t-out="c">X</t>`, "t-out on a <t>"],
       [`<t t-call="sub">X</t>`, "t-call on a <t>"],
+      [`<t t-call-block="b">X</t>`, "t-call-block on a <t>"],
       [`<t t-call-slot="s">X</t>`, "t-call-slot on a <t>"],
       [`<t t-set="v">X</t>`, "t-set on a <t>"],
     ]) {

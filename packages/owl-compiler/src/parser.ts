@@ -386,6 +386,7 @@ const SLOT_HIDING_DIRECTIVES = new Set([
   "t-out",
   "t-esc",
   "t-call",
+  "t-call-block",
   "t-call-slot",
   "t-slot",
   "t-set",
