@@ -18,8 +18,9 @@ export interface ValidationContext {
   withKey(key: PropertyKey): ValidationContext;
 }
 
-// Objects a message prints in full: past it, an object met before is a marker,
-// so values sharing sub-objects (a DAG) stay linear instead of exponential.
+// Entries a message prints in full: past it, an object met before is a
+// marker, so values sharing sub-objects (a DAG) stay linear instead of
+// exponential.
 const PRINT_BUDGET = 1000;
 
 // A JSON.stringify replacer that prints a value seen twice in full, and only
@@ -48,7 +49,9 @@ function makeSafeReplacer() {
         return "[Repeated]";
       }
       seen.add(value);
-      printed++;
+      // the budget counts what an object prints, not just the object: one
+      // large array met many times must not be printed many times
+      printed += 1 + (Array.isArray(value) ? value.length : Object.keys(value).length);
       ancestors.push(value);
     }
     return value;

@@ -321,12 +321,21 @@ export class PluginManager extends Scope {
           debugLog("plugin", "start failed, later batches skipped", e);
         }
         this.pending.clear();
-        // A start cancelled by the destruction of the manager is not a
-        // failure: `ready` resolves. Anything else keeps `ready` rejected and
-        // `hasPendingReady` true, so later startPlugins calls chain onto the
-        // rejected promise and are skipped, and the error surfaces as an
-        // unhandled rejection when no consumer awaits `ready`.
-        if (isAbortError(e) && this.status >= STATUS.DESTROYED) {
+        // Once the manager is destroyed nobody waits for its plugins: an
+        // onWillStart failing then (aborted or not) is dropped and `ready`
+        // resolves, as for a destroyed component's hooks. A failure of a live
+        // manager keeps `ready` rejected and `hasPendingReady` true, so later
+        // startPlugins calls chain onto the rejected promise and are skipped,
+        // and the error surfaces as an unhandled rejection when no consumer
+        // awaits `ready`.
+        if (this.status >= STATUS.DESTROYED) {
+          if (debug.plugin) {
+            debugLog(
+              "plugin",
+              `${isAbortError(e) ? "abort" : "failure"} after destroy, dropped`,
+              e
+            );
+          }
           return;
         }
         throw e;

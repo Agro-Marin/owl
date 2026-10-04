@@ -1520,4 +1520,17 @@ describe("plugin start failures and lookups", () => {
     await expect(mounted).rejects.toMatchObject({ name: "AbortError" });
     expect(fixture.innerHTML).toBe("");
   });
+
+  test("a plugin onWillStart failing after its app was destroyed is dropped, not unhandled", async () => {
+    const rpc = makeDeferred<void>();
+    class Failing extends Plugin {
+      setup() {
+        onWillStart(() => rpc);
+      }
+    }
+    const app = new App({ plugins: [Failing] });
+    app.destroy();
+    rpc.reject(new Error("network down"));
+    await expect(app.pluginManager.ready).resolves.toBeUndefined();
+  });
 });

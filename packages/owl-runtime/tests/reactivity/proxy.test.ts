@@ -2701,3 +2701,20 @@ describe("array mutators do not subscribe their caller", () => {
     ]);
   });
 });
+
+describe("set operations across shallow and deep sets", () => {
+  test("a shallow set holding proxies compares its members with a deep set's by raw object", () => {
+    if (!("union" in Set.prototype)) {
+      return;
+    }
+    const o1 = { n: 1 };
+    const o2 = { n: 2 };
+    const s: any = signal.Set(new Set([proxy(o1)]))();
+    const b: any = proxy(new Set([o1, o2]));
+    expect(s.isSubsetOf(b)).toBe(true);
+    expect(s.intersection(b).size).toBe(1);
+    expect(s.union(b).size).toBe(2);
+    expect(b.isSupersetOf(s)).toBe(true);
+    expect(b.difference(s).size).toBe(1);
+  });
+});

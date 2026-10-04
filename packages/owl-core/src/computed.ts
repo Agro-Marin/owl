@@ -1,5 +1,6 @@
 import {
   atomSymbol,
+  computationScopes,
   ComputationState,
   Equals,
   onReadAtom,
@@ -109,7 +110,11 @@ export function computed<TRead, TWrite = TRead>(
   readComputed.set = options.set ?? readonlySetter;
 
   if (!options.detached) {
-    getScope()?.computations.push(computation);
+    const scope = getScope();
+    if (scope) {
+      scope.computations.push(computation);
+      computationScopes.set(computation, scope);
+    }
   }
 
   return readComputed;

@@ -1,6 +1,7 @@
 import {
   ComputationState,
   ComputationAtom,
+  computationScopes,
   disposeOwned,
   getCurrentComputation,
   removeSources,
@@ -68,13 +69,16 @@ function createEffect<T>(fn: () => T, immediate: boolean, options?: EffectOption
   // Created by an effect, it is disposed when that effect runs again or is
   // disposed. Created by a render, it is disposed with the component: a value
   // the component memoizes across renders keeps its effect. Created in a
-  // computed's getter, it is owned by nothing, like a top-level effect.
+  // computed's getter, it is disposed with the scope the computed was created
+  // in (a component, a plugin), or owned by nothing for a detached one.
   const parent = getCurrentComputation();
   if (parent && !parent.isDerived) {
     (parent.owned ??= new Set()).add(cleanupEffect);
     if (parent.isEffect) {
       computation.owner = parent;
     }
+  } else if (parent) {
+    computationScopes.get(parent)?.onDestroy(cleanupEffect);
   }
   computation.isEffect = true;
   if (debug.effect) {

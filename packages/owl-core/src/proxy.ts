@@ -622,16 +622,53 @@ function makeForEachObserver(target: any, shallow: boolean) {
  * the whole membership of the set. Its result is a fresh, plain Set or a
  * boolean. A reactive `other` is read through its proxy, and so observed too.
  */
-// The operation runs on raw sets on both sides: a reactive `other` would yield
-// proxies of the objects the raw target holds. Reading its size observes it.
-function makeSetOperation(method: Function, target: Set<any>) {
+type SetOperation =
+  | "difference"
+  | "intersection"
+  | "isDisjointFrom"
+  | "isSubsetOf"
+  | "isSupersetOf"
+  | "symmetricDifference"
+  | "union";
+
+// The members of a set-like by their raw object: a shallow set may hold
+// proxies, a deep one yields them, and either way a member is the same member
+// as its raw object.
+function membersByRaw(members: Iterable<any>): Map<any, any> {
+  const byRaw = new Map();
+  for (const member of members) {
+    byRaw.set(toRaw(member), member);
+  }
+  return byRaw;
+}
+
+// The ES2025 set operations, on members compared by their raw object, so that
+// any mix of shallow, deep and plain sets answers as the raw sets would; a
+// result holds the members as the sets hold them. Reading `other`'s keys
+// through it observes a reactive one.
+function makeSetOperation(name: SetOperation, target: Set<any>) {
   return (other: any) => {
     onReadTargetKey(target, KEYCHANGES);
-    const rawOther = toRaw(other);
-    if (rawOther !== other) {
-      other.size;
+    const mine = membersByRaw(target);
+    const theirs = membersByRaw(other.keys());
+    const notIn = (a: Map<any, any>, b: Map<any, any>) =>
+      [...a].filter(([raw]) => !b.has(raw)).map(([, member]) => member);
+    switch (name) {
+      case "union":
+        return new Set([...target, ...notIn(theirs, mine)]);
+      case "intersection":
+        return new Set([...mine].filter(([raw]) => theirs.has(raw)).map(([, member]) => member));
+      case "difference":
+        return new Set(notIn(mine, theirs));
+      case "symmetricDifference":
+        return new Set([...notIn(mine, theirs), ...notIn(theirs, mine)]);
+      case "isSubsetOf":
+        return notIn(mine, theirs).length === 0;
+      case "isSupersetOf":
+        return notIn(theirs, mine).length === 0;
+      case "isDisjointFrom":
+        return [...mine.keys()].every((raw) => !theirs.has(raw));
     }
-    return method.call(target, rawOther);
   };
 }
 /**
@@ -713,10 +750,7 @@ const setOperations = (
   ] as const
 )
   .filter((name) => name in Set.prototype)
-  .map((name): [PropertyKey, MethodFactory] => [
-    name,
-    (target) => makeSetOperation((Set.prototype as any)[name], target),
-  ]);
+  .map((name): [PropertyKey, MethodFactory] => [name, (target) => makeSetOperation(name, target)]);
 const weakMapMethods: [PropertyKey, MethodFactory][] = [
   ["has", (target, shallow) => makeKeyObserver("has", target, shallow)],
   ["get", (target, shallow) => makeKeyObserver("get", target, shallow)],

@@ -69,10 +69,14 @@ itself is disposed, the child is disposed too.
 An effect created while a component renders (from a template helper, or a
 getter that lazily creates an `asyncComputed`) belongs to the component: it
 lasts across renders and is disposed with the component, so a value the
-component memoizes keeps its effect. An effect created inside a
-[computed](computed_values.md)'s getter belongs to nothing, like a top-level
-`effect()`: it is not a dependent of the computed, survives its recomputes,
-and must be disposed by whoever created it.
+component memoizes keeps its effect. Memoize it: an effect created on every
+render is a new one each time, and they pile up until the component is
+destroyed. An effect created inside a [computed](computed_values.md)'s getter
+belongs to the scope the computed was created in — the component or plugin
+whose `setup()` created it — and is disposed with it, not when the computed
+recomputes; the same advice applies. A `detached` computed, or one created
+outside any scope, gives its effects no owner: like a top-level `effect()`, they
+must be disposed by whoever created them.
 
 This ownership is **implicit** — any `effect()` call made while another effect
 is on the call stack is attached to that effect, even if it happens inside a

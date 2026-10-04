@@ -1,5 +1,5 @@
 import { atomSymbol, computed, disposeComputation, effect, proxy, signal, untrack } from "../src";
-import { expectSpy, nextMicroTick } from "./helpers";
+import { expectSpy, nextMicroTick, TestScope } from "./helpers";
 
 async function waitScheduler() {
   await nextMicroTick();
@@ -754,5 +754,35 @@ describe("effect", () => {
       await waitScheduler();
       expectSpy(spy, 2, { args: [1, 0] });
     });
+  });
+});
+
+describe("effects created by a scoped computed", () => {
+  test("are disposed with the scope the computed was created in", async () => {
+    const dep = signal(0);
+    const n = signal(0);
+    let runs = 0;
+    const scope = new TestScope({});
+    const c = scope.run(() =>
+      computed(() => {
+        n();
+        effect(() => {
+          dep();
+          runs++;
+        });
+        return 1;
+      })
+    );
+    effect(() => c());
+    n.set(1);
+    await waitScheduler();
+    runs = 0;
+    dep.set(1);
+    await waitScheduler();
+    expect(runs).toBe(2);
+    scope.finalize(() => {});
+    dep.set(2);
+    await waitScheduler();
+    expect(runs).toBe(2);
   });
 });

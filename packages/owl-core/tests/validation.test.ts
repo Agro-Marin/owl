@@ -1326,3 +1326,16 @@ test("assertType prints a value sharing sub-objects in bounded size", () => {
   expect(message).toContain("[Repeated]");
   expect(message.length).toBeLessThan(200_000);
 });
+
+test("assertType prints one large array met many times once", () => {
+  const big = Array.from({ length: 20000 }, (_, i) => i);
+  const value = { items: Array.from({ length: 50 }, () => big) };
+  let message = "";
+  try {
+    assertType(value, t.object({ missing: t.number() }));
+  } catch (e: any) {
+    message = e.message;
+  }
+  expect(message).toContain("[Repeated]");
+  expect(message.length).toBeLessThan(500_000);
+});

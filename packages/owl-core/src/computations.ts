@@ -87,6 +87,13 @@ export interface ComputationAtom<T = any> extends Atom<T> {
 
 export const atomSymbol = Symbol("Atom");
 
+// The scope a computed was created in (unless detached): the effects its
+// getter creates are disposed with that scope.
+export const computationScopes = new WeakMap<
+  ComputationAtom,
+  { onDestroy(cb: () => void): void }
+>();
+
 let observers: ComputationAtom[] = [];
 let immediateObservers: ComputationAtom[] = [];
 let currentComputation: ComputationAtom | undefined;
@@ -239,17 +246,23 @@ function updateEach(computations: ComputationAtom[]): unknown[] | null {
 // recreates. One that is running already (the child runs inside a write of
 // its) or that waits in the other queue is left to its own turn.
 function updateOwnerFirst(computation: ComputationAtom) {
-  const owner = computation.owner;
-  if (
-    owner &&
-    owner.state !== ComputationState.EXECUTED &&
-    !owner.running &&
-    owner.immediate === computation.immediate
-  ) {
-    if (debug.effect) {
-      debugLog("effect", `run owner ${owner.name} before ${computation.name}`);
+  // the topmost ancestor due in the same queue, idle and stale: its run
+  // disposes every effect below it, this one included
+  let first: ComputationAtom | null = null;
+  for (let owner = computation.owner; owner; owner = owner.owner) {
+    if (
+      owner.state !== ComputationState.EXECUTED &&
+      !owner.running &&
+      owner.immediate === computation.immediate
+    ) {
+      first = owner;
     }
-    updateOwnerFirst(owner);
+  }
+  if (first) {
+    if (debug.effect) {
+      debugLog("effect", `run owner ${first.name} before ${computation.name}`);
+    }
+    updateComputation(first);
   }
   updateComputation(computation);
 }

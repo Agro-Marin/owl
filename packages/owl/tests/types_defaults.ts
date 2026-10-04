@@ -144,4 +144,9 @@ assertEq<StripBrands<typeof WithOptional>, { a: number } & { b: string }>();
 const Unchecked = t.object<{ a: ReturnType<typeof t.number> }>();
 assertEq<ReturnType<typeof Unchecked.toShape>, {}>();
 void WithOptional;
+
+// t.and([]) checks nothing: its value is unknown
+const Empty = t.and([]);
+assertEq<StripBrands<typeof Empty>, unknown>();
+void Empty;
 void Unchecked;

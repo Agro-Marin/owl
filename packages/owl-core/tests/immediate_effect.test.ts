@@ -1,4 +1,4 @@
-import { computed, immediateEffect, effect, proxy, signal } from "../src";
+import { computed, immediateEffect, effect, proxy, signal, untrack } from "../src";
 import { expectSpy, nextMicroTick } from "./helpers";
 
 async function waitScheduler() {
@@ -335,5 +335,26 @@ describe("array methods run as one batch", () => {
       process.off("unhandledRejection", onRejection);
       expect(rejections).toMatchObject([{ message: "immediate saw 0" }]);
     });
+  });
+});
+
+describe("owner chain", () => {
+  test("an immediate grandparent due runs before a stale child, past a deferred parent", async () => {
+    const a = signal(0);
+    const log: string[] = [];
+    immediateEffect(() => {
+      const ga = untrack(a);
+      effect(() => {
+        immediateEffect(() => {
+          log.push(`child ga=${ga} a=${a()}`);
+        });
+      });
+      // read after the subtree exists: the child is notified first
+      a();
+    });
+    log.length = 0;
+    a.set(1);
+    await waitScheduler();
+    expect(log).toEqual(["child ga=1 a=1"]);
   });
 });

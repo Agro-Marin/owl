@@ -74,11 +74,13 @@ type MemberShape<M> = M extends { toShape(): infer S } ? S : never;
 type MergedShape<T extends any[]> = UnionToIntersection<MemberShape<T[number]>>;
 // The value of an intersection: each member's value, intersected. A member's
 // value is boxed first, or UnionToIntersection would also split the member's
-// own union - an optional member's `V | undefined` - and yield never.
-type IntersectionValue<T extends any[]> =
-  UnionToIntersection<
-    T[number] extends infer M ? (M extends any ? { value: StripBrands<M> } : never) : never
-  > extends { value: infer V }
+// own union - an optional member's `V | undefined` - and yield never. No
+// member constrains nothing.
+type IntersectionValue<T extends any[]> = [T[number]] extends [never]
+  ? unknown
+  : UnionToIntersection<
+        T[number] extends infer M ? (M extends any ? { value: StripBrands<M> } : never) : never
+      > extends { value: infer V }
     ? V
     : never;
 
