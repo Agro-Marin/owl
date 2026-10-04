@@ -19,7 +19,7 @@ import {
   useListener,
   xml,
 } from "../src";
-import { atomSymbol, Atom, PluginManager, types } from "@odoo/owl-core";
+import { atomSymbol, Atom, observersOf, PluginManager, types } from "@odoo/owl-core";
 import { STATUS } from "../src/status";
 import { makeDeferred, makeTestFixture, nextMicroTick, nextTick, waitScheduler } from "./helpers";
 
@@ -747,12 +747,12 @@ test("destroying a plugin with computed cleans up signal observers", () => {
 
   // Evaluate the computed to establish subscriptions
   a.isSelected();
-  expect(selectedIdAtom.observers.size).toBe(1);
+  expect(observersOf(selectedIdAtom).length).toBe(1);
 
   manager.destroy();
 
   // After destruction, the computed should be cleaned up from selectedId's observers
-  expect(selectedIdAtom.observers.size).toBe(0);
+  expect(observersOf(selectedIdAtom).length).toBe(0);
 });
 
 describe("onWillStart in plugins", () => {

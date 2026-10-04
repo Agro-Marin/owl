@@ -1,4 +1,4 @@
-import { atomSymbol, shallowEqual, signal } from "../src";
+import { immediateEffect, shallowEqual, signal } from "../src";
 import { expectSpy, spyEffect, waitScheduler } from "./helpers";
 
 test("signal can be created and read", () => {
@@ -537,18 +537,14 @@ describe("signal.Set", () => {
 });
 
 describe("signal atom notifications", () => {
-  // Counts how many times onWriteAtom is called on the signal's atom by
-  // counting iterations of its observers set (onWriteAtom iterates it once
-  // per call).
+  // Counts the notifications of the signal's own atom: an immediate effect
+  // that reads the signal, and nothing it holds, runs once per notification.
   function countAtomNotifications(sig: any): () => number {
-    const atom = sig[atomSymbol];
-    let count = 0;
-    atom.observers = new (class extends Set<any> {
-      [Symbol.iterator]() {
-        count++;
-        return super[Symbol.iterator]();
-      }
-    })(atom.observers);
+    let count = -1;
+    immediateEffect(() => {
+      sig();
+      count++;
+    });
     return () => count;
   }
 

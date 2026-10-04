@@ -1,7 +1,7 @@
 import { OwlError } from "./owl_error";
 import {
-  Atom,
   atomSymbol,
+  createAtom,
   Equals,
   onReadAtom,
   onWriteAtom,
@@ -30,11 +30,7 @@ interface SignalOptions<TValue, TElem = TValue> {
 }
 
 function buildSignal<T>(value: T, toRead: (value: T) => T, equals?: Equals<T>): Signal<T> {
-  const atom: Atom & { type: "signal" } = {
-    type: "signal",
-    value,
-    observers: new Set(),
-  };
+  const atom = createAtom(value, "signal");
   const equalsFn = toEqualsFn(equals);
 
   let readValue = toRead(value);

@@ -1,4 +1,13 @@
-import { atomSymbol, computed, disposeComputation, effect, proxy, signal, untrack } from "../src";
+import {
+  atomSymbol,
+  computed,
+  disposeComputation,
+  effect,
+  observersOf,
+  proxy,
+  signal,
+  untrack,
+} from "../src";
 import { expectSpy, nextMicroTick, TestScope } from "./helpers";
 
 async function waitScheduler() {
@@ -159,7 +168,7 @@ describe("effect", () => {
       ).toThrow("first run");
       return cleanup;
     });
-    expect((s as any)[atomSymbol].observers.size).toBe(0);
+    expect(observersOf((s as any)[atomSymbol]).length).toBe(0);
     outer();
     expect(cleanup).toHaveBeenCalledTimes(1);
   });
@@ -351,7 +360,7 @@ describe("effect", () => {
       });
       c();
       disposeComputation((c as any)[atomSymbol]);
-      expect((c as any)[atomSymbol].observers.size).toBe(0);
+      expect(observersOf((c as any)[atomSymbol]).length).toBe(0);
       other.set(1);
       await waitScheduler();
       expectSpy(spy, 2, { args: [1] });

@@ -244,7 +244,7 @@ export abstract class Scope {
 // disposed component takes its unobserved computeds along).
 function disposeUnobserved(computations: ComputationAtom[]): void {
   for (const computation of computations) {
-    if (!computation.observers.size) {
+    if (computation.subs === undefined) {
       disposeComputation(computation);
     }
   }

@@ -29,6 +29,9 @@ export {
   runTracked,
   removeSources,
   disposeComputation,
+  observersOf,
+  sourcesOf,
+  type Link,
 } from "./computations";
 
 // Reactivity: signal

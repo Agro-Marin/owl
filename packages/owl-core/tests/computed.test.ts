@@ -11,6 +11,8 @@ import {
   ReactiveValue,
   setComputation,
   updateComputation,
+  observersOf,
+  sourcesOf,
 } from "../src/computations";
 import { expectSpy, nextMicroTick, spyEffect } from "./helpers";
 
@@ -226,7 +228,7 @@ describe("throwing compute", () => {
     const brokenAtom = (broken as any)[atomSymbol] as ComputationAtom;
 
     expect(() => broken()).toThrow(TestError);
-    expect(brokenAtom.sources.size).toBe(0);
+    expect(sourcesOf(brokenAtom).length).toBe(0);
 
     // Read another signal from a non-tracking context. Without the
     // try/finally in updateComputation, currentComputation would still
@@ -235,8 +237,8 @@ describe("throwing compute", () => {
     const witness = signal(42);
     witness();
     const witnessAtom = (witness as any)[atomSymbol] as ComputationAtom;
-    expect(witnessAtom.observers.size).toBe(0);
-    expect(brokenAtom.sources.size).toBe(0);
+    expect(observersOf(witnessAtom).length).toBe(0);
+    expect(sourcesOf(brokenAtom).length).toBe(0);
   });
 
   test("a reader that caught the error runs again once the getter recovers", async () => {
@@ -303,11 +305,11 @@ describe("unsubscription", () => {
     const d = computedWithDerived(() => state.a + state.b);
     const e = spyEffect(() => d());
     d();
-    expect(d.atom.observers.size).toBe(0);
+    expect(observersOf(d.atom).length).toBe(0);
     const unsubscribe = e();
-    expect(d.atom.observers.size).toBe(1);
+    expect(observersOf(d.atom).length).toBe(1);
     unsubscribe();
-    expect(d.atom.observers.size).toBe(0);
+    expect(observersOf(d.atom).length).toBe(0);
   });
 });
 
@@ -335,21 +337,21 @@ describe("disposeComputation", () => {
     updateComputation(signalComp);
 
     // Verify sources are established
-    expect(signalComp.sources.has(isSelectedAtom)).toBe(true);
-    expect(isSelectedAtom.observers.has(signalComp)).toBe(true);
-    expect(isSelectedAtom.sources.has(selectedIdAtom)).toBe(true);
-    expect(selectedIdAtom.observers.has(isSelectedAtom)).toBe(true);
+    expect(sourcesOf(signalComp).includes(isSelectedAtom)).toBe(true);
+    expect(observersOf(isSelectedAtom).includes(signalComp)).toBe(true);
+    expect(sourcesOf(isSelectedAtom).includes(selectedIdAtom)).toBe(true);
+    expect(observersOf(selectedIdAtom).includes(isSelectedAtom)).toBe(true);
 
     // Dispose (simulating _destroy)
     disposeComputation(signalComp);
 
     // signalComputation's sources should be cleared
-    expect(signalComp.sources.size).toBe(0);
+    expect(sourcesOf(signalComp).length).toBe(0);
     // signalComputation should be removed from isSelected's observers
-    expect(isSelectedAtom.observers.has(signalComp)).toBe(false);
+    expect(observersOf(isSelectedAtom).includes(signalComp)).toBe(false);
     // KEY CHECK: isSelected should be removed from selectedId's observers
     // (recursive disposal since isSelected has no more observers)
-    expect(selectedIdAtom.observers.has(isSelectedAtom)).toBe(false);
+    expect(observersOf(selectedIdAtom).includes(isSelectedAtom)).toBe(false);
   });
 
   test("disposing works after removeSources + re-render (simulating _render flow)", () => {
@@ -376,8 +378,8 @@ describe("disposeComputation", () => {
     setComputation(undefined);
 
     // Verify sources established
-    expect(signalComp.sources.has(isSelectedAtom)).toBe(true);
-    expect(selectedIdAtom.observers.has(isSelectedAtom)).toBe(true);
+    expect(sourcesOf(signalComp).includes(isSelectedAtom)).toBe(true);
+    expect(observersOf(selectedIdAtom).includes(isSelectedAtom)).toBe(true);
 
     // Simulate second _render() (e.g., parent-triggered render)
     removeSources(signalComp); // clears sources
@@ -386,16 +388,16 @@ describe("disposeComputation", () => {
     setComputation(undefined);
 
     // Verify sources still correct after second render
-    expect(signalComp.sources.has(isSelectedAtom)).toBe(true);
-    expect(isSelectedAtom.observers.has(signalComp)).toBe(true);
-    expect(selectedIdAtom.observers.has(isSelectedAtom)).toBe(true);
+    expect(sourcesOf(signalComp).includes(isSelectedAtom)).toBe(true);
+    expect(observersOf(isSelectedAtom).includes(signalComp)).toBe(true);
+    expect(observersOf(selectedIdAtom).includes(isSelectedAtom)).toBe(true);
 
     // Dispose (simulating _destroy)
     disposeComputation(signalComp);
 
-    expect(signalComp.sources.size).toBe(0);
-    expect(isSelectedAtom.observers.has(signalComp)).toBe(false);
-    expect(selectedIdAtom.observers.has(isSelectedAtom)).toBe(false);
+    expect(sourcesOf(signalComp).length).toBe(0);
+    expect(observersOf(isSelectedAtom).includes(signalComp)).toBe(false);
+    expect(observersOf(selectedIdAtom).includes(isSelectedAtom)).toBe(false);
   });
 });
 
@@ -407,12 +409,12 @@ describe("detach on write", () => {
     const storeAtom = atomOf(store);
     const d = spyComputed(() => store() * 2);
     expect(d()).toBe(2);
-    expect(storeAtom.observers.size).toBe(1);
+    expect(observersOf(storeAtom).length).toBe(1);
 
     // nothing observes d: the next write to store severs the subscription
     store.set(2);
     await waitScheduler();
-    expect(storeAtom.observers.size).toBe(0);
+    expect(observersOf(storeAtom).length).toBe(0);
     // still lazy: the write did not recompute it
     expectSpy(d.spy, 1);
   });
@@ -424,15 +426,15 @@ describe("detach on write", () => {
     d();
     store.set(2);
     await waitScheduler();
-    expect(storeAtom.observers.size).toBe(0);
+    expect(observersOf(storeAtom).length).toBe(0);
 
     expect(d()).toBe(4);
     expectSpy(d.spy, 2);
-    expect(storeAtom.observers.size).toBe(1);
+    expect(observersOf(storeAtom).length).toBe(1);
 
     store.set(3);
     await waitScheduler();
-    expect(storeAtom.observers.size).toBe(0);
+    expect(observersOf(storeAtom).length).toBe(0);
     expect(d()).toBe(6);
   });
 
@@ -442,14 +444,14 @@ describe("detach on write", () => {
     const a = computed(() => store() + 1);
     const b = computed(() => a() * 10);
     expect(b()).toBe(20);
-    expect(storeAtom.observers.size).toBe(1);
-    expect(atomOf(a).observers.size).toBe(1);
+    expect(observersOf(storeAtom).length).toBe(1);
+    expect(observersOf(atomOf(a)).length).toBe(1);
 
     store.set(2);
     await waitScheduler();
     // disposing b drops a's last observer, which recursively detaches a
-    expect(atomOf(a).observers.size).toBe(0);
-    expect(storeAtom.observers.size).toBe(0);
+    expect(observersOf(atomOf(a)).length).toBe(0);
+    expect(observersOf(storeAtom).length).toBe(0);
   });
 
   test("computed observed by an effect stays subscribed", async () => {
@@ -462,7 +464,7 @@ describe("detach on write", () => {
     store.set(2);
     await waitScheduler();
     expectSpy(e.spy, 2);
-    expect(storeAtom.observers.size).toBe(1);
+    expect(observersOf(storeAtom).length).toBe(1);
     stop();
   });
 
@@ -476,7 +478,7 @@ describe("detach on write", () => {
     const e = spyEffect(() => d());
     const stop = e();
     await waitScheduler();
-    expect(atomOf(store).observers.size).toBe(1);
+    expect(observersOf(atomOf(store)).length).toBe(1);
 
     store.set(3);
     await waitScheduler();
@@ -492,18 +494,18 @@ describe("detach on write", () => {
     const d = spyComputed(() => store() * 2);
     const e = spyEffect(() => (cond() ? d() : 0));
     const stop = e();
-    expect(storeAtom.observers.size).toBe(1);
+    expect(observersOf(storeAtom).length).toBe(1);
 
     cond.set(false);
     await waitScheduler();
     // the effect dropped d, but d is still subscribed to store...
-    expect(atomOf(d).observers.size).toBe(0);
-    expect(storeAtom.observers.size).toBe(1);
+    expect(observersOf(atomOf(d)).length).toBe(0);
+    expect(observersOf(storeAtom).length).toBe(1);
 
     // ...until the next write to store mops it up
     store.set(2);
     await waitScheduler();
-    expect(storeAtom.observers.size).toBe(0);
+    expect(observersOf(storeAtom).length).toBe(0);
     stop();
   });
 });

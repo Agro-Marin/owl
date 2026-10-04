@@ -13,7 +13,7 @@ import {
   proxy,
   xml,
 } from "../../src";
-import { atomSymbol, Atom } from "@odoo/owl-core";
+import { atomSymbol, Atom, observersOf } from "@odoo/owl-core";
 import {
   makeDeferred,
   makeTestFixture,
@@ -476,7 +476,7 @@ describe("reactive cleanup on component destruction", () => {
     expect(fixture.innerHTML).toBe("<div><span>false</span></div>");
 
     // The child's isSelected computed should be in selectedId's observers
-    expect(selectedIdAtom.observers.size).toBe(1);
+    expect(observersOf(selectedIdAtom).length).toBe(1);
 
     // Destroy the child by toggling show
     parent.show.set(false);
@@ -485,7 +485,7 @@ describe("reactive cleanup on component destruction", () => {
 
     // After child destruction, isSelected computed should be cleaned up
     // from selectedId's observers
-    expect(selectedIdAtom.observers.size).toBe(0);
+    expect(observersOf(selectedIdAtom).length).toBe(0);
   });
 
   test("destroying multiple children with computeds cleans up all signal observers", async () => {
@@ -516,7 +516,7 @@ describe("reactive cleanup on component destruction", () => {
     );
 
     // 3 row computeds should be in selectedId's observers
-    expect(selectedIdAtom.observers.size).toBe(3);
+    expect(observersOf(selectedIdAtom).length).toBe(3);
 
     // Clear all rows
     parent.rows.set([]);
@@ -524,7 +524,7 @@ describe("reactive cleanup on component destruction", () => {
     expect(fixture.innerHTML).toBe("<div></div>");
 
     // All computeds should be cleaned up
-    expect(selectedIdAtom.observers.size).toBe(0);
+    expect(observersOf(selectedIdAtom).length).toBe(0);
   });
 
   test("benchmark-like scenario: signal.Array rows with computed isSelected", async () => {
@@ -564,27 +564,27 @@ describe("reactive cleanup on component destruction", () => {
     }
 
     const root = await mount(Root, fixture);
-    expect(selectedIdAtom.observers.size).toBe(0);
+    expect(observersOf(selectedIdAtom).length).toBe(0);
 
     // Create rows
     root.rows.set(buildRows(10));
     await nextTick();
-    expect(selectedIdAtom.observers.size).toBe(10);
+    expect(observersOf(selectedIdAtom).length).toBe(10);
 
     // Clear rows - this should clean up all computed observers
     root.rows.set([]);
     await nextTick();
     expect(fixture.querySelector("tbody")!.innerHTML).toBe("");
-    expect(selectedIdAtom.observers.size).toBe(0);
+    expect(observersOf(selectedIdAtom).length).toBe(0);
 
     // Create again and clear again - should not accumulate
     root.rows.set(buildRows(5));
     await nextTick();
-    expect(selectedIdAtom.observers.size).toBe(5);
+    expect(observersOf(selectedIdAtom).length).toBe(5);
 
     root.rows.set([]);
     await nextTick();
-    expect(selectedIdAtom.observers.size).toBe(0);
+    expect(observersOf(selectedIdAtom).length).toBe(0);
   });
 });
 

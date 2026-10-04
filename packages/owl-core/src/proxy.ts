@@ -6,6 +6,7 @@ import {
   onWriteAtom,
   Atom,
   ComputationState,
+  createAtom,
   createComputation,
   untrack,
   withObserver,
@@ -105,10 +106,7 @@ function getTargetKeyAtom(
   }
   let atom = findAtom(table, key);
   if (!atom) {
-    atom = {
-      value: undefined,
-      observers: new Set(),
-    };
+    atom = createAtom(undefined, "key");
     if (isObjectKey(key)) {
       (table.objectKeys ??= new WeakMap()).set(key, atom);
     } else {
@@ -185,7 +183,7 @@ function releaseKey(target: Target, key: PropertyKey): void {
   for (const atoms of [targetToKeysToAtomItem, targetToKeysToPresenceAtom]) {
     const table = atoms.get(target);
     const atom = table && findAtom(table, key);
-    if (atom && atom.observers.size === 0) {
+    if (atom && atom.subs === undefined) {
       if (isObjectKey(key)) {
         table!.objectKeys!.delete(key);
       } else {
