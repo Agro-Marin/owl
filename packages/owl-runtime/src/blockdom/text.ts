@@ -1,15 +1,5 @@
 import type { VNode } from "./index";
-
-const getDescriptor = (o: any, p: any) => Object.getOwnPropertyDescriptor(o, p)!;
-let nodeInsertBefore: typeof Node.prototype.insertBefore;
-let characterDataSetData: (v: string) => void;
-let nodeRemoveChild: typeof Node.prototype.removeChild;
-if (typeof Node !== "undefined") {
-  const nodeProto = Node.prototype;
-  nodeInsertBefore = nodeProto.insertBefore;
-  nodeRemoveChild = nodeProto.removeChild;
-  characterDataSetData = getDescriptor(CharacterData.prototype, "data").set!;
-}
+import { characterDataSetData, nodeInsertBefore, nodeRemoveChild } from "./dom";
 
 class VText {
   text: string | String;

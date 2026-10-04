@@ -1,12 +1,5 @@
 import type { VNode } from "./index";
-
-let nodeInsertBefore: typeof Node.prototype.insertBefore;
-let nodeRemoveChild: typeof Node.prototype.removeChild;
-if (typeof Node !== "undefined") {
-  const nodeProto = Node.prototype;
-  nodeInsertBefore = nodeProto.insertBefore;
-  nodeRemoveChild = nodeProto.removeChild;
-}
+import { nodeInsertBefore, nodeRemoveChild } from "./dom";
 
 class VHtml {
   html: string;

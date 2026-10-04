@@ -1,18 +1,6 @@
 import { releaseCatchers } from "./event_catcher";
 import type { VNode } from "./index";
-
-const getDescriptor = (o: any, p: any) => Object.getOwnPropertyDescriptor(o, p)!;
-let nodeInsertBefore: typeof Node.prototype.insertBefore;
-let nodeAppendChild: typeof Node.prototype.appendChild;
-let nodeRemoveChild: typeof Node.prototype.removeChild;
-let nodeSetTextContent: (v: string) => void;
-if (typeof Node !== "undefined") {
-  const nodeProto = Node.prototype;
-  nodeInsertBefore = nodeProto.insertBefore;
-  nodeAppendChild = nodeProto.appendChild;
-  nodeRemoveChild = nodeProto.removeChild;
-  nodeSetTextContent = getDescriptor(nodeProto, "textContent").set!;
-}
+import { nodeAppendChild, nodeInsertBefore, nodeRemoveChild, nodeSetTextContent } from "./dom";
 
 // -----------------------------------------------------------------------------
 // List Node

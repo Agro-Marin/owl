@@ -16,19 +16,7 @@ import type { VNode } from "./index";
 import { VMulti } from "./multi";
 import { toText } from "./text";
 
-const getDescriptor = (o: any, p: any) => Object.getOwnPropertyDescriptor(o, p)!;
-let nodeProto: Node;
-let elementProto: Element;
-let characterDataSetData: (v: string) => void;
-let nodeGetFirstChild: () => ChildNode | null;
-let nodeGetNextSibling: () => ChildNode | null;
-if (typeof Node !== "undefined") {
-  nodeProto = Node.prototype;
-  elementProto = Element.prototype;
-  characterDataSetData = getDescriptor(CharacterData.prototype, "data").set!;
-  nodeGetFirstChild = getDescriptor(nodeProto, "firstChild").get!;
-  nodeGetNextSibling = getDescriptor(nodeProto, "nextSibling").get!;
-}
+import { characterDataSetData, nodeGetFirstChild, nodeGetNextSibling } from "./dom";
 
 const NO_OP = () => {};
 const XMLNS_URI = "http://www.w3.org/2000/xmlns/";
@@ -523,9 +511,10 @@ function createBlockClass(template: HTMLElement, ctx: BlockCtx): BlockClass {
 
   // these values are defined here to make them faster to lookup in the class
   // block scope
+  const nodeProto = Node.prototype;
   const nodeCloneNode = nodeProto.cloneNode;
   const nodeInsertBefore = nodeProto.insertBefore;
-  const elementRemove = elementProto.remove;
+  const elementRemove = Element.prototype.remove;
 
   class Block {
     el: HTMLElement | undefined;
