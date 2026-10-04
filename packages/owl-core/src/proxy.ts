@@ -76,48 +76,56 @@ export function toRaw<T extends Target, U extends Reactive<T>>(value: U | T): T 
   return targets.has(value) ? (targets.get(value) as T) : value;
 }
 
-interface TargetAtoms {
-  keys: Map<PropertyKey, Atom>;
-  // an object key (of a Map, Set or WeakMap) is held weakly: its atom must
-  // not keep a deleted key, or any key of a WeakMap, alive
-  objectKeys: WeakMap<object, Atom> | null;
+// The atoms of the keys of each target. An object key (of a Map, Set or
+// WeakMap) is held weakly, in a table of its own: its atom must not keep a
+// deleted key, or any key of a WeakMap, alive. Property keys, the common case,
+// are one WeakMap lookup and one Map lookup away.
+interface KeyAtoms {
+  keys: WeakMap<Target, Map<PropertyKey, Atom>>;
+  objectKeys: WeakMap<Target, WeakMap<object, Atom>>;
 }
-type KeyAtoms = WeakMap<Target, TargetAtoms>;
 
 // a key's value, read by a get
-const targetToKeysToAtomItem: KeyAtoms = new WeakMap();
+const itemAtoms: KeyAtoms = { keys: new WeakMap(), objectKeys: new WeakMap() };
 // a key's presence, read by `in` / has(): notified when the key appears or
 // disappears, not when its value changes
-const targetToKeysToPresenceAtom: KeyAtoms = new WeakMap();
+const presenceAtoms: KeyAtoms = { keys: new WeakMap(), objectKeys: new WeakMap() };
 
 function isObjectKey(key: unknown): key is object {
   return (typeof key === "object" && key !== null) || typeof key === "function";
 }
 
-function getTargetKeyAtom(
-  target: Target,
-  key: PropertyKey,
-  atoms: KeyAtoms = targetToKeysToAtomItem
-): Atom {
-  let table = atoms.get(target);
-  if (!table) {
-    table = { keys: new Map(), objectKeys: null };
-    atoms.set(target, table);
-  }
-  let atom = findAtom(table, key);
-  if (!atom) {
-    atom = createAtom(undefined, "key");
-    if (isObjectKey(key)) {
-      (table.objectKeys ??= new WeakMap()).set(key, atom);
-    } else {
-      table.keys.set(key, atom);
+function getTargetKeyAtom(target: Target, key: PropertyKey, atoms: KeyAtoms = itemAtoms): Atom {
+  if (isObjectKey(key)) {
+    let table = atoms.objectKeys.get(target);
+    if (table === undefined) {
+      table = new WeakMap();
+      atoms.objectKeys.set(target, table);
     }
+    let atom = table.get(key);
+    if (atom === undefined) {
+      atom = createAtom(undefined, "key");
+      table.set(key, atom);
+    }
+    return atom;
+  }
+  let table = atoms.keys.get(target);
+  if (table === undefined) {
+    table = new Map();
+    atoms.keys.set(target, table);
+  }
+  let atom = table.get(key);
+  if (atom === undefined) {
+    atom = createAtom(undefined, "key");
+    table.set(key, atom);
   }
   return atom;
 }
 
-function findAtom(table: TargetAtoms, key: PropertyKey): Atom | undefined {
-  return isObjectKey(key) ? table.objectKeys?.get(key) : table.keys.get(key);
+function findAtom(target: Target, key: PropertyKey, atoms: KeyAtoms): Atom | undefined {
+  return isObjectKey(key)
+    ? atoms.objectKeys.get(target)?.get(key)
+    : atoms.keys.get(target)?.get(key);
 }
 
 /**
@@ -145,13 +153,8 @@ function onReadTargetKey(target: Target, key: PropertyKey): void {
  * @param key the key that changed (or Symbol `KEYCHANGES` if a key was created
  *   or deleted)
  */
-function onWriteTargetKey(
-  target: Target,
-  key: PropertyKey,
-  atoms: KeyAtoms = targetToKeysToAtomItem
-): void {
-  const table = atoms.get(target);
-  const atom = table && findAtom(table, key);
+function onWriteTargetKey(target: Target, key: PropertyKey, atoms: KeyAtoms = itemAtoms): void {
+  const atom = findAtom(target, key, atoms);
   if (atom) {
     if (debug.reactivity) {
       debugLog("reactivity", `proxy write ${describeKey(key)}`, target);
@@ -166,29 +169,31 @@ function describeKey(key: PropertyKey): string {
 
 function onReadKeyPresence(target: Target, key: PropertyKey): void {
   if (isObserving()) {
-    onReadAtom(getTargetKeyAtom(target, key, targetToKeysToPresenceAtom));
+    onReadAtom(getTargetKeyAtom(target, key, presenceAtoms));
   }
 }
 
 // a key appeared or disappeared: the key list, the key's presence, its value
 function onWriteKeyPresence(target: Target, key: PropertyKey): void {
   onWriteTargetKey(target, KEYCHANGES);
-  onWriteTargetKey(target, key, targetToKeysToPresenceAtom);
+  onWriteTargetKey(target, key, presenceAtoms);
 }
 
 // A removed key's atoms that nothing observes are dropped: kept, every key a
 // long-lived object ever had would stay allocated, object keys included. A
 // later read creates them again.
 function releaseKey(target: Target, key: PropertyKey): void {
-  for (const atoms of [targetToKeysToAtomItem, targetToKeysToPresenceAtom]) {
-    const table = atoms.get(target);
-    const atom = table && findAtom(table, key);
-    if (atom && atom.subs === undefined) {
-      if (isObjectKey(key)) {
-        table!.objectKeys!.delete(key);
-      } else {
-        table!.keys.delete(key);
-      }
+  releaseKeyAtom(target, key, itemAtoms);
+  releaseKeyAtom(target, key, presenceAtoms);
+}
+
+function releaseKeyAtom(target: Target, key: PropertyKey, atoms: KeyAtoms): void {
+  const atom = findAtom(target, key, atoms);
+  if (atom !== undefined && atom.subs === undefined) {
+    if (isObjectKey(key)) {
+      atoms.objectKeys.get(target)!.delete(key);
+    } else {
+      atoms.keys.get(target)!.delete(key);
     }
   }
 }
@@ -204,17 +209,24 @@ function releaseKey(target: Target, key: PropertyKey): void {
  * @param oldLength the length before the write
  */
 function onWriteDroppedIndices(target: Target, newLength: number, oldLength: number): void {
-  for (const atoms of [targetToKeysToAtomItem, targetToKeysToPresenceAtom]) {
-    const table = atoms.get(target);
-    if (!table) {
-      continue;
-    }
-    if (oldLength - newLength <= table.keys.size) {
+  onWriteDroppedIndicesIn(target, newLength, oldLength, itemAtoms);
+  onWriteDroppedIndicesIn(target, newLength, oldLength, presenceAtoms);
+}
+
+function onWriteDroppedIndicesIn(
+  target: Target,
+  newLength: number,
+  oldLength: number,
+  atoms: KeyAtoms
+): void {
+  const table = atoms.keys.get(target);
+  if (table !== undefined) {
+    if (oldLength - newLength <= table.size) {
       for (let i = newLength; i < oldLength; i++) {
         onWriteDroppedIndex(target, String(i), atoms);
       }
     } else {
-      for (const key of table.keys.keys()) {
+      for (const key of table.keys()) {
         if (typeof key === "string" && isIndexIn(key, newLength, oldLength)) {
           onWriteDroppedIndex(target, key, atoms);
         }
@@ -716,7 +728,7 @@ function makeClearNotifier(target: Map<any, any> | Set<any>) {
     target.clear();
     onWriteTargetKey(target, KEYCHANGES);
     for (const key of allKeys) {
-      onWriteTargetKey(target, key, targetToKeysToPresenceAtom);
+      onWriteTargetKey(target, key, presenceAtoms);
       onWriteTargetKey(target, key);
       releaseKey(target, key);
     }
