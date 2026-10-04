@@ -2625,3 +2625,51 @@ describe("collections and arrays: values stay what they are", () => {
     expect(runs).toBe(2);
   });
 });
+
+describe("array mutators do not subscribe their caller", () => {
+  test("an effect that only pushes does not re-run on another push", async () => {
+    const log: string[] = proxy([]);
+    let runs = 0;
+    effect(() => {
+      runs++;
+      log.push("effect");
+    });
+    log.push("external");
+    await waitScheduler();
+    expect(runs).toBe(1);
+    expect(log).toEqual(["effect", "external"]);
+  });
+
+  test("two effects pushing to the same array do not re-run each other", async () => {
+    const log: string[] = proxy([]);
+    let runsA = 0;
+    let runsB = 0;
+    effect(() => {
+      runsA++;
+      log.push("a");
+    });
+    effect(() => {
+      runsB++;
+      log.push("b");
+    });
+    for (let i = 0; i < 5; i++) {
+      await waitScheduler();
+    }
+    expect([runsA, runsB]).toEqual([1, 1]);
+  });
+
+  test("an effect that reads the array after mutating it still tracks what it read", async () => {
+    const items: number[] = proxy([3, 1, 2]);
+    const seen: number[][] = [];
+    effect(() => {
+      items.sort();
+      seen.push([...items]);
+    });
+    items.push(0);
+    await waitScheduler();
+    expect(seen).toEqual([
+      [1, 2, 3],
+      [0, 1, 2, 3],
+    ]);
+  });
+});

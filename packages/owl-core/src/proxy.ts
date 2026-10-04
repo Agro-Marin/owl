@@ -516,7 +516,10 @@ for (const name of [
 ] as const) {
   const method = Array.prototype[name] as Function;
   arrayMethods.set(method, function (this: unknown[], ...args: unknown[]) {
-    return batch(() => method.apply(this, args));
+    // the length and items a mutator reads are its own business, not reads of
+    // the caller: tracked, an effect that only pushes would re-run on every
+    // push of another, and two of them would re-run each other forever
+    return batch(() => untrack(() => method.apply(this, args)));
   });
 }
 for (const name of ["includes", "indexOf", "lastIndexOf"] as const) {
