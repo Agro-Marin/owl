@@ -957,17 +957,25 @@ export class CodeGenerator {
     }
     if (memo) {
       const vnodes = `c_block${id}`;
-      const entry = `{ deps: deps${level}, vnodes: ${vnodes}, index: ${loopVar} }`;
+      const entry = (content: string) =>
+        `{ deps: deps${level}, vnodes: ${vnodes}, index: ${loopVar}, content: ${content} }`;
       keyLines.push(
         `const deps${level} = ${compileExpr(ast.memo!)};`,
-        `const hit${level} = memoHit(${memo}_previous, ${uniqueKey}, deps${level});`,
+        `const hit${level} = memoHit(${memo}_previous, ${uniqueKey}, deps${level}, node);`,
         `if (hit${level} !== undefined) {`,
         `  ${vnodes}[${loopVar}] = hit${level}.vnodes[hit${level}.index];`,
-        `  ${memo}_next.set(${uniqueKey}, ${entry});`,
+        `  ${memo}_next.set(${uniqueKey}, ${entry(`hit${level}.content`)});`,
         `  continue;`,
         `}`
       );
-      this.addLine(`${memo}_next.set(${uniqueKey}, ${entry});`);
+      if (ast.memoContent) {
+        this.helpers.add("memoBegin");
+        this.helpers.add("memoEnd");
+        keyLines.push(`const outer${level} = memoBegin();`);
+        this.addLine(`${memo}_next.set(${uniqueKey}, ${entry(`memoEnd(outer${level})`)});`);
+      } else {
+        this.addLine(`${memo}_next.set(${uniqueKey}, ${entry("null")});`);
+      }
     }
     keyLines.forEach((line, i) => this.addLine(line, keyIdx + i));
     this.target.indentLevel--;

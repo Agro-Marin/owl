@@ -18,7 +18,7 @@ import { BDom, RefCallback, VNode } from "./blockdom";
 import { Component, ComponentConstructor } from "./component";
 import { fibersInError, handleError, handleHookRejection } from "./rendering/error_handling";
 import { APPLIED_TO_DOM, Fiber, FiberPhase, makeRootFiber, MountFiber } from "./rendering/fibers";
-import type { MemoSite } from "./rendering/template_helpers";
+import type { MemoSite } from "./rendering/memo";
 import { STATUS } from "./status";
 
 // -----------------------------------------------------------------------------

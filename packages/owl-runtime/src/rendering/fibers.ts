@@ -3,6 +3,7 @@ import { BDom, mount, type MountTarget } from "../blockdom";
 import type { ComponentNode } from "../component_node";
 import { STATUS } from "../status";
 import { fibersInError, handleError } from "./error_handling";
+import { memoResume, memoSuspend } from "./memo";
 import { Scheduler } from "./scheduler";
 
 // Max times a given fiber may be recycled before being committed to the DOM
@@ -263,6 +264,7 @@ export class Fiber {
       node.signalComputation.state = ComputationState.EXECUTED;
       node.previousMemos = node.memos;
       node.memos = null;
+      const outerCollection = memoSuspend();
       this.phase = FiberPhase.RENDERING;
       const start = debug.fiber ? debugNow() : -1;
       // the error is handled while the render is still the current
@@ -275,6 +277,7 @@ export class Fiber {
           return null;
         } finally {
           this.phase = FiberPhase.RENDERED;
+          memoResume(outerCollection);
         }
       });
       const newCounter = root.counter - 1;

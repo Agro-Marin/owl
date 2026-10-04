@@ -12,12 +12,13 @@ import {
   untrack,
 } from "@odoo/owl-core";
 import { App } from "../app";
-import { BDom, createCatcher, multi, RefCallback, text, toggler, VNode } from "../blockdom";
+import { BDom, createCatcher, multi, RefCallback, text, toggler } from "../blockdom";
 import { html } from "../blockdom/index";
 import { Component } from "../component";
 import { ComponentNode } from "../component_node";
 import { Markup } from "../utils";
 import { handleHookRejection } from "./error_handling";
+import { memoBegin, memoCollectChild, memoEnd, memoHit, memoKeep, memoPrevious } from "./memo";
 import { Fiber, makeChildFiber } from "./fibers";
 
 const ObjectCreate = Object.create;
@@ -499,6 +500,7 @@ function createComponent<P extends Record<string, any>>(
       }
     }
     (parentFiber.childrenMap ||= new Map()).set(key, node);
+    memoCollectChild(key);
     return node;
   };
 }
@@ -526,49 +528,6 @@ function checkTagName(tag: unknown): unknown {
   return tag;
 }
 
-// A t-memo item: its dependencies when it last ran, and where its vnode is —
-// a slot of that render's list, which the list patch fills with the mounted
-// vnode once the render is committed.
-export interface MemoEntry {
-  deps: unknown[];
-  vnodes: VNode[];
-  index: number;
-}
-export type MemoSite = Map<unknown, MemoEntry>;
-
-function memoPrevious(node: ComponentNode, site: string): MemoSite | undefined {
-  return node.previousMemos?.get(site);
-}
-
-function memoKeep(node: ComponentNode, site: string, entries: MemoSite) {
-  (node.memos ??= new Map()).set(site, entries);
-}
-
-function memoHit(
-  previous: MemoSite | undefined,
-  key: unknown,
-  deps: unknown[]
-): MemoEntry | undefined {
-  if (!Array.isArray(deps)) {
-    throw new OwlError(`t-memo expects an array of dependencies, got ${typeof deps}`);
-  }
-  const entry = previous?.get(key);
-  if (entry === undefined) {
-    return undefined;
-  }
-  const previousDeps = entry.deps;
-  const length = deps.length;
-  if (previousDeps.length !== length) {
-    return undefined;
-  }
-  for (let i = 0; i < length; i++) {
-    if (!Object.is(previousDeps[i], deps[i])) {
-      return undefined;
-    }
-  }
-  return entry;
-}
-
 export const helpers = {
   withDefault,
   checkTagName,
@@ -592,4 +551,6 @@ export const helpers = {
   memoPrevious,
   memoKeep,
   memoHit,
+  memoBegin,
+  memoEnd,
 };

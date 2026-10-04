@@ -22,21 +22,162 @@ exports[`t-memo > a list the previous render did not show starts without memos 1
         ctx["row"] = k_block3[i1];
         const key1 = ctx['row'].id;
         const deps1 = [];
-        const hit1 = memoHit(memo1_previous, key1, deps1);
+        const hit1 = memoHit(memo1_previous, key1, deps1, node);
         if (hit1 !== undefined) {
           c_block3[i1] = hit1.vnodes[hit1.index];
-          memo1_next.set(key1, { deps: deps1, vnodes: c_block3, index: i1 });
+          memo1_next.set(key1, { deps: deps1, vnodes: c_block3, index: i1, content: hit1.content });
           continue;
         }
         const b5 = safeOutput(ctx['row'].label, key, "__2", 1, key1);
         c_block3[i1] = withKey(block4([], [b5]), key1);
-        memo1_next.set(key1, { deps: deps1, vnodes: c_block3, index: i1 });
+        memo1_next.set(key1, { deps: deps1, vnodes: c_block3, index: i1, content: null });
       }
       memoKeep(node, memo1_site, memo1_next);
       const b3 = list(c_block3);
       b2 = block2([], [b3]);
     }
     return multi([b2]);
+  }
+}"
+`;
+
+exports[`t-memo > a memoized item inside a memoized item carries the inner item's components 1`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { safeOutput, memoPrevious, memoKeep, memoHit, prepareList, createComponent, withKey, keyOf, memoBegin, memoEnd } = helpers;
+  const comp1 = createComponent(app, \`Cell\`, true, false, false, ["label","title"]);
+  
+  let block2 = createBlock(\`<p><block-child-0/></p>\`);
+  let block5 = createBlock(\`<div><block-child-0/></div>\`);
+  let block7 = createBlock(\`<span><block-child-0/></span>\`);
+  
+  return function template(ctx, node, key = "") {
+    const b3 = safeOutput(ctx['this'].state.title, key, "__1");
+    const b2 = block2([], [b3]);
+    const memo1_site = key + \`__2\`;
+    const memo1_previous = memoPrevious(node, memo1_site);
+    const memo1_next = new Map();
+    const ctx1 = ctx;
+    const [k_block4, v_block4, l_block4, c_block4] = prepareList(ctx['this'].state.groups);
+    for (let i1 = 0; i1 < l_block4; i1++) {
+      let ctx = Object.create(ctx1);
+      ctx["group"] = k_block4[i1];
+      const key1 = ctx['group'].id;
+      const skey1 = keyOf(key1);
+      const deps1 = [ctx['group'].items.length];
+      const hit1 = memoHit(memo1_previous, skey1, deps1, node);
+      if (hit1 !== undefined) {
+        c_block4[i1] = hit1.vnodes[hit1.index];
+        memo1_next.set(skey1, { deps: deps1, vnodes: c_block4, index: i1, content: hit1.content });
+        continue;
+      }
+      const outer1 = memoBegin();
+      const memo2_site = key + \`__3__\${skey1}\`;
+      const memo2_previous = memoPrevious(node, memo2_site);
+      const memo2_next = new Map();
+      const ctx2 = ctx;
+      const [k_block6, v_block6, l_block6, c_block6] = prepareList(ctx['group'].items);
+      for (let i2 = 0; i2 < l_block6; i2++) {
+        let ctx = Object.create(ctx2);
+        ctx["item"] = k_block6[i2];
+        const key2 = ctx['item'].id;
+        const skey2 = keyOf(key2);
+        const deps2 = [ctx['item'].label];
+        const hit2 = memoHit(memo2_previous, skey2, deps2, node);
+        if (hit2 !== undefined) {
+          c_block6[i2] = hit2.vnodes[hit2.index];
+          memo2_next.set(skey2, { deps: deps2, vnodes: c_block6, index: i2, content: hit2.content });
+          continue;
+        }
+        const outer2 = memoBegin();
+        const b8 = comp1({label: ctx['item'].label,title: ctx['this'].state.title}, key + \`__4__\${skey1}__\${skey2}\`, node, this, null);
+        c_block6[i2] = withKey(block7([], [b8]), key2);
+        memo2_next.set(skey2, { deps: deps2, vnodes: c_block6, index: i2, content: memoEnd(outer2) });
+      }
+      memoKeep(node, memo2_site, memo2_next);
+      const b6 = list(c_block6);
+      c_block4[i1] = withKey(block5([], [b6]), key1);
+      memo1_next.set(skey1, { deps: deps1, vnodes: c_block4, index: i1, content: memoEnd(outer1) });
+    }
+    memoKeep(node, memo1_site, memo1_next);
+    const b4 = list(c_block4);
+    return multi([b2, b4]);
+  }
+}"
+`;
+
+exports[`t-memo > a memoized item inside a memoized item carries the inner item's components 2`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { safeOutput } = helpers;
+  
+  let block1 = createBlock(\`<b><block-child-0/></b>\`);
+  
+  return function template(ctx, node, key = "") {
+    const b2 = safeOutput(ctx['this'].props.label, key, "__1");
+    return block1([], [b2]);
+  }
+}"
+`;
+
+exports[`t-memo > a memoized item keeps its child components, unrendered, until its dependencies change 1`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { safeOutput, memoPrevious, memoKeep, memoHit, prepareList, createComponent, withKey, keyOf, memoBegin, memoEnd } = helpers;
+  const comp1 = createComponent(app, \`Cell\`, true, false, false, ["label","extra"]);
+  
+  let block2 = createBlock(\`<p><block-child-0/></p>\`);
+  let block4 = createBlock(\`<ul><block-child-0/></ul>\`);
+  let block6 = createBlock(\`<li><block-child-0/></li>\`);
+  
+  return function template(ctx, node, key = "") {
+    const b3 = safeOutput(ctx['this'].state.title, key, "__1");
+    const b2 = block2([], [b3]);
+    const memo1_site = key + \`__2\`;
+    const memo1_previous = memoPrevious(node, memo1_site);
+    const memo1_next = new Map();
+    const ctx1 = ctx;
+    const [k_block5, v_block5, l_block5, c_block5] = prepareList(ctx['this'].state.rows);
+    for (let i1 = 0; i1 < l_block5; i1++) {
+      let ctx = Object.create(ctx1);
+      ctx["row"] = k_block5[i1];
+      const key1 = ctx['row'].id;
+      const skey1 = keyOf(key1);
+      const deps1 = [ctx['row'].label];
+      const hit1 = memoHit(memo1_previous, skey1, deps1, node);
+      if (hit1 !== undefined) {
+        c_block5[i1] = hit1.vnodes[hit1.index];
+        memo1_next.set(skey1, { deps: deps1, vnodes: c_block5, index: i1, content: hit1.content });
+        continue;
+      }
+      const outer1 = memoBegin();
+      const b7 = comp1({label: ctx['row'].label,extra: ctx['this'].state.title}, key + \`__3__\${skey1}\`, node, this, null);
+      c_block5[i1] = withKey(block6([], [b7]), key1);
+      memo1_next.set(skey1, { deps: deps1, vnodes: c_block5, index: i1, content: memoEnd(outer1) });
+    }
+    memoKeep(node, memo1_site, memo1_next);
+    const b5 = list(c_block5);
+    const b4 = block4([], [b5]);
+    return multi([b2, b4]);
+  }
+}"
+`;
+
+exports[`t-memo > a memoized item keeps its child components, unrendered, until its dependencies change 2`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { safeOutput } = helpers;
+  
+  let block1 = createBlock(\`<b><block-child-0/>/<block-child-1/></b>\`);
+  
+  return function template(ctx, node, key = "") {
+    const b2 = safeOutput(ctx['this'].props.label, key, "__1");
+    const b3 = safeOutput(ctx['this'].state.clicks, key, "__2");
+    return block1([], [b2, b3]);
   }
 }"
 `;
@@ -79,16 +220,16 @@ exports[`t-memo > a memoized list in a template called twice keeps each call's i
       ctx["row"] = k_block2[i1];
       const key1 = ctx['row'].id;
       const deps1 = [ctx['row'].label];
-      const hit1 = memoHit(memo1_previous, key1, deps1);
+      const hit1 = memoHit(memo1_previous, key1, deps1, node);
       if (hit1 !== undefined) {
         c_block2[i1] = hit1.vnodes[hit1.index];
-        memo1_next.set(key1, { deps: deps1, vnodes: c_block2, index: i1 });
+        memo1_next.set(key1, { deps: deps1, vnodes: c_block2, index: i1, content: hit1.content });
         continue;
       }
       const b4 = safeOutput(ctx['side'], key, "__2", 1, key1);
       const b5 = safeOutput(ctx['row'].label, key, "__3", 1, key1);
       c_block2[i1] = withKey(block3([], [b4, b5]), key1);
-      memo1_next.set(key1, { deps: deps1, vnodes: c_block2, index: i1 });
+      memo1_next.set(key1, { deps: deps1, vnodes: c_block2, index: i1, content: null });
     }
     memoKeep(node, memo1_site, memo1_next);
     const b2 = list(c_block2);
@@ -119,15 +260,15 @@ exports[`t-memo > a render superseded before it is applied leaves memos the next
       ctx["row"] = k_block4[i1];
       const key1 = ctx['row'].id;
       const deps1 = [ctx['row'].label];
-      const hit1 = memoHit(memo1_previous, key1, deps1);
+      const hit1 = memoHit(memo1_previous, key1, deps1, node);
       if (hit1 !== undefined) {
         c_block4[i1] = hit1.vnodes[hit1.index];
-        memo1_next.set(key1, { deps: deps1, vnodes: c_block4, index: i1 });
+        memo1_next.set(key1, { deps: deps1, vnodes: c_block4, index: i1, content: hit1.content });
         continue;
       }
       const b6 = safeOutput(ctx['row'].label, key, "__3", 1, key1);
       c_block4[i1] = withKey(block5([], [b6]), key1);
-      memo1_next.set(key1, { deps: deps1, vnodes: c_block4, index: i1 });
+      memo1_next.set(key1, { deps: deps1, vnodes: c_block4, index: i1, content: null });
     }
     memoKeep(node, memo1_site, memo1_next);
     const b4 = list(c_block4);
@@ -147,6 +288,79 @@ exports[`t-memo > a render superseded before it is applied leaves memos the next
   
   return function template(ctx, node, key = "") {
     const b2 = safeOutput(ctx['this'].props.value, key, "__1");
+    return block1([], [b2]);
+  }
+}"
+`;
+
+exports[`t-memo > an item whose components were created by a superseded render renders them again 1`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { createComponent, memoPrevious, memoKeep, memoHit, prepareList, withKey, keyOf, memoBegin, memoEnd } = helpers;
+  const comp1 = createComponent(app, \`Slow\`, true, false, false, ["value"]);
+  const comp2 = createComponent(app, \`Cell\`, true, false, false, ["label"]);
+  
+  let block3 = createBlock(\`<ul><block-child-0/></ul>\`);
+  let block5 = createBlock(\`<li><block-child-0/></li>\`);
+  
+  return function template(ctx, node, key = "") {
+    const b2 = comp1({value: ctx['this'].state.value}, key + \`__1\`, node, this, null);
+    const memo1_site = key + \`__2\`;
+    const memo1_previous = memoPrevious(node, memo1_site);
+    const memo1_next = new Map();
+    const ctx1 = ctx;
+    const [k_block4, v_block4, l_block4, c_block4] = prepareList(ctx['this'].state.rows);
+    for (let i1 = 0; i1 < l_block4; i1++) {
+      let ctx = Object.create(ctx1);
+      ctx["row"] = k_block4[i1];
+      const key1 = ctx['row'].id;
+      const skey1 = keyOf(key1);
+      const deps1 = [ctx['row'].label];
+      const hit1 = memoHit(memo1_previous, skey1, deps1, node);
+      if (hit1 !== undefined) {
+        c_block4[i1] = hit1.vnodes[hit1.index];
+        memo1_next.set(skey1, { deps: deps1, vnodes: c_block4, index: i1, content: hit1.content });
+        continue;
+      }
+      const outer1 = memoBegin();
+      const b6 = comp2({label: ctx['row'].label}, key + \`__3__\${skey1}\`, node, this, null);
+      c_block4[i1] = withKey(block5([], [b6]), key1);
+      memo1_next.set(skey1, { deps: deps1, vnodes: c_block4, index: i1, content: memoEnd(outer1) });
+    }
+    memoKeep(node, memo1_site, memo1_next);
+    const b4 = list(c_block4);
+    const b3 = block3([], [b4]);
+    return multi([b2, b3]);
+  }
+}"
+`;
+
+exports[`t-memo > an item whose components were created by a superseded render renders them again 2`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { safeOutput } = helpers;
+  
+  let block1 = createBlock(\`<i><block-child-0/></i>\`);
+  
+  return function template(ctx, node, key = "") {
+    const b2 = safeOutput(ctx['this'].props.value, key, "__1");
+    return block1([], [b2]);
+  }
+}"
+`;
+
+exports[`t-memo > an item whose components were created by a superseded render renders them again 3`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { safeOutput } = helpers;
+  
+  let block1 = createBlock(\`<b><block-child-0/></b>\`);
+  
+  return function template(ctx, node, key = "") {
+    const b2 = safeOutput(ctx['this'].props.label, key, "__1");
     return block1([], [b2]);
   }
 }"
@@ -172,17 +386,17 @@ exports[`t-memo > an item whose dependencies are unchanged keeps its previous co
       ctx["row"] = k_block2[i1];
       const key1 = ctx['row'].id;
       const deps1 = [ctx['row'].label];
-      const hit1 = memoHit(memo1_previous, key1, deps1);
+      const hit1 = memoHit(memo1_previous, key1, deps1, node);
       if (hit1 !== undefined) {
         c_block2[i1] = hit1.vnodes[hit1.index];
-        memo1_next.set(key1, { deps: deps1, vnodes: c_block2, index: i1 });
+        memo1_next.set(key1, { deps: deps1, vnodes: c_block2, index: i1, content: hit1.content });
         continue;
       }
       let attr1 = {on:ctx['row'].id===ctx['this'].state.selected};
       const b4 = safeOutput(ctx['row'].label, key, "__2", 1, key1);
       const b5 = safeOutput(ctx['row'].note, key, "__3", 1, key1);
       c_block2[i1] = withKey(block3([attr1], [b4, b5]), key1);
-      memo1_next.set(key1, { deps: deps1, vnodes: c_block2, index: i1 });
+      memo1_next.set(key1, { deps: deps1, vnodes: c_block2, index: i1, content: null });
     }
     memoKeep(node, memo1_site, memo1_next);
     const b2 = list(c_block2);
@@ -211,15 +425,15 @@ exports[`t-memo > memoized items move, disappear and come back with the right co
       ctx["row"] = k_block2[i1];
       const key1 = ctx['row'].id;
       const deps1 = [ctx['row'].label];
-      const hit1 = memoHit(memo1_previous, key1, deps1);
+      const hit1 = memoHit(memo1_previous, key1, deps1, node);
       if (hit1 !== undefined) {
         c_block2[i1] = hit1.vnodes[hit1.index];
-        memo1_next.set(key1, { deps: deps1, vnodes: c_block2, index: i1 });
+        memo1_next.set(key1, { deps: deps1, vnodes: c_block2, index: i1, content: hit1.content });
         continue;
       }
       const b4 = safeOutput(ctx['row'].label, key, "__2", 1, key1);
       c_block2[i1] = withKey(block3([], [b4]), key1);
-      memo1_next.set(key1, { deps: deps1, vnodes: c_block2, index: i1 });
+      memo1_next.set(key1, { deps: deps1, vnodes: c_block2, index: i1, content: null });
     }
     memoKeep(node, memo1_site, memo1_next);
     const b2 = list(c_block2);
@@ -258,16 +472,16 @@ exports[`t-memo > nested memoized lists keep the items of each outer item apart 
         ctx["item"] = k_block6[i2];
         const key2 = ctx['item'].id;
         const deps2 = [ctx['item'].label];
-        const hit2 = memoHit(memo1_previous, key2, deps2);
+        const hit2 = memoHit(memo1_previous, key2, deps2, node);
         if (hit2 !== undefined) {
           c_block6[i2] = hit2.vnodes[hit2.index];
-          memo1_next.set(key2, { deps: deps2, vnodes: c_block6, index: i2 });
+          memo1_next.set(key2, { deps: deps2, vnodes: c_block6, index: i2, content: hit2.content });
           continue;
         }
         const b8 = safeOutput(ctx['group'].id, key, "__3", 2, key1, key2);
         const b9 = safeOutput(ctx['item'].label, key, "__4", 2, key1, key2);
         c_block6[i2] = withKey(block7([], [b8, b9]), key2);
-        memo1_next.set(key2, { deps: deps2, vnodes: c_block6, index: i2 });
+        memo1_next.set(key2, { deps: deps2, vnodes: c_block6, index: i2, content: null });
       }
       memoKeep(node, memo1_site, memo1_next);
       const b6 = list(c_block6);
@@ -299,14 +513,14 @@ exports[`t-memo > rejects an item it could not skip, and dependencies that are n
       ctx["row"] = k_block2[i1];
       const key1 = ctx['row'].id;
       const deps1 = ctx['row'].id;
-      const hit1 = memoHit(memo1_previous, key1, deps1);
+      const hit1 = memoHit(memo1_previous, key1, deps1, node);
       if (hit1 !== undefined) {
         c_block2[i1] = hit1.vnodes[hit1.index];
-        memo1_next.set(key1, { deps: deps1, vnodes: c_block2, index: i1 });
+        memo1_next.set(key1, { deps: deps1, vnodes: c_block2, index: i1, content: hit1.content });
         continue;
       }
       c_block2[i1] = withKey(block3(), key1);
-      memo1_next.set(key1, { deps: deps1, vnodes: c_block2, index: i1 });
+      memo1_next.set(key1, { deps: deps1, vnodes: c_block2, index: i1, content: null });
     }
     memoKeep(node, memo1_site, memo1_next);
     const b2 = list(c_block2);

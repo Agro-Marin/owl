@@ -528,10 +528,14 @@ then. Anything the item shows must therefore appear in the array; a value read
 inside the item and missing from it does not update the item, nor make the
 component re-render.
 
-The item must be made of elements, text and `t-out` only: Owl rejects a
-`t-memo` item containing a component, a slot or a `t-call` (a skipped item
-would not render them), or a `t-set` writing a variable of the enclosing scope
-(a skipped item would not write it).
+A skipped item keeps its child components as they are: they are not updated
+with new props (list what they receive in the array), and they still render
+on their own when their own state changes. A memoized list inside a memoized
+item is kept along with it.
+
+Owl rejects a `t-memo` item containing a slot or a `t-call` (what they render
+is only known when they run), or a `t-set` writing a variable of the enclosing
+scope (a skipped item would not write it).
 
 ### Sub Templates
 

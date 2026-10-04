@@ -106,6 +106,9 @@ export interface ASTTForEach extends BaseAST {
   noFlags: number;
   key: string;
   memo?: string;
+  // whether the memoized item renders child components or memoized lists of
+  // its own, to carry on a hit
+  memoContent?: boolean;
 }
 
 export interface ASTTKey extends BaseAST {
@@ -580,13 +583,14 @@ function parseTForEach(node: Element, ctx: ParsingContext): AST | null {
     return null;
   }
   if (memo !== null) {
-    // a memoized item keeps its previous vnode without running its body: a
-    // component, slot or called template inside would not be visited, and its
-    // owner would destroy it as no longer rendered
-    const directive = unvisitableDirective(body);
+    // a memoized item keeps its previous vnode without running its body: the
+    // child components it rendered are carried over by key, but a slot or a
+    // called template may render components another node owns, or that only
+    // the called template knows of
+    const directive = findDirective(body, UNVISITABLE);
     if (body.hasNoRepresentation || directive) {
       throw new OwlError(
-        `t-memo needs an item made of elements, text and t-out only (expression: t-foreach="${collection}" t-memo="${memo}"${directive ? `, found ${directive}` : ""})`
+        `t-memo needs an item made of elements, text, t-out and components only (expression: t-foreach="${collection}" t-memo="${memo}"${directive ? `, found ${directive}` : ""})`
       );
     }
   }
@@ -609,6 +613,9 @@ function parseTForEach(node: Element, ctx: ParsingContext): AST | null {
   };
   if (memo !== null) {
     ast.memo = memo;
+    if (findDirective(body, COMPONENT) || hasMemoizedLoop(body)) {
+      ast.memoContent = true;
+    }
   }
   if (body.hasNoRepresentation) {
     ast.hasNoRepresentation = true;
@@ -617,18 +624,18 @@ function parseTForEach(node: Element, ctx: ParsingContext): AST | null {
 }
 
 const UNVISITABLE: Partial<Record<ASTType, string>> = {
-  [ASTType.TComponent]: "a component",
   [ASTType.TCall]: "t-call",
   [ASTType.TCallSlot]: "t-slot",
   [ASTType.TCallBlock]: "t-call-block",
 };
+const COMPONENT: Partial<Record<ASTType, string>> = { [ASTType.TComponent]: "a component" };
 
 // walks every nested object, so that a branch kept outside `content` (t-elif,
 // a t-out or t-set body) is searched too
-function unvisitableDirective(value: any): string | null {
+function findDirective(value: any, directives: Partial<Record<ASTType, string>>): string | null {
   if (Array.isArray(value)) {
     for (const item of value) {
-      const found = unvisitableDirective(item);
+      const found = findDirective(item, directives);
       if (found) {
         return found;
       }
@@ -638,17 +645,35 @@ function unvisitableDirective(value: any): string | null {
   if (!value || typeof value !== "object") {
     return null;
   }
-  const found = typeof value.type === "number" && UNVISITABLE[value.type as ASTType];
+  const found = typeof value.type === "number" && directives[value.type as ASTType];
   if (found) {
     return found;
   }
   for (const key in value) {
-    const inner = unvisitableDirective(value[key]);
+    const inner = findDirective(value[key], directives);
     if (inner) {
       return inner;
     }
   }
   return null;
+}
+
+function hasMemoizedLoop(value: any): boolean {
+  if (Array.isArray(value)) {
+    return value.some(hasMemoizedLoop);
+  }
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+  if (value.type === ASTType.TForEach && value.memo !== undefined) {
+    return true;
+  }
+  for (const key in value) {
+    if (hasMemoizedLoop(value[key])) {
+      return true;
+    }
+  }
+  return false;
 }
 
 function parseTKey(node: Element, ctx: ParsingContext): AST | null {
