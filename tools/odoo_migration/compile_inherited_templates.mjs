@@ -241,3 +241,72 @@ console.log(
     `${regressions.length} rejected only by the new build, ${fixedByNew.length} only by the old, ` +
     `${bothFail} by both; ${unapplied.length} extensions not applied (in module dependency order)`
 );
+
+// FREE_NAMES=1: a component's own template reads a context name nothing in it
+// sets — not `this.x`, not a t-set, t-as, slot scope or arrow parameter — so
+// it is undefined at run time (a template a t-call names is skipped: its
+// caller provides its names). Component templates are the names some
+// module's JavaScript gives as `static template = "..."`.
+if (process.env.FREE_NAMES) {
+  const componentTemplates = new Set();
+  const moduleRoots = new Set([...moduleDirs.values()]);
+  const walk = (dir) => {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const path = `${dir}/${entry.name}`;
+      if (entry.isDirectory()) {
+        if (entry.name !== "node_modules" && entry.name !== "lib" && entry.name !== "tests") {
+          walk(path);
+        }
+      } else if (entry.name.endsWith(".js")) {
+        for (const m of fs.readFileSync(path, "utf8").matchAll(/static template = "([^"]+)"/g)) {
+          componentTemplates.add(m[1]);
+        }
+      }
+    }
+  };
+  for (const root of moduleRoots) {
+    if (fs.existsSync(root + "/static/src")) {
+      walk(root + "/static/src");
+    }
+  }
+  const called = new Set();
+  const allTemplates = [...base.values(), ...primary.values(), ...[...extensions.values()].flat()];
+  for (const { el } of allTemplates) {
+    for (const node of el.querySelectorAll("[t-call]")) {
+      called.add(node.getAttribute("t-call"));
+    }
+  }
+  const findings = [];
+  for (const name of componentTemplates) {
+    const el = resolve(name);
+    if (!el || called.has(name)) {
+      continue;
+    }
+    let code;
+    try {
+      const app = new newOwl.App(config);
+      app.addTemplate(name, el.outerHTML);
+      app.getTemplate(name);
+      code = String(app.templates[name]);
+    } catch {
+      continue;
+    }
+    const reads = new Set([...code.matchAll(/ctx\['([\w$]+)'\]/g)].map((m) => m[1]));
+    const sets = new Set([...code.matchAll(/ctx\[["`']([\w$]+)["`']\]\s*=/g)].map((m) => m[1]));
+    for (const m of code.matchAll(/\(([\w$, ]+)\)\s*=>/g)) {
+      for (const param of m[1].split(",")) {
+        sets.add(param.trim());
+      }
+    }
+    const free = [...reads].filter((r) => !sets.has(r) && r !== "this" && r !== "__globals__");
+    if (free.length) {
+      findings.push(`${name} :: ${free.join(", ")}`);
+    }
+  }
+  for (const line of findings) {
+    console.log("FREE-NAME", line);
+  }
+  console.log(
+    `${componentTemplates.size} component templates; ${findings.length} read a name nothing sets`
+  );
+}
