@@ -268,6 +268,10 @@ function parseNode(node: Node, ctx: ParsingContext): AST | null {
 // <t /> tag
 // -----------------------------------------------------------------------------
 
+function isTranslationContext(attribute: string): boolean {
+  return attribute === "t-translation-context" || attribute.startsWith("t-translation-context-");
+}
+
 function unsupportedDirectiveError(directive: string, where: string): OwlError {
   return new OwlError(`Unsupported directive '${directive}' on ${where}`);
 }
@@ -528,7 +532,11 @@ function parseTOutNode(node: Element, ctx: ParsingContext): AST | null {
     if (node.hasAttribute("t-ref")) {
       throw tRefError(node);
     }
-    const directive = node.getAttributeNames().find((a) => a.startsWith("t-") && a !== "t-name");
+    // a translation context is no directive: template inheritance adds one
+    // for each attribute an extension sets, a t-if included
+    const directive = node
+      .getAttributeNames()
+      .find((a) => a.startsWith("t-") && a !== "t-name" && !isTranslationContext(a));
     if (directive) {
       throw unsupportedDirectiveError(directive, "a <t> with t-out");
     }
@@ -753,7 +761,7 @@ function parseTCallBlock(node: Element, ctx: ParsingContext): AST | null {
   const name = node.getAttribute("t-call-block")!;
   const directive = node
     .getAttributeNames()
-    .find((a) => a.startsWith("t-") && a !== "t-call-block");
+    .find((a) => a.startsWith("t-") && a !== "t-call-block" && !isTranslationContext(a));
   if (directive) {
     throw unsupportedDirectiveError(directive, "a t-call-block node");
   }
@@ -1170,7 +1178,12 @@ function normalizeTIf(el: Element) {
           "t-if cannot stay at the same level as t-foreach when using t-elif or t-else"
         );
       }
+      // t-else with a t-if is an else branch holding an `if`: it reads as
+      // t-elif, and is what an inheriting template gets when it adds a t-if to
+      // an else node, which owl always rendered that way
+      const elseIf = node.hasAttribute("t-else") && node.hasAttribute("t-if");
       if (
+        !(elseIf && !node.hasAttribute("t-elif")) &&
         ["t-if", "t-elif", "t-else"].map(nattr).reduce(function (a, b) {
           return a + b;
         }) > 1

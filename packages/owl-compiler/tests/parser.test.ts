@@ -1490,12 +1490,26 @@ describe("qweb parser", () => {
   });
 
   test("a branch carrying two conditional directives throws, empty values included", async () => {
-    expect(() => parse(`<t t-if="a">A</t><t t-else="" t-if="b">B</t>`)).toThrow(
-      "Only one conditional branching directive is allowed per node"
-    );
     expect(() => parse(`<t t-if="a">A</t><t t-elif="b" t-else="">B</t>`)).toThrow(
       "Only one conditional branching directive is allowed per node"
     );
+    expect(() => parse(`<t t-if="a">A</t><t t-elif="b" t-if="c">B</t>`)).toThrow(
+      "Only one conditional branching directive is allowed per node"
+    );
+  });
+
+  test("a translation context beside t-out or t-call-block is no directive", async () => {
+    // template inheritance adds one for each attribute an extension sets
+    expect(() => parse(`<t t-out="value" t-translation-context-t-if="mod"/>`)).not.toThrow();
+    expect(() => parse(`<t t-call-block="b" t-translation-context="mod"/>`)).not.toThrow();
+    expect(() => parse(`<t t-out="value" t-foo="1"/>`)).toThrow(
+      "Unsupported directive 't-foo' on a <t> with t-out"
+    );
+  });
+
+  test("t-else with a t-if is an else branch holding the if", async () => {
+    // what an inheriting template gets by adding a t-if to an else node
+    expect(() => parse(`<t t-if="a">A</t><t t-else="" t-if="b">B</t>`)).not.toThrow();
   });
 
   test("t-foreach without t-as throws", async () => {

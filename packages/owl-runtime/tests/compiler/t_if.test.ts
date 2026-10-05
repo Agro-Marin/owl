@@ -9,6 +9,13 @@ snapshotEverything();
 // -----------------------------------------------------------------------------
 
 describe("t-if", () => {
+  test("t-else with a t-if renders as t-elif, as owl 1d588236 did", () => {
+    const template = `<div><span t-if="a">A</span><span t-else="" t-if="b">B</span></div>`;
+    expect(renderToString(template, { a: 1, b: 1 })).toBe("<div><span>A</span></div>");
+    expect(renderToString(template, { a: 0, b: 1 })).toBe("<div><span>B</span></div>");
+    expect(renderToString(template, { a: 0, b: 0 })).toBe("<div></div>");
+  });
+
   test("t-if in a div", () => {
     const template = `<div><t t-if="condition">ok</t></div>`;
     expect(renderToString(template, { condition: true })).toBe("<div>ok</div>");
