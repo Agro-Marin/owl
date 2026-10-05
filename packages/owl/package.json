@@ -18,6 +18,11 @@
       "require": "./dist/owl.runtime.cjs",
       "default": "./dist/owl.runtime.es.js"
     },
+    "./compiler": {
+      "types": "./dist/types/compiler.d.ts",
+      "import": "./dist/owl.compiler.es.js",
+      "default": "./dist/owl.compiler.es.js"
+    },
     "./dist/*": "./dist/*",
     "./package.json": "./package.json"
   },

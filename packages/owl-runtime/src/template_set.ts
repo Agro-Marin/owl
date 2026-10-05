@@ -123,7 +123,9 @@ export class TemplateSet {
 
   _compileTemplate(name: string, template: string | Element): TemplateFunction {
     if (!TemplateSet.compiler) {
-      throw new OwlError(`Unable to compile a template. Please use owl full build instead`);
+      throw new OwlError(
+        `Unable to compile a template: load the compiler module (@odoo/owl/compiler) or use the full build`
+      );
     }
     return TemplateSet.compiler.compile(template, {
       name,
@@ -138,7 +140,7 @@ export class TemplateSet {
   private _parseXML(xml: string): Document {
     if (!TemplateSet.compiler) {
       throw new OwlError(
-        `Unable to parse XML templates. Please use owl full build instead, or pass a Document instance.`
+        `Unable to parse XML templates: load the compiler module (@odoo/owl/compiler), use the full build, or pass a Document instance`
       );
     }
     return TemplateSet.compiler.parseXML(xml);

@@ -60,10 +60,38 @@ async function buildVariant(entry, suffix) {
   ]);
 }
 
+// dist/owl.compiler.es.js: the compiler for a page whose @odoo/owl is the
+// runtime build. Everything it would share with the runtime is imported from
+// @odoo/owl, never bundled: a second owl-core would be a second OwlError class.
+async function buildCompilerModule() {
+  const outfile = "dist/owl.compiler.es.js";
+  await esbuild.build({
+    entryPoints: ["src/compiler.ts"],
+    bundle: true,
+    define,
+    target: "es2022",
+    format: "esm",
+    outfile,
+    external: ["@odoo/owl"],
+    alias: {
+      "@odoo/owl-runtime": "@odoo/owl",
+      "@odoo/owl-core": "./src/compiler_core.ts",
+    },
+  });
+  const code = readFileSync(outfile, "utf-8");
+  if (/class OwlError\b/.test(code) || !code.includes('from "@odoo/owl"')) {
+    throw new Error(`${outfile} must import the runtime from @odoo/owl, not bundle owl-core`);
+  }
+}
+
 function buildTypes() {
   mkdirSync("dist/types", { recursive: true });
   execSync(
     "npx dts-bundle-generator --project tsconfig.types.json -o dist/types/owl.d.ts src/index.ts --no-banner",
+    { stdio: "inherit" }
+  );
+  execSync(
+    "npx dts-bundle-generator --project tsconfig.types.json -o dist/types/compiler.d.ts src/compiler.ts --no-banner",
     { stdio: "inherit" }
   );
 }
@@ -77,4 +105,5 @@ switch (target) {
   default:
     await buildVariant("src/index.ts");
     await buildVariant("src/runtime.ts", "runtime");
+    await buildCompilerModule();
 }

@@ -17,6 +17,7 @@ differently from upstream.
 | `t-memo="[deps]"`                        | on a keyed `t-foreach`: an item whose dependencies are unchanged keeps its previous content (child components included)             | [template syntax](reference/template_syntax.md#memoized-list-items) |
 | `setDebug(channels)`, `setDebugSink(fn)` | opt-in debug logging per channel (reactivity, effect, computed, scope, plugin, scheduler, fiber, lifecycle, error, template, event) | [debug logging](reference/debug_logging.md)                         |
 | `@odoo/owl/runtime`                      | the runtime without the template compiler (`owl.runtime.es.js`, 34% smaller), for pages whose templates arrive precompiled          | —                                                                   |
+| `@odoo/owl/compiler`                     | the compiler alone (`owl.compiler.es.js`); importing it installs it into a runtime build loaded as `@odoo/owl`, which then compiles | —                                                                   |
 
 ## Behaviour that differs from upstream
 
