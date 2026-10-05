@@ -27,10 +27,15 @@ import { OwlError } from "@odoo/owl-core";
 // Misc types, constants and helpers
 //------------------------------------------------------------------------------
 
+// the names an expression reads as JavaScript's own, never from the
+// context: keywords, and the standard globals a template may call (Vue's
+// template allow-list) — a template writing `String(x)` means the global
 const RESERVED_WORDS = new Set(
-  "true,false,NaN,null,undefined,debugger,console,window,in,instanceof,new,function,return,eval,void,Math,RegExp,Array,Object,Date,__globals__".split(
-    ","
-  )
+  (
+    "true,false,NaN,null,undefined,debugger,console,window,in,instanceof,new,function,return,eval,void,__globals__," +
+    "Math,RegExp,Array,Object,Date,Number,Boolean,String,Symbol,BigInt,Map,Set,JSON,Intl,Error," +
+    "Infinity,isFinite,isNaN,parseFloat,parseInt,decodeURI,decodeURIComponent,encodeURI,encodeURIComponent"
+  ).split(",")
 );
 
 const WORD_REPLACEMENT: { [key: string]: string } = Object.assign(Object.create(null), {

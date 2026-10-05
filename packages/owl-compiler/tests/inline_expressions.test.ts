@@ -444,3 +444,18 @@ describe("expression evaluation", () => {
     expect(compileExpr("~1")).toBe("~1");
   });
 });
+
+describe("standard globals", () => {
+  test("are read as JavaScript's own, not from the context", () => {
+    expect(compileExpr("String(x)")).toBe("String(ctx['x'])");
+    expect(compileExpr("Number.isInteger(a) && JSON.stringify(o)")).toBe(
+      "Number.isInteger(ctx['a'])&&JSON.stringify(ctx['o'])"
+    );
+    expect(compileExpr("parseInt(s, 10) + Infinity")).toBe("parseInt(ctx['s'],10)+Infinity");
+    expect(compileExpr("encodeURIComponent(s)")).toBe("encodeURIComponent(ctx['s'])");
+  });
+
+  test("an arrow's parameter of the same name stays the parameter", () => {
+    expect(compileExpr("(String) => String + x")).toBe("(String)=>String+ctx['x']");
+  });
+});
