@@ -1304,3 +1304,83 @@ test("every view of a component resolves the defaults the component declared", a
   expect(otherSchema.w).toBe(400);
   expect(otherSchema.label).toBe("own");
 });
+
+describe("schema view", () => {
+  test("views of one component class keep their own values", async () => {
+    class Child extends Component {
+      static template = xml`<span t-out="this.props.value"/>`;
+      props = props({ value: t.number() });
+    }
+    class Parent extends Component {
+      static template = xml`<Child value="this.a()"/><Child value="this.b()"/>`;
+      static components = { Child };
+      a = signal(1);
+      b = signal(2);
+    }
+    const parent = await mount(Parent, fixture);
+    expect(fixture.innerHTML).toBe("<span>1</span><span>2</span>");
+    parent.a.set(3);
+    await nextTick();
+    expect(fixture.innerHTML).toBe("<span>3</span><span>2</span>");
+  });
+
+  test("a schema view's own keys are exactly the schema's", async () => {
+    let view: any;
+    class Child extends Component {
+      static template = xml`<span/>`;
+      props = (view = props({ a: t.number(), b: t.string().optional() }));
+    }
+    class Parent extends Component {
+      static template = xml`<Child a="1"/>`;
+      static components = { Child };
+    }
+    await mount(Parent, fixture);
+    const proto = Object.getPrototypeOf(view);
+    expect(Object.getPrototypeOf(proto)).toBe(null);
+    expect(Reflect.ownKeys(proto)).toEqual([]);
+    expect(Object.isFrozen(proto)).toBe(true);
+    expect(view instanceof Object).toBe(false);
+    expect(Reflect.ownKeys(view)).toEqual(["a", "b"]);
+    expect({ ...view }).toEqual({ a: 1, b: undefined });
+  });
+
+  test("a prop read only in setup, then in an effect, follows its updates", async () => {
+    const seen: number[] = [];
+    class Child extends Component {
+      static template = xml`<span/>`;
+      props = props({ value: t.number() });
+      setup() {
+        seen.push(this.props.value);
+        effect(() => {
+          seen.push(this.props.value);
+        });
+      }
+    }
+    class Parent extends Component {
+      static template = xml`<Child value="this.v()"/>`;
+      static components = { Child };
+      v = signal(1);
+    }
+    const parent = await mount(Parent, fixture);
+    parent.v.set(2);
+    await nextTick();
+    await nextTick();
+    expect(seen).toEqual([1, 1, 2]);
+  });
+
+  test("a schema view reads through an object inheriting from it", async () => {
+    let view: any;
+    class Child extends Component {
+      static template = xml`<span/>`;
+      props = (view = props({ a: t.number() }));
+    }
+    class Parent extends Component {
+      static template = xml`<Child a="7"/>`;
+      static components = { Child };
+    }
+    await mount(Parent, fixture);
+    expect(Object.create(view).a).toBe(7);
+    const getter = Object.getOwnPropertyDescriptor(view, "a")!.get!;
+    expect(() => getter.call({})).toThrow('Cannot read prop "a" through an object');
+  });
+});

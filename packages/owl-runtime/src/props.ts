@@ -1,8 +1,14 @@
 import {
   assertType,
+  type Atom,
+  createAtom,
   getDefault,
   GetDefaultedKeys,
   ResolveObjectType,
+  isObserving,
+  onReadAtom,
+  onWriteAtom,
+  OwlError,
   ResolveReaderObjectType,
   signal,
   Signal,
@@ -74,37 +80,18 @@ function makeProps(type?: any): Props<{}> {
     defaultsVersions.set(node, (defaultsVersions.get(node) || 0) + 1);
   }
 
-  // a missing prop resolves to this view's default, else to the default another
-  // view of the component declared
-  function resolveValue(props: Record<string, any>, key: string) {
-    const value = props[key];
-    if (value === undefined) {
-      if (defaults && key in defaults) {
-        return defaults[key];
-      }
-      const declared = node.defaultProps;
-      if (declared && key in declared) {
-        return declared[key];
-      }
-    }
-    return value;
-  }
-
-  const keys: string[] = Array.isArray(type) ? type : Object.keys(type);
-  const signals: Signal<any>[] = [];
-  const result = Object.create(null);
+  const keys: string[] = Array.isArray(type) ? type : schemaKeys(type);
+  const state = new TypedProps(node, defaults);
+  const result: any = new PropsTable();
   for (const key of keys) {
-    const s = signal(resolveValue(node.props, key));
-    signals.push(s);
-    Reflect.defineProperty(result, key, { enumerable: true, configurable: true, get: s });
+    Reflect.defineProperty(result, key, {
+      enumerable: true,
+      configurable: true,
+      get: (propGetters[key] ||= makePropGetter(key)),
+    });
   }
-  node.addHook("propsUpdated", {
-    update() {
-      for (let i = 0; i < keys.length; i++) {
-        signals[i].set(resolveValue(node.props, keys[i]));
-      }
-    },
-  });
+  new StateStamp(result, state);
+  node.addHook("propsUpdated", state);
 
   if (app.dev) {
     if (defaults) {
@@ -131,6 +118,121 @@ function makeProps(type?: any): Props<{}> {
   return Object.preventExtensions(result);
 }
 
+// A schema's key list, computed once per schema object: a component class
+// passes the same one for each of its instances.
+const schemaKeyLists = new WeakMap<object, string[]>();
+
+function schemaKeys(type: object): string[] {
+  let keys = schemaKeyLists.get(type);
+  if (!keys) {
+    keys = Object.keys(type);
+    schemaKeyLists.set(type, keys);
+  }
+  return keys;
+}
+
+// A typed view is a plain object with one accessor per schema key. The
+// accessors are shared by every view (one per key name), so the views of a
+// component class share their hidden class instead of each being a dictionary;
+// an accessor finds its view's state in a private field, which no reflection
+// reaches. A key gets its atom on its first tracked read: a key read only in
+// setup, untracked, never gets one.
+class TypedProps {
+  node: ComponentNode;
+  defaults: Record<string, any> | null;
+  atoms = new AtomTable();
+
+  constructor(node: ComponentNode, defaults: Record<string, any> | null) {
+    this.node = node;
+    this.defaults = defaults;
+  }
+
+  // a missing prop resolves to this view's default, else to the default another
+  // view of the component declared
+  resolve(key: string) {
+    const value = this.node.props[key];
+    if (value === undefined) {
+      const defaults = this.defaults;
+      if (defaults && key in defaults) {
+        return defaults[key];
+      }
+      const declared = this.node.defaultProps;
+      if (declared && key in declared) {
+        return declared[key];
+      }
+    }
+    return value;
+  }
+
+  read(key: string) {
+    let atom = this.atoms[key];
+    if (atom === undefined) {
+      if (!isObserving()) {
+        return this.resolve(key);
+      }
+      atom = this.atoms[key] = createAtom(this.resolve(key), "prop");
+    }
+    onReadAtom(atom);
+    return atom.value;
+  }
+
+  update() {
+    writeAtoms(this.atoms, this);
+  }
+}
+
+function writeAtoms(atoms: Record<string, Atom>, view: { resolve(key: string): any }) {
+  for (const key in atoms) {
+    const atom = atoms[key];
+    const value = view.resolve(key);
+    if (!Object.is(atom.value, value)) {
+      atom.value = value;
+      onWriteAtom(atom, true);
+    }
+  }
+}
+
+// `return target` makes `new StateStamp(target, state)` add the private field
+// to `target` itself
+class ObjectReturner {
+  constructor(target: object) {
+    return target;
+  }
+}
+
+class StateStamp extends ObjectReturner {
+  #state: TypedProps;
+
+  constructor(target: object, state: TypedProps) {
+    super(target);
+    this.#state = state;
+  }
+
+  // the state of `view`, or of the view it inherits from (a read through
+  // `Object.create(props)`)
+  static of(view: object | null): TypedProps | undefined {
+    while (view !== null && typeof view === "object") {
+      if (#state in view) {
+        return (view as StateStamp).#state;
+      }
+      view = Object.getPrototypeOf(view);
+    }
+    return undefined;
+  }
+}
+
+const propGetters: Record<string, (this: object) => any> = Object.create(null);
+
+function makePropGetter(key: string) {
+  return function (this: object) {
+    const state = StateStamp.of(this);
+    if (state === undefined) {
+      throw new OwlError(`Cannot read prop "${key}" through an object that is not a props view`);
+    }
+    return state.read(key);
+  };
+}
+
 function getKeys(node: ComponentNode): string[] {
   const props = node.props;
   const keys: string[] = [];
@@ -147,22 +249,30 @@ function getKeys(node: ComponentNode): string[] {
   return keys;
 }
 
-// The per-key signals of a view, in an object whose prototype chain is one
+// The per-key atoms of a view, in an object whose prototype chain is one
 // empty null-prototype object: no inherited key, yet unlike Object.create(null)
 // V8 keeps it in fast mode, and the views of a component class, reading the
 // same keys, share its shape.
-const SignalTable = function () {} as unknown as new () => Record<string, Signal<any>>;
-SignalTable.prototype = Object.create(null);
+const AtomTable = function () {} as unknown as new () => Record<string, Atom>;
+AtomTable.prototype = Object.create(null);
 
-// A schema-less view has no fixed key set: a key gets its signal on first read,
-// present or not, so a reader of a key that appears or disappears is notified.
+// The schema views, built like an AtomTable: no inherited key, fast mode. Their
+// shared prototype is frozen: nothing can add a key every view would inherit.
+const PropsTable = function () {} as unknown as new () => Record<string, any>;
+PropsTable.prototype = Object.freeze(Object.create(null));
+
+// A schema-less view has no fixed key set: a key gets its atom on its first
+// tracked read, present or not, so a reader of a key that appears or disappears
+// is notified; an untracked read has nobody to notify and creates none. An atom
+// holds the value its readers saw and is written like a signal with the
+// default equality, without a signal's closures.
 // The key set itself is read behind a version signal and cached until the props
 // or the declared defaults change; both are built on the first read of the key
 // set, which most components never make. The view is the proxy's target, and
 // every trap answers for it, so its fields are never observable.
 class PropsView {
   node: ComponentNode;
-  signals = new SignalTable();
+  atoms = new AtomTable();
   keys: string[] | null = null;
   keyLookup: Set<string> | null = null;
   keysDefaults = 0;
@@ -186,7 +296,15 @@ class PropsView {
   }
 
   read(key: string) {
-    return (this.signals[key] ||= signal(this.resolve(key)))();
+    let atom = this.atoms[key];
+    if (atom === undefined) {
+      if (!isObserving()) {
+        return this.resolve(key);
+      }
+      atom = this.atoms[key] = createAtom(this.resolve(key), "prop");
+    }
+    onReadAtom(atom);
+    return atom.value;
   }
 
   // the key set as a reader sees it: subscribes to its changes
@@ -211,10 +329,7 @@ class PropsView {
   }
 
   update() {
-    const signals = this.signals;
-    for (const key in signals) {
-      signals[key].set(this.resolve(key));
-    }
+    writeAtoms(this.atoms, this);
     // nobody read the key set yet: there is no one to notify
     if (!this.keySet) {
       return;

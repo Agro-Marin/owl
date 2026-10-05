@@ -38,7 +38,12 @@ differently from upstream.
 - **A cancelled render pass** does not make a child run `onWillUpdateProps`
   again for props it already holds.
 - **Proxy reads nobody observes create no atom**; `in` / `has()` subscribe to
-  the presence of the key they ask about only.
+  the presence of the key they ask about only. The same holds for a `props()`
+  view: a key read only untracked (in `setup`) gets no atom.
+- **A `props({...})` view inherits from one frozen, empty object** whose own
+  prototype is `null`, instead of having a `null` prototype itself: the views
+  of a component class then share one hidden class, where upstream's are each
+  a dictionary. It still inherits no key.
 
 ## Odoo integration contract
 

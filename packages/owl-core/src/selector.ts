@@ -78,11 +78,11 @@ export function selector<K>(source: () => K, options: SelectorOptions = {}): (ke
   // unobserved ones whenever the table doubled since the last sweep
   function sweep() {
     const before = atoms.size;
-    for (const [key, atom] of atoms) {
+    atoms.forEach((atom, key) => {
       if (!hasObservers(atom)) {
         atoms.delete(key);
       }
-    }
+    });
     swept = atoms.size;
     if (debug.computed) {
       debugLog(
