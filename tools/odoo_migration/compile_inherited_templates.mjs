@@ -22,6 +22,22 @@ for (const k of Object.getOwnPropertyNames(dom.window)) {
   }
 }
 globalThis.odoo = { debug: "" };
+// jsdom's XPath engine departs from the browser's (as Odoo's own precompiler,
+// odoo/tools/assets/js/owl_precompile.mjs, notes): evaluate the extensions'
+// xpaths with the `xpath` package, as that precompiler does
+const xpath = require(process.env.WEB + "/../../node_modules/xpath");
+dom.window.Document.prototype.createExpression = function createExpression(expression) {
+  const parsed = xpath.parse(expression);
+  return {
+    evaluate(context) {
+      const nodes = parsed.select({ node: context });
+      if (!Array.isArray(nodes)) {
+        throw new dom.window.TypeError("The result is not a node set");
+      }
+      return { snapshotLength: nodes.length, snapshotItem: (i) => nodes[i] ?? null };
+    },
+  };
+};
 
 const { applyInheritance } = await import(
   process.env.WEB + "/static/src/core/template_inheritance.js"
@@ -63,7 +79,48 @@ const config = {
 const base = new Map();
 const primary = new Map();
 const extensions = new Map();
-for (const file of fs.readFileSync(0, "utf8").split("\n").filter(Boolean)) {
+// Odoo applies a template's extensions in module load order: a module after
+// the modules it depends on. Files are visited by their module's rank in a
+// dependency-first order (from each __manifest__.py's `depends`), then path.
+function moduleOf(file) {
+  const at = file.indexOf("/static/");
+  return at < 0 ? null : file.slice(0, at);
+}
+function dependsOf(moduleDir) {
+  try {
+    const manifest = fs.readFileSync(moduleDir + "/__manifest__.py", "utf8");
+    const list = /["']depends["']\s*:\s*\[([^\]]*)\]/.exec(manifest);
+    return list ? [...list[1].matchAll(/["']([\w.]+)["']/g)].map((m) => m[1]) : [];
+  } catch {
+    return [];
+  }
+}
+const inputFiles = fs.readFileSync(0, "utf8").split("\n").filter(Boolean);
+const moduleDirs = new Map();
+for (const file of inputFiles) {
+  const dir = moduleOf(file);
+  if (dir) {
+    moduleDirs.set(dir.split("/").pop(), dir);
+  }
+}
+const rank = new Map();
+function visit(name, stack = new Set()) {
+  if (rank.has(name) || stack.has(name) || !moduleDirs.has(name)) {
+    return;
+  }
+  stack.add(name);
+  for (const dep of dependsOf(moduleDirs.get(name)).sort()) {
+    visit(dep, stack);
+  }
+  rank.set(name, rank.size);
+}
+for (const name of [...moduleDirs.keys()].sort()) {
+  visit(name);
+}
+const rankOf = (file) => rank.get(moduleOf(file)?.split("/").pop()) ?? -1;
+inputFiles.sort((a, b) => rankOf(a) - rankOf(b) || (a < b ? -1 : a > b ? 1 : 0));
+
+for (const file of inputFiles) {
   const doc = new DOMParser().parseFromString(fs.readFileSync(file, "utf8"), "text/xml");
   if (doc.getElementsByTagName("parsererror").length) {
     continue;
@@ -182,5 +239,5 @@ if (process.env.UNAPPLIED) {
 console.log(
   `${total} templates after inheritance (${extensions.size} extended, ${primary.size} primary); ` +
     `${regressions.length} rejected only by the new build, ${fixedByNew.length} only by the old, ` +
-    `${bothFail} by both; ${unapplied.length} extensions not applied (order across modules approximated)`
+    `${bothFail} by both; ${unapplied.length} extensions not applied (in module dependency order)`
 );
