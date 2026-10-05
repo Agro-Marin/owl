@@ -1,6 +1,7 @@
 import {
   Component,
   mount,
+  onError,
   onWillDestroy,
   onWillUpdateProps,
   props,
@@ -28,6 +29,8 @@ interface World {
   pending: { resolve: () => void }[];
   violations: string[];
   live: Set<Component>;
+  // whether the bomb's render threw: its boundary shows the fallback from then on
+  threw: boolean;
 }
 
 function makeApp(world: World) {
@@ -70,16 +73,58 @@ function makeApp(world: World) {
       }
     }
   }
+  class Box extends Component {
+    static template = xml`<section><t t-call-slot="default"/></section>`;
+    props = props();
+    setup() {
+      tracked(this);
+    }
+  }
+  class Bomb extends Component {
+    static template = xml`<s t-out="this.check()"/>`;
+    props = props();
+    setup() {
+      tracked(this);
+    }
+    check() {
+      if (this.props.armed) {
+        world.threw = true;
+        throw new Error("boom");
+      }
+      return "ok";
+    }
+  }
+  class Guard extends Component {
+    static template = xml`<em t-if="this.state.failed">failed</em><t t-else=""><Bomb armed="this.props.armed"/></t>`;
+    static components = { Bomb };
+    props = props();
+    state = proxy({ failed: false });
+    setup() {
+      tracked(this);
+      onError(() => {
+        this.state.failed = true;
+      });
+    }
+  }
   class Parent extends Component {
     static template = xml`
       <div>
         <Slow value="this.state.value"/>
         <ul><t t-foreach="this.state.items" t-as="id" t-key="id"><Item list="'u'" id="id" label="this.state.label" isSelected="this.isSelected"/></t></ul>
         <ol><t t-foreach="this.state.items" t-as="id" t-key="id" t-memo="[this.state.label]"><Item list="'o'" id="id" label="this.state.label" isSelected="this.isSelected"/></t></ol>
+        <Box><i t-out="this.state.value"/></Box>
+        <Guard armed="this.state.armed"/>
         <Slow t-if="this.state.flag" value="this.state.value * 10"/>
       </div>`;
-    static components = { Slow, Item };
-    state = proxy({ value: 0, label: "a", flag: false, selected: 0, items: [1, 2, 3] as number[] });
+    static components = { Slow, Item, Box, Guard };
+    state = proxy({
+      value: 0,
+      label: "a",
+      flag: false,
+      selected: 0,
+      armed: false,
+      items: [1, 2, 3] as number[],
+    });
     isSelected = selector(() => this.state.selected);
     setup() {
       tracked(this);
@@ -88,7 +133,7 @@ function makeApp(world: World) {
   return Parent;
 }
 
-function expectedHtml(state: any, itemStates: Map<string, number>): string {
+function expectedHtml(state: any, itemStates: Map<string, number>, threw: boolean): string {
   const items = (list: string) =>
     state.items
       .map(
@@ -97,12 +142,13 @@ function expectedHtml(state: any, itemStates: Map<string, number>): string {
       )
       .join("");
   const extra = state.flag ? `<b>${state.value * 10}</b>` : "";
-  return `<div><b>${state.value}</b><ul>${items("u")}</ul><ol>${items("o")}</ol>${extra}</div>`;
+  const guard = threw ? "<em>failed</em>" : "<s>ok</s>";
+  return `<div><b>${state.value}</b><ul>${items("u")}</ul><ol>${items("o")}</ol><section><i>${state.value}</i></section>${guard}${extra}</div>`;
 }
 
 async function runScenario(seed: number, steps: number) {
   const fixture = makeTestFixture();
-  const world: World = { pending: [], violations: [], live: new Set() };
+  const world: World = { pending: [], violations: [], live: new Set(), threw: false };
   const Parent = makeApp(world);
   const parent: any = await mount(Parent, fixture);
   const random = prng(seed);
@@ -119,9 +165,12 @@ async function runScenario(seed: number, steps: number) {
     } else if (r < 0.25) {
       state.label = state.label === "a" ? "b" : "a";
       trace.push(`label=${state.label}`);
-    } else if (r < 0.32) {
+    } else if (r < 0.3) {
       state.flag = !state.flag;
       trace.push(`flag=${state.flag}`);
+    } else if (r < 0.32) {
+      state.armed = !state.armed;
+      trace.push(`armed=${state.armed}`);
     } else if (r < 0.42) {
       state.items.push(nextId++);
       trace.push(`push`);
@@ -171,7 +220,7 @@ async function runScenario(seed: number, steps: number) {
     itemStates.set(item.props.list + item.props.id, item.state.n);
   }
   const problems: string[] = [...world.violations];
-  const expected = expectedHtml(parent.state, itemStates);
+  const expected = expectedHtml(parent.state, itemStates, world.threw);
   if (fixture.innerHTML !== expected) {
     problems.push(`DOM ${fixture.innerHTML}\n  expected ${expected}`);
   }
