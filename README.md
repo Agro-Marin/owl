@@ -87,6 +87,9 @@ The full documentation is available at **[odoo.github.io/owl/documentation](http
 
 For the Owl 2 documentation, see the [owl-2.x branch](https://github.com/odoo/owl/tree/owl-2.x).
 
+This is the Agro-Marin fork, `3.0-marin`: what it adds to Owl 3 and where it
+behaves differently is in [doc/v3/owl/fork_3.0-marin.md](doc/v3/owl/fork_3.0-marin.md).
+
 ## Installation
 
 ```bash

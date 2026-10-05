@@ -70,6 +70,7 @@ const owlSidebar = [
     items: [
       { text: "OWL 3 Release Notes", link: "/v3/owl/owl3_design" },
       { text: "OWL 2 to OWL 3", link: "/v3/owl/migration_owl2_to_owl3" },
+      { text: "The 3.0-marin Fork", link: "/v3/owl/fork_3.0-marin" },
       { text: "OWL 1 to OWL 2", link: "/v3/owl/migration_owl1_to_owl2" },
     ],
   },

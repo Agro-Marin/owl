@@ -74,3 +74,29 @@ const p = proxy(target);
 p === target; // false (p is a proxy)
 toRaw(p) === target; // true
 ```
+
+## observe
+
+`observe(target, callback)` returns a view of `target` that calls `callback`,
+synchronously, the first time a value read through the view changes — OWL 2's
+`reactive(target, callback)`:
+
+```js
+const state = proxy({ count: 0, label: "a" });
+const view = observe(state, () => console.log("changed"));
+
+view.count; // the view now observes `count`
+state.label = "b"; // nothing: `label` was not read through the view
+state.count = 1; // logs "changed"
+state.count = 2; // nothing: the subscription is one-shot
+view.count; // read again: observed again
+```
+
+- The subscription is **one-shot**: once `callback` ran, only the values read
+  through the view again are observed. A callback that reads the view stays
+  subscribed to what it read.
+- Objects read through the view are views too, with the same callback.
+- Reads through the view still subscribe the computation they happen in (a
+  render, an effect), as a plain proxy read does.
+- Use it to bridge to code that expects a callback; within components, prefer
+  `proxy` with `effect` or a render.
