@@ -27,10 +27,15 @@ const define = {
   __BUILD_HASH__: JSON.stringify(getGitHash()),
 };
 
+// dist/owl.es.js -> dist/owl.<variant>.es.js
+function variantName(filename, variant) {
+  return filename.replace(/^dist\/owl\./, `dist/owl.${variant}.`);
+}
+
 async function buildVariant(entry, suffix) {
-  const esm = suffix ? addSuffix(ES_FILENAME, suffix) : ES_FILENAME;
-  const cjs = suffix ? addSuffix(CJS_FILENAME, suffix) : CJS_FILENAME;
-  const iife = suffix ? addSuffix(IIFE_FILENAME, suffix) : IIFE_FILENAME;
+  const esm = suffix ? variantName(ES_FILENAME, suffix) : ES_FILENAME;
+  const cjs = suffix ? variantName(CJS_FILENAME, suffix) : CJS_FILENAME;
+  const iife = suffix ? variantName(IIFE_FILENAME, suffix) : IIFE_FILENAME;
   const iifeMin = addSuffix(iife, "min");
 
   const common = {
@@ -71,4 +76,5 @@ switch (target) {
     break;
   default:
     await buildVariant("src/index.ts");
+    await buildVariant("src/runtime.ts", "runtime");
 }

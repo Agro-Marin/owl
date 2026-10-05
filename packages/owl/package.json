@@ -12,6 +12,12 @@
       "require": "./dist/owl.cjs",
       "default": "./dist/owl.es.js"
     },
+    "./runtime": {
+      "types": "./dist/types/owl.d.ts",
+      "import": "./dist/owl.runtime.es.js",
+      "require": "./dist/owl.runtime.cjs",
+      "default": "./dist/owl.runtime.es.js"
+    },
     "./dist/*": "./dist/*",
     "./package.json": "./package.json"
   },
