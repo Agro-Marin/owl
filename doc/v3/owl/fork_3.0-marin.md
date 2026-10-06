@@ -161,7 +161,8 @@ true })` creates an effect owned by nothing. When a computed and an effect
   once, like any other.
 - **An `ErrorBoundary`** passes an error caught while its fallback shows to
   its parent; **`mount()`** destroys the App it created when the mount fails;
-  **`render(true)`** renders every `t-memo` item again.
+  **`render(true)`** renders every `t-memo` item again, and the content of a
+  Portal or Suspense too (a separate root, once the host's render is done).
 
 ### Blockdom and events
 
@@ -178,11 +179,17 @@ true })` creates an effect owned by nothing. When a computed and an effect
   modifiers come from the key. `config.mainEventHandler` is
   `(fn, mods, ctx, ev, currentTarget, arg?)`. A render allocates no handler
   array.
-- **Every keyed site** (component, slot call, `t-out="0"`, `t-set` body,
-  `t-call`, `t-memo` list) carries a site id before its loop keys: two sites
-  of one template never share a key (a slot called in a loop and again after
-  it no longer leaves an untracked component no deep render or destroy
-  reaches).
+- **A child's key is exact**: the site id, each loop key and `t-key`, slot and
+  template names are segments (`\u0002`, a tag, a payload; a payload's
+  `\u0002` doubled), so no value of any type or content spells another
+  child's key. A loop key carries its type (`1` and `"1"` are two keys; an
+  array is compared by its items), and a slot's default content has its own
+  segment. Upstream concatenates strings, and a collision leaves a component
+  no deep render or destroy reaches.
+- **A `t-set` body output by another component renders in that component**:
+  its components are that component's children, its expressions still read
+  the context they were written in (upstream creates them in the component
+  that set the body, whose fiber may be gone, and crashes).
 - **A `t-on` on a component or slot mounted by its component's own render**
   looks up the handler enclosing it at its first dispatch, not mid-patch
   (logged on `event`).
@@ -198,13 +205,20 @@ true })` creates an effect owned by nothing. When a computed and an effect
   `indeterminate` are written only when the element holds another value;
   `value` is written on every patch, as upstream.
 - **Synthetic (`.synthetic`) handlers** also listen on the shadow root or other
-  document an app is mounted in.
+  document an app is mounted in; each root replays only the nodes of its own
+  tree, with the target a native listener there would see (capture handlers
+  inside a shadow root, closed ones included, run for composed events). The
+  handlers of one event and phase, passive or not, are replayed in one pass,
+  in path order, up to a stop; a passive one cannot prevent the default.
 - **Every component `t-on` on a parent element shares one listener per kind**
   (event name, capture, passive, synthetic): a nested component's handler runs
   before the enclosing one's, whatever site or render made each, as the event
   bubbles; a native listener on that parent runs before or after all of them,
   not between. `t-on-*.self` on a component means the event targets one of its
   root elements.
+- **A `t-set` body given to an attribute, interpolation, property or `t-att`
+  is its string taken during the render** (`attrValue` / `attrsValue`), so the
+  attribute follows what the body reads.
 - **`String()` of a `t-set` body** throws when the body holds a component
   (which it would create and never mount); a text node stringifies to its text,
   a bigint to its digits (`0n` included), a symbol to its description.
@@ -234,6 +248,9 @@ true })` creates an effect owned by nothing. When a computed and an effect
 - **`__info__.hash`** is the commit, plus `-dirty-<digest>` when the sources
   differ from it (the version file the release script writes excluded);
   outside a git checkout, `nogit-<digest of the sources>`.
+
+Several debug texts are shorter than in earlier fork builds, and `debug` is
+built from `DEBUG_CHANNELS`.
 
 ## Odoo integration contract
 
