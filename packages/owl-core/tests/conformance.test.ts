@@ -36,10 +36,9 @@ const owl: ReactiveFramework = {
 };
 
 // Where owl knowingly differs: a run does not invalidate itself through its
-// own writes (an effect writing what it read does not loop), nor does a
-// computed recover from reading itself. A fix flips its case to a failure here.
+// own writes (an effect writing what it read does not loop). A fix flips its
+// case to a failure here.
 const KNOWN_DIVERGENCES = new Set([
-  "#153 computed self-dep recovery after catching cycle error",
   "#179 computed self-increment: intra-run read-after-write values correct",
   "#180 inner write through computed chain resets signal",
 ]);

@@ -358,3 +358,19 @@ describe("owner chain", () => {
     expect(log).toEqual(["child ga=1 a=1"]);
   });
 });
+
+describe("batch", () => {
+  test("is public: immediate effects run once, after the outermost batch", async () => {
+    const { batch } = await import("../src");
+    const a = signal(1);
+    const b = signal(1);
+    const seen: number[] = [];
+    immediateEffect(() => seen.push(a() + b()));
+    batch(() => {
+      a.set(2);
+      batch(() => b.set(2));
+      expect(seen).toEqual([2]);
+    });
+    expect(seen).toEqual([2, 4]);
+  });
+});

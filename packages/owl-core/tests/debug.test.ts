@@ -60,6 +60,7 @@ test("the computed channel names a recompute and an equal result", async () => {
     "computed: run parity",
     "computed: run parity",
     "computed: parity recomputed an equal value, readers kept",
+    "computed: dispose parity, effect was its last observer",
   ]);
 });
 

@@ -1,4 +1,5 @@
 import { debug, debugLog } from "./debug";
+import { OwlError } from "./owl_error";
 
 export interface ReadonlyReactiveValue<TRead> {
   (): TRead;
@@ -38,15 +39,7 @@ export function toEqualsFn<T>(equals: Equals<T> | undefined): (a: T, b: T) => bo
   // recompute, or a signal set() issued from an effect): run it untracked so
   // reading through reactive proxies does not register spurious dependencies
   // on the active computation.
-  return (a, b) => {
-    const previousComputation = currentComputation;
-    currentComputation = undefined;
-    try {
-      return equals(a, b);
-    } finally {
-      currentComputation = previousComputation;
-    }
-  };
+  return (a, b) => untrack(() => equals(a, b));
 }
 
 export enum ComputationState {
@@ -71,7 +64,8 @@ export class Link {
   // what dep.activeLink pointed at before this run pointed it here
   rollback: Link | undefined;
   // dep's value when sub read it: a signal written back to that value since
-  // (a write and its revert in one batch) has not changed for sub
+  // (a write and its revert in one batch) has not changed for sub. Nothing for
+  // a derived dep, whose recompute notifies sub itself.
   seen: unknown;
 
   constructor(
@@ -91,8 +85,12 @@ export class Link {
     this.prevSub = prevSub;
     this.nextSub = undefined;
     this.rollback = rollback;
-    this.seen = dep.value;
+    this.seen = seenValue(dep);
   }
+}
+
+function seenValue(dep: Atom): unknown {
+  return (dep as ComputationAtom).isDerived ? undefined : dep.value;
 }
 
 const DEAD = -1;
@@ -129,11 +127,11 @@ export interface ComputationAtom<T = any> extends Atom<T> {
   // computation runs, so it cannot use activeLink to skip a repeated read
   observed: Set<Atom> | null;
   state: ComputationState;
-  immediate?: boolean;
+  immediate: boolean;
   // observe()'s contract (OWL 2's reactive callback): a derived source that
   // may have changed notifies without being recomputed, since recomputing it
   // inside a write reads records that write has not finished
-  notifiesWithoutRecompute?: boolean;
+  notifiesWithoutRecompute: boolean;
   // the disposers of the effects created while this computation ran: they
   // last until it runs again or is disposed
   owned: Set<() => void> | null;
@@ -321,7 +319,7 @@ function track(dep: Atom, sub: ComputationAtom, tail: Link | undefined) {
     if (next.dep === dep) {
       // read in the same order as by the previous run
       next.version = version;
-      next.seen = dep.value;
+      next.seen = seenValue(dep);
       next.rollback = active;
       dep.activeLink = next;
       sub.depsTail = next;
@@ -362,7 +360,7 @@ function track(dep: Atom, sub: ComputationAtom, tail: Link | undefined) {
 // Moves a link the previous run read to the position of the current read.
 function reuse(link: Link, sub: ComputationAtom, tail: Link | undefined, version: number) {
   link.version = version;
-  link.seen = link.dep.value;
+  link.seen = seenValue(link.dep);
   const next = tail !== undefined ? tail.nextDep : sub.deps;
   if (link !== next) {
     const prevDep = link.prevDep;
@@ -613,27 +611,46 @@ export function updateComputation(computation: ComputationAtom) {
   if (state === ComputationState.EXECUTED) {
     return;
   }
+  if (computation.running) {
+    // read while it runs: its value is what is being computed
+    if (debug.error) {
+      debugLog("error", `cycle: ${computation.name} read while it runs`);
+    }
+    throw new OwlError(
+      `Cycle detected: ${computation.name || "a computation"} reads its own value`
+    );
+  }
   if (state === ComputationState.PENDING) {
-    for (let link = computation.deps; link !== undefined; link = link.nextDep) {
-      const source = link.dep as ComputationAtom;
-      if (!source.isDerived) {
-        // only a comparable (signal) write leaves an atom's reader pending
-        if (!Object.is(link.seen, source.value)) {
-          computation.state = ComputationState.STALE;
+    try {
+      for (let link = computation.deps; link !== undefined; link = link.nextDep) {
+        const source = link.dep as ComputationAtom;
+        if (!source.isDerived) {
+          // only a comparable (signal) write leaves an atom's reader pending
+          if (!Object.is(link.seen, source.value)) {
+            computation.state = ComputationState.STALE;
+            break;
+          }
+          continue;
+        }
+        updateComputation(source);
+        // As soon as a source's recompute has marked us STALE (via onWriteAtom),
+        // we already know this computation must re-run. Stop probing the rest of
+        // the sources: any work they'd do is redundant, and worse, evaluating
+        // them eagerly can surface errors from values the about-to-run body will
+        // not actually read (e.g. an `if (lastValue()) uppercase()` guard whose
+        // upstream signal just went falsy).
+        if (computation.state === ComputationState.STALE) {
           break;
         }
-        continue;
       }
-      updateComputation(source);
-      // As soon as a source's recompute has marked us STALE (via onWriteAtom),
-      // we already know this computation must re-run. Stop probing the rest of
-      // the sources: any work they'd do is redundant, and worse, evaluating
-      // them eagerly can surface errors from values the about-to-run body will
-      // not actually read (e.g. an `if (lastValue()) uppercase()` guard whose
-      // upstream signal just went falsy).
-      if (computation.state === ComputationState.STALE) {
-        break;
+    } catch (error) {
+      // as if its run had thrown: it stays subscribed, and the next change of
+      // a source queues it again (left pending, nothing ever would)
+      if (debug.error) {
+        debugLog("error", `${computation.name}: a source threw while it was checked`, error);
       }
+      computation.state = ComputationState.EXECUTED;
+      throw error;
     }
     // If the state is still not stale after processing the sources, none of
     // the dependencies have actually changed.
@@ -674,16 +691,7 @@ export function updateComputation(computation: ComputationAtom) {
 // links go stale (a new version), and wait for the run that tracks.
 function detachAndRun(computation: ComputationAtom) {
   computation.version++;
-  const previousComputation = currentComputation;
-  const previousObserver = currentObserver;
-  currentComputation = undefined;
-  currentObserver = undefined;
-  try {
-    return computation.compute();
-  } finally {
-    currentComputation = previousComputation;
-    currentObserver = previousObserver;
-  }
+  return untrack(computation.compute);
 }
 
 // A derived source the run read and then invalidated, by a write of its own,
@@ -692,15 +700,12 @@ function detachAndRun(computation: ComputationAtom) {
 // run wrote after reading it, the run does not start over.
 function settleDerivedSources(computation: ComputationAtom) {
   for (let link = computation.deps; link !== undefined; link = link.nextDep) {
-    const source = link.dep;
-    if ((source as ComputationAtom).isDerived && (source as ComputationAtom).state) {
+    const source = link.dep as ComputationAtom;
+    if (source.isDerived && source.state !== ComputationState.EXECUTED) {
       if (debug.computed) {
-        debugLog(
-          "computed",
-          `settle ${(source as ComputationAtom).name}, invalidated by ${computation.name}`
-        );
+        debugLog("computed", `settle ${source.name}, invalidated by ${computation.name}`);
       }
-      updateComputation(source as ComputationAtom);
+      updateComputation(source);
     }
   }
 }
@@ -761,6 +766,11 @@ function observedSources(observer: ComputationAtom): Set<Atom> {
   return result;
 }
 
+/**
+ * Unsubscribes `computation` from its sources. A derived source it was the
+ * last observer of is disposed with it: left subscribed, it would stay
+ * reachable from its own sources until one of them is written.
+ */
 export function removeSources(computation: ComputationAtom) {
   let link = computation.deps;
   computation.deps = undefined;
@@ -769,40 +779,23 @@ export function removeSources(computation: ComputationAtom) {
   while (link !== undefined) {
     const next: Link | undefined = link.nextDep;
     unlinkSub(link);
+    const source = link.dep as ComputationAtom;
+    if (source.isDerived && !source.running && !hasObservers(source)) {
+      if (debug.computed) {
+        debugLog("computed", `dispose ${source.name}, ${computation.name} was its last observer`);
+      }
+      disposeComputation(source);
+    }
     link = next;
   }
 }
 
 export function disposeComputation(computation: ComputationAtom) {
-  let link = computation.deps;
-  computation.deps = undefined;
-  computation.depsTail = undefined;
-  computation.observed = null;
-  let failure: { error: unknown } | null = null;
-  while (link !== undefined) {
-    const next: Link | undefined = link.nextDep;
-    unlinkSub(link);
-    // Recursively dispose derived computations that lost all observers.
-    const derived = link.dep as ComputationAtom;
-    if (derived.isDerived && !hasObservers(derived)) {
-      try {
-        disposeComputation(derived);
-      } catch (error) {
-        failure ||= { error };
-      }
-    }
-    link = next;
-  }
-  // Mark as stale so it recomputes correctly if ever re-used (shared computed case)
-  computation.state = ComputationState.STALE;
-  try {
-    disposeOwned(computation);
-  } catch (error) {
-    failure ||= { error };
-  }
-  if (failure) {
-    throw failure.error;
-  }
+  removeSources(computation);
+  // A derived computation recomputes when it is read again (a shared
+  // computed); any other is done, and a run already queued for it is skipped.
+  computation.state = computation.isDerived ? ComputationState.STALE : ComputationState.EXECUTED;
+  disposeOwned(computation);
 }
 
 /**
@@ -844,7 +837,7 @@ function markDownstream(computation: ComputationAtom) {
       if (observer.isDerived && observer.subs === undefined) {
         pendingDisposals.add(observer);
       }
-      if (observer.state || link.version !== observer.version) {
+      if (observer.state !== ComputationState.EXECUTED || link.version !== observer.version) {
         continue;
       }
       observer.state = observer.notifiesWithoutRecompute
@@ -861,16 +854,21 @@ function markDownstream(computation: ComputationAtom) {
   }
 }
 
+/**
+ * Runs `fn` with nothing tracking its reads: neither the current computation
+ * nor the observe() view the read goes through subscribes to them.
+ */
 export function untrack<T>(fn: (...args: any[]) => T): T {
   const previousComputation = currentComputation;
+  const previousObserver = currentObserver;
   currentComputation = undefined;
-  let result: T;
+  currentObserver = undefined;
   try {
-    result = fn();
+    return fn();
   } finally {
     currentComputation = previousComputation;
+    currentObserver = previousObserver;
   }
-  return result;
 }
 
 function observerNames(atom: Atom): string[] {

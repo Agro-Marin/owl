@@ -15,6 +15,7 @@ export { proxy, observe, markRaw, toRaw, readArrayItems } from "./proxy";
 
 // Reactivity: computations (core tracking primitives)
 export {
+  batch,
   untrack,
   type Equals,
   type ReactiveValue,

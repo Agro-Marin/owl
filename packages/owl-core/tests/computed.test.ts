@@ -6,9 +6,11 @@ import {
   ComputationAtom,
   ComputationState,
   createComputation,
+  onReadAtom,
   disposeComputation,
   removeSources,
   ReactiveValue,
+  ReadonlyReactiveValue,
   setComputation,
   updateComputation,
   observersOf,
@@ -832,5 +834,95 @@ describe("detached", () => {
     manager.destroy();
     state.value = 2;
     expect(detached()).toBe(4);
+  });
+});
+
+describe("cycles", () => {
+  test("a computed reading itself fails with a cycle error, after one run", () => {
+    let runs = 0;
+    const self: ReadonlyReactiveValue<number> = computed(
+      () => {
+        runs++;
+        // bounds the recursion of a graph that does not detect the cycle
+        return runs > 50 ? 0 : self() + 1;
+      },
+      { name: "self" }
+    );
+    expect(() => self()).toThrow("Cycle detected: self reads its own value");
+    expect(runs).toBe(1);
+  });
+
+  test("two computeds reading each other fail with a cycle error", () => {
+    let runs = 0;
+    const a: ReadonlyReactiveValue<number> = computed(() => (++runs > 50 ? 0 : b() + 1), {
+      name: "a",
+    });
+    const b: ReadonlyReactiveValue<number> = computed(() => (++runs > 50 ? 0 : a() + 1), {
+      name: "b",
+    });
+    expect(() => a()).toThrow("Cycle detected: a reads its own value");
+    expect(runs).toBe(2);
+  });
+
+  test("a computed that caught its cycle error recovers once it stops reading itself", () => {
+    const mode = signal(0);
+    const c: ReadonlyReactiveValue<number> = computed(() => {
+      if (mode() === 0) {
+        try {
+          return c();
+        } catch {
+          return -1;
+        }
+      }
+      return mode();
+    });
+    expect(c()).toBe(-1);
+    mode.set(1);
+    expect(c()).toBe(1);
+  });
+});
+
+describe("a failing source in a pending check", () => {
+  test("the reader stays subscribed and runs again on its next change", async () => {
+    class IntentionalTestError extends Error {
+      override name = "IntentionalTestError";
+    }
+    const s = signal(0);
+    const t = signal(0);
+    // a derived computation that throws, which computed() never does
+    const failing = createComputation(() => {
+      if (s() > 0) {
+        throw new IntentionalTestError("source failed");
+      }
+      return s();
+    }, true);
+    let runs = 0;
+    effect(() => {
+      runs++;
+      updateComputation(failing);
+      onReadAtom(failing);
+      t();
+    });
+    s.set(1);
+    await waitScheduler();
+    expect(runs).toBe(1);
+    t.set(1);
+    await waitScheduler();
+    expect(runs).toBe(2);
+  });
+});
+
+describe("disposed reader", () => {
+  test("an effect disposed unsubscribes the computed it was the last observer of", async () => {
+    const s = signal(1);
+    const double = computed(() => s() * 2, { name: "double", detached: true });
+    const dispose = effect(() => double());
+    expect(observersOf((s as any)[atomSymbol])).toEqual([(double as any)[atomSymbol]]);
+    dispose();
+    expect(observersOf((s as any)[atomSymbol])).toEqual([]);
+    // read again, it follows its source again
+    expect(double()).toBe(2);
+    s.set(2);
+    expect(double()).toBe(4);
   });
 });

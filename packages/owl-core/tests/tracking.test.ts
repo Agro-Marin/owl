@@ -2,6 +2,7 @@ import {
   atomSymbol,
   ComputationState,
   computed,
+  getCurrentComputation,
   createComputation,
   hasObservers,
   runTracked,
@@ -12,6 +13,7 @@ import {
   proxy,
   signal,
   sourcesOf,
+  untrack,
   type Atom,
   type ComputationAtom,
 } from "../src";
@@ -307,5 +309,39 @@ describe("dependency tracking", () => {
     await waitScheduler();
     expect(sourcesOf(atomOf(c))).toEqual([]);
     expect(c()).toBe(4);
+  });
+});
+
+describe("untrack", () => {
+  test("a read inside untrack subscribes no observe() view either", () => {
+    const other = proxy({ x: 1 });
+    const state = proxy({
+      get a() {
+        return untrack(() => other.x);
+      },
+    });
+    let calls = 0;
+    const view = observe(state, () => calls++);
+    expect(view.a).toBe(1);
+    other.x = 2;
+    expect(calls).toBe(0);
+  });
+});
+
+describe("links", () => {
+  test("a link to a computed keeps no copy of its value", () => {
+    const list = signal([1, 2, 3]);
+    const firstTwo = computed(() => list().slice(0, 2));
+    let reader: any;
+    const dispose = effect(() => {
+      reader = getCurrentComputation();
+      firstTwo();
+      list();
+    });
+    expect(reader.deps.dep).toBe(atomOf(firstTwo));
+    expect(reader.deps.seen).toBeUndefined();
+    // a signal's link keeps it: a write set back compares to it
+    expect(reader.deps.nextDep.seen).toBe(list());
+    dispose();
   });
 });

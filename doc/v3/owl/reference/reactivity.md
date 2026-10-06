@@ -91,3 +91,14 @@ a.set(10);
 This holds for signals with the default equality. A signal created with a
 custom `equals` (including `equals: false`), and `signal.trigger(s)`, notify
 their readers unconditionally.
+
+An [`immediateEffect`](effects.md) runs on each write, not in a microtask.
+`batch(fn)` holds those runs until `fn` (and any batch around it) returns, so
+they see the writes of `fn` together, once:
+
+```js
+batch(() => {
+  a.set(5);
+  b.set(6);
+}); // an immediateEffect reading a and b runs once, and sees 5 and 6
+```

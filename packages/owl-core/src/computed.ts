@@ -65,7 +65,8 @@ export function computed<TRead, TWrite = TRead>(
   // it runs again once the getter recovers.
   let failure: { error: unknown } | null = null;
   const computation = createComputation(() => {
-    let newValue: TRead;
+    let newValue: TRead | undefined;
+    let newFailure: { error: unknown } | null = null;
     try {
       newValue = getter();
       if (hasValue && !failure && equalsFn(computation.value, newValue)) {
@@ -80,18 +81,18 @@ export function computed<TRead, TWrite = TRead>(
       if (debug.computed) {
         debugLog("computed", `${computation.name} failed, the error is its value`, error);
       }
-      if (hasValue) {
-        onWriteAtom(computation);
-      }
-      hasValue = true;
-      failure = { error };
-      return undefined;
+      newFailure = { error };
+      newValue = undefined;
     }
-    if (hasValue) {
+    // the result is in place before the readers hear of it: an immediate one
+    // reads it during the notification
+    const notify = hasValue;
+    hasValue = true;
+    failure = newFailure;
+    computation.value = newValue;
+    if (notify) {
       onWriteAtom(computation);
     }
-    hasValue = true;
-    failure = null;
     return newValue;
   }, true);
   computation.name = options.name || (debug.computed && getter.name) || "computed";
