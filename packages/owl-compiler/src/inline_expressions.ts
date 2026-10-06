@@ -38,6 +38,15 @@ const RESERVED_WORDS = new Set(
   ).split(",")
 );
 
+// the keywords that start a statement an arrow's block body cannot hold: it
+// takes declarations, expressions and return only
+const STATEMENT_KEYWORDS = new Set(
+  (
+    "break,case,catch,class,const,continue,default,do,else,enum,export,extends,finally,for,if," +
+    "import,super,switch,throw,try,var,while,with,yield"
+  ).split(",")
+);
+
 const WORD_REPLACEMENT: { [key: string]: string } = Object.assign(Object.create(null), {
   and: "&&",
   or: "||",
@@ -67,7 +76,6 @@ type TKind =
 interface Token {
   type: TKind;
   value: string;
-  originalValue?: string;
   size?: number;
   varName?: string;
   replace?: Function;
@@ -89,10 +97,10 @@ const STATIC_TOKEN_MAP: { [key: string]: TKind } = Object.assign(Object.create(n
   ")": "RIGHT_PAREN",
 });
 
-// note that the space after typeof is relevant. It makes sure that the formatted
-// expression has a space after typeof. Currently we don't support delete and void
+// the space after a word operator is relevant: the formatted expression keeps
+// one after it
 const OPERATORS =
-  "...,.,===,==,++,+,!==,!=,!,||,&&,>=,>,<=,<,??=,??,?.,?,--,-,*,/,%,typeof ,=>,=,;,in ,new ,|,&,^,~".split(
+  "...,.,===,==,++,+,!==,!=,!,||,&&,>=,>,<=,<,??=,??,?.,?,--,-,*,/,%,typeof ,delete ,=>,=,;,in ,new ,|,&,^,~".split(
     ","
   );
 
@@ -176,8 +184,17 @@ function replaceInterpolations(template: string, replacer: (expr: string) => str
   return result;
 }
 
+// the characters after which a / starts a regular expression, not a division
+const REGEXP_PREFIX_RE = /[(,=:[!&|?{};+\-*%<>~^]/;
+
+/**
+ * Returns the index of the } that closes the code starting at `start`, past
+ * the strings, template literals, regular expressions and comments in it.
+ */
 function findClosingBrace(str: string, start: number): number {
   let depth = 0;
+  // the last character of code, for a / to tell a division from a regexp
+  let previous = "";
   for (let i = start; i < str.length; i++) {
     const char = str[i];
     if (char === "'" || char === '"') {
@@ -188,6 +205,11 @@ function findClosingBrace(str: string, start: number): number {
       }
     } else if (char === "`") {
       i = findTemplateEnd(str, i);
+    } else if (str.startsWith("/*", i) || str.startsWith("//", i)) {
+      i = commentEnd(str, i) - 1;
+      continue;
+    } else if (char === "/" && (!previous || REGEXP_PREFIX_RE.test(previous))) {
+      i = regExpEnd(str, i);
     } else if (char === "{") {
       depth++;
     } else if (char === "}") {
@@ -196,8 +218,50 @@ function findClosingBrace(str: string, start: number): number {
       }
       depth--;
     }
+    if (!/\s/.test(char)) {
+      previous = str[i];
+    }
   }
   throw new OwlError("Invalid expression");
+}
+
+/**
+ * Returns the index of the / that closes the regular expression opened at
+ * `start`, past its escapes and character classes.
+ */
+function regExpEnd(str: string, start: number): number {
+  let inClass = false;
+  let i = start + 1;
+  for (; str[i] !== "/" || inClass; i++) {
+    const char = str[i];
+    if (!char || char === "\n") {
+      throw new OwlError("Invalid expression");
+    }
+    if (char === "\\") {
+      i++;
+    } else if (char === "[") {
+      inClass = true;
+    } else if (char === "]") {
+      inClass = false;
+    }
+  }
+  return i;
+}
+
+/**
+ * Returns the index past the comment (`/* *\/` or `//` up to the line end)
+ * that starts at `start`.
+ */
+function commentEnd(str: string, start: number): number {
+  if (str[start + 1] === "*") {
+    const end = str.indexOf("*/", start + 2);
+    if (end < 0) {
+      throw new OwlError("Invalid expression");
+    }
+    return end + 2;
+  }
+  const end = str.indexOf("\n", start);
+  return end < 0 ? str.length : end;
 }
 
 const NUMBER_RE =
@@ -258,21 +322,7 @@ const tokenizeRegExp: Tokenizer = function (expr, previous, beforePrevious) {
   ) {
     return false;
   }
-  let inClass = false;
-  let i = 1;
-  for (; expr[i] !== "/" || inClass; i++) {
-    const char = expr[i];
-    if (!char || char === "\n") {
-      throw new OwlError("Invalid expression");
-    }
-    if (char === "\\") {
-      i++;
-    } else if (char === "[") {
-      inClass = true;
-    } else if (char === "]") {
-      inClass = false;
-    }
-  }
+  const i = regExpEnd(expr, 0);
   const flags = /^[a-z]*/.exec(expr.slice(i + 1))![0];
   return { type: "VALUE", value: expr.slice(0, i + 1 + flags.length) };
 };
@@ -341,6 +391,9 @@ export function tokenize(expr: string): Token[] {
   try {
     while (token) {
       current = current.trim();
+      while (current.startsWith("/*") || current.startsWith("//")) {
+        current = current.slice(commentEnd(current, 0)).trim();
+      }
       if (current) {
         const previous = result[result.length - 1];
         const isProperty = previous?.value === "." || previous?.value === "?.";
@@ -438,7 +491,8 @@ const RIGHT_GROUPS = new Set<TKind>(["RIGHT_BRACE", "RIGHT_BRACKET", "RIGHT_PARE
 
 /**
  * Turns the parameters of the parenthesized arrow parameter list that ends at
- * `end` into locals, default values aside, and returns the index of its "(".
+ * `end` into locals, default values and computed keys aside, and returns the
+ * index of its "(".
  */
 function bindArrowParams(tokens: Token[], end: number, scope: Set<string>): number {
   let depth = 0;
@@ -451,23 +505,8 @@ function bindArrowParams(tokens: Token[], end: number, scope: Set<string>): numb
       break;
     }
   }
-  const levels = [{ inDefault: false, base: false }];
-  for (let k = start + 1; k < end; k++) {
-    const t = tokens[k];
-    const level = levels[levels.length - 1];
-    if (LEFT_GROUPS.has(t.type)) {
-      levels.push({ inDefault: level.inDefault, base: level.inDefault });
-    } else if (RIGHT_GROUPS.has(t.type)) {
-      levels.pop();
-    } else if (t.type === "COMMA") {
-      level.inDefault = level.base;
-    } else if (t.type === "OPERATOR" && t.value === "=") {
-      level.inDefault = true;
-    } else if (t.type === "SYMBOL" && t.varName && !level.inDefault) {
-      scope.add(t.varName);
-    }
-  }
-  // a default value may read an earlier parameter
+  bindPattern(tokens, start, scope);
+  // a default value or a computed key may read an earlier parameter
   for (let k = start + 1; k < end; k++) {
     const t = tokens[k];
     if (t.type === "SYMBOL" && t.varName && scope.has(t.varName)) {
@@ -542,9 +581,10 @@ function bindDeclarators(tokens: Token[], start: number, scope: Set<string>): nu
 }
 
 /**
- * Adds the names bound by the destructuring pattern opened at `start` to
- * `scope`, default values and computed keys aside, and returns the index of
- * its closing token.
+ * Adds the names bound by the destructuring pattern (or the parameter list)
+ * opened at `start` to `scope`, default values and computed keys aside, and
+ * returns the index of its closing token. Its tokens may be compiled already,
+ * as a parameter list's are: a name is then the token's `varName`.
  */
 function bindPattern(tokens: Token[], start: number, scope: Set<string>): number {
   const levels: { inExpr: boolean; base: boolean; isObject: boolean }[] = [];
@@ -554,7 +594,7 @@ function bindPattern(tokens: Token[], start: number, scope: Set<string>): number
     const level = levels[levels.length - 1];
     if (LEFT_GROUPS.has(t.type)) {
       // a "[" in key position of an object pattern is a computed key
-      const prev = tokens[k - 1].type;
+      const prev = tokens[k - 1]?.type;
       const inExpr =
         !!level &&
         (level.inExpr || (level.isObject && (prev === "LEFT_BRACE" || prev === "COMMA")));
@@ -575,7 +615,7 @@ function bindPattern(tokens: Token[], start: number, scope: Set<string>): number
       tokens[k - 1].value !== "." &&
       tokens[k - 1].value !== "?."
     ) {
-      scope.add(t.value);
+      scope.add(t.varName ?? t.value);
     }
   }
   return k;
@@ -757,6 +797,18 @@ export function processExpr(
           }
         }
       }
+      // a context name may be any string, a keyword included: only where a
+      // statement starts, in an arrow's block body, is a keyword one
+      const startsStatement =
+        groupType === "BLOCK" &&
+        (prevToken.type === "LEFT_BRACE" ||
+          prevToken.type === "RIGHT_BRACE" ||
+          prevToken.value === ";");
+      if (isVar && startsStatement && STATEMENT_KEYWORDS.has(token.value)) {
+        throw new OwlError(
+          `Unsupported statement '${token.value}' in a template expression (\`${expr}\`): an arrow function's block body takes declarations, expressions and return only`
+        );
+      }
     }
 
     if (token.type === "TEMPLATE_STRING") {
@@ -799,7 +851,6 @@ export function processExpr(
     if (isVar) {
       token.varName = token.value;
       if (!isLocal(token.value)) {
-        token.originalValue = token.value;
         token.value = `ctx['${token.value}']`;
       } else {
         token.value = `_${token.value}`;
@@ -812,7 +863,7 @@ export function processExpr(
   const freeVariables =
     topLevelArrowIndex === -1
       ? null
-      : collectVariables(tokens, topLevelArrowIndex + 1).filter((v) => v !== "this");
+      : collectVariables(tokens, topLevelParams![0]).filter((v) => v !== "this");
 
   const arrow =
     topLevelArrowIndex === -1
@@ -830,15 +881,40 @@ export function processExpr(
   };
 }
 
-export function compileExpr(expr: string, seededLocals?: Set<string>): string {
-  return processExpr(expr, seededLocals).expr;
+export function compileExpr(expr: string): string {
+  return processExpr(expr).expr;
 }
 
-const INTERP_REGEXP = /\{\{.*?\}\}|\#\{.*?\}/g;
-const HAS_INTERP_REGEXP = /\{\{.*?\}\}|\#\{.*?\}/;
+/**
+ * The `{{ expr }}` and `#{ expr }` interpolations of `s`, each ending at the
+ * brace that closes it: an expression may hold braces and strings with "}}".
+ * An interpolation that is not closed is text.
+ */
+function findInterpolations(s: string): { start: number; end: number; expr: string }[] {
+  const result = [];
+  for (let i = 0; i < s.length; i++) {
+    const isDouble = s.startsWith("{{", i);
+    if (!isDouble && !s.startsWith("#{", i)) {
+      continue;
+    }
+    let close: number;
+    try {
+      close = findClosingBrace(s, i + 2);
+    } catch {
+      continue;
+    }
+    if (isDouble && s[close + 1] !== "}") {
+      continue;
+    }
+    const end = isDouble ? close + 2 : close + 1;
+    result.push({ start: i, end, expr: s.slice(i + 2, close) });
+    i = end - 1;
+  }
+  return result;
+}
 
 export function isInterpolated(s: string): boolean {
-  return HAS_INTERP_REGEXP.test(s);
+  return findInterpolations(s).length > 0;
 }
 
 /**
@@ -848,22 +924,16 @@ export function escapeTemplateString(str: string): string {
   return str.replace(/\\/g, "\\\\").replace(/`/g, "\\`").replace(/\$\{/g, "\\${");
 }
 
-function replaceDynamicParts(s: string, replacer: (s: string) => string) {
-  let matches = s.match(INTERP_REGEXP);
-  if (matches && matches[0].length === s.length) {
-    return `(${replacer(s.slice(2, matches[0][0] === "{" ? -2 : -1))})`;
+export function interpolate(s: string): string {
+  const parts = findInterpolations(s);
+  if (parts.length === 1 && parts[0].start === 0 && parts[0].end === s.length) {
+    return `(${compileExpr(parts[0].expr)})`;
   }
-
   let r = "";
   let last = 0;
-  for (const match of s.matchAll(INTERP_REGEXP)) {
-    const part = match[0];
-    r += escapeTemplateString(s.slice(last, match.index));
-    r += "${" + replacer(part.slice(2, part[0] === "{" ? -2 : -1)) + "}";
-    last = match.index! + part.length;
+  for (const { start, end, expr } of parts) {
+    r += escapeTemplateString(s.slice(last, start)) + "${" + compileExpr(expr) + "}";
+    last = end;
   }
   return "`" + r + escapeTemplateString(s.slice(last)) + "`";
-}
-export function interpolate(s: string): string {
-  return replaceDynamicParts(s, compileExpr);
 }

@@ -1,4 +1,4 @@
-import { compileExpr, processExpr, tokenize } from "../src/inline_expressions";
+import { compileExpr, interpolate, processExpr, tokenize } from "../src/inline_expressions";
 
 describe("tokenizer", () => {
   test("simple tokens", () => {
@@ -258,6 +258,14 @@ describe("expression evaluation", () => {
     expect(freeVars("this.doSomething(item)")).toBeNull();
   });
 
+  test("processExpr: an arrow's free variables include those its parameter defaults read", () => {
+    const freeVars = (expr: string) => processExpr(expr).freeVariables;
+    expect(freeVars("(x = item) => f(x)")).toEqual(["item", "f"]);
+    expect(freeVars("({a = item}) => a")).toEqual(["item"]);
+    expect(freeVars("async (x = item) => x")).toEqual(["item"]);
+    expect(freeVars("(a, b = a) => b")).toEqual([]);
+  });
+
   test("processExpr: only a whole-expression arrow has free variables", () => {
     const freeVars = (expr: string) => processExpr(expr).freeVariables;
     expect(freeVars("this.state.flag ? () => 'A' : () => 'B'")).toBeNull();
@@ -371,6 +379,42 @@ describe("expression evaluation", () => {
     expect(compileExpr("() => ({const: 1, let: x})")).toBe("()=>({const:1,let:ctx['x']})");
   });
 
+  test("a computed key in a destructured parameter reads the context", () => {
+    expect(compileExpr("({[k]: v}) => v")).toBe("({[ctx['k']]:_v})=>_v");
+    expect(compileExpr("(k, {[k]: v}) => v")).toBe("(_k,{[_k]:_v})=>_v");
+    const run = (expr: string, ...args: any[]) =>
+      new Function("ctx", `return (${compileExpr(expr)})`)({ k: "x" })(...args);
+    expect(run("({[k]: v}) => v", { x: 5 })).toBe(5);
+  });
+
+  test("a statement is rejected with the keyword it starts with", () => {
+    expect(() => compileExpr("() => { if (a) { b() } }")).toThrow(
+      "Unsupported statement 'if' in a template expression"
+    );
+    expect(() => compileExpr("() => { for (const i of l) {} }")).toThrow(
+      "Unsupported statement 'for' in a template expression"
+    );
+    expect(() => compileExpr("() => { throw e }")).toThrow("Unsupported statement 'throw'");
+    expect(compileExpr("o.if + o.for")).toBe("ctx['o'].if+ctx['o'].for");
+    expect(compileExpr("({if: 1, else: x})")).toBe("({if:1,else:ctx['x']})");
+    expect(compileExpr("var + 1")).toBe("ctx['var']+1");
+    expect(compileExpr("delete o.x")).toBe("delete ctx['o'].x");
+    expect(compileExpr("o.delete(k)")).toBe("ctx['o'].delete(ctx['k'])");
+  });
+
+  test("comments are skipped", () => {
+    expect(compileExpr("a /* b */ + c")).toBe("ctx['a']+ctx['c']");
+    expect(compileExpr("a + // b\n c")).toBe("ctx['a']+ctx['c']");
+    expect(compileExpr("`${ a /* } */ }`")).toBe("`${ctx['a']}`");
+    expect(compileExpr("'/* s */'")).toBe("'/* s */'");
+  });
+
+  test("a regular expression in a template interpolation may hold a brace or a backtick", () => {
+    expect(compileExpr("`a${ /}/.test(s) }b`")).toBe("`a${/}/.test(ctx['s'])}b`");
+    expect(compileExpr("`${ /[`]/.test(s) }`")).toBe("`${/[`]/.test(ctx['s'])}`");
+    expect(compileExpr("`${ a / b }`")).toBe("`${ctx['a']/ctx['b']}`");
+  });
+
   test("arrow functions: not yet supported", () => {
     expect(compileExpr("(e => e)(e)")).toBe("(_e=>_e)(ctx['e'])");
   });
@@ -457,5 +501,18 @@ describe("standard globals", () => {
 
   test("an arrow's parameter of the same name stays the parameter", () => {
     expect(compileExpr("(String) => String + x")).toBe("(String)=>String+ctx['x']");
+  });
+});
+
+describe("interpolate", () => {
+  test("an interpolation ends at the brace that closes it, not at the first }}", () => {
+    expect(interpolate("x{{ {a: {b: 1}}.a.b }}y")).toBe("`x${{a:{b:1}}.a.b}y`");
+    expect(interpolate("{{ a ? '}}' : b }}")).toBe("(ctx['a']?'}}':ctx['b'])");
+    expect(interpolate("#{ {a: 1}.a } and {{b}}")).toBe("`${{a:1}.a} and ${ctx['b']}`");
+  });
+
+  test("an unclosed interpolation is text", () => {
+    expect(interpolate("a{{b")).toBe("`a{{b`");
+    expect(interpolate("a{{b}")).toBe("`a{{b}`");
   });
 });
