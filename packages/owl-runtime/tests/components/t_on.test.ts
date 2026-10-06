@@ -279,6 +279,34 @@ describe("t-on", () => {
     expect(fixture.innerHTML).toBe(" [1] <p>something</p>");
   });
 
+  test("a slot's t-on mounted by its component's own render runs, then the t-on on the component", async () => {
+    const calls: string[] = [];
+    const state = proxy({ show: false });
+    class Child extends Component {
+      // the empty t-if: when the slot's handlers look for the ones enclosing
+      // them, the branch holding them is not mounted yet
+      static template = xml`<t t-if="this.state.show"><t t-if="false"/><t t-call-slot="default" t-on-click="() => this.log('slot')"/></t>`;
+      props = props();
+      state = state;
+      log(name: string) {
+        calls.push(name);
+      }
+    }
+    class Parent extends Component {
+      static template = xml`<div><Child t-on-click="() => this.log('child')"><p>content</p></Child></div>`;
+      static components = { Child };
+      log(name: string) {
+        calls.push(name);
+      }
+    }
+    await mount(Parent, fixture);
+    state.show = true;
+    await nextTick();
+    expect(fixture.innerHTML).toBe("<div><p>content</p></div>");
+    fixture.querySelector("p")!.click();
+    expect(calls).toEqual(["slot", "child"]);
+  });
+
   test("t-on on t-set-slots", async () => {
     class Child extends Component {
       static template = xml`<t t-call-slot="myslot"/>`;

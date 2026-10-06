@@ -1,5 +1,51 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`t-on > a slot's t-on mounted by its component's own render runs, then the t-on on the component 1`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { markRaw, createComponent, createCatcher } = helpers;
+  const comp1 = createComponent(app, \`Child\`, true, true, false, []);
+  const hdlr_fn1 = (ctx)=>ctx['this'].log('child');
+  const catcher1 = createCatcher({"click":0}, [hdlr_fn1]);
+  
+  let block1 = createBlock(\`<div><block-child-0/></div>\`);
+  let block2 = createBlock(\`<p>content</p>\`);
+  
+  function slot1(ctx, node, key = "") {
+    return block2();
+  }
+  
+  return function template(ctx, node, key = "") {
+    const b3 = catcher1(comp1({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`__1\`, node, this, null), ctx);
+    return block1([], [b3]);
+  }
+}"
+`;
+
+exports[`t-on > a slot's t-on mounted by its component's own render runs, then the t-on on the component 2`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { callSlot, createCatcher } = helpers;
+  const hdlr_fn1 = (ctx)=>ctx['this'].log('slot');
+  const catcher1 = createCatcher({"click":0}, [hdlr_fn1]);
+  
+  return function template(ctx, node, key = "") {
+    let b2;
+    if (ctx['this'].state.show) {
+      let b3, b4;
+      if (false) {
+        b3 = text(\`\`);
+      }
+      b4 = catcher1(callSlot(ctx, node, key + \`__1\`, "default", false, null), ctx);
+      b2 = multi([b3, b4]);
+    }
+    return multi([b2]);
+  }
+}"
+`;
+
 exports[`t-on > t-on expression captured in t-foreach 1`] = `
 "function anonymous(app, bdom, helpers
 ) {

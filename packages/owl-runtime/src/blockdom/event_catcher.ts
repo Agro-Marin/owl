@@ -1,4 +1,4 @@
-import { eventModifierMask } from "@odoo/owl-core";
+import { debug, debugLog, eventModifierMask } from "@odoo/owl-core";
 import { config, type HandlerFn } from "./config";
 import { nodeInsertBefore } from "./dom";
 import { createEventHandler } from "./events";
@@ -58,9 +58,30 @@ interface VCatcherBase {
   // listener key -> the handlers it dispatches to
   groups: Map<string, CatcherHandler[]>;
   ctx: any;
-  // the catcher enclosing this one in the same parent element, of any site
-  outer: VCatcherBase | null;
+  // the catcher enclosing this one in the same parent element, of any site;
+  // undefined until found (see outerOf)
+  outer: VCatcherBase | null | undefined;
   holds(node: Node): boolean;
+  // the enclosing catcher, from the nodes around it
+  findOuter(): VCatcherBase | null;
+}
+
+// A catcher mounted by a render of its own (a component re-rendering alone)
+// has no enclosing catcher in the mounts running: it finds it from the DOM at
+// its first dispatch. Not at mount: that render is still patching the
+// enclosing catcher's child (the branch holding this catcher is not all in it
+// yet), so the first node of that child cannot be read.
+function outerOf(catcher: VCatcherBase): VCatcherBase | null {
+  if (catcher.outer === undefined) {
+    catcher.outer = catcher.findOuter();
+    if (debug.event) {
+      debugLog(
+        "event",
+        `catcher mounted by its own render: ${catcher.outer ? "an enclosing catcher" : "no enclosing catcher"} found at dispatch`
+      );
+    }
+  }
+  return catcher.outer;
 }
 
 // Each listener reads the latest handler data at dispatch, and applies its
@@ -76,7 +97,7 @@ function dispatch(key: string, parent: Node, ev: Event) {
   if (!node) {
     return;
   }
-  for (let catcher = ownerOf(node, node); catcher; catcher = catcher.outer) {
+  for (let catcher = ownerOf(node, node); catcher; catcher = outerOf(catcher)) {
     const handlers = catcher.groups.get(key);
     if (handlers) {
       for (const { fn, mods } of handlers) {
@@ -94,7 +115,7 @@ function ownerOf(node: Node, from: Node | null): VCatcherBase | null {
     let catcher = byEnd.get(n) || null;
     if (catcher) {
       while (catcher && !catcher.holds(node)) {
-        catcher = catcher.outer;
+        catcher = outerOf(catcher);
       }
       return catcher;
     }
@@ -150,7 +171,7 @@ export function createCatcher(eventsSpec: EventsSpec, fns: (HandlerFn | null)[])
     child: VNode;
     groups = groups;
     ctx: any;
-    outer: VCatcherBase | null = null;
+    outer: VCatcherBase | null | undefined = undefined;
 
     parentEl?: HTMLElement | undefined;
     afterNode: Text | null = null;
@@ -177,12 +198,12 @@ export function createCatcher(eventsSpec: EventsSpec, fns: (HandlerFn | null)[])
       } finally {
         updating.pop();
       }
-      if (!this.outer) {
-        // mounted by a render of its own (a component re-rendering alone):
-        // an enclosing catcher is complete, found after the end anchor
-        this.outer = ownerOf(this.child.firstNode()!, end.nextSibling);
-      }
       listen(keys, parent);
+    }
+
+    findOuter(): VCatcherBase | null {
+      const first = this.child.firstNode();
+      return first ? ownerOf(first, this.afterNode!.nextSibling) : null;
     }
 
     holds(node: Node): boolean {
