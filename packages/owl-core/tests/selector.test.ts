@@ -174,7 +174,7 @@ describe("selector", () => {
     expect(seen).toEqual(["no selection", true, "no selection"]);
   });
 
-  test("a selector disposed while its run is queued does not follow its source again", () => {
+  test("a selector disposed while its run is queued skips that run and does not follow its source again", () => {
     const selected = signal("a");
     const manager = new PluginManager({});
     // subscribed first: its run comes before the selector's
@@ -183,9 +183,21 @@ describe("selector", () => {
         manager.destroy();
       }
     });
-    const isSelected = manager.run(() => selector(() => selected(), { name: "rows" }));
+    let sourceCalls = 0;
+    const isSelected = manager.run(() =>
+      selector(
+        () => {
+          sourceCalls++;
+          return selected();
+        },
+        { name: "rows" }
+      )
+    );
     const rows = rowsReading(isSelected as any, ["a"] as any);
+    const callsBefore = sourceCalls;
     selected.set("b");
+    // the dispose left it done: the queued run is skipped, not run on a dead selector
+    expect(sourceCalls).toBe(callsBefore);
     expect(observersOf((selected as any)[atomSymbol]).map((c) => c.name)).toEqual([
       "immediateEffect",
     ]);
