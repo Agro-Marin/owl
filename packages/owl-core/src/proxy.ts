@@ -184,7 +184,8 @@ const PRIVATE_NAMES = /#[\p{ID_Continue}$\u200c\u200d]+/gu;
  * @returns the underlying value
  */
 export function toRaw<T extends Target, U extends Reactive<T>>(value: U | T): T {
-  return targets.has(value) ? (targets.get(value) as T) : value;
+  // a raw object is never undefined: one lookup answers both questions
+  return (targets.get(value) as T | undefined) ?? (value as T);
 }
 
 // The atoms of the keys of each target. An object key (of a Map, Set or
