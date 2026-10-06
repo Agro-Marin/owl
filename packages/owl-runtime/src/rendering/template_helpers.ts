@@ -556,8 +556,13 @@ function createComponent<P extends Record<string, any>>(
         propSignals.set(node, signals);
       }
       // only in the render's children: the node joins ctx.childMap once
-      // that render is committed
+      // that render is committed. It is one of them before its first render
+      // runs: an error that render does not catch destroys the app, which
+      // reaches the node only through them.
+      (parentFiber.childrenMap ||= new Map()).set(key, node);
       node.start(new Fiber(node, parentFiber));
+      memoCollectChild(key);
+      return node;
     }
     (parentFiber.childrenMap ||= new Map()).set(key, node);
     memoCollectChild(key);

@@ -14,6 +14,7 @@ import {
   onWillUpdateProps,
   proxy,
   signal,
+  status,
   useEffect,
   xml,
 } from "../../src";
@@ -61,6 +62,48 @@ describe("basics", () => {
     expect(error).toBeInstanceOf(TypeError);
     expect(fixture.innerHTML).toBe("");
     expect(getConsoleOutput()).toEqual([]);
+  });
+
+  test("a component whose first render throws is destroyed with the app its error destroys", async () => {
+    const digits = signal("[16,notjson]");
+    let renders = 0;
+    let faulty: any = null;
+    class Faulty extends Component {
+      static template = xml`<span t-out="this.format()"/>`;
+      setup() {
+        faulty = this;
+      }
+      format() {
+        renders++;
+        return JSON.parse(digits());
+      }
+    }
+    class Row extends Component {
+      static template = xml`<p>row</p>`;
+    }
+    class Renderer extends Component {
+      static template = xml`<div><Row/><Faulty/></div>`;
+      static components = { Row, Faulty };
+      setup() {
+        onWillStart(() => Promise.resolve());
+      }
+    }
+    class Root extends Component {
+      static template = xml`<Renderer/>`;
+      static components = { Renderer };
+    }
+    let error: any = null;
+    try {
+      await mount(Root, fixture);
+    } catch (e) {
+      error = e;
+    }
+    expect(error).toBeInstanceOf(SyntaxError);
+    expect(renders).toBe(1);
+    expect(status(faulty)).toBe("destroyed");
+    digits.set("[16,notjsoneither]");
+    await nextTick();
+    expect(renders).toBe(1);
   });
 
   test("display a nice error if it cannot find component", async () => {
