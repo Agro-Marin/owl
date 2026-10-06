@@ -390,12 +390,20 @@ function updateChild(node: ComponentNode, props: Record<string, any>, parentFibe
     const p = promises.length === 1 ? promises[0] : Promise.all(promises);
     p.then(
       () => {
-        if (fiber !== node.fiber) return;
+        if (fiber !== node.fiber) {
+          if (debug.fiber) {
+            debugLog(
+              "fiber",
+              `drop ${node.componentName}'s update: superseded, or the component destroyed`
+            );
+          }
+          return;
+        }
         node.props = props;
         for (const view of node.propsUpdated) view.update();
         fiber.render();
       },
-      (error) => handleHookRejection(node, error)
+      (error) => handleHookRejection(node, fiber, error)
     );
   } else {
     node.props = props;

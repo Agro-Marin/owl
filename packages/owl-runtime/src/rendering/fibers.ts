@@ -340,6 +340,16 @@ export class RootFiber extends Fiber {
         }
       }
       current = undefined;
+      if (node.status === STATUS.DESTROYED) {
+        if (debug.fiber) {
+          debugLog(
+            "fiber",
+            `drop ${node.componentName}'s commit: an onWillPatch hook destroyed it`
+          );
+        }
+        this.locked = false;
+        return;
+      }
 
       // Step 2: patching the dom
       node._patch();

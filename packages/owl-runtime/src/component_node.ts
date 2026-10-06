@@ -17,7 +17,14 @@ import type { App } from "./app";
 import { BDom, RefCallback, VNode } from "./blockdom";
 import { Component, ComponentConstructor } from "./component";
 import { fibersInError, handleError, handleHookRejection } from "./rendering/error_handling";
-import { APPLIED_TO_DOM, Fiber, FiberPhase, makeRootFiber, MountFiber } from "./rendering/fibers";
+import {
+  APPLIED_TO_DOM,
+  Fiber,
+  FiberPhase,
+  makeRootFiber,
+  MountFiber,
+  RootFiber,
+} from "./rendering/fibers";
 import type { MemoSite } from "./rendering/memo";
 import { STATUS } from "./status";
 
@@ -188,13 +195,13 @@ export class ComponentNode extends Scope implements VNode<ComponentNode> {
     try {
       await Promise.all(untrack(() => this.willStart.map((f) => f.call(component))));
     } catch (e) {
-      handleHookRejection(this, e);
+      handleHookRejection(this, fiber, e);
       return;
     }
     if (debug.lifecycle) {
       debugLog("lifecycle", `willStart ${this.componentName} settled`);
     }
-    if (this.status === STATUS.NEW && this.fiber === fiber) {
+    if (this.fiber === fiber) {
       fiber.render();
     }
   }
@@ -263,7 +270,18 @@ export class ComponentNode extends Scope implements VNode<ComponentNode> {
   }
 
   _destroy() {
+    if (this.status === STATUS.DESTROYED) {
+      // a re-patch removing a subtree whose removal threw earlier
+      return;
+    }
     const component = this.component;
+    // every check that a render is still current then fails for a render of
+    // this node in flight: its pending hooks settle into nothing
+    const fiber = this.fiber;
+    this.fiber = null;
+    if (fiber !== null && fiber.root === fiber) {
+      this.app.scheduler.forget(fiber as RootFiber);
+    }
     // a throwing onWillUnmount must not leave this subtree alive (still
     // MOUNTED, rendering, running its effects): the error is rethrown once the
     // destruction is complete
@@ -300,7 +318,7 @@ export class ComponentNode extends Scope implements VNode<ComponentNode> {
     }
     // the children a pending render created are not in childMap until it is
     // committed
-    for (const child of this.fiber?.childrenMap?.values() || []) {
+    for (const child of fiber?.childrenMap?.values() || []) {
       if (child.status === STATUS.NEW) {
         try {
           child._destroy();

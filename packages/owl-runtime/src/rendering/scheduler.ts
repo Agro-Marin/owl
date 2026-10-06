@@ -1,7 +1,6 @@
 import { debug, debugLog } from "@odoo/owl-core";
 import { fibersInError } from "./error_handling";
 import { APPLIED_TO_DOM, Fiber, RootFiber } from "./fibers";
-import { STATUS } from "../status";
 
 // -----------------------------------------------------------------------------
 //  Scheduler
@@ -41,6 +40,20 @@ export class Scheduler {
   }
 
   /**
+   * Drops the pass of a component destroyed before its commit.
+   */
+  forget(fiber: RootFiber) {
+    if (this.tasks.delete(fiber)) {
+      if (debug.scheduler) {
+        debugLog("scheduler", `drop ${fiber.node.componentName}: destroyed`);
+      }
+      if (!this.tasks.size && !this.processing) {
+        Scheduler.active.delete(this);
+      }
+    }
+  }
+
+  /**
    * Process all current tasks. This only applies to the fibers that are ready.
    * Other tasks are left unchanged.
    */
@@ -56,7 +69,7 @@ export class Scheduler {
         );
       }
       for (let f of renders) {
-        if (f.root && f.node.status !== STATUS.DESTROYED && f.node.fiber === f) {
+        if (f.root && f.node.fiber === f) {
           f.render();
         }
       }
@@ -104,13 +117,6 @@ export class Scheduler {
         failed = true;
         continue;
       }
-      if (fiber.node.status === STATUS.DESTROYED) {
-        if (debug.scheduler) {
-          debugLog("scheduler", `drop ${fiber.node.componentName}: destroyed`);
-        }
-        this.tasks.delete(fiber);
-        continue;
-      }
       if (debug.scheduler && fiber.counter !== 0) {
         debugLog(
           "scheduler",
@@ -127,11 +133,6 @@ export class Scheduler {
         if (fiber.renderState & APPLIED_TO_DOM) {
           this.tasks.delete(fiber);
         }
-      }
-    }
-    for (let task of this.tasks) {
-      if (task.node.status === STATUS.DESTROYED) {
-        this.tasks.delete(task);
       }
     }
     if (failed) {

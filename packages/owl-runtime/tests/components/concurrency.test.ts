@@ -3,13 +3,16 @@ import {
   Component,
   ComponentConstructor,
   mount,
+  onError,
   onMounted,
   onWillDestroy,
+  onWillPatch,
   onWillStart,
   onWillUnmount,
   onWillUpdateProps,
   props,
   proxy,
+  signal,
   xml,
 } from "../../src";
 import { Fiber } from "../../src/rendering/fibers";
@@ -4567,4 +4570,166 @@ test("a child re-rendered because its parent's pass was cancelled runs onWillUpd
   parent.state.value = 3;
   await nextTick();
   expect(updates).toEqual([2, 3]);
+});
+
+describe("superseded and destroyed renders", () => {
+  test("a rejection of a superseded onWillUpdateProps is dropped, the newer update applies", async () => {
+    const defs: [number, any][] = [];
+    const errors: string[] = [];
+    class Child extends Component {
+      static template = xml`<span t-out="this.props.v"/>`;
+      props = props();
+      setup() {
+        onWillUpdateProps((next: any) => {
+          const def = makeDeferred();
+          defs.push([next.v, def]);
+          return def;
+        });
+      }
+    }
+    class Parent extends Component {
+      static template = xml`<div><Child v="this.state.v"/></div>`;
+      static components = { Child };
+      state = proxy({ v: 1 });
+      setup() {
+        onError((e) => errors.push(e.message));
+      }
+    }
+    const parent = await mount(Parent, fixture);
+    parent.state.v = 2;
+    await nextTick();
+    parent.state.v = 3;
+    await nextTick();
+    expect(defs.map(([v]) => v)).toEqual([2, 3]);
+    defs[0][1].reject(new Error("stale"));
+    await nextTick();
+    defs[1][1].resolve();
+    await nextTick();
+    expect(errors).toEqual([]);
+    expect(fixture.innerHTML).toBe("<div><span>3</span></div>");
+  });
+
+  test("a component removed while its onWillUpdateProps is pending does not render", async () => {
+    const def = makeDeferred();
+    const ext = signal(0);
+    const renders: string[] = [];
+    class Child extends Component {
+      static template = xml`<span t-out="this.read(this.props.v)"/>`;
+      props = props();
+      setup() {
+        onWillUpdateProps(() => def);
+      }
+      read(v: number) {
+        renders.push(`v=${v} ext=${ext()}`);
+        return v;
+      }
+    }
+    class Parent extends Component {
+      static template = xml`<Child v="this.state.v"/>`;
+      static components = { Child };
+      state = proxy({ v: 1 });
+    }
+    class Grand extends Component {
+      static template = xml`<div><t t-if="this.state.show"><Parent/></t></div>`;
+      static components = { Parent };
+      state = proxy({ show: true });
+    }
+    const grand = await mount(Grand, fixture);
+    const parent = Object.values(grand.__owl__.children)[0].component as Parent;
+    const child = Object.values(parent.__owl__.children)[0];
+    renders.length = 0;
+    parent.state.v = 2;
+    await nextTick();
+    grand.state.show = false;
+    await nextTick();
+    expect(child.status).toBe(2);
+    def.resolve();
+    await nextTick();
+    const render = vi.spyOn(child, "render");
+    ext.set(1);
+    await nextTick();
+    expect(renders).toEqual([]);
+    expect(render).not.toHaveBeenCalled();
+    expect(fixture.innerHTML).toBe("<div></div>");
+  });
+
+  test("a component destroyed by an earlier onWillPatch of the same commit gets no onWillPatch", async () => {
+    const log: string[] = [];
+    let b: any;
+    class A extends Component {
+      static template = xml`<a t-out="this.props.v"/>`;
+      props = props();
+      setup() {
+        onWillPatch(() => {
+          log.push("A willPatch");
+          b.__owl__.destroy();
+        });
+      }
+    }
+    class B extends Component {
+      static template = xml`<b t-out="this.props.v"/>`;
+      props = props();
+      setup() {
+        b = this;
+        onWillPatch(() => log.push("B willPatch"));
+      }
+    }
+    class Parent extends Component {
+      static template = xml`<div><A v="this.state.v"/><B v="this.state.v"/></div>`;
+      static components = { A, B };
+      state = proxy({ v: 0 });
+    }
+    const parent = await mount(Parent, fixture);
+    parent.state.v = 1;
+    await nextTick();
+    expect(log).toEqual(["A willPatch"]);
+  });
+
+  test("an app destroyed by an onWillPatch hook applies nothing of that commit", async () => {
+    const log: string[] = [];
+    let app: App;
+    class Child extends Component {
+      static template = xml`<c/>`;
+      setup() {
+        onMounted(() => log.push("child mounted"));
+        onWillDestroy(() => log.push("child destroyed"));
+      }
+    }
+    class Parent extends Component {
+      static template = xml`<div><t t-if="this.state.show"><Child/></t></div>`;
+      static components = { Child };
+      state = proxy({ show: false });
+      setup() {
+        onWillPatch(() => app.destroy());
+      }
+    }
+    app = new App({ test: true });
+    const parent = await app.createRoot(Parent).mount(fixture);
+    parent.state.show = true;
+    await nextTick();
+    expect(log).toEqual(["child destroyed"]);
+    expect(fixture.innerHTML).toBe("");
+    expect(app.scheduler.tasks.size).toBe(0);
+  });
+
+  test("a root destroyed while its onWillStart is pending leaves no task behind", async () => {
+    const def = makeDeferred();
+    class Slow extends Component {
+      static template = xml`<div/>`;
+      setup() {
+        onWillStart(() => def);
+      }
+    }
+    const app = new App({ test: true });
+    const root = app.createRoot(Slow);
+    root.mount(fixture);
+    await nextTick();
+    root.destroy();
+    expect(app.scheduler.tasks.size).toBe(0);
+    expect(Scheduler.active.has(app.scheduler)).toBe(false);
+    def.resolve();
+    await nextTick();
+    expect(app.scheduler.tasks.size).toBe(0);
+    app.destroy();
+  });
 });
