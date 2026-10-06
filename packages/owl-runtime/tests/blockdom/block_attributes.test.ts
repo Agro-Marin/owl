@@ -396,3 +396,13 @@ test("a style property moved after a shorthand it follows is applied again", asy
   patch(tree, block(["margin-top: 4px; margin: 2px"]));
   expect(div.style.marginTop).toBe("2px");
 });
+
+test("t-att given a string or a number is an error naming it", () => {
+  const block = createBlock('<div block-attributes="0"></div>');
+  expect(() => mount(block(["foo"]), fixture)).toThrow(
+    "Invalid t-att value 'foo': expected an object or a [name, value] pair"
+  );
+  const tree = block([{ a: "1" }]);
+  mount(tree, fixture);
+  expect(() => patch(tree, block([3]))).toThrow("Invalid t-att value '3'");
+});

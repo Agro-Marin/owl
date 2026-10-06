@@ -1,3 +1,4 @@
+import { OwlError } from "@odoo/owl-core";
 import type { Setter, Updater } from "./block_compiler";
 
 let elemSetAttribute: typeof Element.prototype.setAttribute;
@@ -45,7 +46,18 @@ const NO_ATTRS = Object.freeze({});
 
 // t-att takes an object, a [name, value] pair, or nothing at all
 function toAttrs(attrs: any): { [name: string]: any } {
-  return !attrs ? NO_ATTRS : isArray(attrs) ? { [attrs[0]]: attrs[1] } : attrs;
+  if (!attrs) {
+    return NO_ATTRS;
+  }
+  if (isArray(attrs)) {
+    return { [attrs[0]]: attrs[1] };
+  }
+  if (typeof attrs !== "object") {
+    throw new OwlError(
+      `Invalid t-att value '${String(attrs)}': expected an object or a [name, value] pair`
+    );
+  }
+  return attrs;
 }
 
 export function makeAttrsUpdaters(
