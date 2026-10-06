@@ -8,18 +8,18 @@ differently from upstream.
 
 ## Added API
 
-| API                                      | What it does                                                                                                                                                                                                                                                          | Reference                                                           |
-| ---------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
-| `immediateEffect(fn)`                    | an effect that runs synchronously on each change, not in the next microtask                                                                                                                                                                                           | [effects](reference/effects.md)                                     |
-| `observe(target, callback)`              | OWL 2's `reactive(target, callback)`: a view of `target` that calls `callback` once a value read through it changes                                                                                                                                                   | [proxies](reference/proxies.md#observe)                             |
-| `computed(fn, { detached: true })`       | a computed that outlives the scope that created it                                                                                                                                                                                                                    | [computed values](reference/computed_values.md)                     |
-| `selector(source)`                       | `isSelected(key)`, whose readers depend on the answer for their key only                                                                                                                                                                                              | [computed values](reference/computed_values.md#selectors)           |
-| `t-memo="[deps]"`                        | on a keyed `t-foreach`: an item whose dependencies are unchanged keeps its previous content (child components included)                                                                                                                                               | [template syntax](reference/template_syntax.md#memoized-list-items) |
-| `setDebug(channels)`, `setDebugSink(fn)` | opt-in debug logging per channel (reactivity, effect, computed, scope, plugin, scheduler, fiber, lifecycle, error, template, event)                                                                                                                                   | [debug logging](reference/debug_logging.md)                         |
-| `@odoo/owl/runtime`                      | the runtime without the template compiler (`owl.runtime.es.js`, 34% smaller), for pages whose templates arrive precompiled                                                                                                                                            | —                                                                   |
-| `@odoo/owl/compiler`                     | the compiler alone (`owl.compiler.es.js`, `owl.compiler.iife.js`); it imports nothing and registers itself, keyed by its build (version and hash), on `globalThis[Symbol.for("@odoo/owl/compiler")]`; a runtime takes its own build's, so two builds can share a page | [precompiling templates](reference/precompiling_templates.md)       |
-| `batch(fn)`                              | groups writes: immediate effects run once, after the outermost batch (exported by `@odoo/owl` and `@odoo/owl/runtime`)                                                                                                                                                | [reactivity](reference/reactivity.md)                               |
-| `markRaw(Class.prototype)`               | every instance of the class and of its subclasses stays raw: what a class with private members (`#x`) needs                                                                                                                                                           | [proxies](reference/proxies.md)                                     |
+| API                                      | What it does                                                                                                                                                                                                                                                                                              | Reference                                                           |
+| ---------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
+| `immediateEffect(fn)`                    | an effect that runs synchronously on each change, not in the next microtask                                                                                                                                                                                                                               | [effects](reference/effects.md)                                     |
+| `observe(target, callback)`              | OWL 2's `reactive(target, callback)`: a view of `target` that calls `callback` once a value read through it changes                                                                                                                                                                                       | [proxies](reference/proxies.md#observe)                             |
+| `computed(fn, { detached: true })`       | a computed that outlives the scope that created it                                                                                                                                                                                                                                                        | [computed values](reference/computed_values.md)                     |
+| `selector(source)`                       | `isSelected(key)`, whose readers depend on the answer for their key only                                                                                                                                                                                                                                  | [computed values](reference/computed_values.md#selectors)           |
+| `t-memo="[deps]"`                        | on a keyed `t-foreach`: an item whose dependencies are unchanged keeps its previous content (child components included)                                                                                                                                                                                   | [template syntax](reference/template_syntax.md#memoized-list-items) |
+| `setDebug(channels)`, `setDebugSink(fn)` | opt-in debug logging per channel (reactivity, effect, computed, scope, plugin, scheduler, fiber, lifecycle, error, template, event)                                                                                                                                                                       | [debug logging](reference/debug_logging.md)                         |
+| `@odoo/owl/runtime`                      | the runtime without the template compiler (`owl.runtime.es.js`, 34% smaller), for pages whose templates arrive precompiled                                                                                                                                                                                | —                                                                   |
+| `@odoo/owl/compiler`                     | the compiler alone (`owl.compiler.es.js`, `owl.compiler.cjs` for `require()`, `owl.compiler.iife.js`); it imports nothing and registers itself, keyed by its build (version and hash), on `globalThis[Symbol.for("@odoo/owl/compiler")]`; a runtime takes its own build's, so two builds can share a page | [precompiling templates](reference/precompiling_templates.md)       |
+| `batch(fn)`                              | groups writes: immediate effects run once, after the outermost batch (exported by `@odoo/owl` and `@odoo/owl/runtime`)                                                                                                                                                                                    | [reactivity](reference/reactivity.md)                               |
+| `markRaw(Class.prototype)`               | every instance of the class and of its subclasses stays raw: what a class with private members (`#x`) needs                                                                                                                                                                                               | [proxies](reference/proxies.md)                                     |
 
 ## Behaviour that differs from upstream
 
@@ -68,8 +68,23 @@ its own value` instead of recursing (upstream hangs); a computed that catches
 - **Disposing an effect disposes the computeds it was the last observer of**,
   as destroying a component already did: read again, such a computed
   recomputes (a new object for an object result), and an effect its getter
-  creates is created again, owned by its scope. `untrack` also stops an
+  creates is created again, owned by the computed. `untrack` also stops an
   `observe()` view from subscribing to its reads.
+- **An effect belongs to the computation whose run creates it**, tracked or
+  not (`untrack` keeps the owner): an effect's, a computed's (detached ones
+  included), a selector source's or an `observe()` callback's effect is
+  disposed before that run is repeated and when the computation is disposed;
+  a render's lasts until its component is destroyed. A scope being set up is
+  an ownership root. Upstream gives a getter's effect to the computed's scope
+  (or to nothing), and `untrack` drops ownership. `effect(fn, { detached:
+true })` creates an effect owned by nothing. When a computed and an effect
+  it owns are both due, the computed runs first. An `asyncComputed` is
+  disposed whole by its owner (no longer loading, the abandoned run's result
+  ignored).
+- **A cleanup that throws while computeds are disposed** does not stop the
+  others: on a recompute it is reported as an unhandled rejection, on a
+  cascade the dispose throws after releasing everything, and in bulk the
+  error goes to the flush or to `reportError`.
 - **An effect its own cleanup disposes does not run again**, and an effect
   keeps only a returned function as its cleanup.
 - **A selector** notifies both keys of a change in one batch (a reader that
@@ -87,8 +102,14 @@ its own value` instead of recursing (upstream hangs); a computed that catches
   class of the proxied object declares that member (another class's private
   member error passes through unchanged). `markRaw` of a built-in prototype
   (`Object`, `Array`, `Map`, `Set`, `WeakMap`, `Function`) throws.
-- **A write through a setter is one batch**: an immediate reader of the keys
-  the setter writes runs once, after it returns.
+- **A write through a setter, an array write (an index or the length) and a
+  delete are each one batch**: an immediate reader of several keys the write
+  notifies runs once, after it. An index written past the end of an array
+  behind its own Proxy notifies its length, also through a shallow proxy.
+- **A Map proxy, and an `observe()` view of a Map, have no `add`** (it reads
+  `undefined`, as on a Map). A set operation (`union`, `intersection`, …) on a
+  proxy checks its argument as the native method does and returns a plain Set
+  of the members as its own set holds them, the target's first.
 - **A shallow proxy** (`signal.Array`, `signal.Object`) keeps a proxy written
   into it, as shallow Maps and Sets did.
 - **`obj.hasOwnProperty(k)` through a proxy subscribes to the presence of
@@ -135,9 +156,12 @@ its own value` instead of recursing (upstream hangs); a computed that catches
 
 ### Blockdom and events
 
-- **A list removes its items one by one**, also as its parent's only child
-  (no `textContent = ""` bulk clear): what a Portal or a widget put in that
-  parent, before, after or between the items, survives.
+- **A list empties its parent at once only when its items, one node each,
+  and its anchor are all the parent holds** (checked node by node, again
+  after the unmount hooks); otherwise it removes them one by one. What a
+  Portal or a widget put before, after or among the items survives either
+  way. A text, html or multi anchor removal does nothing once its node is
+  detached.
 - **A `value` property** (`t-att-value`, `t-model`) is set after the element's
   other attributes and its children: a select finds its `t-foreach` options,
   a range input its `max`. `disabled`, `readOnly`, `checked`, `selected` and
@@ -169,6 +193,14 @@ its own value` instead of recursing (upstream hangs); a computed that catches
   compiles; a context variable cannot be named `delete`); `{{ }}` and `#{ }`
   end at the brace that closes them; an arrow prop's free variables include
   those its parameter defaults read.
+- **A slot without a slot scope and a t-call with neither attributes nor body
+  render in the context they are given**, not a child of it (only a bare-name
+  `t-model.proxy` can tell): a new context under one made in this render costs
+  V8 about 1.6 µs and 1.2 KB. A render makes no function for its slots, slot
+  defaults, t-call bodies and t-out bodies. `t-props` copies with object
+  spread (an own `__proto__` key is a prop). A t-call attribute is assigned on
+  the new context, so one named like a getter-only property up the context
+  chain is ignored (Owl's own contexts hold none).
 - **`__info__.hash`** is the commit, plus `-dirty-<digest>` when the sources
   differ from it (the version file the release script writes excluded);
   outside a git checkout, `nogit-<digest of the sources>`.
@@ -176,6 +208,9 @@ its own value` instead of recursing (upstream hangs); a computed that catches
 ## Odoo integration contract
 
 Odoo reaches into these internals; a refactor must keep their shape:
+A slot descriptor is `{__render, __ctx, __owner, __scope?, ...attrs}`
+(`__render` static, run with `__owner`), and a t-call body sits in the call
+context under the `zero` / `zeroCtx` helper symbols; Odoo reads none of them.
 `node.renderFn` is an own function, wrapped and called unbound
 (`web/core/utils/render_hooks.js`, HOOT, o_spreadsheet);
 `app._compileTemplate(name, template)` is wrapped per instance
@@ -199,6 +234,10 @@ snapshot of the committed children; `App.version` + `__info__.hash` scope the te
 
 ## Test suites beyond upstream's
 
+- `owl-core/tests/foreign_proxy.ts`: targets behind a foreign Proxy (Odoo
+  mail's record and `RecordList` shapes, forwarding Proxies); the owl-core and
+  owl-runtime `foreign_proxy.test.ts` files run the reactive contract and
+  `t-foreach` against each.
 - `owl-core/tests/conformance.test.ts`: the cross-framework reactive
   conformance suite (`reactive-framework-test-suite`); 176 of 178 core cases,
   the two deliberate divergences marked as expected failures.
