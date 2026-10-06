@@ -546,6 +546,37 @@ describe("collections", () => {
     expect([entryRuns, propertyRuns]).toEqual([2, 2]);
   });
 
+  test("hasOwnProperty taken from a collection outside any computation still observes the property", async () => {
+    const map: any = proxy(new Map());
+    const hasOwn = map.hasOwnProperty;
+    const seen: boolean[] = [];
+    effect(() => {
+      seen.push(hasOwn.call(map, "foo"));
+    });
+    map.set("foo", 1);
+    await waitScheduler();
+    expect(seen).toEqual([false]);
+    map.foo = 1;
+    await waitScheduler();
+    expect(seen).toEqual([false, true]);
+  });
+
+  test("`in`, Object.keys and delete on a collection observe its properties, not its entries", async () => {
+    const map: any = proxy(new Map());
+    const seen: unknown[] = [];
+    effect(() => {
+      seen.push("foo" in map, Object.keys(map).length);
+    });
+    map.set("foo", 1);
+    await waitScheduler();
+    expect(seen).toEqual([false, 0]);
+    map.foo = 1;
+    await waitScheduler();
+    delete map.foo;
+    await waitScheduler();
+    expect(seen).toEqual([false, 0, true, 1, false, 0]);
+  });
+
   test("hasOwnProperty is the first property read of a collection: it observes the property, not the entry", async () => {
     const map: any = proxy(new Map());
     const seen: boolean[] = [];

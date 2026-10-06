@@ -49,11 +49,20 @@ function canBeMadeReactive(value: any): boolean {
   return objectToString.call(raw) === "[object Object]";
 }
 /**
- * The deep proxy of `val` when it can have one, `val` itself otherwise (and
- * always for a shallow proxy, which hands its values out as stored).
+ * The deep proxy of `value` when it can have one, `value` itself otherwise
+ * (and always for a shallow proxy, which hands its values out as stored). The
+ * proxy an object read before already has spares the checks proxifyTarget
+ * would make (twice) to find it.
  */
-function possiblyReactive(val: any, shallow: boolean) {
-  return !shallow && canBeMadeReactive(val) ? proxy(val) : val;
+function reactiveValue(value: any, shallow: boolean): any {
+  if (shallow || typeof value !== "object" || value === null) {
+    return value;
+  }
+  const reactive = deepProxies.get(value);
+  if (reactive ? isMarkedRaw(value) : !canBeMadeReactive(value)) {
+    return value;
+  }
+  return reactive ?? proxifyTarget(value, false);
 }
 
 const skipped = new WeakSet<Target>();
@@ -557,14 +566,16 @@ class BasicHandler implements ProxyHandler<any> {
   shallow: boolean;
   // the value atoms of the target's keys
   keyAtoms: AtomTable | undefined;
-  // what the atoms of the target's own properties are keyed by: the target,
-  // or for a collection an object standing for its properties
-  host: Target | null;
 
-  constructor(shallow: boolean, host: Target | null = null) {
+  constructor(shallow: boolean) {
     this.shallow = shallow;
     this.keyAtoms = undefined;
-    this.host = host;
+  }
+
+  // what the atoms of the target's own properties are keyed by: the target,
+  // or for a collection an object standing for its properties
+  host(target: Target): Target {
+    return target;
   }
 
   get(target: any, key: PropertyKey, receiver: any): any {
@@ -574,7 +585,7 @@ class BasicHandler implements ProxyHandler<any> {
       if (debug.reactivity) {
         debugRead(target, key, itemAtoms);
       }
-      onReadAtom(atomOf((this.keyAtoms ??= keyTable(target, key, itemAtoms)), key));
+      onReadAtom(atomOf((this.keyAtoms ??= keyTable(this.host(target), key, itemAtoms)), key));
     }
     let value;
     try {
@@ -585,27 +596,15 @@ class BasicHandler implements ProxyHandler<any> {
     if (typeof value === "function") {
       return replacedMethods.get(value) ?? value;
     }
-    // Fast path: signal-based proxies and primitive values don't need wrapping
-    if (this.shallow || typeof value !== "object" || value === null) {
-      return value;
-    }
-    // the proxy an object read before already has spares the checks
-    // proxifyTarget would make (twice) to find it
-    const reactive = deepProxies.get(value);
-    if (reactive ? isMarkedRaw(value) : !canBeMadeReactive(value)) {
-      return value;
-    }
-    if (isLocked(target, key)) {
-      return value;
-    }
-    return reactive ?? proxifyTarget(value, false);
+    const result = reactiveValue(value, this.shallow);
+    return result !== value && isLocked(target, key) ? value : result;
   }
 
   set(target: any, key: PropertyKey, value: any, receiver: any): boolean {
     // a write subscribes nothing, though a getter or setter it runs reads
     // through the proxy
     const shallow = this.shallow;
-    const atoms = this.host ?? target;
+    const atoms = this.host(target);
     try {
       return isObserving()
         ? untrack(() => writeKey(target, key, value, receiver, shallow, atoms))
@@ -619,7 +618,7 @@ class BasicHandler implements ProxyHandler<any> {
     const hadKey = objectHasOwnProperty.call(target, key);
     const ret = Reflect.deleteProperty(target, key);
     if (hadKey && ret) {
-      const atoms = this.host ?? target;
+      const atoms = this.host(target);
       onWriteKeyPresence(atoms, key);
       onWriteTargetKey(atoms, key);
       releaseKey(atoms, key);
@@ -631,12 +630,12 @@ class BasicHandler implements ProxyHandler<any> {
   }
 
   ownKeys(target: any): ArrayLike<string | symbol> {
-    onReadTargetKey(this.host ?? target, KEYCHANGES);
+    onReadTargetKey(this.host(target), KEYCHANGES);
     return Reflect.ownKeys(target);
   }
 
   has(target: any, key: PropertyKey): boolean {
-    onReadTargetKey(this.host ?? target, key, presenceAtoms);
+    onReadTargetKey(this.host(target), key, presenceAtoms);
     return Reflect.has(target, key);
   }
 }
@@ -758,21 +757,9 @@ export function readArrayItems<T>(array: T[]): T[] {
   const length = raw.length;
   const items = new Array(length);
   for (let i = 0; i < length; i++) {
-    items[i] = deepItem(raw[i]);
+    items[i] = reactiveValue(raw[i], false);
   }
   return items;
-}
-
-// what the get trap of a deep proxy hands out for `value`
-function deepItem(value: any): any {
-  if (typeof value !== "object" || value === null) {
-    return value;
-  }
-  const reactive = deepProxies.get(value);
-  if (reactive ? isMarkedRaw(value) : !canBeMadeReactive(value)) {
-    return value;
-  }
-  return reactive ?? proxifyTarget(value, false);
 }
 
 function onWriteKeyCreated(target: Target, key: PropertyKey, originalLength: number): void {
@@ -846,10 +833,8 @@ for (const name of ["includes", "indexOf", "lastIndexOf"] as const) {
 // hasOwnProperty reads the presence of the key it asks about, as `in` does
 const hasOwnPropertyReader = function (this: object, key: PropertyKey) {
   const raw = toRaw(this);
-  // a collection's proxy made its properties' stand-in when it was asked for
-  // this method
   onReadTargetKey(
-    propertyHosts.get(raw) ?? raw,
+    collectionType(raw) ? propertyHost(raw) : raw,
     typeof key === "symbol" ? key : String(key),
     presenceAtoms
   );
@@ -876,8 +861,7 @@ const propertyHosts = new WeakMap<Target, Target>();
 function propertyHost(target: Target): Target {
   let host = propertyHosts.get(target);
   if (host === undefined) {
-    host = {};
-    propertyHosts.set(target, host);
+    propertyHosts.set(target, (host = {}));
   }
   return host;
 }
@@ -895,7 +879,7 @@ function makeGet(target: any, shallow: boolean) {
   return (key: any) => {
     key = toRaw(key);
     onReadTargetKey(target, key);
-    return possiblyReactive(target.get(key), shallow);
+    return reactiveValue(target.get(key), shallow);
   };
 }
 
@@ -919,8 +903,8 @@ function makeIteratorObserver(
           onReadTargetKey(target, entry[0]);
         }
         if (!shallow) {
-          entry[0] = possiblyReactive(entry[0], false);
-          entry[1] = possiblyReactive(entry[1], false);
+          entry[0] = reactiveValue(entry[0], false);
+          entry[1] = reactiveValue(entry[1], false);
         }
         yield entry;
       }
@@ -931,7 +915,7 @@ function makeIteratorObserver(
       onReadTargetKey(target, KEYCHANGES);
       for (const [key, value] of target.entries()) {
         onReadTargetKey(target, key);
-        yield possiblyReactive(value, shallow);
+        yield reactiveValue(value, shallow);
       }
     };
   }
@@ -940,7 +924,7 @@ function makeIteratorObserver(
   return function* () {
     onReadTargetKey(target, KEYCHANGES);
     for (const key of target.keys()) {
-      yield possiblyReactive(key, shallow);
+      yield reactiveValue(key, shallow);
     }
   };
 }
@@ -957,7 +941,7 @@ function makeForEachObserver(target: any, shallow: boolean) {
     callback: (value: any, key: any, collection: any) => void,
     thisArg?: any
   ) {
-    const collection = this ?? possiblyReactive(target, shallow);
+    const collection = this ?? reactiveValue(target, shallow);
     onReadTargetKey(target, KEYCHANGES);
     target.forEach((value: any, key: any) => {
       if (readsValues) {
@@ -965,8 +949,8 @@ function makeForEachObserver(target: any, shallow: boolean) {
       }
       callback.call(
         thisArg,
-        possiblyReactive(value, shallow),
-        possiblyReactive(key, shallow),
+        reactiveValue(value, shallow),
+        reactiveValue(key, shallow),
         collection
       );
     });
@@ -1169,6 +1153,7 @@ class CollectionHandler extends BasicHandler {
   factories: Map<PropertyKey, MethodFactory>;
   hasSize: boolean;
   methods: Map<PropertyKey, Function> | undefined = undefined;
+  properties: Target | undefined = undefined;
 
   constructor(type: CollectionRawType, shallow: boolean) {
     super(shallow);
@@ -1191,36 +1176,10 @@ class CollectionHandler extends BasicHandler {
       onReadTargetKey(target, KEYCHANGES);
       return target.size;
     }
-    onReadTargetKey((this.host ??= propertyHost(target)), key);
-    let value;
-    try {
-      value = Reflect.get(target, key, receiver);
-    } catch (error) {
-      throw privateMemberError(error, target, key);
-    }
-    if (typeof value === "function") {
-      return replacedMethods.get(value) ?? value;
-    }
-    return isLocked(target, key) ? value : possiblyReactive(value, this.shallow);
+    return super.get(target, key, receiver);
   }
 
-  set(target: any, key: PropertyKey, value: any, receiver: any): boolean {
-    this.host ??= propertyHost(target);
-    return super.set(target, key, value, receiver);
-  }
-
-  deleteProperty(target: any, key: PropertyKey): boolean {
-    this.host ??= propertyHost(target);
-    return super.deleteProperty(target, key);
-  }
-
-  ownKeys(target: any): ArrayLike<string | symbol> {
-    this.host ??= propertyHost(target);
-    return super.ownKeys(target);
-  }
-
-  has(target: any, key: PropertyKey): boolean {
-    this.host ??= propertyHost(target);
-    return super.has(target, key);
+  host(target: Target): Target {
+    return (this.properties ??= propertyHost(target));
   }
 }
