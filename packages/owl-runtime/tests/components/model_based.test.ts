@@ -248,15 +248,17 @@ async function runScenario(seed: number, steps: number) {
 
 const SEEDS = Number(process.env.OWL_MODEL_SEEDS || 40);
 
-test("random render sequences settle on the render of the final state", async () => {
-  const failures: string[] = [];
-  const start = Date.now();
-  for (let seed = 1; seed <= SEEDS; seed++) {
-    const failure = await runScenario(seed, 40);
-    if (failure) {
-      failures.push(failure);
+test(
+  "random render sequences settle on the render of the final state",
+  async () => {
+    const failures: string[] = [];
+    for (let seed = 1; seed <= SEEDS; seed++) {
+      const failure = await runScenario(seed, 40);
+      if (failure) {
+        failures.push(failure);
+      }
     }
-  }
-  expect(failures.slice(0, 3)).toEqual([]);
-  void start;
-}, 120000);
+    expect(failures.slice(0, 3)).toEqual([]);
+  },
+  Math.max(120000, SEEDS * 200)
+);
