@@ -15,19 +15,19 @@ export function parseXML(xml: string): XMLDocument {
     const parsererrorText = doc.getElementsByTagName("parsererror")[0].textContent;
     if (parsererrorText) {
       msg += "\nThe parser has produced the following error message:\n" + parsererrorText;
-      const re = /\d+/g;
-      const firstMatch = re.exec(parsererrorText);
-      if (firstMatch) {
-        const lineNumber = Number(firstMatch[0]);
+      // "line 3 at column 5" (Chrome), "Line Number 3, Column 5" after a
+      // location url (Firefox), "3:5:" (jsdom)
+      const position =
+        /line(?: number)?\s+(\d+)\D+?column\s+(\d+)/i.exec(parsererrorText) ||
+        /(\d+)\D+(\d+)/.exec(parsererrorText);
+      if (position) {
+        const lineNumber = Number(position[1]);
+        const column = Number(position[2]);
         const line = xml.split("\n")[lineNumber - 1];
-        const secondMatch = re.exec(parsererrorText);
-        if (line && secondMatch) {
-          const column = Number(secondMatch[0]);
-          if (column >= 1 && column <= line.length) {
-            msg +=
-              `\nThe error might be located at xml line ${lineNumber} column ${column}\n` +
-              `${line}\n${"-".repeat(column - 1)}^`;
-          }
+        if (line && column >= 1 && column <= line.length) {
+          msg +=
+            `\nThe error might be located at xml line ${lineNumber} column ${column}\n` +
+            `${line}\n${"-".repeat(column - 1)}^`;
         }
       }
     }

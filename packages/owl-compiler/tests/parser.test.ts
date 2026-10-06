@@ -2282,6 +2282,23 @@ describe("parseXML", () => {
       "The error might be located at xml line 1 column 10\n<a><b></a>\n---------^"
     );
   });
+
+  test("the position is read past a location url, as Firefox reports it", () => {
+    const parse = DOMParser.prototype.parseFromString;
+    DOMParser.prototype.parseFromString = function () {
+      const doc = parse.call(this, "<parsererror/>", "text/xml");
+      doc.documentElement.textContent =
+        "XML Parsing Error: mismatched tag.\nLocation: http://localhost:8069/web\nLine Number 1, Column 10:";
+      return doc;
+    };
+    try {
+      expect(() => parseXML("<a><b></a>")).toThrow(
+        "The error might be located at xml line 1 column 10\n<a><b></a>\n---------^"
+      );
+    } finally {
+      DOMParser.prototype.parseFromString = parse;
+    }
+  });
 });
 
 describe("parse cache", () => {

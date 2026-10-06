@@ -1,4 +1,5 @@
 import { EventModifier, OwlError } from "@odoo/owl-core";
+import type { CustomDirectives } from ".";
 import {
   compileExpr,
   escapeTemplateString,
@@ -38,14 +39,12 @@ type BlockType = "block" | "text" | "multi" | "list" | "html";
 // HTML whitespace: a non-breaking space is content, never condensed
 const whitespaceRE = /[ \t\n\r\f]+/g;
 
-export interface Config {
+export interface CompileOptions {
+  name?: string;
+  dev?: boolean;
   translateFn?: (s: string, translationCtx: string) => string;
   translatableAttributes?: string[];
-  dev?: boolean;
-}
-
-interface CodeGenOptions extends Config {
-  name?: string;
+  customDirectives?: CustomDirectives;
   hasGlobalValues: boolean;
 }
 
@@ -304,7 +303,7 @@ export class CodeGenerator {
     this.nextDataIds[prefix] = n;
     return prefix + n;
   };
-  constructor(ast: AST, options: CodeGenOptions) {
+  constructor(ast: AST, options: CompileOptions) {
     this.translateFn = options.translateFn || ((s: string) => s);
     if (options.translatableAttributes) {
       const attrs = new Set(TRANSLATABLE_ATTRS);

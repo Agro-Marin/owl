@@ -1,5 +1,5 @@
 import { OwlError } from "@odoo/owl-core";
-import { CodeGenerator, Config } from "./code_generator";
+import { CodeGenerator, CompileOptions } from "./code_generator";
 import { parse } from "./parser";
 
 export type CustomDirectives = Record<
@@ -15,12 +15,6 @@ export type CustomDirectives = Record<
 export type Template = (context: any, vnode: any, key?: string) => any;
 
 export type TemplateFunction = (app: any, bdom: any, helpers: any) => Template;
-
-interface CompileOptions extends Config {
-  name?: string;
-  customDirectives?: CustomDirectives;
-  hasGlobalValues: boolean;
-}
 
 export function compile(
   template: string | Element,
@@ -49,3 +43,4 @@ export function compile(
 }
 
 export { parseXML } from "./parse_xml";
+export type { CompileOptions } from "./code_generator";
