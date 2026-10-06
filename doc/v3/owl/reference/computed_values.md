@@ -196,8 +196,10 @@ yourself.
 ### Awaiting the current run
 
 `currentPromise()` returns a promise that resolves as soon as no run is in
-flight: if a run is currently running it resolves once that run — or any run
-that supersedes it — settles, otherwise it resolves immediately. It never
+flight: if a run is currently running, or about to start (a dependency
+changed, or `refresh()` was called, in the current tick), it resolves once that
+run — or any run that supersedes it — settles, otherwise it resolves
+immediately. It never
 rejects; a fetcher error is reported through `error()`, not by rejecting.
 
 This pairs naturally with [`onWillStart`](scope.md) to hold the first render

@@ -1,4 +1,11 @@
-import { Equals, untrack } from "./computations";
+import {
+  ComputationAtom,
+  ComputationState,
+  Equals,
+  getCurrentComputation,
+  untrack,
+} from "./computations";
+import { debug, debugLog } from "./debug";
 import { getScope, isAbortError } from "./scope";
 import { effect } from "./effect";
 import { signal } from "./signal";
@@ -83,7 +90,11 @@ export function asyncComputed<T>(
     endRun();
   }
 
+  // the effect's computation: while a re-run of it is queued (a dependency
+  // changed, refresh() was called), a run is about to start
+  let runner: ComputationAtom;
   const stopEffect = effect(() => {
+    runner ??= getCurrentComputation()!;
     refreshTick();
     const myRunId = ++runId;
     const controller = new AbortController();
@@ -125,10 +136,9 @@ export function asyncComputed<T>(
   function dispose() {
     runId++;
     stopEffect();
-    // Mark the abandoned run as no longer in flight and release any awaiter.
-    inFlight = false;
-    pending?.resolve();
-    pending = null;
+    // the abandoned run is no longer in flight, nor loading; any awaiter is
+    // released
+    endRun();
   }
 
   scope?.onDestroy(dispose);
@@ -139,12 +149,27 @@ export function asyncComputed<T>(
   read.refresh = () => refreshTick.set(untrack(refreshTick) + 1);
   read.dispose = dispose;
   read.currentPromise = () => {
-    if (!inFlight) {
+    const queued = runner.state !== ComputationState.EXECUTED;
+    if (!inFlight && !queued) {
       return Promise.resolve();
     }
     if (!pending) {
       let resolve!: () => void;
       pending = { promise: new Promise<void>((res) => (resolve = res)), resolve };
+      if (!inFlight) {
+        // The queued re-run comes in the effect flush, a microtask scheduled
+        // before this one: after it, the run is in flight (and settles the
+        // promise when it ends), or the check found nothing to fetch again.
+        Promise.resolve().then(() => {
+          if (!inFlight) {
+            if (debug.effect) {
+              debugLog("effect", "asyncComputed: the queued re-run fetched nothing, settled");
+            }
+            pending?.resolve();
+            pending = null;
+          }
+        });
+      }
     }
     return pending.promise;
   };
