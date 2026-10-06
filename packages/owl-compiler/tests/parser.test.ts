@@ -2320,6 +2320,14 @@ describe("parse cache", () => {
     expect(parse(elem, {})).toBe(parse(elem));
     expect(parse(elem, {})).toBe(parse(elem, {}));
   });
+
+  test("a t-custom directive with no set of them, or an empty one, is named as not defined", () => {
+    for (const directives of [undefined, {}]) {
+      expect(() => parse(`<div t-custom-click.stop="x"/>`, directives)).toThrow(
+        'Custom directive "click" is not defined'
+      );
+    }
+  });
 });
 
 describe("directives that need an expression", () => {

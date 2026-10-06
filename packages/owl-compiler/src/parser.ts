@@ -524,6 +524,10 @@ function parseDOMNode(node: Element, ctx: ParsingContext): AST | null {
     } else if (attr !== "t-name") {
       if (attr.startsWith("t-")) {
         if (!ATT_DIRECTIVE_RE.test(attr)) {
+          if (attr.startsWith("t-custom-") && attr.length > 9) {
+            // parseTCustom only runs with a set of custom directives
+            throw new OwlError(`Custom directive "${attr.split(".")[0].slice(9)}" is not defined`);
+          }
           throw new OwlError(`Unknown QWeb directive: '${attr}'`);
         }
         if (!attr.startsWith("t-attf") && !value.trim()) {
