@@ -155,6 +155,40 @@ describe("objects a proxy cannot reach into", () => {
     }
   });
 
+  test("the member an error names is matched as a whole private name, $ and non-ASCII letters included", () => {
+    class Other {
+      #field = 1;
+      static readField(o: Other) {
+        return o.#field;
+      }
+    }
+    class Named {
+      #count$ = 1;
+      #café = 2;
+      #fieldX = 3;
+      get count() {
+        return this.#count$;
+      }
+      get café() {
+        return this.#café;
+      }
+      get other() {
+        return Other.readField({} as Other) + this.#fieldX;
+      }
+    }
+    const state = proxy({ named: new Named() });
+    expect(() => state.named.count).toThrow("markRaw(Named.prototype)");
+    expect(() => state.named.café).toThrow("markRaw(Named.prototype)");
+    let error: any;
+    try {
+      state.named.other;
+    } catch (e) {
+      error = e;
+    }
+    expect(error).toBeInstanceOf(TypeError);
+    expect(error).not.toBeInstanceOf(OwlError);
+  });
+
   test("any other TypeError of a getter is rethrown as it is", () => {
     const error = new TypeError("Cannot read private member, said a message from user code");
     const state = proxy({

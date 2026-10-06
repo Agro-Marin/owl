@@ -141,48 +141,41 @@ const PRIVATE_MEMBER_ERROR =
   /^(?:Cannot (?:read|write) private member (#\S+)|Receiver must be an instance of class (\S+)|can't access private field or method|Cannot access invalid private field \(evaluating '[^']*?(#[\w$]+))/;
 
 function privateMemberError(error: unknown, target: Target, key: PropertyKey): unknown {
-  if (!(error instanceof TypeError)) {
-    return error;
-  }
-  const match = PRIVATE_MEMBER_ERROR.exec(error.message);
-  if (match === null) {
-    return error;
-  }
-  const member = match[1] ?? match[3];
-  const className = match[2];
-  if (
-    (member !== undefined || className !== undefined) &&
-    !classOfTarget(target, (ctor) =>
-      member !== undefined ? declaresPrivate(ctor, member) : ctor.name === className
-    )
-  ) {
-    // the member belongs to no class of the target: the proxy did not cause it
+  const match = error instanceof TypeError && PRIVATE_MEMBER_ERROR.exec(error.message);
+  if (!match || !declaresMember(target, match[1] ?? match[3], match[2])) {
     return error;
   }
   const name = (target as any).constructor?.name || "TheClass";
   return new OwlError(
-    `Cannot reach "${String(key)}" of a ${name} through a reactive proxy: ${error.message}. ` +
+    `Cannot reach "${String(key)}" of a ${name} through a reactive proxy: ${match.input}. ` +
       `A proxy has no private members: mark the class raw with markRaw(${name}.prototype)`,
     { cause: error }
   );
 }
 
-// Whether a class up the prototype chain of `target` passes `test`.
-function classOfTarget(target: Target, test: (ctor: Function) => boolean): boolean {
+// Whether a class up the prototype chain of `target` declares the private
+// `member` (its source names it), or is the class `className`: the error is
+// then the proxy's. One naming neither is blamed on the proxy; one naming a
+// member no class of the target has came from elsewhere.
+function declaresMember(target: Target, member?: string, className?: string): boolean {
+  if (member === undefined && className === undefined) {
+    return true;
+  }
   for (let proto = Object.getPrototypeOf(target); proto; proto = Object.getPrototypeOf(proto)) {
-    const desc = Reflect.getOwnPropertyDescriptor(proto, "constructor");
-    if (desc !== undefined && typeof desc.value === "function" && test(desc.value)) {
+    const ctor = objectHasOwnProperty.call(proto, "constructor") ? proto.constructor : undefined;
+    if (
+      typeof ctor === "function" &&
+      (className !== undefined
+        ? ctor.name === className
+        : Function.prototype.toString.call(ctor).match(PRIVATE_NAMES)?.includes(member!))
+    ) {
       return true;
     }
   }
   return false;
 }
 
-// Whether the source of class `ctor` names the private member `member`.
-function declaresPrivate(ctor: Function, member: string): boolean {
-  const name = member.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  return new RegExp(`${name}(?![\\w$])`).test(Function.prototype.toString.call(ctor));
-}
+const PRIVATE_NAMES = /#[\p{ID_Continue}$\u200c\u200d]+/gu;
 
 /**
  * Given a proxy objet, return the raw (non proxy) underlying object
