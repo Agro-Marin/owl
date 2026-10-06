@@ -14,17 +14,14 @@ export const EventModifier = {
 } as const;
 
 // capture, passive and synthetic choose the listener, not what it does
-const MODIFIERS = new Set(["stop", "capture", "prevent", "self", "synthetic", "passive"]);
+const LISTENER_MODIFIERS = ["capture", "passive", "synthetic"];
 
 export function eventModifierMask(key: string): number {
-  const modifiers = key.split(".").slice(1);
-  const selfIndex = modifiers.indexOf("self");
+  const parts = key.split(".");
+  const selfIndex = parts.indexOf("self", 1);
   let mask = 0;
-  for (let i = 0; i < modifiers.length; i++) {
-    const m = modifiers[i];
-    if (!MODIFIERS.has(m)) {
-      throw new OwlError(`Unknown event modifier: '${m}'`);
-    }
+  for (let i = 1; i < parts.length; i++) {
+    const m = parts[i];
     const beforeSelf = i < selfIndex;
     if (m === "self") {
       mask |= EventModifier.SELF;
@@ -32,6 +29,8 @@ export function eventModifierMask(key: string): number {
       mask |= beforeSelf ? EventModifier.PREVENT_ANY : EventModifier.PREVENT;
     } else if (m === "stop") {
       mask |= beforeSelf ? EventModifier.STOP_ANY : EventModifier.STOP;
+    } else if (!LISTENER_MODIFIERS.includes(m)) {
+      throw new OwlError(`Unknown event modifier: '${m}'`);
     }
   }
   return mask;
