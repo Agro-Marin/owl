@@ -496,6 +496,16 @@ describe("writes", () => {
     expect(notifiedKeys(() => (state.b = 2))).toEqual(["(keys)"]);
   });
 
+  test("a key created on an object holding a length notifies the key list only", () => {
+    const state = proxy({ length: 1 } as any);
+    effect(() => [state.length, Object.keys(state)]);
+    expect(notifiedKeys(() => (state.b = 1))).toEqual(["(keys)"]);
+    const list = proxy([1] as any);
+    effect(() => [list.length, Object.keys(list)]);
+    expect(notifiedKeys(() => (list[1] = 2))).toEqual(["(keys)", "length"]);
+    expect(notifiedKeys(() => (list.extra = 1))).toEqual(["(keys)"]);
+  });
+
   test("a push notifies the length once; a length written to itself notifies nothing", () => {
     const list = proxy([1, 2]);
     effect(() => [list.length, list[2]]);

@@ -661,7 +661,10 @@ function writeKey(
 
 // The write itself, with the reactive proxy as the receiver: an accessor runs
 // with it as `this`, and a target behind its own Proxy sees it in its set trap.
-// A write that failed changed nothing.
+// A write that failed changed nothing. It notifies the key's creation and
+// value, and for an array its length and items. An array's length is compared
+// with the length before the write, not with the value the trap is given: an
+// index written past the end has already grown it.
 function write(
   target: any,
   key: PropertyKey,
@@ -671,53 +674,38 @@ function write(
   atoms: Target
 ): boolean {
   const isArray = Array.isArray(target);
-  const originalLength = isArray ? target.length : 0;
-  const originalValue =
+  const length = isArray ? target.length : 0;
+  const before =
     own !== undefined && "value" in own ? own.value : Reflect.get(target, key, receiver);
   if (!Reflect.set(target, key, stored, receiver)) {
     return false;
   }
-  const changed =
-    !(isArray && key === "length") && !Object.is(originalValue, Reflect.get(target, key, receiver));
-  onWriteKey(target, key, own !== undefined, changed, isArray, originalLength, atoms);
-  return true;
-}
-
-// Notifies a write of `key`: its creation, its value, and for an array its
-// length and items. An array's length is compared with the length before the
-// write, not with the value the trap is given: an index written past the end
-// has already grown it.
-function onWriteKey(
-  target: any,
-  key: PropertyKey,
-  hadKey: boolean,
-  changed: boolean,
-  isArray: boolean,
-  originalLength: number,
-  atoms: Target
-): void {
-  if (!hadKey && objectHasOwnProperty.call(target, key)) {
-    onWriteKeyCreated(atoms, key, originalLength);
-    if (isArray && !changed) {
-      onWriteItems(target);
-    }
-  }
   if (isArray && key === "length") {
-    const length = target.length;
-    if (length !== originalLength) {
+    if (target.length !== length) {
       onWriteTargetKey(target, key);
-      if (length < originalLength) {
+      if (target.length < length) {
         onWriteTargetKey(target, KEYCHANGES);
-        onWriteDroppedIndices(target, length, originalLength);
+        onWriteDroppedIndices(target, target.length, length);
       }
       onWriteItems(target);
     }
-  } else if (changed) {
-    onWriteTargetKey(atoms, key);
-    if (isArray) {
-      onWriteItems(target);
+    return true;
+  }
+  const created = own === undefined && objectHasOwnProperty.call(target, key);
+  const changed = !Object.is(before, Reflect.get(target, key, receiver));
+  if (created) {
+    onWriteKeyPresence(atoms, key);
+    if (isArray && target.length !== length) {
+      onWriteTargetKey(target, "length");
     }
   }
+  if (changed) {
+    onWriteTargetKey(atoms, key);
+  }
+  if (isArray && (created || changed)) {
+    onWriteItems(target);
+  }
+  return true;
 }
 
 // The items atom of an array (ITEMS) is notified without a debug line: the
@@ -760,15 +748,6 @@ export function readArrayItems<T>(array: T[]): T[] {
     items[i] = reactiveValue(raw[i], false);
   }
   return items;
-}
-
-function onWriteKeyCreated(target: Target, key: PropertyKey, originalLength: number): void {
-  onWriteKeyPresence(target, key);
-  // an index past the end grows the array without a length write going
-  // through the set trap
-  if (key !== "length" && Array.isArray(target) && target.length !== originalLength) {
-    onWriteTargetKey(target, "length");
-  }
 }
 
 // Methods a proxy replaces, by the function its read would return. The array
