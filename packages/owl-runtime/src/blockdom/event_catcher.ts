@@ -62,9 +62,8 @@ interface VCatcherBase {
   // the catcher enclosing this one in the same parent element, of any site;
   // undefined until found (see outerOf)
   outer: VCatcherBase | null | undefined;
-  holds(node: Node): boolean;
-  // the enclosing catcher, from the nodes around it
-  findOuter(): VCatcherBase | null;
+  child: VNode;
+  afterNode: Text | null;
 }
 
 // A catcher mounted by a render of its own (a component re-rendering alone)
@@ -74,7 +73,9 @@ interface VCatcherBase {
 // yet), so the first node of that child cannot be read.
 function outerOf(catcher: VCatcherBase): VCatcherBase | null {
   if (catcher.outer === undefined) {
-    catcher.outer = catcher.findOuter();
+    // the enclosing catcher, from the nodes around it
+    const first = catcher.child.firstNode();
+    catcher.outer = first ? ownerOf(first, catcher.afterNode!.nextSibling) : null;
     if (debug.event) {
       debugLog("event", `catcher found its outer one at dispatch: ${!!catcher.outer}`);
     }
@@ -112,13 +113,22 @@ function ownerOf(node: Node, from: Node | null): VCatcherBase | null {
   for (let n = from; n; n = n.nextSibling) {
     let catcher = byEnd.get(n) || null;
     if (catcher) {
-      while (catcher && !catcher.holds(node)) {
+      while (catcher && !holds(catcher, node)) {
         catcher = outerOf(catcher);
       }
       return catcher;
     }
   }
   return null;
+}
+
+function holds(catcher: VCatcherBase, node: Node): boolean {
+  // the end anchor bounds it: only its start is compared
+  const first = catcher.child.firstNode();
+  return (
+    !!first &&
+    (first === node || !!(first.compareDocumentPosition(node) & Node.DOCUMENT_POSITION_FOLLOWING))
+  );
 }
 
 function listen(keys: string[], parent: HTMLElement) {
@@ -197,21 +207,6 @@ export function createCatcher(eventsSpec: EventsSpec, fns: (HandlerFn | null)[])
         updating.pop();
       }
       listen(keys, parent);
-    }
-
-    findOuter(): VCatcherBase | null {
-      const first = this.child.firstNode();
-      return first ? ownerOf(first, this.afterNode!.nextSibling) : null;
-    }
-
-    holds(node: Node): boolean {
-      // the end anchor bounds it: only its start is compared
-      const first = this.child.firstNode();
-      return (
-        !!first &&
-        (first === node ||
-          !!(first.compareDocumentPosition(node) & Node.DOCUMENT_POSITION_FOLLOWING))
-      );
     }
 
     moveBeforeDOMNode(node: Node | null) {
