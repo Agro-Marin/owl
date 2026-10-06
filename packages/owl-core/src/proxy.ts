@@ -522,7 +522,7 @@ class BasicHandler implements ProxyHandler<any> {
       throw privateMemberError(error, target, key);
     }
     if (typeof value === "function") {
-      return arrayMethods.get(value) ?? value;
+      return replacedMethods.get(value) ?? value;
     }
     // Fast path: signal-based proxies and primitive values don't need wrapping
     if (this.shallow || typeof value !== "object" || value === null) {
@@ -543,10 +543,11 @@ class BasicHandler implements ProxyHandler<any> {
   set(target: any, key: PropertyKey, value: any, receiver: any): boolean {
     // a write subscribes nothing, though a getter or setter it runs reads
     // through the proxy
+    const shallow = this.shallow;
     try {
       return isObserving()
-        ? untrack(() => writeKey(target, key, value, receiver))
-        : writeKey(target, key, value, receiver);
+        ? untrack(() => writeKey(target, key, value, receiver, shallow))
+        : writeKey(target, key, value, receiver, shallow);
     } catch (error) {
       throw privateMemberError(error, target, key);
     }
@@ -566,6 +567,34 @@ class BasicHandler implements ProxyHandler<any> {
     return ret;
   }
 
+  // Object.defineProperty notifies as a write does. The engine also defines
+  // through it the key a set trap writes (the proxy is the receiver): that
+  // write notifies on its own.
+  defineProperty(target: any, key: PropertyKey, descriptor: PropertyDescriptor): boolean {
+    if (target === writingTarget && key === writingKey) {
+      return Reflect.defineProperty(target, key, descriptor);
+    }
+    const before = Reflect.getOwnPropertyDescriptor(target, key);
+    const isArray = Array.isArray(target);
+    const originalLength = isArray ? target.length : 0;
+    if (!this.shallow && "value" in descriptor) {
+      descriptor.value = toRaw(descriptor.value);
+    }
+    const ret = Reflect.defineProperty(target, key, descriptor);
+    if (ret) {
+      const after = Reflect.getOwnPropertyDescriptor(target, key)!;
+      if (before !== undefined && before.enumerable !== after.enumerable) {
+        onWriteTargetKey(target, KEYCHANGES);
+      }
+      const changed =
+        !Object.is(before?.value, after.value) ||
+        before?.get !== after.get ||
+        before?.set !== after.set;
+      onWriteKey(target, key, before !== undefined, changed, isArray, originalLength);
+    }
+    return ret;
+  }
+
   ownKeys(target: any): ArrayLike<string | symbol> {
     onReadTargetKey(target, KEYCHANGES);
     return Reflect.ownKeys(target);
@@ -577,35 +606,107 @@ class BasicHandler implements ProxyHandler<any> {
   }
 }
 
-function writeKey(target: any, key: PropertyKey, value: any, receiver: any): boolean {
-  const hadKey = objectHasOwnProperty.call(target, key);
-  const originalValue = Reflect.get(target, key, receiver);
+// The key a set trap is writing, which the defineProperty trap leaves alone
+let writingTarget: Target | null = null;
+let writingKey: PropertyKey | undefined;
+
+function writeKey(
+  target: any,
+  key: PropertyKey,
+  value: any,
+  receiver: any,
+  shallow: boolean
+): boolean {
+  // a shallow proxy hands its values back as stored: it keeps a proxy
+  const stored = shallow ? value : toRaw(value);
   const isArray = Array.isArray(target);
   const originalLength = isArray ? target.length : 0;
-  const ret = Reflect.set(target, key, toRaw(value), receiver);
-  const created = !hadKey && objectHasOwnProperty.call(target, key);
-  if (created) {
-    onWriteKeyCreated(target, key, originalLength);
+  const own = Reflect.getOwnPropertyDescriptor(target, key);
+  if (
+    targets.get(receiver) === target &&
+    (own !== undefined ? "value" in own : !inheritsAccessor(target, key))
+  ) {
+    // A data property written through its own proxy: the engine would only
+    // come back through the proxy's defineProperty trap, to define it on the
+    // target. Written on the target, it costs no trap.
+    const ret = Reflect.set(target, key, stored);
+    const changed = !(isArray && key === "length") && !Object.is(own?.value, target[key]);
+    onWriteKey(target, key, own !== undefined, changed, isArray, originalLength);
+    return ret;
   }
-  if (key === "length" && isArray) {
-    // While Array length may trigger the set trap, it's not actually set by this
-    // method but is updated behind the scenes, and the trap is not called with the
-    // new value. We disable the "same-value-optimization" for it because of that.
-    onWriteTargetKey(target, key);
-    if (target.length < originalValue) {
-      onWriteTargetKey(target, KEYCHANGES);
-      onWriteDroppedIndices(target, target.length, originalValue);
+  // an accessor runs with the proxy as `this`, and a write through another
+  // receiver defines the key on it
+  const originalValue = Reflect.get(target, key, receiver);
+  const previousTarget = writingTarget;
+  const previousKey = writingKey;
+  writingTarget = target;
+  writingKey = key;
+  let ret: boolean;
+  try {
+    ret = Reflect.set(target, key, stored, receiver);
+  } finally {
+    writingTarget = previousTarget;
+    writingKey = previousKey;
+  }
+  const changed =
+    !(isArray && key === "length") && !Object.is(originalValue, Reflect.get(target, key, receiver));
+  onWriteKey(target, key, own !== undefined, changed, isArray, originalLength);
+  return ret;
+}
+
+// Whether a write of a key `target` does not own reaches a setter, or a
+// proxy, up its prototype chain.
+function inheritsAccessor(target: Target, key: PropertyKey): boolean {
+  for (
+    let proto = Object.getPrototypeOf(target);
+    proto !== null;
+    proto = Object.getPrototypeOf(proto)
+  ) {
+    if (targets.has(proto)) {
+      return true;
     }
-    onWriteItems(target);
-  } else if (!Object.is(originalValue, Reflect.get(target, key, receiver))) {
+    const desc = Reflect.getOwnPropertyDescriptor(proto, key);
+    if (desc !== undefined) {
+      return !("value" in desc);
+    }
+  }
+  return false;
+}
+
+// Notifies a write of `key`: its creation, its value, and for an array its
+// length and items. An array's length is compared with the length before the
+// write, not with the value the trap is given: an index written past the end
+// has already grown it.
+function onWriteKey(
+  target: any,
+  key: PropertyKey,
+  hadKey: boolean,
+  changed: boolean,
+  isArray: boolean,
+  originalLength: number
+): void {
+  if (!hadKey && objectHasOwnProperty.call(target, key)) {
+    onWriteKeyCreated(target, key, originalLength);
+    if (isArray && !changed) {
+      onWriteItems(target);
+    }
+  }
+  if (isArray && key === "length") {
+    const length = target.length;
+    if (length !== originalLength) {
+      onWriteTargetKey(target, key);
+      if (length < originalLength) {
+        onWriteTargetKey(target, KEYCHANGES);
+        onWriteDroppedIndices(target, length, originalLength);
+      }
+      onWriteItems(target);
+    }
+  } else if (changed) {
     onWriteTargetKey(target, key);
     if (isArray) {
       onWriteItems(target);
     }
-  } else if (created && isArray) {
-    onWriteItems(target);
   }
-  return ret;
 }
 
 // An array's items, as one atom: read by a loop that reads them all at once
@@ -680,14 +781,14 @@ function onWriteKeyCreated(target: Target, key: PropertyKey, originalLength: num
   }
 }
 
-// Array methods a proxy array replaces. Those that write several keys run as
-// one batch: an immediate computation sees the array before or after the
+// Methods a proxy replaces, by the function its read would return. The array
+// methods that write several keys run as one batch: an immediate computation sees the array before or after the
 // call, not in between. Those that search an item by identity also find the
 // raw object of an item they read as its proxy.
-const arrayMethods = new Map<Function, Function>();
+const replacedMethods = new Map<Function, Function>();
 for (const name of ["copyWithin", "fill", "reverse", "sort"] as const) {
   const method = Array.prototype[name] as Function;
-  arrayMethods.set(method, function (this: unknown[], ...args: unknown[]) {
+  replacedMethods.set(method, function (this: unknown[], ...args: unknown[]) {
     return batch(() => method.apply(this, args));
   });
 }
@@ -698,13 +799,13 @@ for (const name of ["copyWithin", "fill", "reverse", "sort"] as const) {
 // comparator orders, and its caller depends on them (as in Vue).
 for (const name of ["pop", "push", "shift", "splice", "unshift"] as const) {
   const method = Array.prototype[name] as Function;
-  arrayMethods.set(method, function (this: unknown[], ...args: unknown[]) {
+  replacedMethods.set(method, function (this: unknown[], ...args: unknown[]) {
     return batch(() => untrack(() => method.apply(this, args)));
   });
 }
 for (const name of ["includes", "indexOf", "lastIndexOf"] as const) {
   const method = Array.prototype[name] as Function;
-  arrayMethods.set(method, function (this: unknown[], ...args: unknown[]) {
+  replacedMethods.set(method, function (this: unknown[], ...args: unknown[]) {
     const result = method.apply(this, args);
     if (result !== -1 && result !== false) {
       return result;
@@ -713,6 +814,13 @@ for (const name of ["includes", "indexOf", "lastIndexOf"] as const) {
     return method.apply(toRaw(this), [toRaw(args[0] as object), ...args.slice(1)]);
   });
 }
+
+// hasOwnProperty reads the presence of the key it asks about, as `in` does
+replacedMethods.set(objectHasOwnProperty, function (this: object, key: PropertyKey) {
+  const raw = toRaw(this);
+  onReadKeyPresence(raw, typeof key === "symbol" ? key : String(key));
+  return objectHasOwnProperty.call(raw, key);
+});
 
 // what the collection handlers inherit the traps they do not override from
 const deepHandler = new BasicHandler(false);

@@ -1,6 +1,16 @@
 import v8 from "node:v8";
 import vm from "node:vm";
-import { effect, markRaw, observe, OwlError, proxy, toRaw } from "../src";
+import {
+  effect,
+  markRaw,
+  observe,
+  OwlError,
+  proxy,
+  setDebug,
+  setDebugSink,
+  signal,
+  toRaw,
+} from "../src";
 import { waitScheduler } from "./helpers";
 
 v8.setFlagsFromString("--expose-gc");
@@ -191,5 +201,153 @@ describe("proxy invariants: a locked property is handed out as it is", () => {
     const item = proxy({ a: 1 });
     const view = observe({ list: Object.freeze([item]) }, () => {});
     expect(view.list[0]).toBe(item);
+  });
+});
+
+// the keys a write notified, from the reactivity debug channel
+function notifiedKeys(fn: () => void): string[] {
+  const keys: string[] = [];
+  setDebugSink((_channel, message) => {
+    if (message.startsWith("proxy write ")) {
+      keys.push(message.slice("proxy write ".length));
+    }
+  });
+  setDebug(["reactivity"]);
+  try {
+    fn();
+  } finally {
+    setDebug(false);
+    setDebugSink(null);
+  }
+  return keys;
+}
+
+describe("writes", () => {
+  test("a shallow array and a shallow object keep the proxy written into them", async () => {
+    const item = proxy({ done: false });
+    const list = signal.Array<any>([]);
+    const obj = signal.Object<any>({});
+    list().push(item);
+    obj().item = item;
+    expect(list()[0]).toBe(item);
+    expect(obj().item).toBe(item);
+    const seen: boolean[] = [];
+    effect(() => {
+      seen.push(list()[0].done);
+    });
+    list()[0].done = true;
+    await waitScheduler();
+    expect(seen).toEqual([false, true]);
+  });
+
+  test("a deep proxy still stores the raw object of a proxy written into it", () => {
+    const item = proxy({ a: 1 });
+    const state = proxy({ item: null as any });
+    state.item = item;
+    expect(toRaw(state).item).toBe(toRaw(item));
+  });
+
+  test("hasOwnProperty follows the presence of the key it asks about", async () => {
+    const state = proxy({ a: 1 } as Record<string, number>);
+    const seen: boolean[] = [];
+    effect(() => {
+      seen.push(state.hasOwnProperty("b"));
+    });
+    state.a = 2;
+    state.c = 1;
+    await waitScheduler();
+    expect(seen).toEqual([false]);
+    state.b = 1;
+    await waitScheduler();
+    delete state.b;
+    await waitScheduler();
+    expect(seen).toEqual([false, true, false]);
+  });
+
+  test("a write through a setter, or through an object inheriting from the proxy, still notifies", async () => {
+    const state = proxy({
+      _x: 1,
+      set x(value: number) {
+        this._x = value;
+      },
+    } as any);
+    const seen: number[] = [];
+    effect(() => {
+      seen.push(state._x);
+    });
+    state.x = 2;
+    await waitScheduler();
+    const child = Object.create(state);
+    child._x = 3;
+    await waitScheduler();
+    expect(seen).toEqual([1, 2]);
+    expect(child._x).toBe(3);
+    expect(state._x).toBe(2);
+  });
+
+  test("a write to a read-only or a non-extensible target fails as on the raw object", () => {
+    const frozen = proxy(Object.freeze({ a: 1 }) as any);
+    const sealed = proxy(Object.preventExtensions({ a: 1 }) as any);
+    expect(Reflect.set(frozen, "a", 2)).toBe(false);
+    expect(Reflect.set(sealed, "b", 2)).toBe(false);
+    expect(Reflect.set(sealed, "a", 2)).toBe(true);
+    expect(sealed.a).toBe(2);
+  });
+
+  test("Object.defineProperty notifies the readers of the value and of the keys", async () => {
+    const state = proxy({ a: 1 } as any);
+    const values: number[] = [];
+    const keys: string[][] = [];
+    effect(() => {
+      values.push(state.a);
+    });
+    effect(() => {
+      keys.push(Object.keys(state));
+    });
+    Object.defineProperty(state, "a", { value: 2 });
+    await waitScheduler();
+    Object.defineProperty(state, "b", { value: 3, enumerable: true, configurable: true });
+    await waitScheduler();
+    Object.defineProperty(state, "b", { enumerable: false });
+    await waitScheduler();
+    expect(values).toEqual([1, 2]);
+    expect(keys).toEqual([["a"], ["a", "b"], ["a"]]);
+  });
+
+  test("Object.defineProperty stores the raw object of a proxy", () => {
+    const item = proxy({ a: 1 });
+    const state = proxy({} as any);
+    Object.defineProperty(state, "item", { value: item, configurable: true, writable: true });
+    expect(toRaw(state).item).toBe(toRaw(item));
+  });
+
+  test("Object.defineProperty past the end of an array notifies its length", async () => {
+    const list = proxy([1]);
+    const seen: number[] = [];
+    effect(() => {
+      seen.push(list.length);
+    });
+    Object.defineProperty(list, 3, {
+      value: 4,
+      writable: true,
+      configurable: true,
+      enumerable: true,
+    });
+    await waitScheduler();
+    expect(seen).toEqual([1, 4]);
+  });
+
+  test("a write notifies its key once, through the set trap only", () => {
+    const state = proxy({ a: 1 } as any);
+    effect(() => [state.a, Object.keys(state)]);
+    expect(notifiedKeys(() => (state.a = 2))).toEqual(["a"]);
+    expect(notifiedKeys(() => (state.b = 2))).toEqual(["(keys)"]);
+  });
+
+  test("a push notifies the length once; a length written to itself notifies nothing", () => {
+    const list = proxy([1, 2]);
+    effect(() => [list.length, list[2]]);
+    expect(notifiedKeys(() => list.push(3)).filter((key) => key === "length")).toEqual(["length"]);
+    expect(notifiedKeys(() => (list.length = 3))).toEqual([]);
   });
 });
