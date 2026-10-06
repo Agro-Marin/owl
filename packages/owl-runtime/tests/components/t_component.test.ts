@@ -279,4 +279,25 @@ describe("t-component with two classes of the same name", () => {
     expect(Object.values(parent.__owl__.children).map((n) => n.component)).toEqual([b]);
     expect(log).toEqual(["B setup", "C willDestroy"]);
   });
+
+  test("the other class, once its pending render resolves, is a new instance of it in place of the mounted one", async () => {
+    const log: string[] = [];
+    const def = makeDeferred();
+    const { B, C, Parent } = sameNamed(log, def);
+    const parent = await mount(Parent, fixture);
+    const b = Object.values(parent.__owl__.children)[0].component;
+    expect(b).toBeInstanceOf(B);
+    parent.state.C = C;
+    await nextTick();
+    expect(fixture.innerHTML).toBe("<div><span>B0</span></div>");
+    expect(Object.values(parent.__owl__.children).map((n) => n.component)).toEqual([b]);
+    def.resolve();
+    await nextTick();
+    expect(fixture.innerHTML).toBe("<div><span>C</span></div>");
+    const children = Object.values(parent.__owl__.children).map((n) => n.component);
+    expect(children.length).toBe(1);
+    expect(children[0]).toBeInstanceOf(C);
+    expect(children[0]).not.toBe(b);
+    expect(log).toEqual(["B setup", "B willUnmount", "B willDestroy"]);
+  });
 });
