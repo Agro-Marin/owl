@@ -107,12 +107,28 @@ function isLocked(target: Target, key: PropertyKey): boolean {
 
 // The TypeError an engine throws when a getter, setter or method reaches a
 // private member (`this.#x`) through a proxy, which does not have it: V8,
-// SpiderMonkey, JavaScriptCore.
+// SpiderMonkey, JavaScriptCore. The member's name, or its class's, is captured
+// where the message gives it.
 const PRIVATE_MEMBER_ERROR =
-  /^(Cannot (read|write) private member #|Receiver must be an instance of class |can't access private field or method|Cannot access invalid private field)/;
+  /^(?:Cannot (?:read|write) private member (#\S+)|Receiver must be an instance of class (\S+)|can't access private field or method|Cannot access invalid private field \(evaluating '[^']*?(#[\w$]+))/;
 
 function privateMemberError(error: unknown, target: Target, key: PropertyKey): unknown {
-  if (!(error instanceof TypeError) || !PRIVATE_MEMBER_ERROR.test(error.message)) {
+  if (!(error instanceof TypeError)) {
+    return error;
+  }
+  const match = PRIVATE_MEMBER_ERROR.exec(error.message);
+  if (match === null) {
+    return error;
+  }
+  const member = match[1] ?? match[3];
+  const className = match[2];
+  if (
+    (member !== undefined || className !== undefined) &&
+    !classOfTarget(target, (ctor) =>
+      member !== undefined ? declaresPrivate(ctor, member) : ctor.name === className
+    )
+  ) {
+    // the member belongs to no class of the target: the proxy did not cause it
     return error;
   }
   const name = (target as any).constructor?.name || "TheClass";
@@ -121,6 +137,23 @@ function privateMemberError(error: unknown, target: Target, key: PropertyKey): u
       `A proxy has no private members: mark the class raw with markRaw(${name}.prototype)`,
     { cause: error }
   );
+}
+
+// Whether a class up the prototype chain of `target` passes `test`.
+function classOfTarget(target: Target, test: (ctor: Function) => boolean): boolean {
+  for (let proto = Object.getPrototypeOf(target); proto; proto = Object.getPrototypeOf(proto)) {
+    const desc = Reflect.getOwnPropertyDescriptor(proto, "constructor");
+    if (desc !== undefined && typeof desc.value === "function" && test(desc.value)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+// Whether the source of class `ctor` names the private member `member`.
+function declaresPrivate(ctor: Function, member: string): boolean {
+  const name = member.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(`${name}(?![\\w$])`).test(Function.prototype.toString.call(ctor));
 }
 
 /**

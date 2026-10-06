@@ -65,7 +65,9 @@ that proxy creation is a performance bottleneck.
 Marking a class prototype marks the class: every instance of it, and of its
 subclasses, is handed out as it is. A class with private members (`#x`) needs
 it, since a proxy does not have them: a getter or setter reaching one through
-a proxy throws an error that names the class to mark.
+a proxy throws an error that names the class to mark. A private member error
+the object's own classes do not declare (a bug in code the getter calls) is
+rethrown as the engine threw it.
 
 ```js
 class Secret {

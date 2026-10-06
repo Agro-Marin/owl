@@ -82,6 +82,61 @@ describe("objects a proxy cannot reach into", () => {
     expect(() => (state.secret.value = 2)).toThrow("markRaw(Secret.prototype)");
   });
 
+  test("a private method called through a getter throws the same OwlError", () => {
+    class Locked {
+      #check() {
+        return 1;
+      }
+      get checked() {
+        return this.#check();
+      }
+    }
+    const state = proxy({ locked: new Locked() });
+    expect(() => state.locked.checked).toThrow("markRaw(Locked.prototype)");
+  });
+
+  test("a private member error the target's classes do not cause is rethrown as it is", () => {
+    class Other {
+      #field = 1;
+      #method() {
+        return 1;
+      }
+      static readField(o: Other) {
+        return o.#field;
+      }
+      static callMethod(o: Other) {
+        return o.#method();
+      }
+    }
+    class Reader {
+      get field() {
+        return Other.readField({} as Other);
+      }
+      get method() {
+        return Other.callMethod({} as Other);
+      }
+    }
+    const state = proxy({ reader: new Reader() });
+    for (const key of ["field", "method"] as const) {
+      let raw: any;
+      let reactive: any;
+      try {
+        new Reader()[key];
+      } catch (e) {
+        raw = e;
+      }
+      try {
+        state.reader[key];
+      } catch (e) {
+        reactive = e;
+      }
+      expect(raw).toBeInstanceOf(TypeError);
+      expect(reactive).toBeInstanceOf(TypeError);
+      expect(reactive).not.toBeInstanceOf(OwlError);
+      expect(reactive.message).toBe(raw.message);
+    }
+  });
+
   test("any other TypeError of a getter is rethrown as it is", () => {
     const error = new TypeError("Cannot read private member, said a message from user code");
     const state = proxy({
