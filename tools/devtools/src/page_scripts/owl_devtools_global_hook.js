@@ -312,14 +312,14 @@
       let inFlush = false;
       // Per-fiber symbol to track whether _render() was actually called for this
       // fiber's render() invocation. A shared boolean flag is unreliable in OWL 3
-      // because setCounter(0) → flush() → other fibers' render() can all run
+      // because the counter reaching 0 → flush() → other fibers' render() can all run
       // synchronously inside one render() call, resetting a shared flag before
       // the outer render() reads it back.
       const renderCalledKey = Symbol("owlDevtoolsRenderCalled");
       app.scheduler.constructor.prototype.flush = function () {
         // Used to know when a render is triggered inside the flush method or not.
         // Save/restore rather than hard-reset to false so recursive flush() calls
-        // (which occur in OWL 3 when setCounter(0) fires flush() from inside
+        // (which occur in OWL 3 when the pass counter reaching 0 fires flush() from inside
         // _render()) do not prematurely clear the flag for the outer caller.
         const wasInFlush = inFlush;
         inFlush = true;
