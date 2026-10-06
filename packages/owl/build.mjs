@@ -1,6 +1,6 @@
 import * as esbuild from "esbuild";
 import { execSync } from "child_process";
-import { createHash } from "crypto";
+import { buildHash } from "./build_hash.mjs";
 import { readFileSync, mkdirSync } from "fs";
 import { relative, resolve } from "path";
 
@@ -14,40 +14,6 @@ if (pkg.module !== ES_FILENAME || pkg.main !== CJS_FILENAME) {
   throw new Error("package.json has been modified. Build script should be updated accordingly");
 }
 
-const SOURCES = ["owl-core", "owl-compiler", "owl-runtime", "owl"].map((p) => `packages/${p}/src`);
-
-function git(command) {
-  return execSync(`git ${command}`, { cwd: "../..", stdio: ["ignore", "pipe", "ignore"] })
-    .toString()
-    .trim();
-}
-
-// The build's name: the commit, with a digest of the uncommitted changes to the
-// sources when there are any. Odoo keys its persistent cache of compiled
-// templates on it, and the compiler module must be of the runtime's build: two
-// builds of different code must not share a name.
-function getBuildHash() {
-  let commit;
-  try {
-    commit = git("rev-parse --short=8 HEAD");
-  } catch {
-    return "nogit";
-  }
-  const changes =
-    git(`diff HEAD -- ${SOURCES.join(" ")}`) +
-    git(`ls-files --others --exclude-standard -- ${SOURCES.join(" ")}`);
-  if (!changes) {
-    return commit;
-  }
-  const untracked = git(`ls-files --others --exclude-standard -- ${SOURCES.join(" ")}`)
-    .split("\n")
-    .filter(Boolean)
-    .map((file) => readFileSync(resolve("../..", file), "utf-8"))
-    .join("\n");
-  const digest = createHash("sha256").update(changes).update(untracked).digest("hex");
-  return `${commit}-dirty-${digest.slice(0, 8)}`;
-}
-
 function addSuffix(filename, suffix) {
   const parts = filename.split(".");
   parts.splice(parts.length - 1, 0, suffix);
@@ -56,7 +22,7 @@ function addSuffix(filename, suffix) {
 
 const define = {
   __BUILD_DATE__: JSON.stringify(new Date().toISOString()),
-  __BUILD_HASH__: JSON.stringify(getBuildHash()),
+  __BUILD_HASH__: JSON.stringify(buildHash("../..")),
 };
 
 // every package from its sources: one copy of each in a bundle
