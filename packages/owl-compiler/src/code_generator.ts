@@ -31,6 +31,15 @@ import {
   EventHandlers,
 } from "./parser";
 
+// a context made under a loop item, resolved once the template is compiled
+const SCOPE_MARK = "\u0001scope";
+const SCOPE_MARKER_RE = /\u0001scope\d+\u0001/g;
+// an expression writing a context variable: `ctx['v'] = 1`, `ctx['v']++`, ...
+// (a destructuring one too; a literal string holding `=` reads as one: the
+// check only ever errs towards inheriting)
+const CONTEXT_WRITE =
+  /ctx\['[^']*'\]\s*(?:[-+*/%&|^]|\*\*|<<|>>>?|&&|\|\||\?\?)?=(?![=>])|ctx\['[^']*'\]\s*(?:\+\+|--)|(?:\+\+|--)\s*ctx\[|delete\s+ctx\[|[[,{:]\s*ctx\['[^']*'\]\s*[,\]}][^;=\n]*?=(?![=>])/;
+
 // loop levels whose keys a t-out passes to safeOutput as is (see compileTOut)
 const MAX_LAZY_LOOP_KEYS = 3;
 
@@ -224,11 +233,40 @@ function createContext(parentCtx: Context, params?: Partial<Context>): Context {
   );
 }
 
+// A loop of a function: its items are made under `parentVar`, the context
+// around the loop, and each sets `names` (its t-as and the flags it reads).
+interface LoopScope {
+  level: number;
+  parentVar: string;
+  names: string[];
+  // the loop it is in, in the same function
+  parent: LoopScope | null;
+}
+
+// A context made under a loop item of the same function (an item of a nested
+// loop, the context of a t-call with attributes or a body): it is written with
+// a marker, resolved once the template is compiled (see resolveScopes)
+interface ScopeSite {
+  marker: string;
+  target: CodeTarget;
+  // the loop whose item the new context is made under, and the variable
+  // holding that item where the context is made
+  from: LoopScope;
+  itemVar: string;
+  // the new context's variable, and the names it sets itself
+  varName: string;
+  names: string[];
+}
+
 class CodeTarget {
   name: string;
   indentLevel = 0;
   loopLevel = 0;
   loopCtxVars: string[] = [];
+  // the loops being compiled, innermost last
+  loops: LoopScope[] = [];
+  // the loop levels whose item (or, for 0, whose function scope) a t-set writes
+  writtenLevels: Set<number> = new Set();
   // loop levels whose key is concatenated into a string key: they get a
   // `skey<level>` that tells object keys apart
   stringKeyLevels: Set<number> = new Set();
@@ -300,6 +338,7 @@ const translationRE = /^(\s*)([\s\S]+?)(\s*)$/;
 
 export class CodeGenerator {
   blocks: BlockDescription[] = [];
+  scopeSites: ScopeSite[] = [];
   isDebug: boolean = false;
   targets: CodeTarget[] = [];
   target = new CodeTarget("template");
@@ -356,6 +395,7 @@ export class CodeGenerator {
       translationCtx: "",
       tKeyExpr: null,
     });
+    this.resolveScopes();
     // define blocks and utility functions
     let mainCode = [`  let { text, createBlock, list, multi, html, toggler } = bdom;`];
     if (this.helpers.size) {
@@ -442,6 +482,65 @@ export class CodeGenerator {
 
   define(varName: string, expr: string) {
     this.addLine(`const ${varName} = ${expr};`);
+  }
+
+  scopeMarker(from: LoopScope, itemVar: string, varName: string, names: string[]): string {
+    const marker = `${SCOPE_MARK}${this.scopeSites.length}\u0001`;
+    this.scopeSites.push({ marker, target: this.target, from, itemVar, varName, names });
+    return marker;
+  }
+
+  /**
+   * A context made under another one made in the same render (a loop item)
+   * costs V8 about 1.6 us and 1.2 KB: the item becomes a prototype. A loop
+   * item no t-set writes holds only its loop's names, set when it is made:
+   * a context made under it can be made under the item's own prototype with
+   * a copy of those names instead, which no later write can make stale. That
+   * holds while nothing else writes a context: an expression assigning a
+   * variable (`t-on-click="v = 1"`, a bare-name `t-model.proxy`) turns it off
+   * for the whole template.
+   */
+  resolveScopes() {
+    const sites = this.scopeSites;
+    if (!sites.length) {
+      return;
+    }
+    const code = [
+      ...this.staticDefs.map((d) => d.expr),
+      ...[this.target, ...this.targets].flatMap((t) => t.code),
+    ].join("\n");
+    const writesContext = CONTEXT_WRITE.test(code);
+    // whether a context can be made under the prototype of `loop`'s items
+    // with a copy of their names
+    const copiable = (loop: LoopScope, target: CodeTarget): boolean =>
+      !writesContext && !target.writtenLevels.has(loop.level);
+    // the prototype of `loop`'s items, and the names they hold themselves
+    const base = (loop: LoopScope, target: CodeTarget): string =>
+      loop.parent && copiable(loop.parent, target) ? base(loop.parent, target) : loop.parentVar;
+    const ownNames = (loop: LoopScope, target: CodeTarget): string[] => {
+      const names =
+        loop.parent && copiable(loop.parent, target) ? ownNames(loop.parent, target) : [];
+      return [...new Set([...names, ...loop.names])];
+    };
+    const resolved = new Map<string, string>();
+    for (const { marker, target, from, itemVar, varName, names } of sites) {
+      let expr = `Object.create(${itemVar})`;
+      if (copiable(from, target)) {
+        expr = `Object.create(${base(from, target)})`;
+        for (const name of ownNames(from, target)) {
+          if (!names.includes(name)) {
+            const key = JSON.stringify(name);
+            expr += `; ${varName}[${key}] = ${itemVar}[${key}]`;
+          }
+        }
+      }
+      resolved.set(marker, expr);
+    }
+    for (const t of [this.target, ...this.targets]) {
+      t.code = t.code.map((line) =>
+        line.includes(SCOPE_MARK) ? line.replace(SCOPE_MARKER_RE, (m) => resolved.get(m)!) : line
+      );
+    }
   }
 
   insertAnchor(block: BlockDescription) {
@@ -950,7 +1049,32 @@ export class CodeGenerator {
     }
     this.addLine(`for (let ${loopVar} = 0; ${loopVar} < ${l}; ${loopVar}++) {`);
     this.target.indentLevel++;
-    this.addLine(`let ctx = Object.create(${ctxVar});`);
+    const suffixes = [""];
+    if (!(ast.noFlags & ForEachNoFlag.First)) {
+      suffixes.push("_first");
+    }
+    if (!(ast.noFlags & ForEachNoFlag.Last)) {
+      suffixes.push("_last");
+    }
+    if (!(ast.noFlags & ForEachNoFlag.Index)) {
+      suffixes.push("_index");
+    }
+    if (!(ast.noFlags & ForEachNoFlag.Value)) {
+      suffixes.push("_value");
+    }
+    const parentLoop = this.target.loops[this.target.loops.length - 1] || null;
+    const loopScope: LoopScope = {
+      level: this.target.loopLevel,
+      parentVar: ctxVar,
+      names: suffixes.map((suffix) => ast.elem + suffix),
+      parent: parentLoop,
+    };
+    // an item of a loop in a loop is made under the outer item: see resolveScopes
+    const itemExpr = parentLoop
+      ? this.scopeMarker(parentLoop, ctxVar, "ctx", loopScope.names)
+      : `Object.create(${ctxVar})`;
+    this.addLine(`let ctx = ${itemExpr};`);
+    this.target.loops.push(loopScope);
     const loopVarName = (suffix: string) => JSON.stringify(ast.elem + suffix);
     this.addLine(`ctx[${loopVarName("")}] = ${keys}[${loopVar}];`);
     if (!(ast.noFlags & ForEachNoFlag.First)) {
@@ -1021,6 +1145,7 @@ export class CodeGenerator {
     this.target.indentLevel--;
     this.target.loopLevel--;
     this.target.loopCtxVars.pop();
+    this.target.loops.pop();
     for (const [name, level] of this.target.tSetVars) {
       if (level > this.target.loopLevel) {
         this.target.tSetVars.delete(name);
@@ -1147,7 +1272,14 @@ export class CodeGenerator {
     } else {
       // assigned one by one, as Object.assign would, without a literal to copy
       ctxExpr = this.generateId("ctx");
-      this.define(ctxExpr, `Object.create(ctx)`);
+      // in a loop, made under the item: see resolveScopes
+      const loop = this.target.loops[this.target.loops.length - 1];
+      this.define(
+        ctxExpr,
+        loop
+          ? this.scopeMarker(loop, "ctx", ctxExpr, [...attrs.map(([name]) => name)])
+          : `Object.create(ctx)`
+      );
       for (const [name, value] of attrs) {
         this.addLine(`${ctxExpr}[${JSON.stringify(name)}] = ${value};`);
       }
@@ -1201,11 +1333,13 @@ export class CodeGenerator {
         );
       }
       this.addLine(`${this.target.loopCtxVars[defLevel]}[${name}] = ${value};`);
+      this.target.writtenLevels.add(defLevel);
     } else {
       if (!level) {
         this.target.needsScopeProtection = true;
       }
       this.addLine(`ctx[${name}] = ${value};`);
+      this.target.writtenLevels.add(level);
       this.target.tSetVars.set(ast.name, level);
     }
     return null;

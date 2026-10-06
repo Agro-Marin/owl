@@ -66,7 +66,8 @@ export type TNode =
   | { kind: "foreach"; list: string; as: string; key: string; children: TNode[] }
   | { kind: "comp"; def: Def; on: Handler[]; slot: TNode[] | null }
   | { kind: "slot"; on: Handler[] }
-  | { kind: "call"; def: Def }
+  // args: the call's attributes, [name, expression]
+  | { kind: "call"; def: Def; args: [string, string][] }
   // t-set with t-value, or with a body
   | { kind: "set"; name: string; value: string | null; body: TNode[] | null }
   // its content goes to an element outside the root, one per Portal and loop
@@ -347,7 +348,14 @@ export function generator(random: () => number, interactive = false) {
         const def: Def = { name: `call${calls.length + 1}`, body: [] };
         calls.push(def);
         def.body = nodes(inner);
-        return { kind: "call", def };
+        // every other call has an attribute: in a loop it shadows the
+        // innermost loop variable (not a row, which a t-model may write), so
+        // that the call's context is made under the loop item, holding its
+        // own value of that name (no draw: a seed generates the templates it did)
+        const last = [...env.locals].reverse().find((local) => !isRow(local));
+        const args: [string, string][] =
+          calls.length % 2 ? [] : last ? [[last, `${last} + '!'`]] : [["pz", "'lit'"]];
+        return { kind: "call", def, args };
       }
       if (q < 0.16 && inComp) {
         return { kind: "slot", on: handlers(env) };
@@ -512,7 +520,7 @@ export function nodeXml(n: TNode): string {
     case "slot":
       return `<t t-call-slot="default"${onXml(n.on)}/>`;
     case "call":
-      return `<t t-call="${n.def.name}"/>`;
+      return `<t t-call="${n.def.name}"${n.args.map(([k, v]) => ` ${k}="${escapeAttr(v)}"`).join("")}/>`;
     case "set":
       return n.body
         ? `<t t-set="${n.name}">${toXml(n.body)}</t>`
@@ -736,8 +744,16 @@ export function renderNode(n: TNode, ctx: RCtx): VChild[] {
       const content = ctx.slot ? renderList(ctx.slot.nodes, ctx.slot.ctx) : [];
       return withCatcher(content, n.on, ctx);
     }
-    case "call":
-      return renderList(n.def.body, ctx);
+    case "call": {
+      if (!n.args.length) {
+        return renderList(n.def.body, ctx);
+      }
+      const locals = { ...ctx.locals };
+      for (const [name, expr] of n.args) {
+        locals[name] = evaluate(expr, ctx);
+      }
+      return renderList(n.def.body, { ...ctx, locals });
+    }
     case "set":
       // handled by renderList
       return [];

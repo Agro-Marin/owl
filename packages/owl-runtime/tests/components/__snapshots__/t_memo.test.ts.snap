@@ -132,7 +132,7 @@ exports[`t-memo > a memoized item inside a memoized item carries the inner item'
       const ctx2 = ctx;
       const [k_block6, v_block6, l_block6, c_block6] = prepareList(ctx['group'].items);
       for (let i2 = 0; i2 < l_block6; i2++) {
-        let ctx = Object.create(ctx2);
+        let ctx = Object.create(ctx1); ctx["group"] = ctx2["group"];
         ctx["item"] = k_block6[i2];
         const key2 = ctx['item'].id;
         const skey2 = keyOf(key2);
@@ -529,7 +529,7 @@ exports[`t-memo > nested memoized lists keep the items of each outer item apart 
       const ctx2 = ctx;
       const [k_block6, v_block6, l_block6, c_block6] = prepareList(ctx['group'].items);
       for (let i2 = 0; i2 < l_block6; i2++) {
-        let ctx = Object.create(ctx2);
+        let ctx = Object.create(ctx1); ctx["group"] = ctx2["group"];
         ctx["item"] = k_block6[i2];
         const key2 = ctx['item'].id;
         const deps2 = [ctx['item'].label];

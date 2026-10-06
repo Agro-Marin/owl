@@ -344,7 +344,7 @@ exports[`t-set > t-set body with a component, output in nested loops 1`] = `
       const ctx2 = ctx;
       const [k_block4, v_block4, l_block4, c_block4] = prepareList(['a']);
       for (let i2 = 0; i2 < l_block4; i2++) {
-        let ctx = Object.create(ctx2);
+        let ctx = Object.create(ctx1); ctx["r"] = ctx2["r"];
         ctx["c"] = k_block4[i2];
         const key2 = ctx['c'];
         const skey2 = keyOf(key2);

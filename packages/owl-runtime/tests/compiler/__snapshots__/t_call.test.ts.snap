@@ -577,7 +577,7 @@ exports[`t-call (template calling) > recursive template, part 2 2`] = `
       ctx["subtree_value"] = v_block3[i1];
       const key1 = ctx['subtree_index'];
       const skey1 = keyOf(key1);
-      const ctx2 = Object.create(ctx);
+      const ctx2 = Object.create(ctx1); ctx2["subtree"] = ctx["subtree"]; ctx2["subtree_first"] = ctx["subtree_first"]; ctx2["subtree_last"] = ctx["subtree_last"]; ctx2["subtree_index"] = ctx["subtree_index"]; ctx2["subtree_value"] = ctx["subtree_value"];
       ctx2["node"] = ctx['subtree'];
       ctx2[zero] = null;
       c_block3[i1] = withKey(callTemplate(\`nodeTemplate\`, this, app, ctx2, node, key + \`\\u00022\\u0002:\${skey1}\`), key1);
@@ -627,7 +627,7 @@ exports[`t-call (template calling) > recursive template, part 3 2`] = `
       ctx["subtree_value"] = v_block3[i1];
       const key1 = ctx['subtree_index'];
       const skey1 = keyOf(key1);
-      const ctx2 = Object.create(ctx);
+      const ctx2 = Object.create(ctx1); ctx2["subtree"] = ctx["subtree"]; ctx2["subtree_first"] = ctx["subtree_first"]; ctx2["subtree_last"] = ctx["subtree_last"]; ctx2["subtree_index"] = ctx["subtree_index"]; ctx2["subtree_value"] = ctx["subtree_value"];
       ctx2["node"] = ctx['subtree'];
       ctx2[zero] = null;
       c_block3[i1] = withKey(callTemplate(\`nodeTemplate\`, this, app, ctx2, node, key + \`\\u00022\\u0002:\${skey1}\`), key1);
@@ -681,7 +681,7 @@ exports[`t-call (template calling) > recursive template, part 4: with t-set recu
       ctx["subtree_value"] = v_block4[i1];
       const key1 = ctx['subtree_index'];
       const skey1 = keyOf(key1);
-      const ctx2 = Object.create(ctx);
+      const ctx2 = Object.create(ctx1); ctx2["subtree"] = ctx["subtree"]; ctx2["subtree_first"] = ctx["subtree_first"]; ctx2["subtree_last"] = ctx["subtree_last"]; ctx2["subtree_index"] = ctx["subtree_index"]; ctx2["subtree_value"] = ctx["subtree_value"];
       ctx2["node"] = ctx['subtree'];
       ctx2["recursive_idx"] = ctx['recursive_idx'];
       ctx2[zero] = null;

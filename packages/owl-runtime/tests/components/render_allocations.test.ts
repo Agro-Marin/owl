@@ -449,3 +449,74 @@ describe("slots reached through a proxy", () => {
     expect(fixture.innerHTML).toBe(expected);
   });
 });
+
+describe("contexts made under a loop item", () => {
+  test("a nested loop's items and a call context copy the loop item's names, made under its prototype", () => {
+    const lines = renderFunctionLines(
+      `<ul><li t-foreach="this.rows" t-as="r" t-key="r"><t t-call="sub" x="1"/><t t-foreach="this.cols" t-as="c" t-key="c"><i t-out="r + c"/></t></li></ul>`
+    );
+    const made = lines.flatMap((line) =>
+      [...line.matchAll(/Object\.create\((ctx\d*)\)/g)].map((m) => m[1])
+    );
+    // the outer items are made under the template's context, and so is
+    // everything made under them
+    expect(made).toEqual(["ctx1", "ctx1", "ctx1"]);
+    expect(lines.filter((line) => /\["r"\] = ctx\d*\["r"\]/.test(line)).length).toBe(2);
+  });
+
+  test("a loop item a t-set writes is inherited from: a later write is seen", async () => {
+    const seen: any[] = [];
+    class Parent extends Component {
+      static template = xml`
+        <t t-foreach="[1, 2]" t-as="a" t-key="a">
+          <t t-set="n" t-value="0"/>
+          <t t-foreach="[1, 2, 3]" t-as="b" t-key="b"><t t-set="n" t-value="n + b"/><i t-out="n"/></t>
+          <t t-foreach="[1]" t-as="c" t-key="c"><button t-on-click="() => this.seen.push(late + n)"/></t>
+          <t t-set="late" t-value="'L'"/>
+          <b t-out="n"/>
+        </t>`;
+      seen = seen;
+    }
+    await mount(Parent, fixture);
+    expect(fixture.innerHTML).toBe(
+      "<i>1</i><i>3</i><i>6</i><button></button><b>6</b><i>1</i><i>3</i><i>6</i><button></button><b>6</b>"
+    );
+    fixture.querySelector("button")!.click();
+    expect(seen).toEqual(["L6"]);
+  });
+
+  test("a template assigning a variable in an expression inherits from its loop items", async () => {
+    const seen: any[] = [];
+    class Parent extends Component {
+      static template = xml`
+        <t t-foreach="[1]" t-as="a" t-key="a">
+          <button class="w" t-on-click="v = 'set'"/>
+          <t t-foreach="[1]" t-as="b" t-key="b"><button class="r" t-on-click="() => this.seen.push(v)"/></t>
+          <t t-call="${xml`<button class="c" t-on-click="() => this.seen.push(v + x)"/>`}" x="'!'"/>
+        </t>`;
+      seen = seen;
+    }
+    await mount(Parent, fixture);
+    fixture.querySelector<HTMLElement>(".w")!.click();
+    fixture.querySelector<HTMLElement>(".r")!.click();
+    fixture.querySelector<HTMLElement>(".c")!.click();
+    expect(seen).toEqual(["set", "set!"]);
+  });
+
+  test("a call context in nested loops sees every loop's names and its own attributes", async () => {
+    const seen: any[] = [];
+    const sub = xml`<button t-on-click="() => this.seen.push([a, a_index, b, b_index, x].join())"/>`;
+    class Parent extends Component {
+      static template = xml`
+        <t t-foreach="['p', 'q']" t-as="a" t-key="a">
+          <t t-foreach="['r', 's']" t-as="b" t-key="b"><t t-call="${sub}" x="a + b" b="b + '!'"/></t>
+        </t>`;
+      seen = seen;
+    }
+    await mount(Parent, fixture);
+    for (const button of fixture.querySelectorAll("button")) {
+      button.click();
+    }
+    expect(seen).toEqual(["p,0,r!,0,pr", "p,0,s!,1,ps", "q,1,r!,0,qr", "q,1,s!,1,qs"]);
+  });
+});

@@ -140,7 +140,7 @@ exports[`misc > global 1`] = `
       const skey1 = keyOf(key1);
       const b5 = safeOutput(ctx['value'], node, key, "\\u00021", 1, key1);
       const b4 = block4([], [b5]);
-      const ctx3 = Object.create(ctx);
+      const ctx3 = Object.create(ctx1); ctx3["value"] = ctx["value"]; ctx3["value_first"] = ctx["value_first"]; ctx3["value_last"] = ctx["value_last"]; ctx3["value_index"] = ctx["value_index"]; ctx3["value_value"] = ctx["value_value"];
       ctx3[zero] = callBody1;
       ctx3[zeroCtx] = ctx;
       const b6 = callTemplate(\`_callee-asc\`, this, app, ctx3, node, key + \`\\u00025\\u0002:\${skey1}\`);

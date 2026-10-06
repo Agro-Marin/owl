@@ -388,7 +388,7 @@ exports[`t-foreach > t-call with body in t-foreach in t-foreach 1`] = `
       const ctx2 = ctx;
       const [k_block4, v_block4, l_block4, c_block4] = prepareList(ctx['letters']);
       for (let i2 = 0; i2 < l_block4; i2++) {
-        let ctx = Object.create(ctx2);
+        let ctx = Object.create(ctx1); ctx["a"] = ctx2["a"]; ctx["a_first"] = ctx2["a_first"]; ctx["a_last"] = ctx2["a_last"]; ctx["a_index"] = ctx2["a_index"]; ctx["a_value"] = ctx2["a_value"];
         ctx["b"] = k_block4[i2];
         ctx["b_first"] = i2 === 0;
         ctx["b_last"] = i2 === k_block4.length - 1;
@@ -396,7 +396,7 @@ exports[`t-foreach > t-call with body in t-foreach in t-foreach 1`] = `
         ctx["b_value"] = v_block4[i2];
         const key2 = ctx['b'];
         const skey2 = keyOf(key2);
-        const ctx3 = Object.create(ctx);
+        const ctx3 = Object.create(ctx1); ctx3["a"] = ctx["a"]; ctx3["a_first"] = ctx["a_first"]; ctx3["a_last"] = ctx["a_last"]; ctx3["a_index"] = ctx["a_index"]; ctx3["a_value"] = ctx["a_value"]; ctx3["b"] = ctx["b"]; ctx3["b_first"] = ctx["b_first"]; ctx3["b_last"] = ctx["b_last"]; ctx3["b_index"] = ctx["b_index"]; ctx3["b_value"] = ctx["b_value"];
         ctx3["c"] = 'x'+'_'+ctx['a']+'_'+ctx['b'];
         ctx3[zero] = null;
         c_block4[i2] = withKey(callTemplate(\`sub\`, this, app, ctx3, node, key + \`\\u00021\\u0002:\${skey1}\\u0002:\${skey2}\`), key2);
@@ -458,7 +458,7 @@ exports[`t-foreach > t-call without body in t-foreach in t-foreach 1`] = `
       const ctx2 = ctx;
       const [k_block4, v_block4, l_block4, c_block4] = prepareList(ctx['letters']);
       for (let i2 = 0; i2 < l_block4; i2++) {
-        let ctx = Object.create(ctx2);
+        let ctx = Object.create(ctx1); ctx["a"] = ctx2["a"]; ctx["a_first"] = ctx2["a_first"]; ctx["a_last"] = ctx2["a_last"]; ctx["a_index"] = ctx2["a_index"]; ctx["a_value"] = ctx2["a_value"];
         ctx["b"] = k_block4[i2];
         ctx["b_first"] = i2 === 0;
         ctx["b_last"] = i2 === k_block4.length - 1;
@@ -521,7 +521,7 @@ exports[`t-foreach > t-foreach in t-foreach 1`] = `
       const ctx2 = ctx;
       const [k_block3, v_block3, l_block3, c_block3] = prepareList(ctx['letters']);
       for (let i2 = 0; i2 < l_block3; i2++) {
-        let ctx = Object.create(ctx2);
+        let ctx = Object.create(ctx1); ctx["number"] = ctx2["number"];
         ctx["letter"] = k_block3[i2];
         const key2 = ctx['letter'];
         const b5 = text(\` [\`);

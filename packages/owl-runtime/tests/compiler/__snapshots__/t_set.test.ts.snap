@@ -143,7 +143,7 @@ exports[`t-set > a t-set body holding a component keeps one component per site a
       const ctx2 = ctx;
       const [k_block6, v_block6, l_block6, c_block6] = prepareList(['x','y']);
       for (let i2 = 0; i2 < l_block6; i2++) {
-        let ctx = Object.create(ctx2);
+        let ctx = Object.create(ctx1); ctx["a"] = ctx2["a"];
         ctx["b"] = k_block6[i2];
         const key2 = ctx['b'];
         c_block6[i2] = withKey(safeOutput(ctx['v'], node, key, "\\u00024", 2, key1, key2), key2);
@@ -152,21 +152,21 @@ exports[`t-set > a t-set body holding a component keeps one component per site a
       const ctx3 = ctx;
       const [k_block8, v_block8, l_block8, c_block8] = prepareList([1]);
       for (let i2 = 0; i2 < l_block8; i2++) {
-        let ctx = Object.create(ctx3);
+        let ctx = Object.create(ctx1); ctx["a"] = ctx3["a"];
         ctx["c"] = k_block8[i2];
         const key2 = ctx['c'];
         const skey2 = keyOf(key2);
         const ctx4 = ctx;
         const [k_block9, v_block9, l_block9, c_block9] = prepareList([1]);
         for (let i3 = 0; i3 < l_block9; i3++) {
-          let ctx = Object.create(ctx4);
+          let ctx = Object.create(ctx1); ctx["a"] = ctx4["a"]; ctx["c"] = ctx4["c"];
           ctx["d"] = k_block9[i3];
           const key3 = ctx['d'];
           const skey3 = keyOf(key3);
           const ctx5 = ctx;
           const [k_block10, v_block10, l_block10, c_block10] = prepareList([{},{}]);
           for (let i4 = 0; i4 < l_block10; i4++) {
-            let ctx = Object.create(ctx5);
+            let ctx = Object.create(ctx1); ctx["a"] = ctx5["a"]; ctx["c"] = ctx5["c"]; ctx["d"] = ctx5["d"];
             ctx["e"] = k_block10[i4];
             ctx["e_index"] = i4;
             const key4 = ctx['e_index'];
@@ -215,7 +215,7 @@ exports[`t-set > a t-set in an ended loop does not change scoping in a later loo
       const ctx2 = ctx;
       const [k_block3, v_block3, l_block3, c_block3] = prepareList([7]);
       for (let i2 = 0; i2 < l_block3; i2++) {
-        let ctx = Object.create(ctx2);
+        let ctx = Object.create(ctx1); ctx["j"] = ctx2["j"];
         ctx["k"] = k_block3[i2];
         const key2 = ctx['k'];
         ctx["x"] = ctx['k'];

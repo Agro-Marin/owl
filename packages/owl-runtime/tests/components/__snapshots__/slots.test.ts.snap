@@ -2250,7 +2250,7 @@ exports[`slots > slot called inside nested loops gets one component per outer it
       const ctx2 = ctx;
       const [k_block4, v_block4, l_block4, c_block4] = prepareList(['a']);
       for (let i2 = 0; i2 < l_block4; i2++) {
-        let ctx = Object.create(ctx2);
+        let ctx = Object.create(ctx1); ctx["r"] = ctx2["r"];
         ctx["c"] = k_block4[i2];
         const key2 = ctx['c'];
         const skey2 = keyOf(key2);
@@ -3128,7 +3128,7 @@ exports[`slots > slots in t-foreach in t-foreach 1`] = `
       const ctx2 = ctx;
       const [k_block7, v_block7, l_block7, c_block7] = prepareList(ctx['node1'].nodes);
       for (let i2 = 0; i2 < l_block7; i2++) {
-        let ctx = Object.create(ctx2);
+        let ctx = Object.create(ctx1); ctx["node1"] = ctx2["node1"];
         ctx["node2"] = k_block7[i2];
         const key2 = ctx['node2'].key;
         const skey2 = keyOf(key2);
@@ -3346,7 +3346,7 @@ exports[`slots > t-out='0' inside nested loops gets one component per outer iter
       const ctx2 = ctx;
       const [k_block3, v_block3, l_block3, c_block3] = prepareList(['a']);
       for (let i2 = 0; i2 < l_block3; i2++) {
-        let ctx = Object.create(ctx2);
+        let ctx = Object.create(ctx1); ctx["r"] = ctx2["r"];
         ctx["c"] = k_block3[i2];
         const key2 = ctx['c'];
         const skey2 = keyOf(key2);
@@ -3465,7 +3465,7 @@ exports[`slots > t-slot in recursive templates 1`] = `
       if (!ctx['item'].children.length) {
         b5 = safeOutput(ctx['item'].name, node, key, "\\u00022", 1, key1);
       } else {
-        const ctx2 = Object.create(ctx);
+        const ctx2 = Object.create(ctx1); ctx2["item"] = ctx["item"]; ctx2["item_first"] = ctx["item_first"]; ctx2["item_last"] = ctx["item_last"]; ctx2["item_index"] = ctx["item_index"]; ctx2["item_value"] = ctx["item_value"];
         ctx2["name"] = ctx['item'].name;
         ctx2["items"] = ctx['item'].children;
         ctx2[zero] = null;
