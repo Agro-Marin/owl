@@ -913,6 +913,68 @@ describe("a failing source in a pending check", () => {
 });
 
 describe("disposed reader", () => {
+  test("a computed whose getter's effect has a throwing cleanup: the error surfaces, every source is released", () => {
+    const manager = new PluginManager({});
+    const s = signal(0);
+    const a = signal(0);
+    let cleanups = 0;
+    const withEffect = manager.run(() =>
+      computed(
+        () => {
+          effect(() => () => {
+            cleanups++;
+            throw new Error("cleanup failed");
+          });
+          return a();
+        },
+        { name: "withEffect" }
+      )
+    );
+    const dispose = effect(() => {
+      withEffect();
+      s();
+    });
+    dispose();
+    expect(observersOf((s as any)[atomSymbol])).toEqual([]);
+    expect(observersOf((a as any)[atomSymbol])).toEqual([]);
+    // the getter's effect belongs to the scope, not to the computed: its
+    // cleanup runs, and its error is reported, when the scope is destroyed
+    expect(cleanups).toBe(0);
+    manager.destroy();
+    expect(cleanups).toBe(1);
+    expect((globalThis as any).__owl_console_output.splice(0)).toEqual([
+      "error:Error: cleanup failed",
+    ]);
+  });
+
+  test("a cascaded dispose that throws still releases every source and disposes its owner's effects", () => {
+    const s = signal(0);
+    const a = signal(0);
+    const derived = createComputation(() => a(), true);
+    const read = () => {
+      updateComputation(derived);
+      onReadAtom(derived);
+    };
+    let ownCleanups = 0;
+    const owner = createComputation(() => {
+      read();
+      s();
+    }, false);
+    updateComputation(owner);
+    // a derived computation owns no effect through the public API: set one
+    derived.owned = new Set([
+      () => {
+        throw new Error("cleanup failed");
+      },
+    ]);
+    owner.owned = new Set([() => ownCleanups++]);
+    expect(() => disposeComputation(owner)).toThrow("cleanup failed");
+    expect(observersOf((s as any)[atomSymbol])).toEqual([]);
+    expect(observersOf((a as any)[atomSymbol])).toEqual([]);
+    expect(owner.state).toBe(ComputationState.EXECUTED);
+    expect(ownCleanups).toBe(1);
+  });
+
   test("an effect disposed unsubscribes the computed it was the last observer of", async () => {
     const s = signal(1);
     const double = computed(() => s() * 2, { name: "double", detached: true });

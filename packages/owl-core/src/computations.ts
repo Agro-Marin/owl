@@ -769,13 +769,15 @@ function observedSources(observer: ComputationAtom): Set<Atom> {
 /**
  * Unsubscribes `computation` from its sources. A derived source it was the
  * last observer of is disposed with it: left subscribed, it would stay
- * reachable from its own sources until one of them is written.
+ * reachable from its own sources until one of them is written. Every source
+ * is released even when disposing one throws; the first error is rethrown.
  */
 export function removeSources(computation: ComputationAtom) {
   let link = computation.deps;
   computation.deps = undefined;
   computation.depsTail = undefined;
   computation.observed = null;
+  let failure: { error: unknown } | null = null;
   while (link !== undefined) {
     const next: Link | undefined = link.nextDep;
     unlinkSub(link);
@@ -784,18 +786,41 @@ export function removeSources(computation: ComputationAtom) {
       if (debug.computed) {
         debugLog("computed", `dispose ${source.name}, ${computation.name} was its last observer`);
       }
-      disposeComputation(source);
+      try {
+        disposeComputation(source);
+      } catch (error) {
+        failure ||= { error };
+      }
     }
     link = next;
   }
+  if (failure) {
+    throw failure.error;
+  }
 }
 
+/**
+ * Disposes `computation`: its sources, then the effects it owns, all of them
+ * even when one throws; the first error is rethrown.
+ */
 export function disposeComputation(computation: ComputationAtom) {
-  removeSources(computation);
+  let failure: { error: unknown } | null = null;
+  try {
+    removeSources(computation);
+  } catch (error) {
+    failure = { error };
+  }
   // A derived computation recomputes when it is read again (a shared
   // computed); any other is done, and a run already queued for it is skipped.
   computation.state = computation.isDerived ? ComputationState.STALE : ComputationState.EXECUTED;
-  disposeOwned(computation);
+  try {
+    disposeOwned(computation);
+  } catch (error) {
+    failure ||= { error };
+  }
+  if (failure) {
+    throw failure.error;
+  }
 }
 
 /**
