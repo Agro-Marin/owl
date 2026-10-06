@@ -69,9 +69,9 @@ export function selector<K>(source: () => K, options: SelectorOptions = {}): (ke
         started = true;
       } else if (answered !== !failure) {
         // failed or recovered: every key's answer changed
-        notifyAll();
+        notify(atoms.keys());
       } else if (!failure && !Object.is(previous, current)) {
-        notifyKeys(previous, current);
+        notify([previous, current]);
         if (++changes >= atoms.size) {
           sweep();
         }
@@ -86,30 +86,22 @@ export function selector<K>(source: () => K, options: SelectorOptions = {}): (ke
     options.name || (debug.computed && source.name) || "selector"
   );
 
-  function notify(key: K) {
-    const atom = atoms.get(key);
-    if (atom === undefined) {
-      return;
-    }
-    onWriteAtom(atom);
-    if (!hasObservers(atom)) {
-      atoms.delete(key);
-    }
-  }
-
   // one batch: an immediate reader runs once, after every key is notified,
   // and one that throws does not keep the others from being notified
-  function notifyKeys(previous: K, next: K) {
+  function notify(keys: Iterable<K>) {
     untrack(() =>
       batch(() => {
-        notify(previous);
-        notify(next);
+        for (const key of keys) {
+          const atom = atoms.get(key);
+          if (atom !== undefined) {
+            onWriteAtom(atom);
+            if (!hasObservers(atom)) {
+              atoms.delete(key);
+            }
+          }
+        }
       })
     );
-  }
-
-  function notifyAll() {
-    untrack(() => batch(() => atoms.forEach((_, key) => notify(key))));
   }
 
   // keys read once and never again would keep their atoms: drop the

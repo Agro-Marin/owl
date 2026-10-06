@@ -68,11 +68,6 @@ export function asyncComputed<T>(
   // rejects: errors are surfaced through `error()`.
   let pending: { promise: Promise<void>; resolve: () => void } | null = null;
 
-  function beginRun() {
-    loading.set(true);
-    inFlight = true;
-  }
-
   // Settles the current run. Must not read a signal — it also runs on the
   // synchronous path of the effect (the fetcher throwing), where a read would
   // register as a spurious dependency.
@@ -104,7 +99,8 @@ export function asyncComputed<T>(
       abortSignals.push(scope.abortSignal);
     }
 
-    beginRun();
+    loading.set(true);
+    inFlight = true;
     error.set(null);
 
     let promise: Promise<T>;

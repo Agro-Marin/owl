@@ -42,7 +42,7 @@ function createEffect<T>(fn: () => T, immediate: boolean, options?: EffectOption
       let failure: { error: unknown } | null = null;
       if (computation.value || computation.owned) {
         try {
-          releaseUntracked(computation);
+          runUnowned(release, computation);
         } catch (error) {
           // the run still happens: skipping it would leave the effect
           // subscribed to nothing, dead for good
@@ -68,7 +68,7 @@ function createEffect<T>(fn: () => T, immediate: boolean, options?: EffectOption
         // the dispose is released too
         computation.value = cleanup;
         removeSources(computation);
-        releaseUntracked(computation);
+        runUnowned(release, computation);
         return undefined;
       }
       if (failure) {
@@ -119,7 +119,7 @@ function createEffect<T>(fn: () => T, immediate: boolean, options?: EffectOption
     // called. See test "dispose called inside another effect: cleanup's atom
     // reads do not leak to outer".
     if (computation.value || computation.owned) {
-      releaseUntracked(computation);
+      runUnowned(release, computation);
     }
   }
 
@@ -146,14 +146,10 @@ export function adopt(dispose: () => void): ComputationAtom | undefined {
   return owner;
 }
 
-// Runs the cleanup function and disposes the child effects of `effect`, with
-// nothing tracking their reads or owning what they create.
-function releaseUntracked(effect: ComputationAtom) {
-  runUnowned(release, effect);
-}
-
-// Releases everything even when a cleanup throws, then rethrows the first
-// error: a cleanup that throws must not keep the effect's children alive.
+// Runs the cleanup function and disposes the child effects of `effect` (with
+// nothing tracking their reads or owning what they create: run through
+// runUnowned). Releases everything even when a cleanup throws, then rethrows
+// the first error: a cleanup that throws must not keep the effect's children alive.
 // The children go first: created by this effect's run, they may use what its
 // own cleanup tears down.
 function release(effect: ComputationAtom) {
@@ -163,21 +159,15 @@ function release(effect: ComputationAtom) {
   } catch (error) {
     failure = { error };
   }
+  // the computation.value of an effect is its cleanup function, called once
+  const cleanup = effect.value;
+  effect.value = undefined;
   try {
-    runCleanup(effect);
+    cleanup?.();
   } catch (error) {
     failure ||= { error };
   }
   if (failure) {
     throw failure.error;
-  }
-}
-
-function runCleanup(effect: ComputationAtom) {
-  // the computation.value of an effect is its cleanup function, called once
-  const cleanupFn = effect.value;
-  effect.value = undefined;
-  if (cleanupFn) {
-    cleanupFn();
   }
 }

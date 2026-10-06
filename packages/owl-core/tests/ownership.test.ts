@@ -5,6 +5,7 @@ import {
   computed,
   effect,
   immediateEffect,
+  observe,
   Plugin,
   PluginManager,
   Resource,
@@ -294,6 +295,28 @@ describe("a cleanup that throws while computeds are disposed in bulk", () => {
 });
 
 describe("an effect created inside untrack", () => {
+  test("by a getter read through an observe() view, inside untrack, belongs to the effect running", async () => {
+    const s = signal(0);
+    const view = observe(
+      {
+        get value() {
+          return untrack(() => owned());
+        },
+      },
+      () => {}
+    );
+    const dispose = effect(() => {
+      s();
+      untrack(() => view.value);
+    });
+    expect(live).toBe(1);
+    s.set(1);
+    await waitScheduler();
+    expect(live).toBe(1);
+    dispose();
+    expect(live).toBe(0);
+  });
+
   test("within an effect is disposed when that effect re-runs and when it is disposed", async () => {
     const s = signal(0);
     const dispose = effect(() => {

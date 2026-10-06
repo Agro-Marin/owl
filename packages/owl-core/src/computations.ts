@@ -650,7 +650,7 @@ export function updateComputation(computation: ComputationAtom) {
   if (computation.running) {
     // read while it runs: its value is what is being computed
     if (debug.error) {
-      debugLog("error", `cycle: ${computation.name} read while it runs`);
+      debugLog("error", `cycle: ${computation.name}`);
     }
     throw new OwlError(
       `Cycle detected: ${computation.name || "a computation"} reads its own value`
@@ -683,7 +683,7 @@ export function updateComputation(computation: ComputationAtom) {
       // as if its run had thrown: it stays subscribed, and the next change of
       // a source queues it again (left pending, nothing ever would)
       if (debug.error) {
-        debugLog("error", `${computation.name}: a source threw while it was checked`, error);
+        debugLog("error", `${computation.name}: a source threw`, error);
       }
       computation.state = ComputationState.EXECUTED;
       computation.forward = false;
@@ -1020,22 +1020,13 @@ function markDownstream(computation: ComputationAtom) {
 export function untrack<T>(fn: (...args: any[]) => T): T {
   const previousComputation = currentComputation;
   const previousObserver = currentObserver;
-  if (previousComputation === undefined) {
-    if (previousObserver === undefined) {
-      // nothing tracks: nothing to suspend
-      return fn();
-    }
-    currentObserver = undefined;
-    try {
-      return fn();
-    } finally {
-      currentObserver = previousObserver;
-    }
+  if (previousComputation === undefined && previousObserver === undefined) {
+    // nothing tracks: nothing to suspend
+    return fn();
   }
   const previousOwner = currentOwner;
-  currentOwner = previousComputation;
-  currentComputation = undefined;
-  currentObserver = undefined;
+  currentOwner = previousComputation ?? previousOwner;
+  currentComputation = currentObserver = undefined;
   try {
     return fn();
   } finally {
@@ -1052,9 +1043,7 @@ export function runUnowned<A, T>(fn: (arg: A) => T, arg: A): T {
   const previousComputation = currentComputation;
   const previousObserver = currentObserver;
   const previousOwner = currentOwner;
-  currentComputation = undefined;
-  currentObserver = undefined;
-  currentOwner = undefined;
+  currentComputation = currentObserver = currentOwner = undefined;
   try {
     return fn(arg);
   } finally {
