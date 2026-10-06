@@ -178,6 +178,14 @@ true })` creates an effect owned by nothing. When a computed and an effect
   modifiers come from the key. `config.mainEventHandler` is
   `(fn, mods, ctx, ev, currentTarget, arg?)`. A render allocates no handler
   array.
+- **Every keyed site** (component, slot call, `t-out="0"`, `t-set` body,
+  `t-call`, `t-memo` list) carries a site id before its loop keys: two sites
+  of one template never share a key (a slot called in a loop and again after
+  it no longer leaves an untracked component no deep render or destroy
+  reaches).
+- **A `t-on` on a component or slot mounted by its component's own render**
+  looks up the handler enclosing it at its first dispatch, not mid-patch
+  (logged on `event`).
 - **A list empties its parent at once only when its items, one node each,
   and its anchor are all the parent holds** (checked node by node, again
   after the unmount hooks); otherwise it removes them one by one. What a
@@ -256,6 +264,18 @@ snapshot of the committed children; `App.version` + `__info__.hash` scope the te
    module's shape (it imports nothing since the compiler registers itself).
 
 ## Test suites beyond upstream's
+
+- `owl-runtime/tests/compiler/template_fuzz.test.ts` also mounts random
+  templates as components (slots, `t-call`, `t-on` with `.stop`/`.prevent`/
+  `.self`/`.capture`, `t-model` in both forms with `.lazy`/`.trim`/`.number`,
+  bound properties), dispatches every event on every element after each
+  render, and checks which handlers ran, where, and `defaultPrevented` against
+  a propagation model, plus form state after simulated edits and deep renders
+  (`OWL_TEMPLATE_FUZZ_SEED` picks the seed). It fails within four templates
+  on the handler-order bug d6c1a1da fixed, which owl's other suites missed
+  (that bug did not need a child block: a handler on a nested element
+  followed by a sibling's sufficed). `model_based.test.ts` checks click
+  dispatch, a stale loop context included.
 
 - `owl-core/tests/foreign_proxy.ts`: targets behind a foreign Proxy (Odoo
   mail's record and `RecordList` shapes, forwarding Proxies); the owl-core and
