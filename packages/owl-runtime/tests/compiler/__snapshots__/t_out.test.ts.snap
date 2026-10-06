@@ -9,7 +9,7 @@ exports[`t-esc is deprecated > should warn 1`] = `
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['var'], key, "__1");
+    const b2 = safeOutput(ctx['var'], node, key, "\\u00021");
     return block1([], [b2]);
   }
 }"
@@ -25,11 +25,11 @@ exports[`t-esc is deprecated > t-esc on a component is its default slot, as t-ou
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
   function slot1(ctx, node, key = "") {
-    return safeOutput('hi', key, "__1");
+    return safeOutput('hi', node, key, "\\u00021");
   }
   
   return function template(ctx, node, key = "") {
-    const b3 = comp1({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`__2\`, node, this, null);
+    const b3 = comp1({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`\\u00022\`, node, this, null);
     return block1([], [b3]);
   }
 }"
@@ -44,7 +44,7 @@ exports[`t-esc is deprecated > t-esc on a component is its default slot, as t-ou
   let block1 = createBlock(\`<b>[<block-child-0/>]</b>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = callSlot(ctx, node, key + \`__1\`, "default", false, null);
+    const b2 = callSlot(ctx, node, key + \`\\u00021\`, "default", false, null);
     return block1([], [b2]);
   }
 }"
@@ -59,7 +59,7 @@ exports[`t-esc is deprecated > t-out is actually called in t-esc's place 1`] = `
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['var'], key, "__1");
+    const b2 = safeOutput(ctx['var'], node, key, "\\u00021");
     return block1([], [b2]);
   }
 }"
@@ -74,7 +74,7 @@ exports[`t-out > literal 1`] = `
   let block1 = createBlock(\`<span><block-child-0/></span>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput('ok', key, "__1");
+    const b2 = safeOutput('ok', node, key, "\\u00021");
     return block1([], [b2]);
   }
 }"
@@ -87,7 +87,7 @@ exports[`t-out > literal, no outside html element 1`] = `
   let { safeOutput } = helpers;
   
   return function template(ctx, node, key = "") {
-    return safeOutput('ok', key, "__1");
+    return safeOutput('ok', node, key, "\\u00021");
   }
 }"
 `;
@@ -109,7 +109,7 @@ exports[`t-out > multiple calls to t-out 1`] = `
     const ctx1 = Object.create(ctx);
     ctx1[zero] = callBody1;
     ctx1[zeroCtx] = ctx;
-    const b2 = callTemplate(\`sub\`, this, app, ctx1, node, key + \`__1\`);
+    const b2 = callTemplate(\`sub\`, this, app, ctx1, node, key + \`\\u00021\`);
     return block1([], [b2]);
   }
 }"
@@ -124,8 +124,8 @@ exports[`t-out > multiple calls to t-out 2`] = `
   let block1 = createBlock(\`<div><block-child-0/><div>Greeter</div><block-child-1/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = ctx[zero] ? ctx[zero].call(this, ctx[zeroCtx], node, key + \`__1\`) : text("");
-    const b3 = ctx[zero] ? ctx[zero].call(this, ctx[zeroCtx], node, key + \`__2\`) : text("");
+    const b2 = ctx[zero] ? ctx[zero].call(this, ctx[zeroCtx], node, key + \`\\u00021\`) : text("");
+    const b3 = ctx[zero] ? ctx[zero].call(this, ctx[zeroCtx], node, key + \`\\u00022\`) : text("");
     return block1([], [b2, b3]);
   }
 }"
@@ -140,7 +140,7 @@ exports[`t-out > not escaping 1`] = `
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['var'], key, "__1");
+    const b2 = safeOutput(ctx['var'], node, key, "\\u00021");
     return block1([], [b2]);
   }
 }"
@@ -155,7 +155,7 @@ exports[`t-out > number literal 1`] = `
   let block1 = createBlock(\`<span><block-child-0/></span>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(1, key, "__1");
+    const b2 = safeOutput(1, node, key, "\\u00021");
     return block1([], [b2]);
   }
 }"
@@ -178,7 +178,7 @@ exports[`t-out > t-out 0 1`] = `
     const ctx1 = Object.create(ctx);
     ctx1[zero] = callBody1;
     ctx1[zeroCtx] = ctx;
-    const b2 = callTemplate(\`_basic-callee\`, this, app, ctx1, node, key + \`__1\`);
+    const b2 = callTemplate(\`_basic-callee\`, this, app, ctx1, node, key + \`\\u00021\`);
     return block1([], [b2]);
   }
 }"
@@ -193,7 +193,7 @@ exports[`t-out > t-out 0 2`] = `
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = ctx[zero] ? ctx[zero].call(this, ctx[zeroCtx], node, key + \`__1\`) : text("");
+    const b2 = ctx[zero] ? ctx[zero].call(this, ctx[zeroCtx], node, key + \`\\u00021\`) : text("");
     return block1([], [b2]);
   }
 }"
@@ -208,7 +208,7 @@ exports[`t-out > t-out and another sibling node 1`] = `
   let block1 = createBlock(\`<span><span>hello</span><block-child-0/></span>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['var'], key, "__1");
+    const b2 = safeOutput(ctx['var'], node, key, "\\u00021");
     return block1([], [b2]);
   }
 }"
@@ -229,8 +229,8 @@ exports[`t-out > t-out bdom 1`] = `
   
   return function template(ctx, node, key = "") {
     ctx = Object.create(ctx);
-    ctx["var"] = new LazyValue(value1, ctx, this, node, key + \`__1\`);
-    const b3 = safeOutput(ctx['var'], key, "__2");
+    ctx["var"] = new LazyValue(value1, ctx, this, node, key + \`\\u00021\`);
+    const b3 = safeOutput(ctx['var'], node, key, "\\u00022");
     return block1([], [b3]);
   }
 }"
@@ -246,13 +246,13 @@ exports[`t-out > t-out default body is only rendered when used 1`] = `
   let block3 = createBlock(\`<span><block-child-0/></span>\`);
   
   function defaultContent1(ctx, node, key = "") {
-    const b4 = safeOutput(ctx['f'](), key, "__2");
+    const b4 = safeOutput(ctx['f'](), node, key, "\\u00022");
     return block3([], [b4]);
   }
   
   return function template(ctx, node, key = "") {
     const out1 = ctx['x'];
-    const b2 = out1 === undefined || out1 === null ? toggler("default", defaultContent1.call(this, ctx, node, key + \`__1\`)) : safeOutput(out1, key, "__1");
+    const b2 = out1 === undefined || out1 === null ? toggler("default", defaultContent1.call(this, ctx, node, key + \`\\u00021\`)) : safeOutput(out1, node, key, "\\u00021");
     return block1([], [b2]);
   }
 }"
@@ -270,7 +270,7 @@ exports[`t-out > t-out default body that does not start with a block 1`] = `
   
   function defaultContent1(ctx, node, key = "") {
     ctx = Object.create(ctx);
-    ctx["y"] = new LazyValue(value1, ctx, this, node, key + \`__2\`);
+    ctx["y"] = new LazyValue(value1, ctx, this, node, key + \`\\u00022\`);
     return block4();
   }
   
@@ -280,7 +280,7 @@ exports[`t-out > t-out default body that does not start with a block 1`] = `
   
   return function template(ctx, node, key = "") {
     const out1 = ctx['x'];
-    const b2 = out1 === undefined || out1 === null ? toggler("default", defaultContent1.call(this, ctx, node, key + \`__1\`)) : safeOutput(out1, key, "__1");
+    const b2 = out1 === undefined || out1 === null ? toggler("default", defaultContent1.call(this, ctx, node, key + \`\\u00021\`)) : safeOutput(out1, node, key, "\\u00021");
     return block1([], [b2]);
   }
 }"
@@ -295,7 +295,7 @@ exports[`t-out > t-out escaped 1`] = `
   let block1 = createBlock(\`<span><block-child-0/></span>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['var'], key, "__1");
+    const b2 = safeOutput(ctx['var'], node, key, "\\u00021");
     return block1([], [b2]);
   }
 }"
@@ -310,7 +310,7 @@ exports[`t-out > t-out markedup 1`] = `
   let block1 = createBlock(\`<span><block-child-0/></span>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['var'], key, "__1");
+    const b2 = safeOutput(ctx['var'], node, key, "\\u00021");
     return block1([], [b2]);
   }
 }"
@@ -333,7 +333,7 @@ exports[`t-out > t-out on a <t> with a body, as a default 1`] = `
   
   return function template(ctx, node, key = "") {
     const out1 = ctx['var'];
-    const b2 = out1 === undefined || out1 === null ? toggler("default", defaultContent1.call(this, ctx, node, key + \`__1\`)) : safeOutput(out1, key, "__1");
+    const b2 = out1 === undefined || out1 === null ? toggler("default", defaultContent1.call(this, ctx, node, key + \`\\u00021\`)) : safeOutput(out1, node, key, "\\u00021");
     return block1([], [b2]);
   }
 }"
@@ -353,7 +353,7 @@ exports[`t-out > t-out on a node with a body, as a default 1`] = `
   
   return function template(ctx, node, key = "") {
     const out1 = ctx['var'];
-    const b2 = out1 === undefined || out1 === null ? toggler("default", defaultContent1.call(this, ctx, node, key + \`__1\`)) : safeOutput(out1, key, "__1");
+    const b2 = out1 === undefined || out1 === null ? toggler("default", defaultContent1.call(this, ctx, node, key + \`\\u00021\`)) : safeOutput(out1, node, key, "\\u00021");
     return block1([], [b2]);
   }
 }"
@@ -374,7 +374,7 @@ exports[`t-out > t-out on a node with a dom node in body, as a default 1`] = `
   
   return function template(ctx, node, key = "") {
     const out1 = ctx['var'];
-    const b2 = out1 === undefined || out1 === null ? toggler("default", defaultContent1.call(this, ctx, node, key + \`__1\`)) : safeOutput(out1, key, "__1");
+    const b2 = out1 === undefined || out1 === null ? toggler("default", defaultContent1.call(this, ctx, node, key + \`\\u00021\`)) : safeOutput(out1, node, key, "\\u00021");
     return block1([], [b2]);
   }
 }"
@@ -389,7 +389,7 @@ exports[`t-out > t-out switch escaped 1`] = `
   let block1 = createBlock(\`<span><block-child-0/></span>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['var'], key, "__1");
+    const b2 = safeOutput(ctx['var'], node, key, "\\u00021");
     return block1([], [b2]);
   }
 }"
@@ -404,7 +404,7 @@ exports[`t-out > t-out switch escaped on markup 1`] = `
   let block1 = createBlock(\`<span><block-child-0/></span>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['var'], key, "__1");
+    const b2 = safeOutput(ctx['var'], node, key, "\\u00021");
     return block1([], [b2]);
   }
 }"
@@ -419,7 +419,7 @@ exports[`t-out > t-out switch markup 1`] = `
   let block1 = createBlock(\`<span><block-child-0/></span>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['var'], key, "__1");
+    const b2 = safeOutput(ctx['var'], node, key, "\\u00021");
     return block1([], [b2]);
   }
 }"
@@ -443,12 +443,12 @@ exports[`t-out > t-out switch markup on bdom 1`] = `
   return function template(ctx, node, key = "") {
     ctx = Object.create(ctx);
     let b3, b5;
-    ctx["bdom"] = new LazyValue(value1, ctx, this, node, key + \`__1\`);
+    ctx["bdom"] = new LazyValue(value1, ctx, this, node, key + \`\\u00021\`);
     if (ctx['hasBdom']) {
-      const b4 = safeOutput(ctx['bdom'], key, "__2");
+      const b4 = safeOutput(ctx['bdom'], node, key, "\\u00022");
       b3 = block3([], [b4]);
     } else {
-      const b6 = safeOutput(ctx['var'], key, "__3");
+      const b6 = safeOutput(ctx['var'], node, key, "\\u00023");
       b5 = block5([], [b6]);
     }
     return block1([], [b3, b5]);
@@ -465,7 +465,7 @@ exports[`t-out > t-out switch markup on escaped 1`] = `
   let block1 = createBlock(\`<span><block-child-0/></span>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['var'], key, "__1");
+    const b2 = safeOutput(ctx['var'], node, key, "\\u00021");
     return block1([], [b2]);
   }
 }"
@@ -478,7 +478,7 @@ exports[`t-out > t-out with a <t/> in body 1`] = `
   let { safeOutput } = helpers;
   
   return function template(ctx, node, key = "") {
-    return safeOutput(ctx['var'], key, "__1");
+    return safeOutput(ctx['var'], node, key, "\\u00021");
   }
 }"
 `;
@@ -492,7 +492,7 @@ exports[`t-out > t-out with arbitrary object 1`] = `
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['var'], key, "__1");
+    const b2 = safeOutput(ctx['var'], node, key, "\\u00021");
     return block1([], [b2]);
   }
 }"
@@ -507,7 +507,7 @@ exports[`t-out > t-out with arbitrary object 2 1`] = `
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['var'], key, "__1");
+    const b2 = safeOutput(ctx['var'], node, key, "\\u00021");
     return block1([], [b2]);
   }
 }"
@@ -522,7 +522,7 @@ exports[`t-out > t-out with comment 1`] = `
   let block1 = createBlock(\`<span><block-child-0/></span>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['var'], key, "__1");
+    const b2 = safeOutput(ctx['var'], node, key, "\\u00021");
     return block1([], [b2]);
   }
 }"
@@ -542,7 +542,7 @@ exports[`t-out > t-out with just a t-set t-value in body 1`] = `
   
   return function template(ctx, node, key = "") {
     const out1 = ctx['var'];
-    return out1 === undefined || out1 === null ? toggler("default", defaultContent1.call(this, ctx, node, key + \`__1\`)) : safeOutput(out1, key, "__1");
+    return out1 === undefined || out1 === null ? toggler("default", defaultContent1.call(this, ctx, node, key + \`\\u00021\`)) : safeOutput(out1, node, key, "\\u00021");
   }
 }"
 `;
@@ -554,7 +554,7 @@ exports[`t-out > t-out with the 0 number 1`] = `
   let { safeOutput } = helpers;
   
   return function template(ctx, node, key = "") {
-    return safeOutput(ctx['var'], key, "__1");
+    return safeOutput(ctx['var'], node, key, "\\u00021");
   }
 }"
 `;
@@ -568,7 +568,7 @@ exports[`t-out > t-out with the 0 number, in a p 1`] = `
   let block1 = createBlock(\`<p><block-child-0/></p>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['var'], key, "__1");
+    const b2 = safeOutput(ctx['var'], node, key, "\\u00021");
     return block1([], [b2]);
   }
 }"
@@ -581,7 +581,7 @@ exports[`t-out > top level t-out with null 1`] = `
   let { safeOutput } = helpers;
   
   return function template(ctx, node, key = "") {
-    return safeOutput(ctx['var'], key, "__1");
+    return safeOutput(ctx['var'], node, key, "\\u00021");
   }
 }"
 `;
@@ -593,7 +593,7 @@ exports[`t-out > top level t-out with undefined 1`] = `
   let { safeOutput } = helpers;
   
   return function template(ctx, node, key = "") {
-    return safeOutput(ctx['var'], key, "__1");
+    return safeOutput(ctx['var'], node, key, "\\u00021");
   }
 }"
 `;
@@ -607,7 +607,7 @@ exports[`t-out > variable 1`] = `
   let block1 = createBlock(\`<span><block-child-0/></span>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['var'], key, "__1");
+    const b2 = safeOutput(ctx['var'], node, key, "\\u00021");
     return block1([], [b2]);
   }
 }"
@@ -622,7 +622,7 @@ exports[`t-out > with a String class 1`] = `
   let block1 = createBlock(\`<span><block-child-0/></span>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['var'], key, "__1");
+    const b2 = safeOutput(ctx['var'], node, key, "\\u00021");
     return block1([], [b2]);
   }
 }"
@@ -637,7 +637,7 @@ exports[`t-out > with an extended String class 1`] = `
   let block1 = createBlock(\`<span><block-child-0/></span>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['var'], key, "__1");
+    const b2 = safeOutput(ctx['var'], node, key, "\\u00021");
     return block1([], [b2]);
   }
 }"

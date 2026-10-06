@@ -232,7 +232,7 @@ exports[`t-if > dynamic content after t-if with two children nodes 1`] = `
       const b4 = block4();
       b2 = multi([b3, b4]);
     }
-    b5 = safeOutput(ctx['text'], key, "__1");
+    b5 = safeOutput(ctx['text'], node, key, "\\u00021");
     return block1([], [b2, b5]);
   }
 }"
@@ -347,7 +347,7 @@ exports[`t-if > t-if as only child of a node leaves a single child in the node 1
   return function template(ctx, node, key = "") {
     let b2;
     if (ctx['c']) {
-      b2 = safeOutput(ctx['x'], key, "__1");
+      b2 = safeOutput(ctx['x'], node, key, "\\u00021");
     }
     return block1([], [b2]);
   }
@@ -441,7 +441,7 @@ exports[`t-if > t-out with t-elif 1`] = `
     if (false) {
       b2 = text(\`abc\`);
     } else {
-      b3 = safeOutput('x', key, "__1");
+      b3 = safeOutput('x', node, key, "\\u00021");
     }
     return block1([], [b2, b3]);
   }
@@ -459,7 +459,7 @@ exports[`t-if > t-out with t-if 1`] = `
   return function template(ctx, node, key = "") {
     let b2;
     if (true) {
-      b2 = safeOutput('x', key, "__1");
+      b2 = safeOutput('x', node, key, "\\u00021");
     }
     return block1([], [b2]);
   }
@@ -479,7 +479,7 @@ exports[`t-if > t-set, then t-if 1`] = `
     let b2;
     ctx["title"] = 'test';
     if (ctx['title']) {
-      b2 = safeOutput(ctx['title'], key, "__1");
+      b2 = safeOutput(ctx['title'], node, key, "\\u00021");
     }
     return block1([], [b2]);
   }
@@ -583,7 +583,7 @@ exports[`t-if > two t-ifs next to each other 1`] = `
   return function template(ctx, node, key = "") {
     let b2, b4;
     if (ctx['condition']) {
-      const b3 = safeOutput(ctx['text'], key, "__1");
+      const b3 = safeOutput(ctx['text'], node, key, "\\u00021");
       b2 = block2([], [b3]);
     }
     if (ctx['condition']) {

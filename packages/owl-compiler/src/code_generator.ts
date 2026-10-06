@@ -34,6 +34,10 @@ import {
 // loop levels whose keys a t-out passes to safeOutput as is (see compileTOut)
 const MAX_LAZY_LOOP_KEYS = 3;
 
+// the mark that starts a segment of a key (see keyOf in the runtime's
+// template_helpers), as written in a string literal of the generated code
+const KEY_MARK = "\\u0002";
+
 type BlockType = "block" | "text" | "multi" | "list" | "html";
 // HTML whitespace: a non-breaking space is content, never condensed
 const whitespaceRE = /[ \t\n\r\f]+/g;
@@ -261,7 +265,7 @@ class CodeTarget {
   // list's child is always in
   currentKey(ctx: Context) {
     if (ctx.tKeyExpr) {
-      return `${ctx.tKeyExpr} + ${this.stringKey(this.loopLevel)}`;
+      return `\`\${${this.stringKey(this.loopLevel)}}${KEY_MARK}k\${${ctx.tKeyExpr}}\``;
     }
     return `key${this.loopLevel}`;
   }
@@ -818,8 +822,8 @@ export class CodeGenerator {
       // sites, or once per loop iteration, renders its components under each.
       // Only a LazyValue needs it, so its parts are passed and safeOutput joins
       // them only then: the key, the site id, and the raw loop keys
-      const site = this.generateId("__");
-      const keyExpr = ctx.tKeyExpr ? `${ctx.tKeyExpr} + key` : "key";
+      const site = this.siteId();
+      const keyExpr = ctx.tKeyExpr ? `key + \`${KEY_MARK}k\${${ctx.tKeyExpr}}\`` : "key";
       const level = this.target.loopLevel;
       let keyArgs: string;
       if (level <= MAX_LAZY_LOOP_KEYS) {
@@ -831,9 +835,9 @@ export class CodeGenerator {
           }
         }
         const loopKeys = Array.from({ length: level }, (_, i) => `, key${i + 1}`).join("");
-        keyArgs = `${keyExpr}, "${site}"${level ? `, ${level}${loopKeys}` : ""}`;
+        keyArgs = `node, ${keyExpr}, "${site}"${level ? `, ${level}${loopKeys}` : ""}`;
       } else {
-        keyArgs = `${this.scopeKey(ctx, site)}, ""`;
+        keyArgs = `node, ${this.scopeKey(ctx, site)}, ""`;
       }
       const expr = compileExpr(ast.expr);
       this.helpers.add("safeOutput");
@@ -1184,17 +1188,21 @@ export class CodeGenerator {
     return null;
   }
 
-  // the key of a site's content: the site's id, then the key of each open
-  // loop. Every site has an id: without one, a site's loop keys could spell
-  // another site's id (`__2` for the item keyed 2 and for the site __2), and
-  // the two would share a key in their component's children.
-  scopeKey(ctx: Context, site: string = this.generateId("__")): string {
-    let suffix = site;
+  // the key of a site's content: the t-key around it, the site's id, then
+  // the key of each open loop, each a segment of its own (see keyOf in the
+  // runtime): no loop key, t-key or id can spell another, so two sites, or
+  // two items of a site, never share a key in their component's children
+  scopeKey(ctx: Context, site: string = this.siteId()): string {
+    let suffix = ctx.tKeyExpr ? `${KEY_MARK}k\${${ctx.tKeyExpr}}${site}` : site;
     for (let i = 1; i <= this.target.loopLevel; i++) {
-      suffix += `__\${${this.target.stringKey(i)}}`;
+      suffix += `${KEY_MARK}:\${${this.target.stringKey(i)}}`;
     }
-    const key = `key + \`${suffix}\``;
-    return ctx.tKeyExpr ? `${ctx.tKeyExpr} + ${key}` : key;
+    return `key + \`${suffix}\``;
+  }
+
+  // a keyed site's id, unique in the template, as written in the generated code
+  siteId(): string {
+    return this.generateId(KEY_MARK);
   }
 
   /**

@@ -49,10 +49,10 @@ function callSlot(
   defaultContent?: (ctx: any, node: any, key: string) => BDom,
   owner?: any
 ): BDom {
-  key = key + "__slot_" + name;
   const slots = ctx.__owl__.props.slots;
   const slot = slots && slots[name];
   let slotBDom: BDom | null = null;
+  const segment = escapeKey(name);
   if (slot && slot.__render) {
     // a slot renders in the context it was written in: a scope of its own
     // only for its slot scope variable. Its code writes no variable into the
@@ -64,7 +64,7 @@ function callSlot(
       slotCtx = ObjectCreate(slotCtx);
       slotCtx[slot.__scope] = extra || {};
     }
-    slotBDom = slot.__render.call(slot.__owner, slotCtx, parent, key);
+    slotBDom = slot.__render.call(slot.__owner, slotCtx, parent, key + MARK + "s" + segment);
   }
   if (defaultContent) {
     let child1: BDom | undefined = undefined;
@@ -72,53 +72,107 @@ function callSlot(
     if (slotBDom) {
       child1 = dynamic ? toggler(name, slotBDom) : slotBDom;
     } else {
-      child2 = defaultContent.call(owner, ctx, parent, key);
+      // its sites are numbered in another template than the slot's: the
+      // same key would give a component of one to a site of the other
+      child2 = defaultContent.call(owner, ctx, parent, key + MARK + "d" + segment);
     }
     return multi([child1, child2]);
   }
   return slotBDom || text("");
 }
 
-// string keys (component, slot, t-call keys) are built by concatenation: a key
-// takes the string form it has there. An object, a function or a symbol is
-// told apart by identity, with an id of its own instead of "[object Object]";
-// an array keeps its string form, so that a new array of the same items is the
-// same key. An id is \u0002 and a number (or "for:" and the registry name of a
-// registered symbol), and a \u0002 in a string key is doubled: no string key
-// can read as an id.
+// A key (of a child component, a memo site) is the path to its site: a string
+// of segments, each a mark, a tag and a payload. The mark is \u0002, and every
+// payload taken from a template's values doubles it, so a mark followed by
+// anything but another mark always starts a segment, and two different paths
+// never spell one key, whatever the loop keys, t-keys, slot and template names.
+// The compiler writes the static segments in the generated code:
+//   \u0002<digits>  a site (component, slot call, t-call, t-out, t-set body,
+//                   t-memo list), its id unique in its template
+//   \u0002:<value>  the key of an open loop, after its site
+//   \u0002k<value>  the t-key around a site, before it
+// and the helpers below the others:
+//   \u0002s<name>   a slot's content, \u0002d<name> its default content
+//   \u0002t<name>   the template a t-call renders
+//   \u0002c<id>     a dynamic component's class
+//   \u0002v[<id>]   a t-set body at its output site, then the body's own key
+//                   (the id of the component it was set in, when another one
+//                   outputs it)
+const MARK = "\u0002";
+const MARK2 = MARK + MARK;
+
+function escapeKey(name: string): string {
+  return name.includes(MARK) ? name.replaceAll(MARK, MARK2) : name;
+}
+
+// A value's payload tells every value apart, its type included. A number is
+// its digits; a string is itself, escaped, quoted with ' when its first
+// character is at or below "@" (as a number's, a quoted string's and the
+// others' are); the others start with "@": "@3" an object, a function or an
+// unregistered symbol (by identity), "@true", "@null", "@undefined", "@5n",
+// "@NaN", "@-Infinity", "@for:<name>" a registered symbol, and "@[" an array:
+// the payload of each item followed by \u0002, then \u0002] (a new array of
+// the same items is the same key).
 const objectKeys = new WeakMap<object, string>();
 let nextObjectKey = 0;
-const ID_MARK = "\u0002";
+
+function identityKey(key: any): string {
+  let id = objectKeys.get(key);
+  if (id === undefined) {
+    id = "@" + ++nextObjectKey;
+    objectKeys.set(key, id);
+  }
+  return id;
+}
 
 function keyOf(key: any): string {
-  if (typeof key === "string") {
-    return key.includes(ID_MARK) ? key.replaceAll(ID_MARK, ID_MARK + ID_MARK) : key;
+  if (typeof key === "number") {
+    const digits = "" + key;
+    // a finite number ends with a digit; NaN and the infinities do not
+    return digits.charCodeAt(digits.length - 1) <= 0x39 ? digits : "@" + digits;
   }
-  if ((typeof key === "object" && key !== null) || typeof key === "function") {
-    if (Array.isArray(key)) {
-      return keyOf(String(key));
+  if (typeof key === "string") {
+    if (key.includes(MARK)) {
+      key = key.replaceAll(MARK, MARK2);
     }
-    let id = objectKeys.get(key);
-    if (id === undefined) {
-      id = ID_MARK + ++nextObjectKey;
-      objectKeys.set(key, id);
-    }
-    return id;
+    // the others start with a digit, "-" or "@", all at or below "@"
+    return key.charCodeAt(0) <= 0x40 ? "'" + key : key;
+  }
+  if (typeof key === "object" && key !== null) {
+    return Array.isArray(key) ? arrayKey(key, null) : identityKey(key);
+  }
+  if (typeof key === "function") {
+    return identityKey(key);
   }
   if (typeof key === "symbol") {
     // a registered symbol cannot be a WeakMap key; it is its registry name
     const name = Symbol.keyFor(key);
-    if (name !== undefined) {
-      return ID_MARK + "for:" + name;
-    }
-    let id = objectKeys.get(key as any);
-    if (id === undefined) {
-      id = ID_MARK + ++nextObjectKey;
-      objectKeys.set(key as any, id);
-    }
-    return id;
+    return name === undefined ? identityKey(key) : "@for:" + escapeKey(name);
   }
-  return "" + key;
+  if (typeof key === "bigint") {
+    return "@" + key + "n";
+  }
+  // a boolean, null, undefined
+  return "@" + key;
+}
+
+// an array among the items of an array that holds it is "@^" and how many
+// levels up it is
+function arrayKey(items: any[], open: any[][] | null): string {
+  const outer = open || [];
+  outer.push(items);
+  let result = "@[";
+  for (const item of items) {
+    const level = Array.isArray(item) ? outer.indexOf(item) : -1;
+    if (level !== -1) {
+      result += "@^" + (outer.length - level);
+    } else {
+      result += Array.isArray(item) ? arrayKey(item, outer) : keyOf(item);
+    }
+    result += MARK + ",";
+  }
+  outer.pop();
+  return result + MARK + "]";
 }
 
 function withKey(elem: any, k: string) {
@@ -169,8 +223,23 @@ class LazyValue {
     this.key = key;
   }
 
-  evaluate(siteKey: string = ""): any {
-    return this.fn.call(this.component, this.ctx, this.node, this.key + siteKey);
+  // Renders the body at an output site of `node`, whose components it is:
+  // they are in its DOM, its render creates and updates them, and its
+  // destruction or a render dropping the site destroys them. Their key is the
+  // site's, then this value's (its node's id first when it is not `node`: two
+  // components may output their own values at one site of a third).
+  evaluate(siteKey: string = "", node: any = this.node): any {
+    let key = siteKey + MARK + "v";
+    if (node !== this.node) {
+      key += identityKey(this.node);
+      if (debug.fiber) {
+        debugLog(
+          "fiber",
+          `t-set body of ${this.node.componentName} output by ${node.componentName}: its components are ${node.componentName}'s`
+        );
+      }
+    }
+    return this.fn.call(this.component, this.ctx, node, key + this.key);
   }
 
   // what an attribute or an interpolation makes of a t-set body: its HTML. A
@@ -204,10 +273,12 @@ function holdsComponent(bdom: any): boolean {
 /*
  * Safely outputs `value` as a block depending on the nature of `value`. A
  * LazyValue (a t-set body) renders under the key of the output site: `key` +
- * `site` + the `depth` loop keys around it, joined only for a LazyValue.
+ * `site` + the `depth` loop keys around it, joined only for a LazyValue, in
+ * the component `node` renders.
  */
 export function safeOutput(
   value: any,
+  node?: any,
   key: string = "",
   site: string = "",
   depth: number = 0,
@@ -227,15 +298,15 @@ export function safeOutput(
     safeKey = `lazy_value`;
     let siteKey = key + site;
     if (depth) {
-      siteKey += "__" + keyOf(k1);
+      siteKey += MARK + ":" + keyOf(k1);
       if (depth > 1) {
-        siteKey += "__" + keyOf(k2);
+        siteKey += MARK + ":" + keyOf(k2);
         if (depth > 2) {
-          siteKey += "__" + keyOf(k3);
+          siteKey += MARK + ":" + keyOf(k3);
         }
       }
     }
-    block = value.evaluate(siteKey);
+    block = value.evaluate(siteKey, node);
   } else {
     safeKey = "string_unsafe";
     block = text(value);
@@ -481,7 +552,7 @@ function renderAfter(
   );
 }
 
-// A dynamic component's key starts with its class's: a node is reused only by
+// A dynamic component's key ends with its class's: a node is reused only by
 // the class that created it. An id, not the class name, which two classes may
 // share.
 const classKeys = new WeakMap<Function, string>();
@@ -490,7 +561,7 @@ let nextClassKey = 1;
 function classKey(C: Function): string {
   let key = classKeys.get(C);
   if (key === undefined) {
-    key = `${C.name}#${nextClassKey++}`;
+    key = MARK + "c" + nextClassKey++;
     classKeys.set(C, key);
   }
   return key;
@@ -550,7 +621,7 @@ function createComponent<P extends Record<string, any>>(
 
   return (props: P, key: string, ctx: ComponentNode, parent: any, C: any) => {
     if (isDynamic) {
-      key = classKey(C) + key;
+      key = key + classKey(C);
     }
     let node: any = ctx.childMap?.get(key);
     const parentFiber = ctx.fiber!;
@@ -631,9 +702,8 @@ function callTemplate(
   key: any
 ): any {
   const template = app.getTemplate(subTemplate);
-  // a template name holds no \u0002: the last one splits the key from it, so
-  // key "1" calling "2b" and key "12" calling "b" stay apart
-  return toggler(subTemplate, template.call(owner, ctx, parent, key + ID_MARK + subTemplate));
+  const callKey = key + MARK + "t" + escapeKey(subTemplate);
+  return toggler(subTemplate, template.call(owner, ctx, parent, callKey));
 }
 
 // A t-tag value is spliced into block markup: anything that could close the

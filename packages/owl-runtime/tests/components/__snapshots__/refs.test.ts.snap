@@ -141,7 +141,7 @@ exports[`refs > ref in slot is unset across a t-if nested inside the slot conten
   return function template(ctx, node, key = "") {
     let b4;
     if (ctx['this'].visible()) {
-      b4 = comp1({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`__1\`, node, this, null);
+      b4 = comp1({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`\\u00021\`, node, this, null);
     }
     return multi([b4]);
   }
@@ -157,7 +157,7 @@ exports[`refs > ref in slot is unset across a t-if nested inside the slot conten
   let block1 = createBlock(\`<section><block-child-0/></section>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = callSlot(ctx, node, key + \`__1\`, "default", false, null);
+    const b2 = callSlot(ctx, node, key + \`\\u00021\`, "default", false, null);
     return block1([], [b2]);
   }
 }"
@@ -181,7 +181,7 @@ exports[`refs > ref in slot is unset when an intermediate host is removed in pla
   return function template(ctx, node, key = "") {
     let b2;
     if (ctx['this'].show()) {
-      const b4 = comp1({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`__1\`, node, this, null);
+      const b4 = comp1({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`\\u00021\`, node, this, null);
       b2 = block2([], [b4]);
     }
     return multi([b2]);
@@ -198,7 +198,7 @@ exports[`refs > ref in slot is unset when an intermediate host is removed in pla
   let block1 = createBlock(\`<i><block-child-0/></i>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = callSlot(ctx, node, key + \`__1\`, "default", false, null);
+    const b2 = callSlot(ctx, node, key + \`\\u00021\`, "default", false, null);
     return block1([], [b2]);
   }
 }"
@@ -221,7 +221,7 @@ exports[`refs > ref in slot is unset when forwarded through a nested component 1
   return function template(ctx, node, key = "") {
     let b3;
     if (ctx['this'].visible()) {
-      b3 = comp1({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`__1\`, node, this, null);
+      b3 = comp1({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`\\u00021\`, node, this, null);
     }
     return multi([b3]);
   }
@@ -238,11 +238,11 @@ exports[`refs > ref in slot is unset when forwarded through a nested component 2
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
   function slot1(ctx, node, key = "") {
-    return callSlot(ctx, node, key + \`__1\`, "default", false, null);
+    return callSlot(ctx, node, key + \`\\u00021\`, "default", false, null);
   }
   
   return function template(ctx, node, key = "") {
-    const b3 = comp1({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`__2\`, node, this, null);
+    const b3 = comp1({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`\\u00022\`, node, this, null);
     return block1([], [b3]);
   }
 }"
@@ -257,7 +257,7 @@ exports[`refs > ref in slot is unset when forwarded through a nested component 3
   let block1 = createBlock(\`<i><block-child-0/></i>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = callSlot(ctx, node, key + \`__1\`, "default", false, null);
+    const b2 = callSlot(ctx, node, key + \`\\u00021\`, "default", false, null);
     return block1([], [b2]);
   }
 }"
@@ -278,7 +278,7 @@ exports[`refs > ref in slot is unset when the host removes it in place (host sur
   }
   
   return function template(ctx, node, key = "") {
-    return comp1({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`__1\`, node, this, null);
+    return comp1({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`\\u00021\`, node, this, null);
   }
 }"
 `;
@@ -294,7 +294,7 @@ exports[`refs > ref in slot is unset when the host removes it in place (host sur
   return function template(ctx, node, key = "") {
     let b2;
     if (ctx['this'].show()) {
-      const b3 = callSlot(ctx, node, key + \`__1\`, "default", false, null);
+      const b3 = callSlot(ctx, node, key + \`\\u00021\`, "default", false, null);
       b2 = block2([], [b3]);
     }
     return multi([b2]);
@@ -319,7 +319,7 @@ exports[`refs > ref in slot is unset when the slot host is removed 1`] = `
   return function template(ctx, node, key = "") {
     let b3;
     if (ctx['this'].visible()) {
-      b3 = comp1({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`__1\`, node, this, null);
+      b3 = comp1({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`\\u00021\`, node, this, null);
     }
     return multi([b3]);
   }
@@ -335,7 +335,7 @@ exports[`refs > ref in slot is unset when the slot host is removed 2`] = `
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = callSlot(ctx, node, key + \`__1\`, "default", false, null);
+    const b2 = callSlot(ctx, node, key + \`\\u00021\`, "default", false, null);
     return block1([], [b2]);
   }
 }"
@@ -349,7 +349,7 @@ exports[`refs > ref is set by child component 1`] = `
   const comp1 = createComponent(app, \`Child\`, true, false, false, ["ref"]);
   
   return function template(ctx, node, key = "") {
-    return comp1({ref: ctx['this'].ref}, key + \`__1\`, node, this, null);
+    return comp1({ref: ctx['this'].ref}, key + \`\\u00021\`, node, this, null);
   }
 }"
 `;
@@ -399,7 +399,7 @@ exports[`refs > ref is unset even when a sub-root is destroyed re-entrantly mid-
   return function template(ctx, node, key = "") {
     let b3;
     if (ctx['this'].show()) {
-      b3 = comp1({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`__1\`, node, this, null);
+      b3 = comp1({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`\\u00021\`, node, this, null);
     }
     return multi([b3]);
   }
@@ -415,7 +415,7 @@ exports[`refs > ref is unset even when a sub-root is destroyed re-entrantly mid-
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = callSlot(ctx, node, key + \`__1\`, "default", false, null);
+    const b2 = callSlot(ctx, node, key + \`\\u00021\`, "default", false, null);
     return block1([], [b2]);
   }
 }"
@@ -505,7 +505,7 @@ exports[`refs > ref shared between t-if and t-else, t-else has a slotted compone
       let ref1 = createRef(ctx['this'].ref, node);
       b2 = block2([ref1]);
     } else {
-      b4 = comp1({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`__1\`, node, this, null);
+      b4 = comp1({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`\\u00021\`, node, this, null);
     }
     return multi([b2, b4]);
   }
@@ -519,7 +519,7 @@ exports[`refs > ref shared between t-if and t-else, t-else has a slotted compone
   let { callSlot } = helpers;
   
   return function template(ctx, node, key = "") {
-    return callSlot(ctx, node, key + \`__1\`, "default", false, null);
+    return callSlot(ctx, node, key + \`\\u00021\`, "default", false, null);
   }
 }"
 `;
@@ -536,9 +536,9 @@ exports[`refs > refs and recursive templates 1`] = `
   return function template(ctx, node, key = "") {
     let b2, b3;
     let ref1 = createRef(ctx['this'].root, node);
-    b2 = safeOutput(ctx['this'].props.tree.value, key, "__1");
+    b2 = safeOutput(ctx['this'].props.tree.value, node, key, "\\u00021");
     if (ctx['this'].props.tree.child) {
-      b3 = comp1({tree: ctx['this'].props.tree.child}, key + \`__2\`, node, this, null);
+      b3 = comp1({tree: ctx['this'].props.tree.child}, key + \`\\u00022\`, node, this, null);
     }
     return block1([ref1], [b2, b3]);
   }
@@ -582,8 +582,8 @@ exports[`refs > refs are properly bound in slots 1`] = `
   }
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].state.val, key, "__1");
-    const b4 = comp1({slots: markRaw({"footer": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`__2\`, node, this, null);
+    const b2 = safeOutput(ctx['this'].state.val, node, key, "\\u00021");
+    const b4 = comp1({slots: markRaw({"footer": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`\\u00022\`, node, this, null);
     return block1([], [b2, b4]);
   }
 }"
@@ -598,7 +598,7 @@ exports[`refs > refs are properly bound in slots 2`] = `
   let block1 = createBlock(\`<span><block-child-0/></span>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = callSlot(ctx, node, key + \`__1\`, "footer", false, null);
+    const b2 = callSlot(ctx, node, key + \`\\u00021\`, "footer", false, null);
     return block1([], [b2]);
   }
 }"
@@ -699,7 +699,7 @@ exports[`refs > set-like ref in slot drops its element when the slot host is rem
   return function template(ctx, node, key = "") {
     let b3;
     if (ctx['this'].visible()) {
-      b3 = comp1({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`__1\`, node, this, null);
+      b3 = comp1({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`\\u00021\`, node, this, null);
     }
     return multi([b3]);
   }
@@ -715,7 +715,7 @@ exports[`refs > set-like ref in slot drops its element when the slot host is rem
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = callSlot(ctx, node, key + \`__1\`, "default", false, null);
+    const b2 = callSlot(ctx, node, key + \`\\u00021\`, "default", false, null);
     return block1([], [b2]);
   }
 }"

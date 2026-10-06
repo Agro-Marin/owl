@@ -378,7 +378,7 @@ describe("list of components", () => {
     expect(getConsoleOutput()).toEqual([]);
   });
 
-  test("dev mode: keys the list tells apart but the components share are duplicates", async () => {
+  test("dev mode: keys the list tells apart give their components keys of their own", async () => {
     class Child extends Component {
       static template = xml`<i t-out="this.props.v"/>`;
       props = props();
@@ -388,17 +388,13 @@ describe("list of components", () => {
       static components = { Child };
       items = [1, "1"];
     }
-    let error: any;
-    try {
-      await mount(Parent, fixture, { test: true });
-    } catch (e) {
-      error = e;
-    }
-    expect(error?.message).toBe("Got duplicate key in t-foreach: 1");
+    const parent = await mount(Parent, fixture, { test: true });
+    expect(fixture.innerHTML).toBe("<i>1</i><i>1</i>");
+    expect(Object.keys(parent.__owl__.children)).toHaveLength(2);
     expect(getConsoleOutput()).toEqual([]);
   });
 
-  test("dev mode: keys a t-set body output in the loop shares are duplicates", async () => {
+  test("dev mode: keys the list tells apart give a t-set body output in the loop keys of its own", async () => {
     class Child extends Component {
       static template = xml`<i>child</i>`;
     }
@@ -409,13 +405,9 @@ describe("list of components", () => {
       static components = { Child };
       items = [1, "1"];
     }
-    let error: any;
-    try {
-      await mount(Parent, fixture, { test: true });
-    } catch (e) {
-      error = e;
-    }
-    expect(error?.message).toBe("Got duplicate key in t-foreach: 1");
+    const parent = await mount(Parent, fixture, { test: true });
+    expect(fixture.innerHTML).toBe("<i>child</i><i>child</i>");
+    expect(Object.keys(parent.__owl__.children)).toHaveLength(2);
     expect(getConsoleOutput()).toEqual([]);
   });
 

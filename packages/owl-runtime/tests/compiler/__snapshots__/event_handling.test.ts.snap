@@ -186,7 +186,7 @@ exports[`t-on > handler is bound to proper owner, part 3 1`] = `
   let { zero, withoutZero, callTemplate } = helpers;
   
   return function template(ctx, node, key = "") {
-    return callTemplate(\`sub\`, this, app, ctx[zero] ? withoutZero(ctx) : ctx, node, key + \`__1\`);
+    return callTemplate(\`sub\`, this, app, ctx[zero] ? withoutZero(ctx) : ctx, node, key + \`\\u00021\`);
   }
 }"
 `;
@@ -224,7 +224,7 @@ exports[`t-on > handler is bound to proper owner, part 4 1`] = `
       ctx["value_value"] = v_block1[i1];
       const key1 = ctx['value'];
       const skey1 = keyOf(key1);
-      c_block1[i1] = withKey(callTemplate(\`sub\`, this, app, ctx[zero] ? withoutZero(ctx) : ctx, node, key + \`__1__\${skey1}\`), key1);
+      c_block1[i1] = withKey(callTemplate(\`sub\`, this, app, ctx[zero] ? withoutZero(ctx) : ctx, node, key + \`\\u00021\\u0002:\${skey1}\`), key1);
     }
     return list(c_block1);
   }
@@ -287,7 +287,7 @@ exports[`t-on > t-on modifiers (native listener) > t-on combined with t-out 1`] 
   let block1 = createBlock(\`<div><button block-handler-0="click"><block-child-0/></button></div>\`, [hdlr_fn1]);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['html'], key, "__1");
+    const b2 = safeOutput(ctx['html'], node, key, "\\u00021");
     return block1([ctx], [b2]);
   }
 }"
@@ -401,7 +401,7 @@ exports[`t-on > t-on modifiers (native listener) > t-on with prevent modifier in
       let ctx = Object.create(ctx1);
       ctx["project"] = k_block2[i1];
       const key1 = ctx['project'];
-      const b4 = safeOutput(ctx['project'].name, key, "__1", 1, key1);
+      const b4 = safeOutput(ctx['project'].name, node, key, "\\u00021", 1, key1);
       c_block2[i1] = withKey(block3([ctx], [b4]), key1);
     }
     const b2 = list(c_block2);
@@ -522,7 +522,7 @@ exports[`t-on > t-on with t-call 1`] = `
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = callTemplate(\`sub\`, this, app, ctx[zero] ? withoutZero(ctx) : ctx, node, key + \`__1\`);
+    const b2 = callTemplate(\`sub\`, this, app, ctx[zero] ? withoutZero(ctx) : ctx, node, key + \`\\u00021\`);
     return block1([], [b2]);
   }
 }"
@@ -552,7 +552,7 @@ exports[`t-on > t-on, with arguments and t-call 1`] = `
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = callTemplate(\`sub\`, this, app, ctx[zero] ? withoutZero(ctx) : ctx, node, key + \`__1\`);
+    const b2 = callTemplate(\`sub\`, this, app, ctx[zero] ? withoutZero(ctx) : ctx, node, key + \`\\u00021\`);
     return block1([], [b2]);
   }
 }"

@@ -8,7 +8,7 @@ exports[`t-key > a t-key on the t-call node itself recreates it when the key cha
   
   return function template(ctx, node, key = "") {
     const tKey_1 = keyOf(ctx['this'].state.k);
-    return toggler(tKey_1, callTemplate(\`sub\`, this, app, ctx[zero] ? withoutZero(ctx) : ctx, node, tKey_1 + key + \`__1\`));
+    return toggler(tKey_1, callTemplate(\`sub\`, this, app, ctx[zero] ? withoutZero(ctx) : ctx, node, key + \`\\u0002k\${tKey_1}\\u00021\`));
   }
 }"
 `;
@@ -21,7 +21,7 @@ exports[`t-key > a t-key on the t-call node itself recreates it when the key cha
   const comp1 = createComponent(app, \`Cell\`, true, false, false, []);
   
   return function template(ctx, node, key = "") {
-    return comp1({}, key + \`__1\`, node, this, null);
+    return comp1({}, key + \`\\u00021\`, node, this, null);
   }
 }"
 `;
@@ -35,7 +35,7 @@ exports[`t-key > a t-key on the t-call node itself recreates it when the key cha
   let block1 = createBlock(\`<b><block-child-0/></b>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].id, key, "__1");
+    const b2 = safeOutput(ctx['this'].id, node, key, "\\u00021");
     return block1([], [b2]);
   }
 }"
@@ -50,7 +50,7 @@ exports[`t-key > an array t-key is its string form: a new array of the same item
   
   return function template(ctx, node, key = "") {
     const tKey_1 = keyOf([ctx['this'].state.a,'b']);
-    return toggler(tKey_1, comp1({n: ctx['this'].state.n}, tKey_1 + key + \`__1\`, node, this, null));
+    return toggler(tKey_1, comp1({n: ctx['this'].state.n}, key + \`\\u0002k\${tKey_1}\\u00021\`, node, this, null));
   }
 }"
 `;
@@ -64,7 +64,7 @@ exports[`t-key > an array t-key is its string form: a new array of the same item
   let block1 = createBlock(\`<i><block-child-0/></i>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].props.n, key, "__1");
+    const b2 = safeOutput(ctx['this'].props.n, node, key, "\\u00021");
     return block1([], [b2]);
   }
 }"
@@ -89,7 +89,7 @@ exports[`t-key > an object key never shares a component with a string key 1`] = 
       if (keys1.has(skey1)) { throw new OwlError(\`Got duplicate key in t-foreach: \${key1}\`)}
       keys1.add(skey1);
       const props1 = {v: typeof ctx['item']};
-      c_block1[i1] = withKey(comp1(props1, key + \`__1__\${skey1}\`, node, this, null), key1);
+      c_block1[i1] = withKey(comp1(props1, key + \`\\u00021\\u0002:\${skey1}\`, node, this, null), key1);
     }
     return list(c_block1);
   }
@@ -105,7 +105,7 @@ exports[`t-key > an object key never shares a component with a string key 2`] = 
   let block1 = createBlock(\`<i><block-child-0/></i>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].props.v, key, "__1");
+    const b2 = safeOutput(ctx['this'].props.v, node, key, "\\u00021");
     return block1([], [b2]);
   }
 }"
@@ -120,7 +120,7 @@ exports[`t-key > an object t-key on a component recreates it when it changes 1`]
   
   return function template(ctx, node, key = "") {
     const tKey_1 = keyOf(ctx['this'].state.k);
-    return toggler(tKey_1, comp1({}, tKey_1 + key + \`__1\`, node, this, null));
+    return toggler(tKey_1, comp1({}, key + \`\\u0002k\${tKey_1}\\u00021\`, node, this, null));
   }
 }"
 `;
@@ -157,7 +157,7 @@ exports[`t-key > symbol keys are told apart by identity 1`] = `
       if (keys1.has(skey1)) { throw new OwlError(\`Got duplicate key in t-foreach: \${key1}\`)}
       keys1.add(skey1);
       const props1 = {v: ctx['item'].v};
-      c_block1[i1] = withKey(comp1(props1, key + \`__1__\${skey1}\`, node, this, null), key1);
+      c_block1[i1] = withKey(comp1(props1, key + \`\\u00021\\u0002:\${skey1}\`, node, this, null), key1);
     }
     return list(c_block1);
   }
@@ -173,7 +173,7 @@ exports[`t-key > symbol keys are told apart by identity 2`] = `
   let block1 = createBlock(\`<i><block-child-0/></i>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].props.v, key, "__1");
+    const b2 = safeOutput(ctx['this'].props.v, node, key, "\\u00021");
     return block1([], [b2]);
   }
 }"
@@ -187,7 +187,7 @@ exports[`t-key > t-call under a t-key is recreated when the key changes 1`] = `
   
   return function template(ctx, node, key = "") {
     const tKey_1 = keyOf(ctx['this'].state.k);
-    return toggler(tKey_1, callTemplate(\`sub\`, this, app, ctx[zero] ? withoutZero(ctx) : ctx, node, tKey_1 + key + \`__1\`));
+    return toggler(tKey_1, callTemplate(\`sub\`, this, app, ctx[zero] ? withoutZero(ctx) : ctx, node, key + \`\\u0002k\${tKey_1}\\u00021\`));
   }
 }"
 `;
@@ -200,7 +200,7 @@ exports[`t-key > t-call under a t-key is recreated when the key changes 2`] = `
   const comp1 = createComponent(app, \`Cell\`, true, false, false, []);
   
   return function template(ctx, node, key = "") {
-    return comp1({}, key + \`__1\`, node, this, null);
+    return comp1({}, key + \`\\u00021\`, node, this, null);
   }
 }"
 `;
@@ -214,7 +214,7 @@ exports[`t-key > t-call under a t-key is recreated when the key changes 3`] = `
   let block1 = createBlock(\`<b><block-child-0/></b>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].id, key, "__1");
+    const b2 = safeOutput(ctx['this'].id, node, key, "\\u00021");
     return block1([], [b2]);
   }
 }"
@@ -238,7 +238,7 @@ exports[`t-key > t-foreach with t-key switch component position 1`] = `
       const key1 = ctx['c'];
       const skey1 = keyOf(key1);
       const tKey_1 = keyOf(ctx['this'].key1);
-      c_block2[i1] = withKey(comp1({key: ctx['c']+ctx['this'].key1}, tKey_1 + key + \`__1__\${skey1}\`, node, this, null), tKey_1 + skey1);
+      c_block2[i1] = withKey(comp1({key: ctx['c']+ctx['this'].key1}, key + \`\\u0002k\${tKey_1}\\u00021\\u0002:\${skey1}\`, node, this, null), \`\${skey1}\\u0002k\${tKey_1}\`);
     }
     const b2 = list(c_block2);
     return block1([], [b2]);
@@ -255,7 +255,7 @@ exports[`t-key > t-foreach with t-key switch component position 2`] = `
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].props.key, key, "__1");
+    const b2 = safeOutput(ctx['this'].props.key, node, key, "\\u00021");
     return block1([], [b2]);
   }
 }"
@@ -274,7 +274,7 @@ exports[`t-key > t-key change on a component rendering an empty list 1`] = `
   return function template(ctx, node, key = "") {
     const b2 = block2();
     const tKey_1 = keyOf(ctx['this'].key);
-    const b3 = toggler(tKey_1, comp1({items: ctx['this'].items}, tKey_1 + key + \`__1\`, node, this, null));
+    const b3 = toggler(tKey_1, comp1({items: ctx['this'].items}, key + \`\\u0002k\${tKey_1}\\u00021\`, node, this, null));
     const b4 = block4();
     return multi([b2, b3, b4]);
   }
@@ -295,7 +295,7 @@ exports[`t-key > t-key change on a component rendering an empty list 2`] = `
       ctx["item"] = k_block1[i1];
       ctx["item_index"] = i1;
       const key1 = ctx['item_index'];
-      c_block1[i1] = withKey(safeOutput(ctx['item'], key, "__1", 1, key1), key1);
+      c_block1[i1] = withKey(safeOutput(ctx['item'], node, key, "\\u00021", 1, key1), key1);
     }
     return list(c_block1);
   }
@@ -311,7 +311,7 @@ exports[`t-key > t-key on Component 1`] = `
   
   return function template(ctx, node, key = "") {
     const tKey_1 = keyOf(ctx['this'].key);
-    return toggler(tKey_1, comp1({key: ctx['this'].key}, tKey_1 + key + \`__1\`, node, this, null));
+    return toggler(tKey_1, comp1({key: ctx['this'].key}, key + \`\\u0002k\${tKey_1}\\u00021\`, node, this, null));
   }
 }"
 `;
@@ -325,7 +325,7 @@ exports[`t-key > t-key on Component 2`] = `
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].props.key, key, "__1");
+    const b2 = safeOutput(ctx['this'].props.key, node, key, "\\u00021");
     return block1([], [b2]);
   }
 }"
@@ -342,7 +342,7 @@ exports[`t-key > t-key on Component as a function 1`] = `
   
   return function template(ctx, node, key = "") {
     const tKey_1 = keyOf(ctx['this'].key);
-    const b2 = toggler(tKey_1, comp1({key: ctx['this'].key}, tKey_1 + key + \`__1\`, node, this, null));
+    const b2 = toggler(tKey_1, comp1({key: ctx['this'].key}, key + \`\\u0002k\${tKey_1}\\u00021\`, node, this, null));
     return block1([], [b2]);
   }
 }"
@@ -357,7 +357,7 @@ exports[`t-key > t-key on Component as a function 2`] = `
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].props.key, key, "__1");
+    const b2 = safeOutput(ctx['this'].props.key, node, key, "\\u00021");
     return block1([], [b2]);
   }
 }"
@@ -375,9 +375,9 @@ exports[`t-key > t-key on multiple Components 1`] = `
   
   return function template(ctx, node, key = "") {
     const tKey_1 = keyOf(ctx['this'].key1);
-    const b2 = toggler(tKey_1, comp1({key: ctx['this'].key1}, tKey_1 + key + \`__1\`, node, this, null));
+    const b2 = toggler(tKey_1, comp1({key: ctx['this'].key1}, key + \`\\u0002k\${tKey_1}\\u00021\`, node, this, null));
     const tKey_2 = keyOf(ctx['this'].key2);
-    const b3 = toggler(tKey_2, comp2({key: ctx['this'].key2}, tKey_2 + key + \`__2\`, node, this, null));
+    const b3 = toggler(tKey_2, comp2({key: ctx['this'].key2}, key + \`\\u0002k\${tKey_2}\\u00022\`, node, this, null));
     return block1([], [b2, b3]);
   }
 }"
@@ -392,7 +392,7 @@ exports[`t-key > t-key on multiple Components 2`] = `
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].props.key, key, "__1");
+    const b2 = safeOutput(ctx['this'].props.key, node, key, "\\u00021");
     return block1([], [b2]);
   }
 }"
@@ -410,11 +410,11 @@ exports[`t-key > t-key on multiple Components with t-call 1 1`] = `
     const ctx1 = Object.create(ctx);
     ctx1["key"] = ctx['this'].key1;
     ctx1[zero] = null;
-    const b2 = callTemplate(\`calledTemplate\`, this, app, ctx1, node, key + \`__1\`);
+    const b2 = callTemplate(\`calledTemplate\`, this, app, ctx1, node, key + \`\\u00021\`);
     const ctx2 = Object.create(ctx);
     ctx2["key"] = ctx['this'].key2;
     ctx2[zero] = null;
-    const b3 = callTemplate(\`calledTemplate\`, this, app, ctx2, node, key + \`__2\`);
+    const b3 = callTemplate(\`calledTemplate\`, this, app, ctx2, node, key + \`\\u00022\`);
     return block1([], [b2, b3]);
   }
 }"
@@ -429,7 +429,7 @@ exports[`t-key > t-key on multiple Components with t-call 1 2`] = `
   
   return function template(ctx, node, key = "") {
     const tKey_1 = keyOf(ctx['key']);
-    return toggler(tKey_1, comp1({key: ctx['key']}, tKey_1 + key + \`__1\`, node, this, null));
+    return toggler(tKey_1, comp1({key: ctx['key']}, key + \`\\u0002k\${tKey_1}\\u00021\`, node, this, null));
   }
 }"
 `;
@@ -443,7 +443,7 @@ exports[`t-key > t-key on multiple Components with t-call 1 3`] = `
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].props.key, key, "__1");
+    const b2 = safeOutput(ctx['this'].props.key, node, key, "\\u00021");
     return block1([], [b2]);
   }
 }"
@@ -462,7 +462,7 @@ exports[`t-key > t-key on multiple Components with t-call 2 1`] = `
     ctx1["key1"] = ctx['this'].key1;
     ctx1["key2"] = ctx['this'].key2;
     ctx1[zero] = null;
-    const b2 = callTemplate(\`calledTemplate\`, this, app, ctx1, node, key + \`__1\`);
+    const b2 = callTemplate(\`calledTemplate\`, this, app, ctx1, node, key + \`\\u00021\`);
     return block1([], [b2]);
   }
 }"
@@ -478,9 +478,9 @@ exports[`t-key > t-key on multiple Components with t-call 2 2`] = `
   
   return function template(ctx, node, key = "") {
     const tKey_1 = keyOf(ctx['key1']);
-    const b2 = toggler(tKey_1, comp1({key: ctx['key1']}, tKey_1 + key + \`__1\`, node, this, null));
+    const b2 = toggler(tKey_1, comp1({key: ctx['key1']}, key + \`\\u0002k\${tKey_1}\\u00021\`, node, this, null));
     const tKey_2 = keyOf(ctx['key2']);
-    const b3 = toggler(tKey_2, comp2({key: ctx['key2']}, tKey_2 + key + \`__2\`, node, this, null));
+    const b3 = toggler(tKey_2, comp2({key: ctx['key2']}, key + \`\\u0002k\${tKey_2}\\u00022\`, node, this, null));
     return multi([b2, b3]);
   }
 }"
@@ -495,7 +495,7 @@ exports[`t-key > t-key on multiple Components with t-call 2 3`] = `
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].props.key, key, "__1");
+    const b2 = safeOutput(ctx['this'].props.key, node, key, "\\u00021");
     return block1([], [b2]);
   }
 }"

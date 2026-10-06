@@ -8,7 +8,7 @@ exports[`slots > .translate slot props are translated 1`] = `
   const comp1 = createComponent(app, \`Child\`, true, true, false, []);
   
   return function template(ctx, node, key = "") {
-    return comp1({slots: markRaw({"default": {message: \`translated message\`}})}, key + \`__1\`, node, this, null);
+    return comp1({slots: markRaw({"default": {message: \`translated message\`}})}, key + \`\\u00021\`, node, this, null);
   }
 }"
 `;
@@ -20,7 +20,7 @@ exports[`slots > .translate slot props are translated 2`] = `
   let { safeOutput } = helpers;
   
   return function template(ctx, node, key = "") {
-    return safeOutput(ctx['this'].props.slots.default.message, key, "__1");
+    return safeOutput(ctx['this'].props.slots.default.message, node, key, "\\u00021");
   }
 }"
 `;
@@ -38,8 +38,8 @@ exports[`slots > a component with t-props and slots of its own gets both, the sl
   }
   
   return function template(ctx, node, key = "") {
-    const b2 = comp1({a: 'A'}, key + \`__1\`, node, this, null);
-    const b4 = comp2({a: 'A',slots: markRaw({"b": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`__2\`, node, this, null);
+    const b2 = comp1({a: 'A'}, key + \`\\u00021\`, node, this, null);
+    const b4 = comp2({a: 'A',slots: markRaw({"b": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`\\u00022\`, node, this, null);
     return multi([b2, b4]);
   }
 }"
@@ -63,7 +63,7 @@ exports[`slots > a component with t-props and slots of its own gets both, the sl
   return function template(ctx, node, key = "") {
     const props1 = {...ctx['this'].props};
     props1.slots = markRaw(Object.assign({"b": {__render: slot1, __ctx: ctx, __owner: this}, "default": {__render: slot2, __ctx: ctx, __owner: this}}, props1.slots));
-    return comp1(props1, key + \`__1\`, node, this, null);
+    return comp1(props1, key + \`\\u00021\`, node, this, null);
   }
 }"
 `;
@@ -77,9 +77,9 @@ exports[`slots > a component with t-props and slots of its own gets both, the sl
   let block1 = createBlock(\`<div><block-child-0/>|<block-child-1/>|<block-child-2/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].props.a, key, "__1");
-    const b3 = callSlot(ctx, node, key + \`__2\`, "default", false, null);
-    const b4 = callSlot(ctx, node, key + \`__3\`, "b", false, null);
+    const b2 = safeOutput(ctx['this'].props.a, node, key, "\\u00021");
+    const b3 = callSlot(ctx, node, key + \`\\u00022\`, "default", false, null);
+    const b4 = callSlot(ctx, node, key + \`\\u00023\`, "b", false, null);
     return block1([], [b2, b3, b4]);
   }
 }"
@@ -96,11 +96,11 @@ exports[`slots > a slot called in a loop and again after it gives each call its 
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
   function slot1(ctx, node, key = "") {
-    return comp1({}, key + \`__1\`, node, this, null);
+    return comp1({}, key + \`\\u00021\`, node, this, null);
   }
   
   return function template(ctx, node, key = "") {
-    const b3 = comp2({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`__2\`, node, this, null);
+    const b3 = comp2({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`\\u00022\`, node, this, null);
     return block1([], [b3]);
   }
 }"
@@ -122,12 +122,12 @@ exports[`slots > a slot called in a loop and again after it gives each call its 
       ctx["i"] = k_block2[i1];
       const key1 = ctx['i'];
       const skey1 = keyOf(key1);
-      c_block2[i1] = withKey(callSlot(ctx, node, key + \`__1__\${skey1}\`, "default", false, null), key1);
+      c_block2[i1] = withKey(callSlot(ctx, node, key + \`\\u00021\\u0002:\${skey1}\`, "default", false, null), key1);
     }
     const b2 = list(c_block2);
-    const b5 = safeOutput('|', key, "__2");
+    const b5 = safeOutput('|', node, key, "\\u00022");
     const b4 = block4([], [b5]);
-    const b6 = callSlot(ctx, node, key + \`__3\`, "default", false, null);
+    const b6 = callSlot(ctx, node, key + \`\\u00023\`, "default", false, null);
     return multi([b2, b4, b6]);
   }
 }"
@@ -142,7 +142,7 @@ exports[`slots > a slot called in a loop and again after it gives each call its 
   let block1 = createBlock(\`<b><block-child-0/></b>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].id, key, "__1");
+    const b2 = safeOutput(ctx['this'].id, node, key, "\\u00021");
     return block1([], [b2]);
   }
 }"
@@ -157,11 +157,11 @@ exports[`slots > a sub-template looping over a slot can be called twice 1`] = `
   const comp2 = createComponent(app, \`Wrapper\`, true, true, false, []);
   
   function slot1(ctx, node, key = "") {
-    return comp1({}, key + \`__1\`, node, this, null);
+    return comp1({}, key + \`\\u00021\`, node, this, null);
   }
   
   return function template(ctx, node, key = "") {
-    return comp2({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`__2\`, node, this, null);
+    return comp2({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`\\u00022\`, node, this, null);
   }
 }"
 `;
@@ -175,8 +175,8 @@ exports[`slots > a sub-template looping over a slot can be called twice 2`] = `
   let block1 = createBlock(\`<div><block-child-0/><block-child-1/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = callTemplate(\`sub\`, this, app, ctx[zero] ? withoutZero(ctx) : ctx, node, key + \`__1\`);
-    const b3 = callTemplate(\`sub\`, this, app, ctx[zero] ? withoutZero(ctx) : ctx, node, key + \`__2\`);
+    const b2 = callTemplate(\`sub\`, this, app, ctx[zero] ? withoutZero(ctx) : ctx, node, key + \`\\u00021\`);
+    const b3 = callTemplate(\`sub\`, this, app, ctx[zero] ? withoutZero(ctx) : ctx, node, key + \`\\u00022\`);
     return block1([], [b2, b3]);
   }
 }"
@@ -196,7 +196,7 @@ exports[`slots > a sub-template looping over a slot can be called twice 3`] = `
       ctx["i"] = k_block1[i1];
       const key1 = ctx['i'];
       const skey1 = keyOf(key1);
-      c_block1[i1] = withKey(callSlot(ctx, node, key + \`__1__\${skey1}\`, "default", false, null), key1);
+      c_block1[i1] = withKey(callSlot(ctx, node, key + \`\\u00021\\u0002:\${skey1}\`, "default", false, null), key1);
     }
     return list(c_block1);
   }
@@ -212,7 +212,7 @@ exports[`slots > a sub-template looping over a slot can be called twice 4`] = `
   let block1 = createBlock(\`<b><block-child-0/></b>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].id, key, "__1");
+    const b2 = safeOutput(ctx['this'].id, node, key, "\\u00021");
     return block1([], [b2]);
   }
 }"
@@ -228,11 +228,11 @@ exports[`slots > a t-set-slot carrying t-call keeps its t-on handler on the slot
   const comp1 = createComponent(app, \`Child\`, true, true, false, []);
   
   function slot1(ctx, node, key = "") {
-    return catcher1(callTemplate(\`__template__1000\`, this, app, ctx[zero] ? withoutZero(ctx) : ctx, node, key + \`__1\`), ctx);
+    return catcher1(callTemplate(\`__template__1000\`, this, app, ctx[zero] ? withoutZero(ctx) : ctx, node, key + \`\\u00021\`), ctx);
   }
   
   return function template(ctx, node, key = "") {
-    return comp1({slots: markRaw({"a": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`__2\`, node, this, null);
+    return comp1({slots: markRaw({"a": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`\\u00022\`, node, this, null);
   }
 }"
 `;
@@ -246,7 +246,7 @@ exports[`slots > a t-set-slot carrying t-call keeps its t-on handler on the slot
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = callSlot(ctx, node, key + \`__1\`, "a", false, null);
+    const b2 = callSlot(ctx, node, key + \`\\u00021\`, "a", false, null);
     return block1([], [b2]);
   }
 }"
@@ -273,23 +273,23 @@ exports[`slots > a t-set-slot carrying t-out or t-call keeps its slot attributes
   const comp1 = createComponent(app, \`Child\`, true, true, false, []);
   
   function slot1(ctx, node, key = "") {
-    return safeOutput(ctx['s'].v, key, "__1");
+    return safeOutput(ctx['s'].v, node, key, "\\u00021");
   }
   
   function slot2(ctx, node, key = "") {
-    return safeOutput(ctx['s'].v+'!', key, "__2");
+    return safeOutput(ctx['s'].v+'!', node, key, "\\u00022");
   }
   
   function slot3(ctx, node, key = "") {
-    return callTemplate(\`__template__1000\`, this, app, ctx[zero] ? withoutZero(ctx) : ctx, node, key + \`__3\`);
+    return callTemplate(\`__template__1000\`, this, app, ctx[zero] ? withoutZero(ctx) : ctx, node, key + \`\\u00023\`);
   }
   
   function slot4(ctx, node, key = "") {
-    return safeOutput('D', key, "__4");
+    return safeOutput('D', node, key, "\\u00024");
   }
   
   return function template(ctx, node, key = "") {
-    return comp1({slots: markRaw({"a": {__render: slot1, __ctx: ctx, __owner: this, __scope: "s"}, "b": {__render: slot2, __ctx: ctx, __owner: this, __scope: "s"}, "c": {__render: slot3, __ctx: ctx, __owner: this, __scope: "s"}, "d": {__render: slot4, __ctx: ctx, __owner: this, title: ctx['T']}})}, key + \`__5\`, node, this, null);
+    return comp1({slots: markRaw({"a": {__render: slot1, __ctx: ctx, __owner: this, __scope: "s"}, "b": {__render: slot2, __ctx: ctx, __owner: this, __scope: "s"}, "c": {__render: slot3, __ctx: ctx, __owner: this, __scope: "s"}, "d": {__render: slot4, __ctx: ctx, __owner: this, title: ctx['T']}})}, key + \`\\u00025\`, node, this, null);
   }
 }"
 `;
@@ -303,10 +303,10 @@ exports[`slots > a t-set-slot carrying t-out or t-call keeps its slot attributes
   let block1 = createBlock(\`<div><block-child-0/>|<block-child-1/>|<block-child-2/>|<block-child-3/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = callSlot(ctx, node, key + \`__1\`, "a", false, {v: 'A'});
-    const b3 = callSlot(ctx, node, key + \`__2\`, "b", false, {v: 'B'});
-    const b4 = callSlot(ctx, node, key + \`__3\`, "c", false, {v: 'C'});
-    const b5 = callSlot(ctx, node, key + \`__4\`, "d", false, null);
+    const b2 = callSlot(ctx, node, key + \`\\u00021\`, "a", false, {v: 'A'});
+    const b3 = callSlot(ctx, node, key + \`\\u00022\`, "b", false, {v: 'B'});
+    const b4 = callSlot(ctx, node, key + \`\\u00023\`, "c", false, {v: 'C'});
+    const b5 = callSlot(ctx, node, key + \`\\u00024\`, "d", false, null);
     return block1([], [b2, b3, b4, b5]);
   }
 }"
@@ -321,7 +321,7 @@ exports[`slots > a t-set-slot carrying t-out or t-call keeps its slot attributes
   let block1 = createBlock(\`<u><block-child-0/></u>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['s'].v, key, "__1");
+    const b2 = safeOutput(ctx['s'].v, node, key, "\\u00021");
     return block1([], [b2]);
   }
 }"
@@ -337,7 +337,7 @@ exports[`slots > can define a default content 1`] = `
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = comp1({}, key + \`__1\`, node, this, null);
+    const b2 = comp1({}, key + \`\\u00021\`, node, this, null);
     return block1([], [b2]);
   }
 }"
@@ -356,7 +356,7 @@ exports[`slots > can define a default content 2`] = `
   }
   
   return function template(ctx, node, key = "") {
-    const b3 = callSlot(ctx, node, key + \`__1\`, "default", false, null, defaultContent1, this);
+    const b3 = callSlot(ctx, node, key + \`\\u00021\`, "default", false, null, defaultContent1, this);
     return block1([], [b3]);
   }
 }"
@@ -382,7 +382,7 @@ exports[`slots > can define and call slots 1`] = `
   }
   
   return function template(ctx, node, key = "") {
-    const b4 = comp1({slots: markRaw({"header": {__render: slot1, __ctx: ctx, __owner: this}, "footer": {__render: slot2, __ctx: ctx, __owner: this}})}, key + \`__1\`, node, this, null);
+    const b4 = comp1({slots: markRaw({"header": {__render: slot1, __ctx: ctx, __owner: this}, "footer": {__render: slot2, __ctx: ctx, __owner: this}})}, key + \`\\u00021\`, node, this, null);
     return block1([], [b4]);
   }
 }"
@@ -397,8 +397,8 @@ exports[`slots > can define and call slots 2`] = `
   let block1 = createBlock(\`<div><div><block-child-0/></div><div><block-child-1/></div></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = callSlot(ctx, node, key + \`__1\`, "header", false, null);
-    const b3 = callSlot(ctx, node, key + \`__2\`, "footer", false, null);
+    const b2 = callSlot(ctx, node, key + \`\\u00021\`, "header", false, null);
+    const b3 = callSlot(ctx, node, key + \`\\u00022\`, "footer", false, null);
     return block1([], [b2, b3]);
   }
 }"
@@ -416,7 +416,7 @@ exports[`slots > can define and call slots with bound params 1`] = `
   }
   
   return function template(ctx, node, key = "") {
-    return comp1({slots: markRaw({"abc": {__render: slot1, __ctx: ctx, __owner: this, getValue: (ctx['this'].getValue).bind(this)}})}, key + \`__1\`, node, this, null);
+    return comp1({slots: markRaw({"abc": {__render: slot1, __ctx: ctx, __owner: this, getValue: (ctx['this'].getValue).bind(this)}})}, key + \`\\u00021\`, node, this, null);
   }
 }"
 `;
@@ -428,8 +428,8 @@ exports[`slots > can define and call slots with bound params 2`] = `
   let { callSlot, safeOutput } = helpers;
   
   return function template(ctx, node, key = "") {
-    const b2 = callSlot(ctx, node, key + \`__1\`, "abc", false, null);
-    const b3 = safeOutput(ctx['this'].props.slots['abc'].getValue(), key, "__2");
+    const b2 = callSlot(ctx, node, key + \`\\u00021\`, "abc", false, null);
+    const b3 = safeOutput(ctx['this'].props.slots['abc'].getValue(), node, key, "\\u00022");
     return multi([b2, b3]);
   }
 }"
@@ -455,7 +455,7 @@ exports[`slots > can define and call slots with params 1`] = `
   }
   
   return function template(ctx, node, key = "") {
-    const b4 = comp1({slots: markRaw({"header": {__render: slot1, __ctx: ctx, __owner: this, param: ctx['this'].var}, "footer": {__render: slot2, __ctx: ctx, __owner: this, param: '5'}})}, key + \`__1\`, node, this, null);
+    const b4 = comp1({slots: markRaw({"header": {__render: slot1, __ctx: ctx, __owner: this, param: ctx['this'].var}, "footer": {__render: slot2, __ctx: ctx, __owner: this, param: '5'}})}, key + \`\\u00021\`, node, this, null);
     return block1([], [b4]);
   }
 }"
@@ -470,10 +470,10 @@ exports[`slots > can define and call slots with params 2`] = `
   let block1 = createBlock(\`<div><block-child-0/><div><block-child-1/></div><block-child-2/><div><block-child-3/></div></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].props.slots['header'].param, key, "__1");
-    const b3 = callSlot(ctx, node, key + \`__2\`, "header", false, null);
-    const b4 = safeOutput(ctx['this'].props.slots['footer'].param, key, "__3");
-    const b5 = callSlot(ctx, node, key + \`__4\`, "footer", false, null);
+    const b2 = safeOutput(ctx['this'].props.slots['header'].param, node, key, "\\u00021");
+    const b3 = callSlot(ctx, node, key + \`\\u00022\`, "header", false, null);
+    const b4 = safeOutput(ctx['this'].props.slots['footer'].param, node, key, "\\u00023");
+    const b5 = callSlot(ctx, node, key + \`\\u00024\`, "footer", false, null);
     return block1([], [b2, b3, b4, b5]);
   }
 }"
@@ -492,12 +492,12 @@ exports[`slots > can render node with t-ref and Component in same slot 1`] = `
   function slot1(ctx, node, key = "") {
     let ref1 = createRef(ctx['this'].ref, node);
     const b2 = block2([ref1]);
-    const b3 = comp1({}, key + \`__1\`, node, this, null);
+    const b3 = comp1({}, key + \`\\u00021\`, node, this, null);
     return multi([b2, b3]);
   }
   
   return function template(ctx, node, key = "") {
-    return comp2({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`__2\`, node, this, null);
+    return comp2({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`\\u00022\`, node, this, null);
   }
 }"
 `;
@@ -509,7 +509,7 @@ exports[`slots > can render node with t-ref and Component in same slot 2`] = `
   let { callSlot } = helpers;
   
   return function template(ctx, node, key = "") {
-    return callSlot(ctx, node, key + \`__1\`, "default", false, null);
+    return callSlot(ctx, node, key + \`\\u00021\`, "default", false, null);
   }
 }"
 `;
@@ -521,7 +521,7 @@ exports[`slots > can render only empty slot 1`] = `
   let { callSlot } = helpers;
   
   return function template(ctx, node, key = "") {
-    return callSlot(ctx, node, key + \`__1\`, "default", false, null);
+    return callSlot(ctx, node, key + \`\\u00021\`, "default", false, null);
   }
 }"
 `;
@@ -534,7 +534,7 @@ exports[`slots > can use .translate suffix on slot props 1`] = `
   const comp1 = createComponent(app, \`Child\`, true, true, false, []);
   
   return function template(ctx, node, key = "") {
-    return comp1({slots: markRaw({"default": {message: \`some message\`}})}, key + \`__1\`, node, this, null);
+    return comp1({slots: markRaw({"default": {message: \`some message\`}})}, key + \`\\u00021\`, node, this, null);
   }
 }"
 `;
@@ -546,7 +546,7 @@ exports[`slots > can use .translate suffix on slot props 2`] = `
   let { safeOutput } = helpers;
   
   return function template(ctx, node, key = "") {
-    return safeOutput(ctx['this'].props.slots.default.message, key, "__1");
+    return safeOutput(ctx['this'].props.slots.default.message, node, key, "\\u00021");
   }
 }"
 `;
@@ -559,7 +559,7 @@ exports[`slots > can use component in default-content of t-slot 1`] = `
   const comp1 = createComponent(app, \`Child\`, true, false, false, []);
   
   return function template(ctx, node, key = "") {
-    return comp1({}, key + \`__1\`, node, this, null);
+    return comp1({}, key + \`\\u00021\`, node, this, null);
   }
 }"
 `;
@@ -572,11 +572,11 @@ exports[`slots > can use component in default-content of t-slot 2`] = `
   const comp1 = createComponent(app, \`GrandChild\`, true, false, false, []);
   
   function defaultContent1(ctx, node, key = "") {
-    return comp1({}, key + \`__2\`, node, this, null);
+    return comp1({}, key + \`\\u00022\`, node, this, null);
   }
   
   return function template(ctx, node, key = "") {
-    return callSlot(ctx, node, key + \`__1\`, "default", false, null, defaultContent1, this);
+    return callSlot(ctx, node, key + \`\\u00021\`, "default", false, null, defaultContent1, this);
   }
 }"
 `;
@@ -600,7 +600,7 @@ exports[`slots > can use t-call in default-content of t-slot 1`] = `
   const comp1 = createComponent(app, \`Child\`, true, false, false, []);
   
   return function template(ctx, node, key = "") {
-    return comp1({}, key + \`__1\`, node, this, null);
+    return comp1({}, key + \`\\u00021\`, node, this, null);
   }
 }"
 `;
@@ -612,11 +612,11 @@ exports[`slots > can use t-call in default-content of t-slot 2`] = `
   let { callSlot, zero, withoutZero, callTemplate } = helpers;
   
   function defaultContent1(ctx, node, key = "") {
-    return callTemplate(\`__template__999\`, this, app, ctx[zero] ? withoutZero(ctx) : ctx, node, key + \`__2\`);
+    return callTemplate(\`__template__999\`, this, app, ctx[zero] ? withoutZero(ctx) : ctx, node, key + \`\\u00022\`);
   }
   
   return function template(ctx, node, key = "") {
-    return callSlot(ctx, node, key + \`__1\`, "default", false, null, defaultContent1, this);
+    return callSlot(ctx, node, key + \`\\u00021\`, "default", false, null, defaultContent1, this);
   }
 }"
 `;
@@ -646,7 +646,7 @@ exports[`slots > content is the default slot (variation) 1`] = `
   }
   
   return function template(ctx, node, key = "") {
-    return comp1({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`__1\`, node, this, null);
+    return comp1({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`\\u00021\`, node, this, null);
   }
 }"
 `;
@@ -658,7 +658,7 @@ exports[`slots > content is the default slot (variation) 2`] = `
   let { callSlot } = helpers;
   
   return function template(ctx, node, key = "") {
-    return callSlot(ctx, node, key + \`__1\`, "default", false, null);
+    return callSlot(ctx, node, key + \`\\u00021\`, "default", false, null);
   }
 }"
 `;
@@ -678,7 +678,7 @@ exports[`slots > content is the default slot 1`] = `
   }
   
   return function template(ctx, node, key = "") {
-    const b3 = comp1({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`__1\`, node, this, null);
+    const b3 = comp1({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`\\u00021\`, node, this, null);
     return block1([], [b3]);
   }
 }"
@@ -693,7 +693,7 @@ exports[`slots > content is the default slot 2`] = `
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = callSlot(ctx, node, key + \`__1\`, "default", false, null);
+    const b2 = callSlot(ctx, node, key + \`\\u00021\`, "default", false, null);
     return block1([], [b2]);
   }
 }"
@@ -713,7 +713,7 @@ exports[`slots > default content is not rendered if named slot is provided 1`] =
   }
   
   return function template(ctx, node, key = "") {
-    const b3 = comp1({slots: markRaw({"header": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`__1\`, node, this, null);
+    const b3 = comp1({slots: markRaw({"header": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`\\u00021\`, node, this, null);
     return block1([], [b3]);
   }
 }"
@@ -732,7 +732,7 @@ exports[`slots > default content is not rendered if named slot is provided 2`] =
   }
   
   return function template(ctx, node, key = "") {
-    const b3 = callSlot(ctx, node, key + \`__1\`, "header", false, null, defaultContent1, this);
+    const b3 = callSlot(ctx, node, key + \`\\u00021\`, "header", false, null, defaultContent1, this);
     return block1([], [b3]);
   }
 }"
@@ -752,7 +752,7 @@ exports[`slots > default content is not rendered if slot is provided 1`] = `
   }
   
   return function template(ctx, node, key = "") {
-    const b3 = comp1({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`__1\`, node, this, null);
+    const b3 = comp1({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`\\u00021\`, node, this, null);
     return block1([], [b3]);
   }
 }"
@@ -771,7 +771,7 @@ exports[`slots > default content is not rendered if slot is provided 2`] = `
   }
   
   return function template(ctx, node, key = "") {
-    const b3 = callSlot(ctx, node, key + \`__1\`, "default", false, null, defaultContent1, this);
+    const b3 = callSlot(ctx, node, key + \`\\u00021\`, "default", false, null, defaultContent1, this);
     return block1([], [b3]);
   }
 }"
@@ -791,7 +791,7 @@ exports[`slots > default slot next to named slot, with default content 1`] = `
   }
   
   return function template(ctx, node, key = "") {
-    const b3 = comp1({slots: markRaw({"footer": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`__1\`, node, this, null);
+    const b3 = comp1({slots: markRaw({"footer": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`\\u00021\`, node, this, null);
     return block1([], [b3]);
   }
 }"
@@ -814,8 +814,8 @@ exports[`slots > default slot next to named slot, with default content 2`] = `
   }
   
   return function template(ctx, node, key = "") {
-    const b3 = callSlot(ctx, node, key + \`__1\`, "default", false, null, defaultContent1, this);
-    const b5 = callSlot(ctx, node, key + \`__2\`, "footer", false, null, defaultContent2, this);
+    const b3 = callSlot(ctx, node, key + \`\\u00021\`, "default", false, null, defaultContent1, this);
+    const b5 = callSlot(ctx, node, key + \`\\u00022\`, "footer", false, null, defaultContent2, this);
     return block1([], [b3, b5]);
   }
 }"
@@ -829,11 +829,11 @@ exports[`slots > default slot with params with - in it 1`] = `
   const comp1 = createComponent(app, \`Child\`, true, true, false, []);
   
   function slot1(ctx, node, key = "") {
-    return safeOutput(ctx['slotScope']['some-value'], key, "__1");
+    return safeOutput(ctx['slotScope']['some-value'], node, key, "\\u00021");
   }
   
   return function template(ctx, node, key = "") {
-    return comp1({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this, __scope: "slotScope"}})}, key + \`__2\`, node, this, null);
+    return comp1({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this, __scope: "slotScope"}})}, key + \`\\u00022\`, node, this, null);
   }
 }"
 `;
@@ -845,7 +845,7 @@ exports[`slots > default slot with params with - in it 2`] = `
   let { callSlot } = helpers;
   
   return function template(ctx, node, key = "") {
-    return callSlot(ctx, node, key + \`__1\`, "default", false, {'some-value': ctx['this'].state.value});
+    return callSlot(ctx, node, key + \`\\u00021\`, "default", false, {'some-value': ctx['this'].state.value});
   }
 }"
 `;
@@ -868,7 +868,7 @@ exports[`slots > default slot with slot scope: shorthand syntax 1`] = `
   }
   
   return function template(ctx, node, key = "") {
-    return comp1({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this, __scope: "slotScope"}})}, key + \`__1\`, node, this, null);
+    return comp1({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this, __scope: "slotScope"}})}, key + \`\\u00021\`, node, this, null);
   }
 }"
 `;
@@ -882,7 +882,7 @@ exports[`slots > default slot with slot scope: shorthand syntax 2`] = `
   let block1 = createBlock(\`<span><block-child-0/></span>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = callSlot(ctx, node, key + \`__1\`, "default", false, {bool: ctx['this'].state.bool});
+    const b2 = callSlot(ctx, node, key + \`\\u00021\`, "default", false, {bool: ctx['this'].state.bool});
     return block1([], [b2]);
   }
 }"
@@ -900,7 +900,7 @@ exports[`slots > default slot work with text nodes (variation) 1`] = `
   }
   
   return function template(ctx, node, key = "") {
-    return comp1({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`__1\`, node, this, null);
+    return comp1({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`\\u00021\`, node, this, null);
   }
 }"
 `;
@@ -912,7 +912,7 @@ exports[`slots > default slot work with text nodes (variation) 2`] = `
   let { callSlot } = helpers;
   
   return function template(ctx, node, key = "") {
-    return callSlot(ctx, node, key + \`__1\`, "default", false, null);
+    return callSlot(ctx, node, key + \`\\u00021\`, "default", false, null);
   }
 }"
 `;
@@ -931,7 +931,7 @@ exports[`slots > default slot work with text nodes 1`] = `
   }
   
   return function template(ctx, node, key = "") {
-    const b3 = comp1({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`__1\`, node, this, null);
+    const b3 = comp1({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`\\u00021\`, node, this, null);
     return block1([], [b3]);
   }
 }"
@@ -946,7 +946,7 @@ exports[`slots > default slot work with text nodes 2`] = `
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = callSlot(ctx, node, key + \`__1\`, "default", false, null);
+    const b2 = callSlot(ctx, node, key + \`\\u00021\`, "default", false, null);
     return block1([], [b2]);
   }
 }"
@@ -962,12 +962,12 @@ exports[`slots > dynamic slot in multiple locations 1`] = `
   
   function slot1(ctx, node, key = "") {
     const b2 = text(\`hello \`);
-    const b3 = comp1({}, key + \`__1\`, node, this, null);
+    const b3 = comp1({}, key + \`\\u00021\`, node, this, null);
     return multi([b2, b3]);
   }
   
   return function template(ctx, node, key = "") {
-    return comp2({location: ctx['this'].state.location,slots: markRaw({"coffee": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`__2\`, node, this, null);
+    return comp2({location: ctx['this'].state.location,slots: markRaw({"coffee": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`\\u00022\`, node, this, null);
   }
 }"
 `;
@@ -984,12 +984,12 @@ exports[`slots > dynamic slot in multiple locations 2`] = `
     let b2, b4;
     if (ctx['this'].props.location===1) {
       const slot1 = ('coffee');
-      const b3 = toggler(slot1, callSlot(ctx, node, key + \`__1\`, slot1, true, null));
+      const b3 = toggler(slot1, callSlot(ctx, node, key + \`\\u00021\`, slot1, true, null));
       b2 = block2([], [b3]);
     }
     if (ctx['this'].props.location===2) {
       const slot2 = ('coffee');
-      b4 = toggler(slot2, callSlot(ctx, node, key + \`__2\`, slot2, true, null));
+      b4 = toggler(slot2, callSlot(ctx, node, key + \`\\u00022\`, slot2, true, null));
     }
     return multi([b2, b4]);
   }
@@ -1032,7 +1032,7 @@ exports[`slots > dynamic t-call-slot call 1`] = `
   }
   
   return function template(ctx, node, key = "") {
-    const b6 = comp1({slots: markRaw({"slot1": {__render: slot1, __ctx: ctx, __owner: this}, "slot2": {__render: slot2, __ctx: ctx, __owner: this}})}, key + \`__1\`, node, this, null);
+    const b6 = comp1({slots: markRaw({"slot1": {__render: slot1, __ctx: ctx, __owner: this}, "slot2": {__render: slot2, __ctx: ctx, __owner: this}})}, key + \`\\u00021\`, node, this, null);
     return block1([], [b6]);
   }
 }"
@@ -1049,7 +1049,7 @@ exports[`slots > dynamic t-call-slot call 2`] = `
   
   return function template(ctx, node, key = "") {
     const slot1 = (ctx['this'].current.slot);
-    const b2 = toggler(slot1, callSlot(ctx, node, key + \`__1\`, slot1, true, null));
+    const b2 = toggler(slot1, callSlot(ctx, node, key + \`\\u00021\`, slot1, true, null));
     return block1([ctx], [b2]);
   }
 }"
@@ -1078,7 +1078,7 @@ exports[`slots > dynamic t-call-slot call with default 1`] = `
   }
   
   return function template(ctx, node, key = "") {
-    const b6 = comp1({slots: markRaw({"slot1": {__render: slot1, __ctx: ctx, __owner: this}, "slot2": {__render: slot2, __ctx: ctx, __owner: this}})}, key + \`__1\`, node, this, null);
+    const b6 = comp1({slots: markRaw({"slot1": {__render: slot1, __ctx: ctx, __owner: this}, "slot2": {__render: slot2, __ctx: ctx, __owner: this}})}, key + \`\\u00021\`, node, this, null);
     return block1([], [b6]);
   }
 }"
@@ -1098,7 +1098,7 @@ exports[`slots > dynamic t-call-slot call with default 2`] = `
   }
   
   return function template(ctx, node, key = "") {
-    const b3 = callSlot(ctx, node, key + \`__1\`, (ctx['this'].current.slot), true, null, defaultContent1, this);
+    const b3 = callSlot(ctx, node, key + \`\\u00021\`, (ctx['this'].current.slot), true, null, defaultContent1, this);
     return block1([ctx], [b3]);
   }
 }"
@@ -1116,7 +1116,7 @@ exports[`slots > fun: two calls to the same slot 1`] = `
   }
   
   return function template(ctx, node, key = "") {
-    return comp1({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`__1\`, node, this, null);
+    return comp1({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`\\u00021\`, node, this, null);
   }
 }"
 `;
@@ -1128,8 +1128,8 @@ exports[`slots > fun: two calls to the same slot 2`] = `
   let { callSlot } = helpers;
   
   return function template(ctx, node, key = "") {
-    const b2 = callSlot(ctx, node, key + \`__1\`, "default", false, null);
-    const b3 = callSlot(ctx, node, key + \`__2\`, "default", false, null);
+    const b2 = callSlot(ctx, node, key + \`\\u00021\`, "default", false, null);
+    const b3 = callSlot(ctx, node, key + \`\\u00022\`, "default", false, null);
     return multi([b2, b3]);
   }
 }"
@@ -1145,7 +1145,7 @@ exports[`slots > missing slots are ignored 1`] = `
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = comp1({}, key + \`__1\`, node, this, null);
+    const b2 = comp1({}, key + \`\\u00021\`, node, this, null);
     return block1([], [b2]);
   }
 }"
@@ -1160,8 +1160,8 @@ exports[`slots > missing slots are ignored 2`] = `
   let block1 = createBlock(\`<span><block-child-0/><span>some content</span><block-child-1/></span>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = callSlot(ctx, node, key + \`__1\`, "default", false, null);
-    const b3 = callSlot(ctx, node, key + \`__2\`, "footer", false, null);
+    const b2 = callSlot(ctx, node, key + \`\\u00021\`, "default", false, null);
+    const b3 = callSlot(ctx, node, key + \`\\u00022\`, "footer", false, null);
     return block1([], [b2, b3]);
   }
 }"
@@ -1175,7 +1175,7 @@ exports[`slots > mix of slots, t-call, t-call with body, and giving own props ch
   const comp1 = createComponent(app, \`P\`, true, false, false, []);
   
   return function template(ctx, node, key = "") {
-    return comp1({}, key + \`__1\`, node, this, null);
+    return comp1({}, key + \`\\u00021\`, node, this, null);
   }
 }"
 `;
@@ -1192,7 +1192,7 @@ exports[`slots > mix of slots, t-call, t-call with body, and giving own props ch
   
   return function template(ctx, node, key = "") {
     const b2 = block2([ctx]);
-    const b3 = comp1({number: ctx['this'].state.number}, key + \`__1\`, node, this, null);
+    const b3 = comp1({number: ctx['this'].state.number}, key + \`\\u00021\`, node, this, null);
     return multi([b2, b3]);
   }
 }"
@@ -1207,12 +1207,12 @@ exports[`slots > mix of slots, t-call, t-call with body, and giving own props ch
   
   function slot1(ctx, node, key = "") {
     const b2 = text(\`[A]\`);
-    const b3 = callTemplate(\`__template__1002\`, this, app, ctx[zero] ? withoutZero(ctx) : ctx, node, key + \`__1\`);
+    const b3 = callTemplate(\`__template__1002\`, this, app, ctx[zero] ? withoutZero(ctx) : ctx, node, key + \`\\u00021\`);
     return multi([b2, b3]);
   }
   
   return function template(ctx, node, key = "") {
-    return comp1({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`__2\`, node, this, null);
+    return comp1({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`\\u00022\`, node, this, null);
   }
 }"
 `;
@@ -1226,7 +1226,7 @@ exports[`slots > mix of slots, t-call, t-call with body, and giving own props ch
   
   return function template(ctx, node, key = "") {
     const b2 = text(\`[B]\`);
-    const b3 = comp1({slots: ctx['this'].props.slots}, key + \`__1\`, node, this, null);
+    const b3 = comp1({slots: ctx['this'].props.slots}, key + \`\\u00021\`, node, this, null);
     return multi([b2, b3]);
   }
 }"
@@ -1240,7 +1240,7 @@ exports[`slots > mix of slots, t-call, t-call with body, and giving own props ch
   
   return function template(ctx, node, key = "") {
     const b2 = text(\`[C]\`);
-    const b3 = callSlot(ctx, node, key + \`__1\`, "default", false, null);
+    const b3 = callSlot(ctx, node, key + \`\\u00021\`, "default", false, null);
     return multi([b2, b3]);
   }
 }"
@@ -1259,7 +1259,7 @@ exports[`slots > mix of slots, t-call, t-call with body, and giving own props ch
     const ctx1 = Object.create(ctx);
     ctx1["v"] = ctx['this'].props.number;
     ctx1[zero] = null;
-    const b3 = callTemplate(\`__template__1001\`, this, app, ctx1, node, key + \`__1\`);
+    const b3 = callTemplate(\`__template__1001\`, this, app, ctx1, node, key + \`\\u00021\`);
     return multi([b2, b3]);
   }
 }"
@@ -1273,7 +1273,7 @@ exports[`slots > mix of slots, t-call, t-call with body, and giving own props ch
   
   return function template(ctx, node, key = "") {
     const b2 = text(\`[sub2\`);
-    const b3 = safeOutput(ctx['v'], key, "__1");
+    const b3 = safeOutput(ctx['v'], node, key, "\\u00021");
     const b4 = text(\`]\`);
     return multi([b2, b3, b4]);
   }
@@ -1298,7 +1298,7 @@ exports[`slots > multiple roots are allowed in a default slot 1`] = `
   }
   
   return function template(ctx, node, key = "") {
-    const b5 = comp1({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`__1\`, node, this, null);
+    const b5 = comp1({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`\\u00021\`, node, this, null);
     return block1([], [b5]);
   }
 }"
@@ -1313,7 +1313,7 @@ exports[`slots > multiple roots are allowed in a default slot 2`] = `
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = callSlot(ctx, node, key + \`__1\`, "default", false, null);
+    const b2 = callSlot(ctx, node, key + \`\\u00021\`, "default", false, null);
     return block1([], [b2]);
   }
 }"
@@ -1337,7 +1337,7 @@ exports[`slots > multiple roots are allowed in a named slot 1`] = `
   }
   
   return function template(ctx, node, key = "") {
-    const b5 = comp1({slots: markRaw({"content": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`__1\`, node, this, null);
+    const b5 = comp1({slots: markRaw({"content": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`\\u00021\`, node, this, null);
     return block1([], [b5]);
   }
 }"
@@ -1352,7 +1352,7 @@ exports[`slots > multiple roots are allowed in a named slot 2`] = `
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = callSlot(ctx, node, key + \`__1\`, "content", false, null);
+    const b2 = callSlot(ctx, node, key + \`\\u00021\`, "content", false, null);
     return block1([], [b2]);
   }
 }"
@@ -1368,15 +1368,15 @@ exports[`slots > multiple slots containing components 1`] = `
   const comp3 = createComponent(app, \`B\`, true, true, false, []);
   
   function slot1(ctx, node, key = "") {
-    return comp1({val: 1}, key + \`__1\`, node, this, null);
+    return comp1({val: 1}, key + \`\\u00021\`, node, this, null);
   }
   
   function slot2(ctx, node, key = "") {
-    return comp2({val: 2}, key + \`__2\`, node, this, null);
+    return comp2({val: 2}, key + \`\\u00022\`, node, this, null);
   }
   
   return function template(ctx, node, key = "") {
-    return comp3({slots: markRaw({"s1": {__render: slot1, __ctx: ctx, __owner: this}, "s2": {__render: slot2, __ctx: ctx, __owner: this}})}, key + \`__3\`, node, this, null);
+    return comp3({slots: markRaw({"s1": {__render: slot1, __ctx: ctx, __owner: this}, "s2": {__render: slot2, __ctx: ctx, __owner: this}})}, key + \`\\u00023\`, node, this, null);
   }
 }"
 `;
@@ -1390,8 +1390,8 @@ exports[`slots > multiple slots containing components 2`] = `
   let block1 = createBlock(\`<div><block-child-0/><block-child-1/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = callSlot(ctx, node, key + \`__1\`, "s1", false, null);
-    const b3 = callSlot(ctx, node, key + \`__2\`, "s2", false, null);
+    const b2 = callSlot(ctx, node, key + \`\\u00021\`, "s1", false, null);
+    const b3 = callSlot(ctx, node, key + \`\\u00022\`, "s2", false, null);
     return block1([], [b2, b3]);
   }
 }"
@@ -1406,7 +1406,7 @@ exports[`slots > multiple slots containing components 3`] = `
   let block1 = createBlock(\`<span><block-child-0/></span>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].props.val, key, "__1");
+    const b2 = safeOutput(ctx['this'].props.val, node, key, "\\u00021");
     return block1([], [b2]);
   }
 }"
@@ -1423,16 +1423,16 @@ exports[`slots > named slot inside named slot in t-component 1`] = `
   function slot1(ctx, node, key = "") {
     const b2 = text(\` outer \`);
     const Comp1 = ctx['this'].Child;
-    const b4 = toggler(Comp1, comp1({slots: markRaw({"brol": {__render: slot2, __ctx: ctx, __owner: this}})}, key + \`__2\`, node, this, Comp1));
+    const b4 = toggler(Comp1, comp1({slots: markRaw({"brol": {__render: slot2, __ctx: ctx, __owner: this}})}, key + \`\\u00022\`, node, this, Comp1));
     return multi([b2, b4]);
   }
   
   function slot2(ctx, node, key = "") {
-    return safeOutput(ctx['this'].value, key, "__1");
+    return safeOutput(ctx['this'].value, node, key, "\\u00021");
   }
   
   return function template(ctx, node, key = "") {
-    return comp2({slots: markRaw({"brol": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`__3\`, node, this, null);
+    return comp2({slots: markRaw({"brol": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`\\u00023\`, node, this, null);
   }
 }"
 `;
@@ -1444,7 +1444,7 @@ exports[`slots > named slot inside named slot in t-component 2`] = `
   let { callSlot } = helpers;
   
   return function template(ctx, node, key = "") {
-    return callSlot(ctx, node, key + \`__1\`, "brol", false, null);
+    return callSlot(ctx, node, key + \`\\u00021\`, "brol", false, null);
   }
 }"
 `;
@@ -1462,21 +1462,21 @@ exports[`slots > named slot inside slot 1`] = `
   let block4 = createBlock(\`<p>B<block-child-0/></p>\`);
   
   function slot1(ctx, node, key = "") {
-    const b3 = safeOutput(ctx['this'].value, key, "__1");
+    const b3 = safeOutput(ctx['this'].value, node, key, "\\u00021");
     return block2([], [b3]);
   }
   
   function slot2(ctx, node, key = "") {
-    return comp1({slots: markRaw({"brol": {__render: slot3, __ctx: ctx, __owner: this}})}, key + \`__3\`, node, this, null);
+    return comp1({slots: markRaw({"brol": {__render: slot3, __ctx: ctx, __owner: this}})}, key + \`\\u00023\`, node, this, null);
   }
   
   function slot3(ctx, node, key = "") {
-    const b5 = safeOutput(ctx['this'].value, key, "__2");
+    const b5 = safeOutput(ctx['this'].value, node, key, "\\u00022");
     return block4([], [b5]);
   }
   
   return function template(ctx, node, key = "") {
-    const b7 = comp2({slots: markRaw({"brol": {__render: slot1, __ctx: ctx, __owner: this}, "default": {__render: slot2, __ctx: ctx, __owner: this}})}, key + \`__4\`, node, this, null);
+    const b7 = comp2({slots: markRaw({"brol": {__render: slot1, __ctx: ctx, __owner: this}, "default": {__render: slot2, __ctx: ctx, __owner: this}})}, key + \`\\u00024\`, node, this, null);
     return block1([], [b7]);
   }
 }"
@@ -1491,8 +1491,8 @@ exports[`slots > named slot inside slot 2`] = `
   let block1 = createBlock(\`<div><block-child-0/><block-child-1/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = callSlot(ctx, node, key + \`__1\`, "brol", false, null);
-    const b3 = callSlot(ctx, node, key + \`__2\`, "default", false, null);
+    const b2 = callSlot(ctx, node, key + \`\\u00021\`, "brol", false, null);
+    const b3 = callSlot(ctx, node, key + \`\\u00022\`, "default", false, null);
     return block1([], [b2, b3]);
   }
 }"
@@ -1511,21 +1511,21 @@ exports[`slots > named slot inside slot, part 3 1`] = `
   let block4 = createBlock(\`<p>B<block-child-0/></p>\`);
   
   function slot1(ctx, node, key = "") {
-    const b3 = safeOutput(ctx['this'].value, key, "__1");
+    const b3 = safeOutput(ctx['this'].value, node, key, "\\u00021");
     return block2([], [b3]);
   }
   
   function slot2(ctx, node, key = "") {
-    return comp1({slots: markRaw({"brol": {__render: slot3, __ctx: ctx, __owner: this}})}, key + \`__3\`, node, this, null);
+    return comp1({slots: markRaw({"brol": {__render: slot3, __ctx: ctx, __owner: this}})}, key + \`\\u00023\`, node, this, null);
   }
   
   function slot3(ctx, node, key = "") {
-    const b5 = safeOutput(ctx['this'].value, key, "__2");
+    const b5 = safeOutput(ctx['this'].value, node, key, "\\u00022");
     return block4([], [b5]);
   }
   
   return function template(ctx, node, key = "") {
-    const b7 = comp2({slots: markRaw({"brol": {__render: slot1, __ctx: ctx, __owner: this}, "default": {__render: slot2, __ctx: ctx, __owner: this}})}, key + \`__4\`, node, this, null);
+    const b7 = comp2({slots: markRaw({"brol": {__render: slot1, __ctx: ctx, __owner: this}, "default": {__render: slot2, __ctx: ctx, __owner: this}})}, key + \`\\u00024\`, node, this, null);
     return block1([], [b7]);
   }
 }"
@@ -1540,8 +1540,8 @@ exports[`slots > named slot inside slot, part 3 2`] = `
   let block1 = createBlock(\`<div><block-child-0/><block-child-1/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = callSlot(ctx, node, key + \`__1\`, "brol", false, null);
-    const b3 = callSlot(ctx, node, key + \`__2\`, "default", false, null);
+    const b2 = callSlot(ctx, node, key + \`\\u00021\`, "brol", false, null);
+    const b3 = callSlot(ctx, node, key + \`\\u00022\`, "default", false, null);
     return block1([], [b2, b3]);
   }
 }"
@@ -1557,7 +1557,7 @@ exports[`slots > named slots can define a default content 1`] = `
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = comp1({}, key + \`__1\`, node, this, null);
+    const b2 = comp1({}, key + \`\\u00021\`, node, this, null);
     return block1([], [b2]);
   }
 }"
@@ -1576,7 +1576,7 @@ exports[`slots > named slots can define a default content 2`] = `
   }
   
   return function template(ctx, node, key = "") {
-    const b3 = callSlot(ctx, node, key + \`__1\`, "header", false, null, defaultContent1, this);
+    const b3 = callSlot(ctx, node, key + \`\\u00021\`, "header", false, null, defaultContent1, this);
     return block1([], [b3]);
   }
 }"
@@ -1595,21 +1595,21 @@ exports[`slots > named slots inside slot, again 1`] = `
   let block4 = createBlock(\`<p>B<block-child-0/></p>\`);
   
   function slot1(ctx, node, key = "") {
-    const b3 = safeOutput(ctx['this'].value, key, "__1");
+    const b3 = safeOutput(ctx['this'].value, node, key, "\\u00021");
     return block2([], [b3]);
   }
   
   function slot2(ctx, node, key = "") {
-    return comp1({slots: markRaw({"brol2": {__render: slot3, __ctx: ctx, __owner: this}})}, key + \`__3\`, node, this, null);
+    return comp1({slots: markRaw({"brol2": {__render: slot3, __ctx: ctx, __owner: this}})}, key + \`\\u00023\`, node, this, null);
   }
   
   function slot3(ctx, node, key = "") {
-    const b5 = safeOutput(ctx['this'].value, key, "__2");
+    const b5 = safeOutput(ctx['this'].value, node, key, "\\u00022");
     return block4([], [b5]);
   }
   
   return function template(ctx, node, key = "") {
-    const b7 = comp2({slots: markRaw({"brol1": {__render: slot1, __ctx: ctx, __owner: this}, "default": {__render: slot2, __ctx: ctx, __owner: this}})}, key + \`__4\`, node, this, null);
+    const b7 = comp2({slots: markRaw({"brol1": {__render: slot1, __ctx: ctx, __owner: this}, "default": {__render: slot2, __ctx: ctx, __owner: this}})}, key + \`\\u00024\`, node, this, null);
     return block1([], [b7]);
   }
 }"
@@ -1632,9 +1632,9 @@ exports[`slots > named slots inside slot, again 2`] = `
   }
   
   return function template(ctx, node, key = "") {
-    const b3 = callSlot(ctx, node, key + \`__1\`, "brol1", false, null, defaultContent1, this);
-    const b5 = callSlot(ctx, node, key + \`__2\`, "brol2", false, null, defaultContent2, this);
-    const b6 = callSlot(ctx, node, key + \`__3\`, "default", false, null);
+    const b3 = callSlot(ctx, node, key + \`\\u00021\`, "brol1", false, null, defaultContent1, this);
+    const b5 = callSlot(ctx, node, key + \`\\u00022\`, "brol2", false, null, defaultContent2, this);
+    const b6 = callSlot(ctx, node, key + \`\\u00023\`, "default", false, null);
     return block1([], [b3, b5, b6]);
   }
 }"
@@ -1652,15 +1652,15 @@ exports[`slots > nested slots in same template 1`] = `
   let block1 = createBlock(\`<span id="parent"><block-child-0/></span>\`);
   
   function slot1(ctx, node, key = "") {
-    return comp2({slots: markRaw({"default": {__render: slot2, __ctx: ctx, __owner: this}})}, key + \`__2\`, node, this, null);
+    return comp2({slots: markRaw({"default": {__render: slot2, __ctx: ctx, __owner: this}})}, key + \`\\u00022\`, node, this, null);
   }
   
   function slot2(ctx, node, key = "") {
-    return comp1({}, key + \`__1\`, node, this, null);
+    return comp1({}, key + \`\\u00021\`, node, this, null);
   }
   
   return function template(ctx, node, key = "") {
-    const b4 = comp3({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`__3\`, node, this, null);
+    const b4 = comp3({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`\\u00023\`, node, this, null);
     return block1([], [b4]);
   }
 }"
@@ -1675,7 +1675,7 @@ exports[`slots > nested slots in same template 2`] = `
   let block1 = createBlock(\`<span id="c1"><div><block-child-0/></div></span>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = callSlot(ctx, node, key + \`__1\`, "default", false, null);
+    const b2 = callSlot(ctx, node, key + \`\\u00021\`, "default", false, null);
     return block1([], [b2]);
   }
 }"
@@ -1690,7 +1690,7 @@ exports[`slots > nested slots in same template 3`] = `
   let block1 = createBlock(\`<span id="c2"><block-child-0/></span>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = callSlot(ctx, node, key + \`__1\`, "default", false, null);
+    const b2 = callSlot(ctx, node, key + \`\\u00021\`, "default", false, null);
     return block1([], [b2]);
   }
 }"
@@ -1718,11 +1718,11 @@ exports[`slots > nested slots: evaluation context and parented relationship 1`] 
   const comp2 = createComponent(app, \`Child\`, true, true, false, []);
   
   function slot1(ctx, node, key = "") {
-    return comp1({val: ctx['this'].state.val}, key + \`__1\`, node, this, null);
+    return comp1({val: ctx['this'].state.val}, key + \`\\u00021\`, node, this, null);
   }
   
   return function template(ctx, node, key = "") {
-    return comp2({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`__2\`, node, this, null);
+    return comp2({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`\\u00022\`, node, this, null);
   }
 }"
 `;
@@ -1735,11 +1735,11 @@ exports[`slots > nested slots: evaluation context and parented relationship 2`] 
   const comp1 = createComponent(app, \`GrandChild\`, true, true, false, []);
   
   function slot1(ctx, node, key = "") {
-    return callSlot(ctx, node, key + \`__1\`, "default", false, null);
+    return callSlot(ctx, node, key + \`\\u00021\`, "default", false, null);
   }
   
   return function template(ctx, node, key = "") {
-    return comp1({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`__2\`, node, this, null);
+    return comp1({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`\\u00022\`, node, this, null);
   }
 }"
 `;
@@ -1753,7 +1753,7 @@ exports[`slots > nested slots: evaluation context and parented relationship 3`] 
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = callSlot(ctx, node, key + \`__1\`, "default", false, null);
+    const b2 = callSlot(ctx, node, key + \`\\u00021\`, "default", false, null);
     return block1([], [b2]);
   }
 }"
@@ -1768,7 +1768,7 @@ exports[`slots > nested slots: evaluation context and parented relationship 4`] 
   let block1 = createBlock(\`<span><block-child-0/></span>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].props.val, key, "__1");
+    const b2 = safeOutput(ctx['this'].props.val, node, key, "\\u00021");
     return block1([], [b2]);
   }
 }"
@@ -1782,7 +1782,7 @@ exports[`slots > no named slot content => just no children 1`] = `
   const comp1 = createComponent(app, \`Dialog\`, true, false, false, []);
   
   return function template(ctx, node, key = "") {
-    return comp1({}, key + \`__1\`, node, this, null);
+    return comp1({}, key + \`\\u00021\`, node, this, null);
   }
 }"
 `;
@@ -1796,7 +1796,7 @@ exports[`slots > no named slot content => just no children 2`] = `
   let block1 = createBlock(\`<span><block-child-0/></span>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = callSlot(ctx, node, key + \`__1\`, "header", false, null);
+    const b2 = callSlot(ctx, node, key + \`\\u00021\`, "header", false, null);
     return block1([], [b2]);
   }
 }"
@@ -1814,7 +1814,7 @@ exports[`slots > simple default slot 1`] = `
   }
   
   return function template(ctx, node, key = "") {
-    return comp1({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`__1\`, node, this, null);
+    return comp1({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`\\u00021\`, node, this, null);
   }
 }"
 `;
@@ -1828,7 +1828,7 @@ exports[`slots > simple default slot 2`] = `
   let block1 = createBlock(\`<span><block-child-0/></span>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = callSlot(ctx, node, key + \`__1\`, "default", false, null);
+    const b2 = callSlot(ctx, node, key + \`\\u00021\`, "default", false, null);
     return block1([], [b2]);
   }
 }"
@@ -1852,7 +1852,7 @@ exports[`slots > simple default slot with params 1`] = `
   }
   
   return function template(ctx, node, key = "") {
-    return comp1({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`__1\`, node, this, null);
+    return comp1({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`\\u00021\`, node, this, null);
   }
 }"
 `;
@@ -1866,7 +1866,7 @@ exports[`slots > simple default slot with params 2`] = `
   let block1 = createBlock(\`<span><block-child-0/></span>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = callSlot(ctx, node, key + \`__1\`, "default", false, {bool: ctx['this'].state.bool});
+    const b2 = callSlot(ctx, node, key + \`\\u00021\`, "default", false, {bool: ctx['this'].state.bool});
     return block1([], [b2]);
   }
 }"
@@ -1880,11 +1880,11 @@ exports[`slots > simple default slot with params and bound function 1`] = `
   const comp1 = createComponent(app, \`Child\`, true, true, false, []);
   
   function slot1(ctx, node, key = "") {
-    return safeOutput(ctx['slotScope'].fn(), key, "__1");
+    return safeOutput(ctx['slotScope'].fn(), node, key, "\\u00021");
   }
   
   return function template(ctx, node, key = "") {
-    return comp1({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this, __scope: "slotScope"}})}, key + \`__2\`, node, this, null);
+    return comp1({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this, __scope: "slotScope"}})}, key + \`\\u00022\`, node, this, null);
   }
 }"
 `;
@@ -1896,7 +1896,7 @@ exports[`slots > simple default slot with params and bound function 2`] = `
   let { callSlot } = helpers;
   
   return function template(ctx, node, key = "") {
-    return callSlot(ctx, node, key + \`__1\`, "default", false, {fn: (ctx['this'].getValue).bind(this)});
+    return callSlot(ctx, node, key + \`\\u00021\`, "default", false, {fn: (ctx['this'].getValue).bind(this)});
   }
 }"
 `;
@@ -1913,7 +1913,7 @@ exports[`slots > simple default slot, variation 1`] = `
   }
   
   return function template(ctx, node, key = "") {
-    return comp1({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`__1\`, node, this, null);
+    return comp1({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`\\u00021\`, node, this, null);
   }
 }"
 `;
@@ -1925,7 +1925,7 @@ exports[`slots > simple default slot, variation 2`] = `
   let { callSlot } = helpers;
   
   return function template(ctx, node, key = "") {
-    return callSlot(ctx, node, key + \`__1\`, "default", false, null);
+    return callSlot(ctx, node, key + \`\\u00021\`, "default", false, null);
   }
 }"
 `;
@@ -1948,7 +1948,7 @@ exports[`slots > simple dynamic slot with slot scope 1`] = `
   }
   
   return function template(ctx, node, key = "") {
-    return comp1({slots: markRaw({"slotName": {__render: slot1, __ctx: ctx, __owner: this, __scope: "slotScope"}})}, key + \`__1\`, node, this, null);
+    return comp1({slots: markRaw({"slotName": {__render: slot1, __ctx: ctx, __owner: this, __scope: "slotScope"}})}, key + \`\\u00021\`, node, this, null);
   }
 }"
 `;
@@ -1963,7 +1963,7 @@ exports[`slots > simple dynamic slot with slot scope 2`] = `
   
   return function template(ctx, node, key = "") {
     const slot1 = ('slotName');
-    const b2 = toggler(slot1, callSlot(ctx, node, key + \`__1\`, slot1, true, {bool: ctx['this'].state.bool}));
+    const b2 = toggler(slot1, callSlot(ctx, node, key + \`\\u00021\`, slot1, true, {bool: ctx['this'].state.bool}));
     return block1([], [b2]);
   }
 }"
@@ -1977,7 +1977,7 @@ exports[`slots > simple named and empty slot -- 2 1`] = `
   const comp1 = createComponent(app, \`Child\`, true, true, false, []);
   
   return function template(ctx, node, key = "") {
-    return comp1({slots: markRaw({"myEmptySlot": {myProp: 'myProp text'}})}, key + \`__1\`, node, this, null);
+    return comp1({slots: markRaw({"myEmptySlot": {myProp: 'myProp text'}})}, key + \`\\u00021\`, node, this, null);
   }
 }"
 `;
@@ -1995,7 +1995,7 @@ exports[`slots > simple named and empty slot -- 2 2`] = `
   }
   
   return function template(ctx, node, key = "") {
-    const b3 = callSlot(ctx, node, key + \`__1\`, "myEmptySlot", false, null, defaultContent1, this);
+    const b3 = callSlot(ctx, node, key + \`\\u00021\`, "myEmptySlot", false, null, defaultContent1, this);
     return block1([], [b3]);
   }
 }"
@@ -2013,7 +2013,7 @@ exports[`slots > simple named and empty slot 1`] = `
   }
   
   return function template(ctx, node, key = "") {
-    return comp1({slots: markRaw({"myEmptySlot": {}, "default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`__1\`, node, this, null);
+    return comp1({slots: markRaw({"myEmptySlot": {}, "default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`\\u00021\`, node, this, null);
   }
 }"
 `;
@@ -2027,8 +2027,8 @@ exports[`slots > simple named and empty slot 2`] = `
   let block1 = createBlock(\`<span><block-child-0/><block-child-1/></span>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = callSlot(ctx, node, key + \`__1\`, "default", false, null);
-    const b3 = callSlot(ctx, node, key + \`__2\`, "myEmptySlot", false, null);
+    const b2 = callSlot(ctx, node, key + \`\\u00021\`, "default", false, null);
+    const b3 = callSlot(ctx, node, key + \`\\u00022\`, "myEmptySlot", false, null);
     return block1([], [b2, b3]);
   }
 }"
@@ -2052,7 +2052,7 @@ exports[`slots > simple slot with slot scope 1`] = `
   }
   
   return function template(ctx, node, key = "") {
-    return comp1({slots: markRaw({"slotName": {__render: slot1, __ctx: ctx, __owner: this, __scope: "slotScope"}})}, key + \`__1\`, node, this, null);
+    return comp1({slots: markRaw({"slotName": {__render: slot1, __ctx: ctx, __owner: this, __scope: "slotScope"}})}, key + \`\\u00021\`, node, this, null);
   }
 }"
 `;
@@ -2066,7 +2066,7 @@ exports[`slots > simple slot with slot scope 2`] = `
   let block1 = createBlock(\`<span><block-child-0/></span>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = callSlot(ctx, node, key + \`__1\`, "slotName", false, {bool: ctx['this'].state.bool});
+    const b2 = callSlot(ctx, node, key + \`\\u00021\`, "slotName", false, {bool: ctx['this'].state.bool});
     return block1([], [b2]);
   }
 }"
@@ -2082,11 +2082,11 @@ exports[`slots > slot and t-call 1`] = `
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
   function slot1(ctx, node, key = "") {
-    return callTemplate(\`__template__999\`, this, app, ctx[zero] ? withoutZero(ctx) : ctx, node, key + \`__1\`);
+    return callTemplate(\`__template__999\`, this, app, ctx[zero] ? withoutZero(ctx) : ctx, node, key + \`\\u00021\`);
   }
   
   return function template(ctx, node, key = "") {
-    const b3 = comp1({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`__2\`, node, this, null);
+    const b3 = comp1({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`\\u00022\`, node, this, null);
     return block1([], [b3]);
   }
 }"
@@ -2101,7 +2101,7 @@ exports[`slots > slot and t-call 2`] = `
   let block1 = createBlock(\`<span><block-child-0/></span>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = callSlot(ctx, node, key + \`__1\`, "default", false, null);
+    const b2 = callSlot(ctx, node, key + \`\\u00021\`, "default", false, null);
     return block1([], [b2]);
   }
 }"
@@ -2130,11 +2130,11 @@ exports[`slots > slot and t-out 1`] = `
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
   function slot1(ctx, node, key = "") {
-    return safeOutput('toph', key, "__1");
+    return safeOutput('toph', node, key, "\\u00021");
   }
   
   return function template(ctx, node, key = "") {
-    const b3 = comp1({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`__2\`, node, this, null);
+    const b3 = comp1({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`\\u00022\`, node, this, null);
     return block1([], [b3]);
   }
 }"
@@ -2149,7 +2149,7 @@ exports[`slots > slot and t-out 2`] = `
   let block1 = createBlock(\`<span><block-child-0/></span>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = callSlot(ctx, node, key + \`__1\`, "default", false, null);
+    const b2 = callSlot(ctx, node, key + \`\\u00021\`, "default", false, null);
     return block1([], [b2]);
   }
 }"
@@ -2167,12 +2167,12 @@ exports[`slots > slot are properly rendered if inner props are changed 1`] = `
   let block1 = createBlock(\`<div><button block-handler-0="click">Inc[<block-child-0/>]</button><block-child-1/></div>\`, [hdlr_fn1]);
   
   function slot1(ctx, node, key = "") {
-    return comp1({val: ctx['this'].state.val}, key + \`__2\`, node, this, null);
+    return comp1({val: ctx['this'].state.val}, key + \`\\u00022\`, node, this, null);
   }
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].state.val, key, "__1");
-    const b4 = comp2({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`__3\`, node, this, null);
+    const b2 = safeOutput(ctx['this'].state.val, node, key, "\\u00021");
+    const b4 = comp2({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`\\u00023\`, node, this, null);
     return block1([ctx], [b2, b4]);
   }
 }"
@@ -2187,7 +2187,7 @@ exports[`slots > slot are properly rendered if inner props are changed 2`] = `
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = callSlot(ctx, node, key + \`__1\`, "default", false, null);
+    const b2 = callSlot(ctx, node, key + \`\\u00021\`, "default", false, null);
     return block1([], [b2]);
   }
 }"
@@ -2202,7 +2202,7 @@ exports[`slots > slot are properly rendered if inner props are changed 3`] = `
   let block1 = createBlock(\`<div> SC:<block-child-0/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].props.val, key, "__1");
+    const b2 = safeOutput(ctx['this'].props.val, node, key, "\\u00021");
     return block1([], [b2]);
   }
 }"
@@ -2217,11 +2217,11 @@ exports[`slots > slot called inside nested loops gets one component per outer it
   const comp2 = createComponent(app, \`Grid\`, true, true, false, []);
   
   function slot1(ctx, node, key = "") {
-    return comp1({}, key + \`__1\`, node, this, null);
+    return comp1({}, key + \`\\u00021\`, node, this, null);
   }
   
   return function template(ctx, node, key = "") {
-    return comp2({slots: markRaw({"cell": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`__2\`, node, this, null);
+    return comp2({slots: markRaw({"cell": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`\\u00022\`, node, this, null);
   }
 }"
 `;
@@ -2250,7 +2250,7 @@ exports[`slots > slot called inside nested loops gets one component per outer it
         ctx["c"] = k_block4[i2];
         const key2 = ctx['c'];
         const skey2 = keyOf(key2);
-        c_block4[i2] = withKey(callSlot(ctx, node, key + \`__1__\${skey1}__\${skey2}\`, "cell", false, null), key2);
+        c_block4[i2] = withKey(callSlot(ctx, node, key + \`\\u00021\\u0002:\${skey1}\\u0002:\${skey2}\`, "cell", false, null), key2);
       }
       const b4 = list(c_block4);
       c_block2[i1] = withKey(block3([], [b4]), key1);
@@ -2270,7 +2270,7 @@ exports[`slots > slot called inside nested loops gets one component per outer it
   let block1 = createBlock(\`<b><block-child-0/></b>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].id, key, "__1");
+    const b2 = safeOutput(ctx['this'].id, node, key, "\\u00021");
     return block1([], [b2]);
   }
 }"
@@ -2285,11 +2285,11 @@ exports[`slots > slot content has different key from other content -- dynamic sl
   const comp2 = createComponent(app, \`SlotDisplay\`, true, true, false, []);
   
   function slot1(ctx, node, key = "") {
-    return comp1({parent: 'Parent'}, key + \`__1\`, node, this, null);
+    return comp1({parent: 'Parent'}, key + \`\\u00021\`, node, this, null);
   }
   
   return function template(ctx, node, key = "") {
-    return comp2({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`__2\`, node, this, null);
+    return comp2({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`\\u00022\`, node, this, null);
   }
 }"
 `;
@@ -2302,9 +2302,9 @@ exports[`slots > slot content has different key from other content -- dynamic sl
   const comp1 = createComponent(app, \`Child\`, true, false, false, ["parent"]);
   
   return function template(ctx, node, key = "") {
-    const b2 = comp1({parent: 'SlotDisplay'}, key + \`__1\`, node, this, null);
+    const b2 = comp1({parent: 'SlotDisplay'}, key + \`\\u00021\`, node, this, null);
     const slot1 = (ctx['this'].slotName);
-    const b3 = toggler(slot1, callSlot(ctx, node, key + \`__2\`, slot1, true, null));
+    const b3 = toggler(slot1, callSlot(ctx, node, key + \`\\u00022\`, slot1, true, null));
     return multi([b2, b3]);
   }
 }"
@@ -2319,7 +2319,7 @@ exports[`slots > slot content has different key from other content -- dynamic sl
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].props.parent, key, "__1");
+    const b2 = safeOutput(ctx['this'].props.parent, node, key, "\\u00021");
     return block1([], [b2]);
   }
 }"
@@ -2334,11 +2334,11 @@ exports[`slots > slot content has different key from other content -- static slo
   const comp2 = createComponent(app, \`SlotDisplay\`, true, true, false, []);
   
   function slot1(ctx, node, key = "") {
-    return comp1({parent: 'Parent'}, key + \`__1\`, node, this, null);
+    return comp1({parent: 'Parent'}, key + \`\\u00021\`, node, this, null);
   }
   
   return function template(ctx, node, key = "") {
-    return comp2({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`__2\`, node, this, null);
+    return comp2({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`\\u00022\`, node, this, null);
   }
 }"
 `;
@@ -2351,8 +2351,8 @@ exports[`slots > slot content has different key from other content -- static slo
   const comp1 = createComponent(app, \`Child\`, true, false, false, ["parent"]);
   
   return function template(ctx, node, key = "") {
-    const b2 = comp1({parent: 'SlotDisplay'}, key + \`__1\`, node, this, null);
-    const b3 = callSlot(ctx, node, key + \`__2\`, "default", false, null);
+    const b2 = comp1({parent: 'SlotDisplay'}, key + \`\\u00021\`, node, this, null);
+    const b3 = callSlot(ctx, node, key + \`\\u00022\`, "default", false, null);
     return multi([b2, b3]);
   }
 }"
@@ -2367,7 +2367,7 @@ exports[`slots > slot content has different key from other content -- static slo
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].props.parent, key, "__1");
+    const b2 = safeOutput(ctx['this'].props.parent, node, key, "\\u00021");
     return block1([], [b2]);
   }
 }"
@@ -2390,7 +2390,7 @@ exports[`slots > slot content is bound to caller (variation) 1`] = `
   }
   
   return function template(ctx, node, key = "") {
-    return comp1({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`__1\`, node, this, null);
+    return comp1({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`\\u00021\`, node, this, null);
   }
 }"
 `;
@@ -2404,7 +2404,7 @@ exports[`slots > slot content is bound to caller (variation) 2`] = `
   let block1 = createBlock(\`<span><block-child-0/></span>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = callSlot(ctx, node, key + \`__1\`, "default", false, null);
+    const b2 = callSlot(ctx, node, key + \`\\u00021\`, "default", false, null);
     return block1([], [b2]);
   }
 }"
@@ -2425,7 +2425,7 @@ exports[`slots > slot content is bound to caller 1`] = `
   }
   
   return function template(ctx, node, key = "") {
-    return comp1({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`__1\`, node, this, null);
+    return comp1({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`\\u00021\`, node, this, null);
   }
 }"
 `;
@@ -2439,7 +2439,7 @@ exports[`slots > slot content is bound to caller 2`] = `
   let block1 = createBlock(\`<span><block-child-0/></span>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = callSlot(ctx, node, key + \`__1\`, "default", false, null);
+    const b2 = callSlot(ctx, node, key + \`\\u00021\`, "default", false, null);
     return block1([], [b2]);
   }
 }"
@@ -2455,12 +2455,12 @@ exports[`slots > slot in multiple locations 1`] = `
   
   function slot1(ctx, node, key = "") {
     const b2 = text(\` hello \`);
-    const b3 = comp1({}, key + \`__1\`, node, this, null);
+    const b3 = comp1({}, key + \`\\u00021\`, node, this, null);
     return multi([b2, b3]);
   }
   
   return function template(ctx, node, key = "") {
-    return comp2({location: ctx['this'].state.location,slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`__2\`, node, this, null);
+    return comp2({location: ctx['this'].state.location,slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`\\u00022\`, node, this, null);
   }
 }"
 `;
@@ -2476,11 +2476,11 @@ exports[`slots > slot in multiple locations 2`] = `
   return function template(ctx, node, key = "") {
     let b2, b4;
     if (ctx['this'].props.location===1) {
-      const b3 = callSlot(ctx, node, key + \`__1\`, "default", false, null);
+      const b3 = callSlot(ctx, node, key + \`\\u00021\`, "default", false, null);
       b2 = block2([], [b3]);
     }
     if (ctx['this'].props.location===2) {
-      b4 = callSlot(ctx, node, key + \`__2\`, "default", false, null);
+      b4 = callSlot(ctx, node, key + \`\\u00022\`, "default", false, null);
     }
     return multi([b2, b4]);
   }
@@ -2510,12 +2510,12 @@ exports[`slots > slot in t-foreach locations 1`] = `
   
   function slot1(ctx, node, key = "") {
     const b2 = text(\` hello \`);
-    const b3 = comp1({}, key + \`__1\`, node, this, null);
+    const b3 = comp1({}, key + \`\\u00021\`, node, this, null);
     return multi([b2, b3]);
   }
   
   return function template(ctx, node, key = "") {
-    return comp2({list: ctx['this'].state.list,slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`__2\`, node, this, null);
+    return comp2({list: ctx['this'].state.list,slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`\\u00022\`, node, this, null);
   }
 }"
 `;
@@ -2537,8 +2537,8 @@ exports[`slots > slot in t-foreach locations 2`] = `
       ctx["elem_index"] = i1;
       const key1 = ctx['elem_index'];
       const skey1 = keyOf(key1);
-      const b3 = safeOutput(ctx['elem'], key, "__1", 1, key1);
-      const b4 = callSlot(ctx, node, key + \`__2__\${skey1}\`, "default", false, null);
+      const b3 = safeOutput(ctx['elem'], node, key, "\\u00021", 1, key1);
+      const b4 = callSlot(ctx, node, key + \`\\u00022\\u0002:\${skey1}\`, "default", false, null);
       c_block1[i1] = withKey(block2([], [b3, b4]), key1);
     }
     return list(c_block1);
@@ -2570,11 +2570,11 @@ exports[`slots > slot preserves properly parented relationship 1`] = `
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
   function slot1(ctx, node, key = "") {
-    return comp1({}, key + \`__1\`, node, this, null);
+    return comp1({}, key + \`\\u00021\`, node, this, null);
   }
   
   return function template(ctx, node, key = "") {
-    const b3 = comp2({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`__2\`, node, this, null);
+    const b3 = comp2({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`\\u00022\`, node, this, null);
     return block1([], [b3]);
   }
 }"
@@ -2587,7 +2587,7 @@ exports[`slots > slot preserves properly parented relationship 2`] = `
   let { callSlot } = helpers;
   
   return function template(ctx, node, key = "") {
-    return callSlot(ctx, node, key + \`__1\`, "default", false, null);
+    return callSlot(ctx, node, key + \`\\u00021\`, "default", false, null);
   }
 }"
 `;
@@ -2613,11 +2613,11 @@ exports[`slots > slot preserves properly parented relationship, even through t-c
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
   function slot1(ctx, node, key = "") {
-    return callTemplate(\`sub\`, this, app, ctx[zero] ? withoutZero(ctx) : ctx, node, key + \`__1\`);
+    return callTemplate(\`sub\`, this, app, ctx[zero] ? withoutZero(ctx) : ctx, node, key + \`\\u00021\`);
   }
   
   return function template(ctx, node, key = "") {
-    const b3 = comp1({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`__2\`, node, this, null);
+    const b3 = comp1({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`\\u00022\`, node, this, null);
     return block1([], [b3]);
   }
 }"
@@ -2630,7 +2630,7 @@ exports[`slots > slot preserves properly parented relationship, even through t-c
   let { callSlot } = helpers;
   
   return function template(ctx, node, key = "") {
-    return callSlot(ctx, node, key + \`__1\`, "default", false, null);
+    return callSlot(ctx, node, key + \`\\u00021\`, "default", false, null);
   }
 }"
 `;
@@ -2643,7 +2643,7 @@ exports[`slots > slot preserves properly parented relationship, even through t-c
   const comp1 = createComponent(app, \`GrandChild\`, true, false, false, []);
   
   return function template(ctx, node, key = "") {
-    return comp1({}, key + \`__1\`, node, this, null);
+    return comp1({}, key + \`\\u00021\`, node, this, null);
   }
 }"
 `;
@@ -2668,11 +2668,11 @@ exports[`slots > slot under a t-key is recreated when the key changes 1`] = `
   const comp2 = createComponent(app, \`Keyed\`, true, true, false, ["k"]);
   
   function slot1(ctx, node, key = "") {
-    return comp1({}, key + \`__1\`, node, this, null);
+    return comp1({}, key + \`\\u00021\`, node, this, null);
   }
   
   return function template(ctx, node, key = "") {
-    return comp2({k: ctx['this'].state.k,slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`__2\`, node, this, null);
+    return comp2({k: ctx['this'].state.k,slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`\\u00022\`, node, this, null);
   }
 }"
 `;
@@ -2688,7 +2688,7 @@ exports[`slots > slot under a t-key is recreated when the key changes 2`] = `
   return function template(ctx, node, key = "") {
     const b2 = block2();
     const tKey_1 = keyOf(ctx['this'].props.k);
-    const b3 = toggler(tKey_1, callSlot(ctx, node, tKey_1 + key + \`__1\`, "default", false, null));
+    const b3 = toggler(tKey_1, callSlot(ctx, node, key + \`\\u0002k\${tKey_1}\\u00021\`, "default", false, null));
     return multi([b2, b3]);
   }
 }"
@@ -2703,7 +2703,7 @@ exports[`slots > slot under a t-key is recreated when the key changes 3`] = `
   let block1 = createBlock(\`<b><block-child-0/></b>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].id, key, "__1");
+    const b2 = safeOutput(ctx['this'].id, node, key, "\\u00021");
     return block1([], [b2]);
   }
 }"
@@ -2720,15 +2720,15 @@ exports[`slots > slot with slot scope and t-props 1`] = `
   let block4 = createBlock(\`<p><block-child-0/></p>\`);
   
   function slot1(ctx, node, key = "") {
-    const b3 = safeOutput(ctx['info'].a, key, "__1");
+    const b3 = safeOutput(ctx['info'].a, node, key, "\\u00021");
     const b2 = block2([], [b3]);
-    const b5 = safeOutput(ctx['info'].b, key, "__2");
+    const b5 = safeOutput(ctx['info'].b, node, key, "\\u00022");
     const b4 = block4([], [b5]);
     return multi([b2, b4]);
   }
   
   return function template(ctx, node, key = "") {
-    return comp1({slots: markRaw({"slotName": {__render: slot1, __ctx: ctx, __owner: this, __scope: "info"}})}, key + \`__3\`, node, this, null);
+    return comp1({slots: markRaw({"slotName": {__render: slot1, __ctx: ctx, __owner: this, __scope: "info"}})}, key + \`\\u00023\`, node, this, null);
   }
 }"
 `;
@@ -2740,7 +2740,7 @@ exports[`slots > slot with slot scope and t-props 2`] = `
   let { callSlot } = helpers;
   
   return function template(ctx, node, key = "") {
-    return callSlot(ctx, node, key + \`__1\`, "slotName", false, {...ctx['this'].info});
+    return callSlot(ctx, node, key + \`\\u00021\`, "slotName", false, {...ctx['this'].info});
   }
 }"
 `;
@@ -2757,7 +2757,7 @@ exports[`slots > slots and wrapper components 1`] = `
   }
   
   return function template(ctx, node, key = "") {
-    return comp1({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`__1\`, node, this, null);
+    return comp1({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`\\u00021\`, node, this, null);
   }
 }"
 `;
@@ -2771,7 +2771,7 @@ exports[`slots > slots and wrapper components 2`] = `
   let block1 = createBlock(\`<a href="abc"><block-child-0/></a>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = callSlot(ctx, node, key + \`__1\`, "default", false, null);
+    const b2 = callSlot(ctx, node, key + \`\\u00021\`, "default", false, null);
     return block1([], [b2]);
   }
 }"
@@ -2785,7 +2785,7 @@ exports[`slots > slots are properly bound to correct component 1`] = `
   const comp1 = createComponent(app, \`Child\`, true, false, false, []);
   
   return function template(ctx, node, key = "") {
-    return comp1({}, key + \`__1\`, node, this, null);
+    return comp1({}, key + \`\\u00021\`, node, this, null);
   }
 }"
 `;
@@ -2802,12 +2802,12 @@ exports[`slots > slots are properly bound to correct component 2`] = `
   function defaultContent1(ctx, node, key = "") {
     ctx = Object.create(ctx);
     ctx["var"] = 1;
-    const b2 = safeOutput(ctx['this'].state.value, key, "__2");
+    const b2 = safeOutput(ctx['this'].state.value, node, key, "\\u00022");
     return block1([ctx], [b2]);
   }
   
   return function template(ctx, node, key = "") {
-    return callSlot(ctx, node, key + \`__1\`, "default", false, null, defaultContent1, this);
+    return callSlot(ctx, node, key + \`\\u00021\`, "default", false, null, defaultContent1, this);
   }
 }"
 `;
@@ -2828,8 +2828,8 @@ exports[`slots > slots are rendered with proper context 1`] = `
   }
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].state.val, key, "__1");
-    const b4 = comp1({slots: markRaw({"footer": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`__2\`, node, this, null);
+    const b2 = safeOutput(ctx['this'].state.val, node, key, "\\u00021");
+    const b4 = comp1({slots: markRaw({"footer": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`\\u00022\`, node, this, null);
     return block1([], [b2, b4]);
   }
 }"
@@ -2844,7 +2844,7 @@ exports[`slots > slots are rendered with proper context 2`] = `
   let block1 = createBlock(\`<span><block-child-0/></span>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = callSlot(ctx, node, key + \`__1\`, "footer", false, null);
+    const b2 = callSlot(ctx, node, key + \`\\u00021\`, "footer", false, null);
     return block1([], [b2]);
   }
 }"
@@ -2862,7 +2862,7 @@ exports[`slots > slots are rendered with proper context, part 2 1`] = `
   
   function slot1(ctx, node, key = "") {
     const b5 = text(\`User \`);
-    const b6 = safeOutput(ctx['user'].name, key, "__1");
+    const b6 = safeOutput(ctx['user'].name, node, key, "\\u00021");
     return multi([b5, b6]);
   }
   
@@ -2874,7 +2874,7 @@ exports[`slots > slots are rendered with proper context, part 2 1`] = `
       ctx["user"] = k_block2[i1];
       const key1 = ctx['user'].id;
       const skey1 = keyOf(key1);
-      const b7 = comp1({to: '/user/'+ctx['user'].id,slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`__2__\${skey1}\`, node, this, null);
+      const b7 = comp1({to: '/user/'+ctx['user'].id,slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`\\u00022\\u0002:\${skey1}\`, node, this, null);
       c_block2[i1] = withKey(block3([], [b7]), key1);
     }
     const b2 = list(c_block2);
@@ -2893,7 +2893,7 @@ exports[`slots > slots are rendered with proper context, part 2 2`] = `
   
   return function template(ctx, node, key = "") {
     let attr1 = ctx['this'].props.to;
-    const b2 = callSlot(ctx, node, key + \`__1\`, "default", false, null);
+    const b2 = callSlot(ctx, node, key + \`\\u00021\`, "default", false, null);
     return block1([attr1], [b2]);
   }
 }"
@@ -2910,7 +2910,7 @@ exports[`slots > slots are rendered with proper context, part 3 1`] = `
   let block3 = createBlock(\`<li><block-child-0/></li>\`);
   
   function slot1(ctx, node, key = "") {
-    return safeOutput(ctx['userdescr'], key, "__1");
+    return safeOutput(ctx['userdescr'], node, key, "\\u00021");
   }
   
   return function template(ctx, node, key = "") {
@@ -2922,7 +2922,7 @@ exports[`slots > slots are rendered with proper context, part 3 1`] = `
       const key1 = ctx['user'].id;
       const skey1 = keyOf(key1);
       ctx["userdescr"] = 'User '+ctx['user'].name;
-      const b5 = comp1({to: '/user/'+ctx['user'].id,slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`__2__\${skey1}\`, node, this, null);
+      const b5 = comp1({to: '/user/'+ctx['user'].id,slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`\\u00022\\u0002:\${skey1}\`, node, this, null);
       c_block2[i1] = withKey(block3([], [b5]), key1);
     }
     const b2 = list(c_block2);
@@ -2941,7 +2941,7 @@ exports[`slots > slots are rendered with proper context, part 3 2`] = `
   
   return function template(ctx, node, key = "") {
     let attr1 = ctx['this'].props.to;
-    const b2 = callSlot(ctx, node, key + \`__1\`, "default", false, null);
+    const b2 = callSlot(ctx, node, key + \`\\u00021\`, "default", false, null);
     return block1([attr1], [b2]);
   }
 }"
@@ -2957,13 +2957,13 @@ exports[`slots > slots are rendered with proper context, part 4 1`] = `
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
   function slot1(ctx, node, key = "") {
-    return safeOutput(ctx['userdescr'], key, "__1");
+    return safeOutput(ctx['userdescr'], node, key, "\\u00021");
   }
   
   return function template(ctx, node, key = "") {
     ctx = Object.create(ctx);
     ctx["userdescr"] = 'User '+ctx['this'].state.user.name;
-    const b3 = comp1({to: '/user/'+ctx['this'].state.user.id,slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`__2\`, node, this, null);
+    const b3 = comp1({to: '/user/'+ctx['this'].state.user.id,slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`\\u00022\`, node, this, null);
     return block1([], [b3]);
   }
 }"
@@ -2979,7 +2979,7 @@ exports[`slots > slots are rendered with proper context, part 4 2`] = `
   
   return function template(ctx, node, key = "") {
     let attr1 = ctx['this'].props.to;
-    const b2 = callSlot(ctx, node, key + \`__1\`, "default", false, null);
+    const b2 = callSlot(ctx, node, key + \`\\u00021\`, "default", false, null);
     return block1([attr1], [b2]);
   }
 }"
@@ -2996,14 +2996,14 @@ exports[`slots > slots in slots, with vars 1`] = `
   let block2 = createBlock(\`<p>hey<block-child-0/></p>\`);
   
   function slot1(ctx, node, key = "") {
-    const b3 = safeOutput(ctx['test'], key, "__1");
+    const b3 = safeOutput(ctx['test'], node, key, "\\u00021");
     return block2([], [b3]);
   }
   
   return function template(ctx, node, key = "") {
     ctx = Object.create(ctx);
     ctx["test"] = ctx['this'].state.name;
-    const b4 = comp1({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`__2\`, node, this, null);
+    const b4 = comp1({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`\\u00022\`, node, this, null);
     return block1([], [b4]);
   }
 }"
@@ -3019,11 +3019,11 @@ exports[`slots > slots in slots, with vars 2`] = `
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
   function slot1(ctx, node, key = "") {
-    return callSlot(ctx, node, key + \`__1\`, "default", false, null);
+    return callSlot(ctx, node, key + \`\\u00021\`, "default", false, null);
   }
   
   return function template(ctx, node, key = "") {
-    const b3 = comp1({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`__2\`, node, this, null);
+    const b3 = comp1({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`\\u00022\`, node, this, null);
     return block1([], [b3]);
   }
 }"
@@ -3038,7 +3038,7 @@ exports[`slots > slots in slots, with vars 3`] = `
   let block1 = createBlock(\`<span><block-child-0/></span>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = callSlot(ctx, node, key + \`__1\`, "default", false, null);
+    const b2 = callSlot(ctx, node, key + \`\\u00021\`, "default", false, null);
     return block1([], [b2]);
   }
 }"
@@ -3054,7 +3054,7 @@ exports[`slots > slots in t-foreach and re-rendering 1`] = `
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
   function slot1(ctx, node, key = "") {
-    return safeOutput(ctx['n_index'], key, "__1");
+    return safeOutput(ctx['n_index'], node, key, "\\u00021");
   }
   
   return function template(ctx, node, key = "") {
@@ -3066,7 +3066,7 @@ exports[`slots > slots in t-foreach and re-rendering 1`] = `
       ctx["n_index"] = i1;
       const key1 = ctx['n_index'];
       const skey1 = keyOf(key1);
-      c_block2[i1] = withKey(comp1({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`__2__\${skey1}\`, node, this, null), key1);
+      c_block2[i1] = withKey(comp1({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`\\u00022\\u0002:\${skey1}\`, node, this, null), key1);
     }
     const b2 = list(c_block2);
     return block1([], [b2]);
@@ -3083,8 +3083,8 @@ exports[`slots > slots in t-foreach and re-rendering 2`] = `
   let block1 = createBlock(\`<span><block-child-0/><block-child-1/></span>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].state.val, key, "__1");
-    const b3 = callSlot(ctx, node, key + \`__2\`, "default", false, null);
+    const b2 = safeOutput(ctx['this'].state.val, node, key, "\\u00021");
+    const b3 = callSlot(ctx, node, key + \`\\u00022\`, "default", false, null);
     return block1([], [b2, b3]);
   }
 }"
@@ -3103,7 +3103,7 @@ exports[`slots > slots in t-foreach in t-foreach 1`] = `
   let block8 = createBlock(\`<li><block-child-0/></li>\`);
   
   function slot1(ctx, node, key = "") {
-    const b9 = safeOutput(ctx['node1'].value, key, "__2");
+    const b9 = safeOutput(ctx['node1'].value, node, key, "\\u00022");
     return block8([], [b9]);
   }
   
@@ -3115,7 +3115,7 @@ exports[`slots > slots in t-foreach in t-foreach 1`] = `
       ctx["node1"] = k_block2[i1];
       const key1 = ctx['node1'].key;
       const skey1 = keyOf(key1);
-      const b5 = safeOutput(ctx['node1'].value, key, "__1", 1, key1);
+      const b5 = safeOutput(ctx['node1'].value, node, key, "\\u00021", 1, key1);
       const b4 = block4([], [b5]);
       const ctx2 = ctx;
       const [k_block7, v_block7, l_block7, c_block7] = prepareList(ctx['node1'].nodes);
@@ -3124,7 +3124,7 @@ exports[`slots > slots in t-foreach in t-foreach 1`] = `
         ctx["node2"] = k_block7[i2];
         const key2 = ctx['node2'].key;
         const skey2 = keyOf(key2);
-        c_block7[i2] = withKey(comp1({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`__3__\${skey1}__\${skey2}\`, node, this, null), key2);
+        c_block7[i2] = withKey(comp1({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`\\u00023\\u0002:\${skey1}\\u0002:\${skey2}\`, node, this, null), key2);
       }
       const b7 = list(c_block7);
       const b6 = block6([], [b7]);
@@ -3145,7 +3145,7 @@ exports[`slots > slots in t-foreach in t-foreach 2`] = `
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = callSlot(ctx, node, key + \`__1\`, "default", false, null);
+    const b2 = callSlot(ctx, node, key + \`\\u00021\`, "default", false, null);
     return block1([], [b2]);
   }
 }"
@@ -3161,7 +3161,7 @@ exports[`slots > slots in t-foreach with t-set and re-rendering 1`] = `
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
   function slot1(ctx, node, key = "") {
-    return safeOutput(ctx['dummy'], key, "__1");
+    return safeOutput(ctx['dummy'], node, key, "\\u00021");
   }
   
   return function template(ctx, node, key = "") {
@@ -3174,7 +3174,7 @@ exports[`slots > slots in t-foreach with t-set and re-rendering 1`] = `
       const key1 = ctx['n_index'];
       const skey1 = keyOf(key1);
       ctx["dummy"] = ctx['n_index'];
-      c_block2[i1] = withKey(comp1({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`__2__\${skey1}\`, node, this, null), key1);
+      c_block2[i1] = withKey(comp1({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`\\u00022\\u0002:\${skey1}\`, node, this, null), key1);
     }
     const b2 = list(c_block2);
     return block1([], [b2]);
@@ -3191,8 +3191,8 @@ exports[`slots > slots in t-foreach with t-set and re-rendering 2`] = `
   let block1 = createBlock(\`<span><block-child-0/><block-child-1/></span>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].state.val, key, "__1");
-    const b3 = callSlot(ctx, node, key + \`__2\`, "default", false, null);
+    const b2 = safeOutput(ctx['this'].state.val, node, key, "\\u00021");
+    const b3 = callSlot(ctx, node, key + \`\\u00022\`, "default", false, null);
     return block1([], [b2, b3]);
   }
 }"
@@ -3213,7 +3213,7 @@ exports[`slots > t-debug on a t-set-slot (defining a slot) 1`] = `
   }
   
   return function template(ctx, node, key = "") {
-    const b3 = comp1({slots: markRaw({"content": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`__1\`, node, this, null);
+    const b3 = comp1({slots: markRaw({"content": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`\\u00021\`, node, this, null);
     return block1([], [b3]);
   }
 }"
@@ -3228,7 +3228,7 @@ exports[`slots > t-debug on a t-set-slot (defining a slot) 2`] = `
   let block1 = createBlock(\`<span><block-child-0/></span>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = callSlot(ctx, node, key + \`__1\`, "content", false, null);
+    const b2 = callSlot(ctx, node, key + \`\\u00021\`, "content", false, null);
     return block1([], [b2]);
   }
 }"
@@ -3244,14 +3244,14 @@ exports[`slots > t-out='0' in a loop and again after it gives each output its ow
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
   function callBody1(ctx, node, key = "") {
-    return comp1({}, key + \`__1\`, node, this, null);
+    return comp1({}, key + \`\\u00021\`, node, this, null);
   }
   
   return function template(ctx, node, key = "") {
     const ctx1 = Object.create(ctx);
     ctx1[zero] = callBody1;
     ctx1[zeroCtx] = ctx;
-    const b2 = callTemplate(\`__template__1000\`, this, app, ctx1, node, key + \`__2\`);
+    const b2 = callTemplate(\`__template__1000\`, this, app, ctx1, node, key + \`\\u00022\`);
     return block1([], [b2]);
   }
 }"
@@ -3273,12 +3273,12 @@ exports[`slots > t-out='0' in a loop and again after it gives each output its ow
       ctx["i"] = k_block2[i1];
       const key1 = ctx['i'];
       const skey1 = keyOf(key1);
-      c_block2[i1] = withKey(ctx[zero] ? ctx[zero].call(this, ctx[zeroCtx], node, key + \`__1__\${skey1}\`) : text(""), key1);
+      c_block2[i1] = withKey(ctx[zero] ? ctx[zero].call(this, ctx[zeroCtx], node, key + \`\\u00021\\u0002:\${skey1}\`) : text(""), key1);
     }
     const b2 = list(c_block2);
-    const b5 = safeOutput('|', key, "__2");
+    const b5 = safeOutput('|', node, key, "\\u00022");
     const b4 = block4([], [b5]);
-    const b6 = ctx[zero] ? ctx[zero].call(this, ctx[zeroCtx], node, key + \`__3\`) : text("");
+    const b6 = ctx[zero] ? ctx[zero].call(this, ctx[zeroCtx], node, key + \`\\u00023\`) : text("");
     return multi([b2, b4, b6]);
   }
 }"
@@ -3293,7 +3293,7 @@ exports[`slots > t-out='0' in a loop and again after it gives each output its ow
   let block1 = createBlock(\`<b><block-child-0/></b>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].id, key, "__1");
+    const b2 = safeOutput(ctx['this'].id, node, key, "\\u00021");
     return block1([], [b2]);
   }
 }"
@@ -3307,14 +3307,14 @@ exports[`slots > t-out='0' inside nested loops gets one component per outer iter
   const comp1 = createComponent(app, \`Cell\`, true, false, false, []);
   
   function callBody1(ctx, node, key = "") {
-    return comp1({}, key + \`__1\`, node, this, null);
+    return comp1({}, key + \`\\u00021\`, node, this, null);
   }
   
   return function template(ctx, node, key = "") {
     const ctx1 = Object.create(ctx);
     ctx1[zero] = callBody1;
     ctx1[zeroCtx] = ctx;
-    return callTemplate(\`sub\`, this, app, ctx1, node, key + \`__2\`);
+    return callTemplate(\`sub\`, this, app, ctx1, node, key + \`\\u00022\`);
   }
 }"
 `;
@@ -3342,7 +3342,7 @@ exports[`slots > t-out='0' inside nested loops gets one component per outer iter
         ctx["c"] = k_block3[i2];
         const key2 = ctx['c'];
         const skey2 = keyOf(key2);
-        c_block3[i2] = withKey(ctx[zero] ? ctx[zero].call(this, ctx[zeroCtx], node, key + \`__1__\${skey1}__\${skey2}\`) : text(""), key2);
+        c_block3[i2] = withKey(ctx[zero] ? ctx[zero].call(this, ctx[zeroCtx], node, key + \`\\u00021\\u0002:\${skey1}\\u0002:\${skey2}\`) : text(""), key2);
       }
       const b3 = list(c_block3);
       c_block1[i1] = withKey(block2([], [b3]), key1);
@@ -3361,7 +3361,7 @@ exports[`slots > t-out='0' inside nested loops gets one component per outer iter
   let block1 = createBlock(\`<b><block-child-0/></b>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].id, key, "__1");
+    const b2 = safeOutput(ctx['this'].id, node, key, "\\u00021");
     return block1([], [b2]);
   }
 }"
@@ -3379,11 +3379,11 @@ exports[`slots > t-set t-value in a slot 1`] = `
   function slot1(ctx, node, key = "") {
     ctx = Object.create(ctx);
     ctx["rainbow"] = 'dash';
-    return safeOutput(ctx['rainbow'], key, "__1");
+    return safeOutput(ctx['rainbow'], node, key, "\\u00021");
   }
   
   return function template(ctx, node, key = "") {
-    const b3 = comp1({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`__2\`, node, this, null);
+    const b3 = comp1({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`\\u00022\`, node, this, null);
     return block1([], [b3]);
   }
 }"
@@ -3398,7 +3398,7 @@ exports[`slots > t-set t-value in a slot 2`] = `
   let block1 = createBlock(\`<span><block-child-0/></span>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = callSlot(ctx, node, key + \`__1\`, "default", false, null);
+    const b2 = callSlot(ctx, node, key + \`\\u00021\`, "default", false, null);
     return block1([], [b2]);
   }
 }"
@@ -3416,7 +3416,7 @@ exports[`slots > t-set-slot=default has priority over rest of the content 1`] = 
   }
   
   return function template(ctx, node, key = "") {
-    return comp1({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`__1\`, node, this, null);
+    return comp1({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`\\u00021\`, node, this, null);
   }
 }"
 `;
@@ -3428,7 +3428,7 @@ exports[`slots > t-set-slot=default has priority over rest of the content 2`] = 
   let { callSlot } = helpers;
   
   return function template(ctx, node, key = "") {
-    return callSlot(ctx, node, key + \`__1\`, "default", false, null);
+    return callSlot(ctx, node, key + \`\\u00021\`, "default", false, null);
   }
 }"
 `;
@@ -3441,7 +3441,7 @@ exports[`slots > t-slot in recursive templates 1`] = `
   const comp1 = createComponent(app, \`Wrapper\`, true, true, false, []);
   
   function slot1(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['name']||ctx['this'].name, key, "__1");
+    const b2 = safeOutput(ctx['name']||ctx['this'].name, node, key, "\\u00021");
     const ctx1 = ctx;
     const [k_block3, v_block3, l_block3, c_block3] = prepareList(ctx['items']||ctx['this'].items);
     for (let i1 = 0; i1 < l_block3; i1++) {
@@ -3455,13 +3455,13 @@ exports[`slots > t-slot in recursive templates 1`] = `
       const skey1 = keyOf(key1);
       let b5, b6;
       if (!ctx['item'].children.length) {
-        b5 = safeOutput(ctx['item'].name, key, "__2", 1, key1);
+        b5 = safeOutput(ctx['item'].name, node, key, "\\u00022", 1, key1);
       } else {
         const ctx2 = Object.create(ctx);
         ctx2["name"] = ctx['item'].name;
         ctx2["items"] = ctx['item'].children;
         ctx2[zero] = null;
-        b6 = callTemplate(\`_test_recursive_template\`, this, app, ctx2, node, key + \`__3__\${skey1}\`);
+        b6 = callTemplate(\`_test_recursive_template\`, this, app, ctx2, node, key + \`\\u00023\\u0002:\${skey1}\`);
       }
       c_block3[i1] = withKey(multi([b5, b6]), key1);
     }
@@ -3470,7 +3470,7 @@ exports[`slots > t-slot in recursive templates 1`] = `
   }
   
   return function template(ctx, node, key = "") {
-    return comp1({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`__4\`, node, this, null);
+    return comp1({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`\\u00024\`, node, this, null);
   }
 }"
 `;
@@ -3484,7 +3484,7 @@ exports[`slots > t-slot in recursive templates 2`] = `
   let block1 = createBlock(\`<wrapper><block-child-0/></wrapper>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = callSlot(ctx, node, key + \`__1\`, "default", false, null);
+    const b2 = callSlot(ctx, node, key + \`\\u00021\`, "default", false, null);
     return block1([], [b2]);
   }
 }"
@@ -3501,11 +3501,11 @@ exports[`slots > t-slot nested within another slot 1`] = `
   let block1 = createBlock(\`<span id="c1"><block-child-0/></span>\`);
   
   function slot1(ctx, node, key = "") {
-    return comp1({}, key + \`__1\`, node, this, null);
+    return comp1({}, key + \`\\u00021\`, node, this, null);
   }
   
   return function template(ctx, node, key = "") {
-    const b3 = comp2({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`__2\`, node, this, null);
+    const b3 = comp2({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`\\u00022\`, node, this, null);
     return block1([], [b3]);
   }
 }"
@@ -3522,15 +3522,15 @@ exports[`slots > t-slot nested within another slot 2`] = `
   let block1 = createBlock(\`<span id="c2"><block-child-0/></span>\`);
   
   function slot1(ctx, node, key = "") {
-    return comp1({slots: markRaw({"default": {__render: slot2, __ctx: ctx, __owner: this}})}, key + \`__2\`, node, this, null);
+    return comp1({slots: markRaw({"default": {__render: slot2, __ctx: ctx, __owner: this}})}, key + \`\\u00022\`, node, this, null);
   }
   
   function slot2(ctx, node, key = "") {
-    return callSlot(ctx, node, key + \`__1\`, "default", false, null);
+    return callSlot(ctx, node, key + \`\\u00021\`, "default", false, null);
   }
   
   return function template(ctx, node, key = "") {
-    const b4 = comp2({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`__3\`, node, this, null);
+    const b4 = comp2({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`\\u00023\`, node, this, null);
     return block1([], [b4]);
   }
 }"
@@ -3545,7 +3545,7 @@ exports[`slots > t-slot nested within another slot 3`] = `
   let block1 = createBlock(\`<span id="modal"><block-child-0/></span>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = callSlot(ctx, node, key + \`__1\`, "default", false, null);
+    const b2 = callSlot(ctx, node, key + \`\\u00021\`, "default", false, null);
     return block1([], [b2]);
   }
 }"
@@ -3560,7 +3560,7 @@ exports[`slots > t-slot nested within another slot 4`] = `
   let block1 = createBlock(\`<span id="portal"><block-child-0/></span>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = callSlot(ctx, node, key + \`__1\`, "default", false, null);
+    const b2 = callSlot(ctx, node, key + \`\\u00021\`, "default", false, null);
     return block1([], [b2]);
   }
 }"
@@ -3593,7 +3593,7 @@ exports[`slots > t-slot scope context 1`] = `
   }
   
   return function template(ctx, node, key = "") {
-    return comp1({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`__1\`, node, this, null);
+    return comp1({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`\\u00021\`, node, this, null);
   }
 }"
 `;
@@ -3609,12 +3609,12 @@ exports[`slots > t-slot scope context 2`] = `
   let block1 = createBlock(\`<div block-handler-0="click"><block-child-0/></div>\`, [hdlr_fn1]);
   
   function slot1(ctx, node, key = "") {
-    const b2 = callSlot(ctx, node, key + \`__1\`, "default", false, null);
+    const b2 = callSlot(ctx, node, key + \`\\u00021\`, "default", false, null);
     return block1([ctx], [b2]);
   }
   
   return function template(ctx, node, key = "") {
-    return comp1({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`__2\`, node, this, null);
+    return comp1({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`\\u00022\`, node, this, null);
   }
 }"
 `;
@@ -3626,7 +3626,7 @@ exports[`slots > t-slot scope context 3`] = `
   let { callSlot } = helpers;
   
   return function template(ctx, node, key = "") {
-    return callSlot(ctx, node, key + \`__1\`, "default", false, null);
+    return callSlot(ctx, node, key + \`\\u00021\`, "default", false, null);
   }
 }"
 `;
@@ -3641,11 +3641,11 @@ exports[`slots > t-slot within dynamic t-call 1`] = `
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
   function slot1(ctx, node, key = "") {
-    return callTemplate((ctx['this'].tcallTemplate), this, app, ctx[zero] ? withoutZero(ctx) : ctx, node, key + \`__1\`);
+    return callTemplate((ctx['this'].tcallTemplate), this, app, ctx[zero] ? withoutZero(ctx) : ctx, node, key + \`\\u00021\`);
   }
   
   return function template(ctx, node, key = "") {
-    const b3 = comp1({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`__2\`, node, this, null);
+    const b3 = comp1({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`\\u00022\`, node, this, null);
     return block1([], [b3]);
   }
 }"
@@ -3660,7 +3660,7 @@ exports[`slots > t-slot within dynamic t-call 2`] = `
   let block1 = createBlock(\`<div class="slotted"><block-child-0/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = callSlot(ctx, node, key + \`__1\`, "default", false, null);
+    const b2 = callSlot(ctx, node, key + \`\\u00021\`, "default", false, null);
     return block1([], [b2]);
   }
 }"
@@ -3676,7 +3676,7 @@ exports[`slots > t-slot within dynamic t-call 3`] = `
   let block1 = createBlock(\`<div class="slot"><block-child-0/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = comp1({}, key + \`__1\`, node, this, null);
+    const b2 = comp1({}, key + \`\\u00021\`, node, this, null);
     return block1([], [b2]);
   }
 }"
@@ -3706,11 +3706,11 @@ exports[`slots > template can just return a slot 1`] = `
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
   function slot1(ctx, node, key = "") {
-    return comp1({value: ctx['this'].state.value}, key + \`__1\`, node, this, null);
+    return comp1({value: ctx['this'].state.value}, key + \`\\u00021\`, node, this, null);
   }
   
   return function template(ctx, node, key = "") {
-    const b3 = comp2({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`__2\`, node, this, null);
+    const b3 = comp2({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`\\u00022\`, node, this, null);
     return block1([], [b3]);
   }
 }"
@@ -3723,7 +3723,7 @@ exports[`slots > template can just return a slot 2`] = `
   let { callSlot } = helpers;
   
   return function template(ctx, node, key = "") {
-    return callSlot(ctx, node, key + \`__1\`, "default", false, null);
+    return callSlot(ctx, node, key + \`\\u00021\`, "default", false, null);
   }
 }"
 `;
@@ -3737,7 +3737,7 @@ exports[`slots > template can just return a slot 3`] = `
   let block1 = createBlock(\`<span><block-child-0/></span>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].props.value, key, "__1");
+    const b2 = safeOutput(ctx['this'].props.value, node, key, "\\u00021");
     return block1([], [b2]);
   }
 }"

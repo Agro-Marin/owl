@@ -15,7 +15,7 @@ exports[`list of components > a keyed item switching between text and markup, or
       let ctx = Object.create(ctx1);
       ctx["item"] = k_block2[i1];
       const key1 = ctx['item'].id;
-      c_block2[i1] = withKey(safeOutput(ctx['item'].content, key, "__1", 1, key1), key1);
+      c_block2[i1] = withKey(safeOutput(ctx['item'].content, node, key, "\\u00021", 1, key1), key1);
     }
     const b2 = list(c_block2);
     const ctx2 = ctx;
@@ -51,7 +51,7 @@ exports[`list of components > components in a node in a t-foreach  1`] = `
       ctx["item"] = k_block2[i1];
       const key1 = 'li_'+ctx['item'];
       const skey1 = keyOf(key1);
-      const b4 = comp1({item: ctx['item']}, key + \`__1__\${skey1}\`, node, this, null);
+      const b4 = comp1({item: ctx['item']}, key + \`\\u00021\\u0002:\${skey1}\`, node, this, null);
       c_block2[i1] = withKey(block3([], [b4]), key1);
     }
     const b2 = list(c_block2);
@@ -69,7 +69,7 @@ exports[`list of components > components in a node in a t-foreach  2`] = `
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].props.item, key, "__1");
+    const b2 = safeOutput(ctx['this'].props.item, node, key, "\\u00021");
     return block1([], [b2]);
   }
 }"
@@ -94,7 +94,7 @@ exports[`list of components > crash on duplicate key in dev mode 1`] = `
       if (keys1.has(skey1)) { throw new OwlError(\`Got duplicate key in t-foreach: \${key1}\`)}
       keys1.add(skey1);
       const props1 = {};
-      c_block1[i1] = withKey(comp1(props1, key + \`__1__\${skey1}\`, node, this, null), key1);
+      c_block1[i1] = withKey(comp1(props1, key + \`\\u00021\\u0002:\${skey1}\`, node, this, null), key1);
     }
     return list(c_block1);
   }
@@ -131,7 +131,7 @@ exports[`list of components > crash on the same object used twice as a key in de
       if (keys1.has(skey1)) { throw new OwlError(\`Got duplicate key in t-foreach: \${key1}\`)}
       keys1.add(skey1);
       const props1 = {};
-      c_block1[i1] = withKey(comp1(props1, key + \`__1__\${skey1}\`, node, this, null), key1);
+      c_block1[i1] = withKey(comp1(props1, key + \`\\u00021\\u0002:\${skey1}\`, node, this, null), key1);
     }
     return list(c_block1);
   }
@@ -175,7 +175,7 @@ exports[`list of components > dev mode: a body without components keeps the list
 }"
 `;
 
-exports[`list of components > dev mode: keys a t-set body output in the loop shares are duplicates 1`] = `
+exports[`list of components > dev mode: keys the list tells apart give a t-set body output in the loop keys of its own 1`] = `
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
@@ -184,12 +184,12 @@ exports[`list of components > dev mode: keys a t-set body output in the loop sha
   
   function value1(ctx, node, key = "") {
     const props1 = {};
-    return comp1(props1, key + \`__1\`, node, this, null);
+    return comp1(props1, key + \`\\u00021\`, node, this, null);
   }
   
   return function template(ctx, node, key = "") {
     ctx = Object.create(ctx);
-    ctx["v"] = new LazyValue(value1, ctx, this, node, key + \`__2\`);
+    ctx["v"] = new LazyValue(value1, ctx, this, node, key + \`\\u00022\`);
     const ctx1 = ctx;
     const [k_block2, v_block2, l_block2, c_block2] = prepareList(ctx['this'].items);
     const keys2 = new Set();
@@ -200,14 +200,14 @@ exports[`list of components > dev mode: keys a t-set body output in the loop sha
       const skey1 = keyOf(key1);
       if (keys2.has(skey1)) { throw new OwlError(\`Got duplicate key in t-foreach: \${key1}\`)}
       keys2.add(skey1);
-      c_block2[i1] = withKey(safeOutput(ctx['v'], key, "__3", 1, key1), key1);
+      c_block2[i1] = withKey(safeOutput(ctx['v'], node, key, "\\u00023", 1, key1), key1);
     }
     return list(c_block2);
   }
 }"
 `;
 
-exports[`list of components > dev mode: keys a t-set body output in the loop shares are duplicates 2`] = `
+exports[`list of components > dev mode: keys the list tells apart give a t-set body output in the loop keys of its own 2`] = `
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
@@ -220,7 +220,7 @@ exports[`list of components > dev mode: keys a t-set body output in the loop sha
 }"
 `;
 
-exports[`list of components > dev mode: keys the list tells apart but the components share are duplicates 1`] = `
+exports[`list of components > dev mode: keys the list tells apart give their components keys of their own 1`] = `
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
@@ -239,14 +239,14 @@ exports[`list of components > dev mode: keys the list tells apart but the compon
       if (keys1.has(skey1)) { throw new OwlError(\`Got duplicate key in t-foreach: \${key1}\`)}
       keys1.add(skey1);
       const props1 = {v: ctx['item']};
-      c_block1[i1] = withKey(comp1(props1, key + \`__1__\${skey1}\`, node, this, null), key1);
+      c_block1[i1] = withKey(comp1(props1, key + \`\\u00021\\u0002:\${skey1}\`, node, this, null), key1);
     }
     return list(c_block1);
   }
 }"
 `;
 
-exports[`list of components > dev mode: keys the list tells apart but the components share are duplicates 2`] = `
+exports[`list of components > dev mode: keys the list tells apart give their components keys of their own 2`] = `
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
@@ -255,7 +255,7 @@ exports[`list of components > dev mode: keys the list tells apart but the compon
   let block1 = createBlock(\`<i><block-child-0/></i>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].props.v, key, "__1");
+    const b2 = safeOutput(ctx['this'].props.v, node, key, "\\u00021");
     return block1([], [b2]);
   }
 }"
@@ -278,7 +278,7 @@ exports[`list of components > emptied, keeps a node one of its components put am
       ctx["id"] = k_block2[i1];
       const key1 = ctx['id'];
       const skey1 = keyOf(key1);
-      c_block2[i1] = withKey(comp1({id: ctx['id']}, key + \`__1__\${skey1}\`, node, this, null), key1);
+      c_block2[i1] = withKey(comp1({id: ctx['id']}, key + \`\\u00021\\u0002:\${skey1}\`, node, this, null), key1);
     }
     const b2 = list(c_block2);
     return block1([], [b2]);
@@ -295,7 +295,7 @@ exports[`list of components > emptied, keeps a node one of its components put am
   let block1 = createBlock(\`<li><block-child-0/></li>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].props.id, key, "__1");
+    const b2 = safeOutput(ctx['this'].props.id, node, key, "\\u00021");
     return block1([], [b2]);
   }
 }"
@@ -319,7 +319,7 @@ exports[`list of components > list of sub components inside other nodes 1`] = `
       ctx["blip"] = k_block2[i1];
       const key1 = ctx['blip'].id;
       const skey1 = keyOf(key1);
-      const b4 = comp1({}, key + \`__1__\${skey1}\`, node, this, null);
+      const b4 = comp1({}, key + \`\\u00021\\u0002:\${skey1}\`, node, this, null);
       c_block2[i1] = withKey(block3([], [b4]), key1);
     }
     const b2 = list(c_block2);
@@ -360,7 +360,7 @@ exports[`list of components > object keys are told apart by identity, components
       if (keys1.has(skey1)) { throw new OwlError(\`Got duplicate key in t-foreach: \${key1}\`)}
       keys1.add(skey1);
       const props1 = {item: ctx['item']};
-      c_block1[i1] = withKey(comp1(props1, key + \`__1__\${skey1}\`, node, this, null), key1);
+      c_block1[i1] = withKey(comp1(props1, key + \`\\u00021\\u0002:\${skey1}\`, node, this, null), key1);
     }
     return list(c_block1);
   }
@@ -376,7 +376,7 @@ exports[`list of components > object keys are told apart by identity, components
   let block1 = createBlock(\`<i><block-child-0/></i>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].props.item.n, key, "__1");
+    const b2 = safeOutput(ctx['this'].props.item.n, node, key, "\\u00021");
     return block1([], [b2]);
   }
 }"
@@ -408,7 +408,7 @@ exports[`list of components > order is correct when slots are not of same type 1
   }
   
   return function template(ctx, node, key = "") {
-    return comp1({slots: markRaw({"a": {__render: slot1, __ctx: ctx, __owner: this, active: !ctx['this'].state.active}, "b": {__render: slot2, __ctx: ctx, __owner: this, active: true}, "c": {__render: slot3, __ctx: ctx, __owner: this, active: ctx['this'].state.active}})}, key + \`__1\`, node, this, null);
+    return comp1({slots: markRaw({"a": {__render: slot1, __ctx: ctx, __owner: this, active: !ctx['this'].state.active}, "b": {__render: slot2, __ctx: ctx, __owner: this, active: true}, "c": {__render: slot3, __ctx: ctx, __owner: this, active: ctx['this'].state.active}})}, key + \`\\u00021\`, node, this, null);
   }
 }"
 `;
@@ -428,7 +428,7 @@ exports[`list of components > order is correct when slots are not of same type 2
       const key1 = ctx['slotName'];
       const skey1 = keyOf(key1);
       const slot1 = (ctx['slotName']);
-      c_block1[i1] = withKey(toggler(slot1, callSlot(ctx, node, key + \`__1__\${skey1}\`, slot1, true, null)), key1);
+      c_block1[i1] = withKey(toggler(slot1, callSlot(ctx, node, key + \`\\u00021\\u0002:\${skey1}\`, slot1, true, null)), key1);
     }
     return list(c_block1);
   }
@@ -461,7 +461,7 @@ exports[`list of components > reconciliation alg works for t-foreach in t-foreac
         ctx["blip_index"] = i2;
         const key2 = ctx['blip_index'];
         const skey2 = keyOf(key2);
-        c_block3[i2] = withKey(comp1({blip: ctx['blip']}, key + \`__1__\${skey1}__\${skey2}\`, node, this, null), key2);
+        c_block3[i2] = withKey(comp1({blip: ctx['blip']}, key + \`\\u00021\\u0002:\${skey1}\\u0002:\${skey2}\`, node, this, null), key2);
       }
       c_block2[i1] = withKey(list(c_block3), key1);
     }
@@ -480,7 +480,7 @@ exports[`list of components > reconciliation alg works for t-foreach in t-foreac
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].props.blip, key, "__1");
+    const b2 = safeOutput(ctx['this'].props.blip, node, key, "\\u00021");
     return block1([], [b2]);
   }
 }"
@@ -512,7 +512,7 @@ exports[`list of components > reconciliation alg works for t-foreach in t-foreac
         ctx["col"] = k_block4[i2];
         const key2 = ctx['col'];
         const skey2 = keyOf(key2);
-        const b6 = comp1({row: ctx['row'],col: ctx['col']}, key + \`__1__\${skey1}__\${skey2}\`, node, this, null);
+        const b6 = comp1({row: ctx['row'],col: ctx['col']}, key + \`\\u00021\\u0002:\${skey1}\\u0002:\${skey2}\`, node, this, null);
         c_block4[i2] = withKey(block5([], [b6]), key2);
       }
       const b4 = list(c_block4);
@@ -533,7 +533,7 @@ exports[`list of components > reconciliation alg works for t-foreach in t-foreac
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].props.row+'_'+ctx['this'].props.col, key, "__1");
+    const b2 = safeOutput(ctx['this'].props.row+'_'+ctx['this'].props.col, node, key, "\\u00021");
     return block1([], [b2]);
   }
 }"
@@ -554,7 +554,7 @@ exports[`list of components > simple list 1`] = `
       ctx["elem"] = k_block1[i1];
       const key1 = ctx['elem'].id;
       const skey1 = keyOf(key1);
-      c_block1[i1] = withKey(comp1({value: ctx['elem'].value}, key + \`__1__\${skey1}\`, node, this, null), key1);
+      c_block1[i1] = withKey(comp1({value: ctx['elem'].value}, key + \`\\u00021\\u0002:\${skey1}\`, node, this, null), key1);
     }
     return list(c_block1);
   }
@@ -570,7 +570,7 @@ exports[`list of components > simple list 2`] = `
   let block1 = createBlock(\`<span><block-child-0/></span>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].props.value, key, "__1");
+    const b2 = safeOutput(ctx['this'].props.value, node, key, "\\u00021");
     return block1([], [b2]);
   }
 }"
@@ -593,7 +593,7 @@ exports[`list of components > sub components rendered in a loop 1`] = `
       ctx["number"] = k_block2[i1];
       const key1 = ctx['number'];
       const skey1 = keyOf(key1);
-      c_block2[i1] = withKey(comp1({n: ctx['number']}, key + \`__1__\${skey1}\`, node, this, null), key1);
+      c_block2[i1] = withKey(comp1({n: ctx['number']}, key + \`\\u00021\\u0002:\${skey1}\`, node, this, null), key1);
     }
     const b2 = list(c_block2);
     return block1([], [b2]);
@@ -610,7 +610,7 @@ exports[`list of components > sub components rendered in a loop 2`] = `
   let block1 = createBlock(\`<p><block-child-0/></p>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].props.n, key, "__1");
+    const b2 = safeOutput(ctx['this'].props.n, node, key, "\\u00021");
     return block1([], [b2]);
   }
 }"
@@ -633,7 +633,7 @@ exports[`list of components > sub components with some state rendered in a loop 
       ctx["number"] = k_block2[i1];
       const key1 = ctx['number'];
       const skey1 = keyOf(key1);
-      c_block2[i1] = withKey(comp1({}, key + \`__1__\${skey1}\`, node, this, null), key1);
+      c_block2[i1] = withKey(comp1({}, key + \`\\u00021\\u0002:\${skey1}\`, node, this, null), key1);
     }
     const b2 = list(c_block2);
     return block1([], [b2]);
@@ -650,7 +650,7 @@ exports[`list of components > sub components with some state rendered in a loop 
   let block1 = createBlock(\`<p><block-child-0/></p>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].state.n, key, "__1");
+    const b2 = safeOutput(ctx['this'].state.n, node, key, "\\u00021");
     return block1([], [b2]);
   }
 }"
@@ -673,7 +673,7 @@ exports[`list of components > switch component position 1`] = `
       ctx["c"] = k_block2[i1];
       const key1 = ctx['c'];
       const skey1 = keyOf(key1);
-      c_block2[i1] = withKey(comp1({key: ctx['c']}, key + \`__1__\${skey1}\`, node, this, null), key1);
+      c_block2[i1] = withKey(comp1({key: ctx['c']}, key + \`\\u00021\\u0002:\${skey1}\`, node, this, null), key1);
     }
     const b2 = list(c_block2);
     return block1([], [b2]);
@@ -690,7 +690,7 @@ exports[`list of components > switch component position 2`] = `
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].props.key, key, "__1");
+    const b2 = safeOutput(ctx['this'].props.key, node, key, "\\u00021");
     return block1([], [b2]);
   }
 }"
@@ -714,7 +714,7 @@ exports[`list of components > t-foreach with t-component, and update 1`] = `
       ctx["n_index"] = i1;
       const key1 = ctx['n_index'];
       const skey1 = keyOf(key1);
-      c_block2[i1] = withKey(comp1({val: ctx['n_index']}, key + \`__1__\${skey1}\`, node, this, null), key1);
+      c_block2[i1] = withKey(comp1({val: ctx['n_index']}, key + \`\\u00021\\u0002:\${skey1}\`, node, this, null), key1);
     }
     const b2 = list(c_block2);
     return block1([], [b2]);
@@ -731,8 +731,8 @@ exports[`list of components > t-foreach with t-component, and update 2`] = `
   let block1 = createBlock(\`<span><block-child-0/><block-child-1/></span>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].state.val, key, "__1");
-    const b3 = safeOutput(ctx['this'].props.val, key, "__2");
+    const b2 = safeOutput(ctx['this'].state.val, node, key, "\\u00021");
+    const b3 = safeOutput(ctx['this'].props.val, node, key, "\\u00022");
     return block1([], [b2, b3]);
   }
 }"

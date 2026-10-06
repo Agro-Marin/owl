@@ -16,7 +16,7 @@ exports[`t-ref > a lazy t-set body used as a string does not bind its refs 1`] =
   
   return function template(ctx, node, key = "") {
     ctx = Object.create(ctx);
-    ctx["v"] = new LazyValue(value1, ctx, this, node, key + \`__1\`);
+    ctx["v"] = new LazyValue(value1, ctx, this, node, key + \`\\u00021\`);
     let attr1 = ctx['v'];
     return block2([attr1]);
   }
@@ -47,7 +47,7 @@ exports[`t-ref > ref in a t-call 1`] = `
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = callTemplate(\`sub\`, this, app, ctx[zero] ? withoutZero(ctx) : ctx, node, key + \`__1\`);
+    const b2 = callTemplate(\`sub\`, this, app, ctx[zero] ? withoutZero(ctx) : ctx, node, key + \`\\u00021\`);
     return block1([], [b2]);
   }
 }"
@@ -107,8 +107,8 @@ exports[`t-ref > refs in a loop 1`] = `
       const skey1 = keyOf(key1);
       const tKey_1 = keyOf(ctx['item'].id);
       let ref1 = createRef(ctx['item'].ref, node);
-      const b4 = toggler(tKey_1, safeOutput(ctx['item'].id, tKey_1 + key, "__1", 1, key1));
-      c_block2[i1] = withKey(block3([ref1], [b4]), tKey_1 + skey1);
+      const b4 = toggler(tKey_1, safeOutput(ctx['item'].id, node, key + \`\\u0002k\${tKey_1}\`, "\\u00021", 1, key1));
+      c_block2[i1] = withKey(block3([ref1], [b4]), \`\${skey1}\\u0002k\${tKey_1}\`);
     }
     const b2 = list(c_block2);
     return block1([], [b2]);

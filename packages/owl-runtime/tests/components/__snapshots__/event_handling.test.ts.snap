@@ -80,8 +80,8 @@ exports[`event handling > handler receive the event as argument 1`] = `
   let block1 = createBlock(\`<span block-handler-0="click"><block-child-0/><block-child-1/></span>\`, [hdlr_fn1]);
   
   return function template(ctx, node, key = "") {
-    const b2 = comp1({}, key + \`__1\`, node, this, null);
-    const b3 = safeOutput(ctx['this'].state.value, key, "__2");
+    const b2 = comp1({}, key + \`\\u00021\`, node, this, null);
+    const b3 = safeOutput(ctx['this'].state.value, node, key, "\\u00022");
     return block1([ctx], [b2, b3]);
   }
 }"
@@ -127,7 +127,7 @@ exports[`event handling > input blur event is not called if component is destroy
   return function template(ctx, node, key = "") {
     let b2;
     if (ctx['this'].state.cond) {
-      b2 = comp1({}, key + \`__1\`, node, this, null);
+      b2 = comp1({}, key + \`\\u00021\`, node, this, null);
     }
     return block1([], [b2]);
   }
@@ -184,7 +184,7 @@ exports[`event handling > support for callable expression in event handler 1`] =
   let block1 = createBlock(\`<div><block-child-0/><input type="text" block-handler-0="input"/></div>\`, [hdlr_fn1]);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].state.value, key, "__1");
+    const b2 = safeOutput(ctx['this'].state.value, node, key, "\\u00021");
     return block1([ctx], [b2]);
   }
 }"
@@ -236,7 +236,7 @@ exports[`event handling > unnamed slot should call the event only once 1`] = `
   }
   
   return function template(ctx, node, key = "") {
-    return catcher1(comp1({slots: markRaw({"named": {__render: slot1, __ctx: ctx, __owner: this}, "default": {__render: slot2, __ctx: ctx, __owner: this}})}, key + \`__1\`, node, this, null), ctx);
+    return catcher1(comp1({slots: markRaw({"named": {__render: slot1, __ctx: ctx, __owner: this}, "default": {__render: slot2, __ctx: ctx, __owner: this}})}, key + \`\\u00021\`, node, this, null), ctx);
   }
 }"
 `;
@@ -248,8 +248,8 @@ exports[`event handling > unnamed slot should call the event only once 2`] = `
   let { callSlot } = helpers;
   
   return function template(ctx, node, key = "") {
-    const b2 = callSlot(ctx, node, key + \`__1\`, "named", false, null);
-    const b3 = callSlot(ctx, node, key + \`__2\`, "default", false, null);
+    const b2 = callSlot(ctx, node, key + \`\\u00021\`, "named", false, null);
+    const b3 = callSlot(ctx, node, key + \`\\u00022\`, "default", false, null);
     return multi([b2, b3]);
   }
 }"

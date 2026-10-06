@@ -11,7 +11,7 @@ exports[`app > app: clear scheduler tasks on destroy 1`] = `
     let b2, b3;
     b2 = text(\`A\`);
     if (ctx['this'].state.value) {
-      b3 = comp1({}, key + \`__1\`, node, this, null);
+      b3 = comp1({}, key + \`\\u00021\`, node, this, null);
     }
     return multi([b2, b3]);
   }
@@ -53,7 +53,7 @@ exports[`app > can call processTask twice in a row without crashing 1`] = `
   
   return function template(ctx, node, key = "") {
     const b2 = text(\`parent\`);
-    const b3 = comp1({}, key + \`__1\`, node, this, null);
+    const b3 = comp1({}, key + \`\\u00021\`, node, this, null);
     return multi([b2, b3]);
   }
 }"
@@ -81,7 +81,7 @@ exports[`app > can configure an app with props 1`] = `
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].props.value, key, "__1");
+    const b2 = safeOutput(ctx['this'].props.value, node, key, "\\u00021");
     return block1([], [b2]);
   }
 }"
@@ -203,9 +203,9 @@ exports[`app.destroy() finishes the teardown when an onWillDestroy throws, then 
   
   return function template(ctx, node, key = "") {
     const props1 = {};
-    const b2 = comp1(props1, key + \`__1\`, node, this, null);
+    const b2 = comp1(props1, key + \`\\u00021\`, node, this, null);
     const props2 = {};
-    const b3 = comp2(props2, key + \`__2\`, node, this, null);
+    const b3 = comp2(props2, key + \`\\u00022\`, node, this, null);
     return block1([], [b2, b3]);
   }
 }"

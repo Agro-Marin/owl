@@ -55,7 +55,7 @@ exports[`props validation > additional props are allowed (array) 1`] = `
   
   return function template(ctx, node, key = "") {
     const props1 = {message: 'm',otherProp: 'o'};
-    return comp1(props1, key + \`__1\`, node, this, null);
+    return comp1(props1, key + \`\\u00021\`, node, this, null);
   }
 }"
 `;
@@ -82,7 +82,7 @@ exports[`props validation > additional props are allowed (object) 1`] = `
   
   return function template(ctx, node, key = "") {
     const props1 = {message: 'm',otherProp: 'o'};
-    return comp1(props1, key + \`__1\`, node, this, null);
+    return comp1(props1, key + \`\\u00021\`, node, this, null);
   }
 }"
 `;
@@ -109,7 +109,7 @@ exports[`props validation > can use custom class as type 1`] = `
   
   return function template(ctx, node, key = "") {
     const props1 = {customObj: ctx['this'].customObj};
-    return comp1(props1, key + \`__1\`, node, this, null);
+    return comp1(props1, key + \`\\u00021\`, node, this, null);
   }
 }"
 `;
@@ -121,7 +121,7 @@ exports[`props validation > can use custom class as type 2`] = `
   let { safeOutput } = helpers;
   
   return function template(ctx, node, key = "") {
-    return safeOutput(ctx['this'].props.customObj.val, key, "__1");
+    return safeOutput(ctx['this'].props.customObj.val, node, key, "\\u00021");
   }
 }"
 `;
@@ -135,7 +135,7 @@ exports[`props validation > can use custom class as type: validation failure 1`]
   
   return function template(ctx, node, key = "") {
     const props1 = {customObj: ctx['this'].customObj};
-    return comp1(props1, key + \`__1\`, node, this, null);
+    return comp1(props1, key + \`\\u00021\`, node, this, null);
   }
 }"
 `;
@@ -151,7 +151,7 @@ exports[`props validation > can validate a prop with multiple types 1`] = `
   
   return function template(ctx, node, key = "") {
     const props1 = {p: ctx['this'].p};
-    const b2 = comp1(props1, key + \`__1\`, node, this, null);
+    const b2 = comp1(props1, key + \`\\u00021\`, node, this, null);
     return block1([], [b2]);
   }
 }"
@@ -181,7 +181,7 @@ exports[`props validation > can validate a prop with multiple types 3`] = `
   
   return function template(ctx, node, key = "") {
     const props1 = {p: ctx['this'].p};
-    const b2 = comp1(props1, key + \`__1\`, node, this, null);
+    const b2 = comp1(props1, key + \`\\u00021\`, node, this, null);
     return block1([], [b2]);
   }
 }"
@@ -211,7 +211,7 @@ exports[`props validation > can validate a prop with multiple types 5`] = `
   
   return function template(ctx, node, key = "") {
     const props1 = {p: ctx['this'].p};
-    const b2 = comp1(props1, key + \`__1\`, node, this, null);
+    const b2 = comp1(props1, key + \`\\u00021\`, node, this, null);
     return block1([], [b2]);
   }
 }"
@@ -228,7 +228,7 @@ exports[`props validation > can validate an array with given primitive type 1`] 
   
   return function template(ctx, node, key = "") {
     const props1 = {p: ctx['this'].p};
-    const b2 = comp1(props1, key + \`__1\`, node, this, null);
+    const b2 = comp1(props1, key + \`\\u00021\`, node, this, null);
     return block1([], [b2]);
   }
 }"
@@ -258,7 +258,7 @@ exports[`props validation > can validate an array with given primitive type 3`] 
   
   return function template(ctx, node, key = "") {
     const props1 = {p: ctx['this'].p};
-    const b2 = comp1(props1, key + \`__1\`, node, this, null);
+    const b2 = comp1(props1, key + \`\\u00021\`, node, this, null);
     return block1([], [b2]);
   }
 }"
@@ -288,7 +288,7 @@ exports[`props validation > can validate an array with given primitive type 5`] 
   
   return function template(ctx, node, key = "") {
     const props1 = {p: ctx['this'].p};
-    const b2 = comp1(props1, key + \`__1\`, node, this, null);
+    const b2 = comp1(props1, key + \`\\u00021\`, node, this, null);
     return block1([], [b2]);
   }
 }"
@@ -305,7 +305,7 @@ exports[`props validation > can validate an array with given primitive type 6`] 
   
   return function template(ctx, node, key = "") {
     const props1 = {p: ctx['this'].p};
-    const b2 = comp1(props1, key + \`__1\`, node, this, null);
+    const b2 = comp1(props1, key + \`\\u00021\`, node, this, null);
     return block1([], [b2]);
   }
 }"
@@ -322,7 +322,7 @@ exports[`props validation > can validate an array with multiple sub element type
   
   return function template(ctx, node, key = "") {
     const props1 = {p: ctx['this'].p};
-    const b2 = comp1(props1, key + \`__1\`, node, this, null);
+    const b2 = comp1(props1, key + \`\\u00021\`, node, this, null);
     return block1([], [b2]);
   }
 }"
@@ -352,7 +352,7 @@ exports[`props validation > can validate an array with multiple sub element type
   
   return function template(ctx, node, key = "") {
     const props1 = {p: ctx['this'].p};
-    const b2 = comp1(props1, key + \`__1\`, node, this, null);
+    const b2 = comp1(props1, key + \`\\u00021\`, node, this, null);
     return block1([], [b2]);
   }
 }"
@@ -382,7 +382,7 @@ exports[`props validation > can validate an array with multiple sub element type
   
   return function template(ctx, node, key = "") {
     const props1 = {p: ctx['this'].p};
-    const b2 = comp1(props1, key + \`__1\`, node, this, null);
+    const b2 = comp1(props1, key + \`\\u00021\`, node, this, null);
     return block1([], [b2]);
   }
 }"
@@ -412,7 +412,7 @@ exports[`props validation > can validate an array with multiple sub element type
   
   return function template(ctx, node, key = "") {
     const props1 = {p: ctx['this'].p};
-    const b2 = comp1(props1, key + \`__1\`, node, this, null);
+    const b2 = comp1(props1, key + \`\\u00021\`, node, this, null);
     return block1([], [b2]);
   }
 }"
@@ -429,7 +429,7 @@ exports[`props validation > can validate an object with simple shape 1`] = `
   
   return function template(ctx, node, key = "") {
     const props1 = {p: ctx['this'].p};
-    const b2 = comp1(props1, key + \`__1\`, node, this, null);
+    const b2 = comp1(props1, key + \`\\u00021\`, node, this, null);
     return block1([], [b2]);
   }
 }"
@@ -459,7 +459,7 @@ exports[`props validation > can validate an object with simple shape 3`] = `
   
   return function template(ctx, node, key = "") {
     const props1 = {p: ctx['this'].p};
-    const b2 = comp1(props1, key + \`__1\`, node, this, null);
+    const b2 = comp1(props1, key + \`\\u00021\`, node, this, null);
     return block1([], [b2]);
   }
 }"
@@ -489,7 +489,7 @@ exports[`props validation > can validate an object with simple shape 5`] = `
   
   return function template(ctx, node, key = "") {
     const props1 = {p: ctx['this'].p};
-    const b2 = comp1(props1, key + \`__1\`, node, this, null);
+    const b2 = comp1(props1, key + \`\\u00021\`, node, this, null);
     return block1([], [b2]);
   }
 }"
@@ -506,7 +506,7 @@ exports[`props validation > can validate an object with simple shape 6`] = `
   
   return function template(ctx, node, key = "") {
     const props1 = {p: ctx['this'].p};
-    const b2 = comp1(props1, key + \`__1\`, node, this, null);
+    const b2 = comp1(props1, key + \`\\u00021\`, node, this, null);
     return block1([], [b2]);
   }
 }"
@@ -523,7 +523,7 @@ exports[`props validation > can validate an optional props 1`] = `
   
   return function template(ctx, node, key = "") {
     const props1 = {p: ctx['this'].p};
-    const b2 = comp1(props1, key + \`__1\`, node, this, null);
+    const b2 = comp1(props1, key + \`\\u00021\`, node, this, null);
     return block1([], [b2]);
   }
 }"
@@ -553,7 +553,7 @@ exports[`props validation > can validate an optional props 3`] = `
   
   return function template(ctx, node, key = "") {
     const props1 = {p: ctx['this'].p};
-    const b2 = comp1(props1, key + \`__1\`, node, this, null);
+    const b2 = comp1(props1, key + \`\\u00021\`, node, this, null);
     return block1([], [b2]);
   }
 }"
@@ -583,7 +583,7 @@ exports[`props validation > can validate an optional props 5`] = `
   
   return function template(ctx, node, key = "") {
     const props1 = {p: ctx['this'].p};
-    const b2 = comp1(props1, key + \`__1\`, node, this, null);
+    const b2 = comp1(props1, key + \`\\u00021\`, node, this, null);
     return block1([], [b2]);
   }
 }"
@@ -622,7 +622,7 @@ exports[`props validation > can validate recursively complicated prop def 1`] = 
   
   return function template(ctx, node, key = "") {
     const props1 = {p: ctx['this'].p};
-    const b2 = comp1(props1, key + \`__1\`, node, this, null);
+    const b2 = comp1(props1, key + \`\\u00021\`, node, this, null);
     return block1([], [b2]);
   }
 }"
@@ -652,7 +652,7 @@ exports[`props validation > can validate recursively complicated prop def 3`] = 
   
   return function template(ctx, node, key = "") {
     const props1 = {p: ctx['this'].p};
-    const b2 = comp1(props1, key + \`__1\`, node, this, null);
+    const b2 = comp1(props1, key + \`\\u00021\`, node, this, null);
     return block1([], [b2]);
   }
 }"
@@ -682,7 +682,7 @@ exports[`props validation > can validate recursively complicated prop def 5`] = 
   
   return function template(ctx, node, key = "") {
     const props1 = {p: ctx['this'].p};
-    const b2 = comp1(props1, key + \`__1\`, node, this, null);
+    const b2 = comp1(props1, key + \`\\u00021\`, node, this, null);
     return block1([], [b2]);
   }
 }"
@@ -698,12 +698,12 @@ exports[`props validation > can validate through slots 1`] = `
   
   function slot1(ctx, node, key = "") {
     const props1 = {};
-    return comp1(props1, key + \`__1\`, node, this, null);
+    return comp1(props1, key + \`\\u00021\`, node, this, null);
   }
   
   return function template(ctx, node, key = "") {
     const props2 = {slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})};
-    return comp2(props2, key + \`__2\`, node, this, null);
+    return comp2(props2, key + \`\\u00022\`, node, this, null);
   }
 }"
 `;
@@ -715,7 +715,7 @@ exports[`props validation > can validate through slots 2`] = `
   let { callSlot } = helpers;
   
   return function template(ctx, node, key = "") {
-    return callSlot(ctx, node, key + \`__1\`, "default", false, null);
+    return callSlot(ctx, node, key + \`\\u00021\`, "default", false, null);
   }
 }"
 `;
@@ -753,7 +753,7 @@ exports[`props validation > default values are applied before validating props a
   
   return function template(ctx, node, key = "") {
     const props1 = {p: ctx['this'].state.p};
-    const b2 = comp1(props1, key + \`__1\`, node, this, null);
+    const b2 = comp1(props1, key + \`\\u00021\`, node, this, null);
     return block1([], [b2]);
   }
 }"
@@ -768,7 +768,7 @@ exports[`props validation > default values are applied before validating props a
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].props.p, key, "__1");
+    const b2 = safeOutput(ctx['this'].props.p, node, key, "\\u00021");
     return block1([], [b2]);
   }
 }"
@@ -785,7 +785,7 @@ exports[`props validation > missing required boolean prop causes an error 1`] = 
   
   return function template(ctx, node, key = "") {
     const props1 = {};
-    const b2 = comp1(props1, key + \`__1\`, node, this, null);
+    const b2 = comp1(props1, key + \`\\u00021\`, node, this, null);
     return block1([], [b2]);
   }
 }"
@@ -802,7 +802,7 @@ exports[`props validation > mix of optional and mandatory 1`] = `
   
   return function template(ctx, node, key = "") {
     const props1 = {};
-    const b2 = comp1(props1, key + \`__1\`, node, this, null);
+    const b2 = comp1(props1, key + \`\\u00021\`, node, this, null);
     return block1([], [b2]);
   }
 }"
@@ -830,7 +830,7 @@ exports[`props validation > props are validated in dev mode (code snapshot) 1`] 
   
   return function template(ctx, node, key = "") {
     const props1 = {message: 1};
-    const b2 = comp1(props1, key + \`__1\`, node, this, null);
+    const b2 = comp1(props1, key + \`\\u00021\`, node, this, null);
     return block1([], [b2]);
   }
 }"
@@ -845,7 +845,7 @@ exports[`props validation > props are validated in dev mode (code snapshot) 2`] 
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].props.message, key, "__1");
+    const b2 = safeOutput(ctx['this'].props.message, node, key, "\\u00021");
     return block1([], [b2]);
   }
 }"
@@ -884,7 +884,7 @@ exports[`props validation > props: list of strings 1`] = `
   
   return function template(ctx, node, key = "") {
     const props1 = {};
-    const b2 = comp1(props1, key + \`__1\`, node, this, null);
+    const b2 = comp1(props1, key + \`\\u00021\`, node, this, null);
     return block1([], [b2]);
   }
 }"
@@ -934,7 +934,7 @@ exports[`props validation > validate simple types 1`] = `
   
   return function template(ctx, node, key = "") {
     const props1 = {p: ctx['this'].p};
-    const b2 = comp1(props1, key + \`__1\`, node, this, null);
+    const b2 = comp1(props1, key + \`\\u00021\`, node, this, null);
     return block1([], [b2]);
   }
 }"
@@ -951,7 +951,7 @@ exports[`props validation > validate simple types 2`] = `
   
   return function template(ctx, node, key = "") {
     const props1 = {p: ctx['this'].p};
-    const b2 = comp1(props1, key + \`__1\`, node, this, null);
+    const b2 = comp1(props1, key + \`\\u00021\`, node, this, null);
     return block1([], [b2]);
   }
 }"
@@ -981,7 +981,7 @@ exports[`props validation > validate simple types 4`] = `
   
   return function template(ctx, node, key = "") {
     const props1 = {p: ctx['this'].p};
-    const b2 = comp1(props1, key + \`__1\`, node, this, null);
+    const b2 = comp1(props1, key + \`\\u00021\`, node, this, null);
     return block1([], [b2]);
   }
 }"
@@ -998,7 +998,7 @@ exports[`props validation > validate simple types 5`] = `
   
   return function template(ctx, node, key = "") {
     const props1 = {p: ctx['this'].p};
-    const b2 = comp1(props1, key + \`__1\`, node, this, null);
+    const b2 = comp1(props1, key + \`\\u00021\`, node, this, null);
     return block1([], [b2]);
   }
 }"
@@ -1015,7 +1015,7 @@ exports[`props validation > validate simple types 6`] = `
   
   return function template(ctx, node, key = "") {
     const props1 = {p: ctx['this'].p};
-    const b2 = comp1(props1, key + \`__1\`, node, this, null);
+    const b2 = comp1(props1, key + \`\\u00021\`, node, this, null);
     return block1([], [b2]);
   }
 }"
@@ -1045,7 +1045,7 @@ exports[`props validation > validate simple types 8`] = `
   
   return function template(ctx, node, key = "") {
     const props1 = {p: ctx['this'].p};
-    const b2 = comp1(props1, key + \`__1\`, node, this, null);
+    const b2 = comp1(props1, key + \`\\u00021\`, node, this, null);
     return block1([], [b2]);
   }
 }"
@@ -1062,7 +1062,7 @@ exports[`props validation > validate simple types 9`] = `
   
   return function template(ctx, node, key = "") {
     const props1 = {p: ctx['this'].p};
-    const b2 = comp1(props1, key + \`__1\`, node, this, null);
+    const b2 = comp1(props1, key + \`\\u00021\`, node, this, null);
     return block1([], [b2]);
   }
 }"
@@ -1079,7 +1079,7 @@ exports[`props validation > validate simple types 10`] = `
   
   return function template(ctx, node, key = "") {
     const props1 = {p: ctx['this'].p};
-    const b2 = comp1(props1, key + \`__1\`, node, this, null);
+    const b2 = comp1(props1, key + \`\\u00021\`, node, this, null);
     return block1([], [b2]);
   }
 }"
@@ -1109,7 +1109,7 @@ exports[`props validation > validate simple types 12`] = `
   
   return function template(ctx, node, key = "") {
     const props1 = {p: ctx['this'].p};
-    const b2 = comp1(props1, key + \`__1\`, node, this, null);
+    const b2 = comp1(props1, key + \`\\u00021\`, node, this, null);
     return block1([], [b2]);
   }
 }"
@@ -1126,7 +1126,7 @@ exports[`props validation > validate simple types 13`] = `
   
   return function template(ctx, node, key = "") {
     const props1 = {p: ctx['this'].p};
-    const b2 = comp1(props1, key + \`__1\`, node, this, null);
+    const b2 = comp1(props1, key + \`\\u00021\`, node, this, null);
     return block1([], [b2]);
   }
 }"
@@ -1143,7 +1143,7 @@ exports[`props validation > validate simple types 14`] = `
   
   return function template(ctx, node, key = "") {
     const props1 = {p: ctx['this'].p};
-    const b2 = comp1(props1, key + \`__1\`, node, this, null);
+    const b2 = comp1(props1, key + \`\\u00021\`, node, this, null);
     return block1([], [b2]);
   }
 }"
@@ -1173,7 +1173,7 @@ exports[`props validation > validate simple types 16`] = `
   
   return function template(ctx, node, key = "") {
     const props1 = {p: ctx['this'].p};
-    const b2 = comp1(props1, key + \`__1\`, node, this, null);
+    const b2 = comp1(props1, key + \`\\u00021\`, node, this, null);
     return block1([], [b2]);
   }
 }"
@@ -1190,7 +1190,7 @@ exports[`props validation > validate simple types 17`] = `
   
   return function template(ctx, node, key = "") {
     const props1 = {p: ctx['this'].p};
-    const b2 = comp1(props1, key + \`__1\`, node, this, null);
+    const b2 = comp1(props1, key + \`\\u00021\`, node, this, null);
     return block1([], [b2]);
   }
 }"
@@ -1207,7 +1207,7 @@ exports[`props validation > validate simple types 18`] = `
   
   return function template(ctx, node, key = "") {
     const props1 = {p: ctx['this'].p};
-    const b2 = comp1(props1, key + \`__1\`, node, this, null);
+    const b2 = comp1(props1, key + \`\\u00021\`, node, this, null);
     return block1([], [b2]);
   }
 }"
@@ -1237,7 +1237,7 @@ exports[`props validation > validate simple types 20`] = `
   
   return function template(ctx, node, key = "") {
     const props1 = {p: ctx['this'].p};
-    const b2 = comp1(props1, key + \`__1\`, node, this, null);
+    const b2 = comp1(props1, key + \`\\u00021\`, node, this, null);
     return block1([], [b2]);
   }
 }"
@@ -1254,7 +1254,7 @@ exports[`props validation > validate simple types 21`] = `
   
   return function template(ctx, node, key = "") {
     const props1 = {p: ctx['this'].p};
-    const b2 = comp1(props1, key + \`__1\`, node, this, null);
+    const b2 = comp1(props1, key + \`\\u00021\`, node, this, null);
     return block1([], [b2]);
   }
 }"
@@ -1271,7 +1271,7 @@ exports[`props validation > validate simple types 22`] = `
   
   return function template(ctx, node, key = "") {
     const props1 = {p: ctx['this'].p};
-    const b2 = comp1(props1, key + \`__1\`, node, this, null);
+    const b2 = comp1(props1, key + \`\\u00021\`, node, this, null);
     return block1([], [b2]);
   }
 }"
@@ -1301,7 +1301,7 @@ exports[`props validation > validate simple types 24`] = `
   
   return function template(ctx, node, key = "") {
     const props1 = {p: ctx['this'].p};
-    const b2 = comp1(props1, key + \`__1\`, node, this, null);
+    const b2 = comp1(props1, key + \`\\u00021\`, node, this, null);
     return block1([], [b2]);
   }
 }"
@@ -1318,7 +1318,7 @@ exports[`props validation > validation is only done in dev mode 1`] = `
   
   return function template(ctx, node, key = "") {
     const props1 = {};
-    const b2 = comp1(props1, key + \`__1\`, node, this, null);
+    const b2 = comp1(props1, key + \`\\u00021\`, node, this, null);
     return block1([], [b2]);
   }
 }"
@@ -1334,7 +1334,7 @@ exports[`props validation > validation is only done in dev mode 2`] = `
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = comp1({}, key + \`__1\`, node, this, null);
+    const b2 = comp1({}, key + \`\\u00021\`, node, this, null);
     return block1([], [b2]);
   }
 }"
@@ -1362,7 +1362,7 @@ exports[`schema defaults > a key with a schema default may be omitted 1`] = `
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].props.p, key, "__1");
+    const b2 = safeOutput(ctx['this'].props.p, node, key, "\\u00021");
     return block1([], [b2]);
   }
 }"
@@ -1380,9 +1380,9 @@ exports[`schema defaults > a plain default value is shared between component ins
   
   return function template(ctx, node, key = "") {
     const props1 = {};
-    const b2 = comp1(props1, key + \`__1\`, node, this, null);
+    const b2 = comp1(props1, key + \`\\u00021\`, node, this, null);
     const props2 = {};
-    const b3 = comp2(props2, key + \`__2\`, node, this, null);
+    const b3 = comp2(props2, key + \`\\u00022\`, node, this, null);
     return block1([], [b2, b3]);
   }
 }"
@@ -1397,7 +1397,7 @@ exports[`schema defaults > a plain default value is shared between component ins
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].props.p.length, key, "__1");
+    const b2 = safeOutput(ctx['this'].props.p.length, node, key, "\\u00021");
     return block1([], [b2]);
   }
 }"
@@ -1414,7 +1414,7 @@ exports[`schema defaults > default values can be declared in the schema 1`] = `
   
   return function template(ctx, node, key = "") {
     const props1 = {};
-    const b2 = comp1(props1, key + \`__1\`, node, this, null);
+    const b2 = comp1(props1, key + \`\\u00021\`, node, this, null);
     return block1([], [b2]);
   }
 }"
@@ -1429,7 +1429,7 @@ exports[`schema defaults > default values can be declared in the schema 2`] = `
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].props.p, key, "__1");
+    const b2 = safeOutput(ctx['this'].props.p, node, key, "\\u00021");
     return block1([], [b2]);
   }
 }"
@@ -1447,9 +1447,9 @@ exports[`schema defaults > factory defaults are resolved once per component inst
   
   return function template(ctx, node, key = "") {
     const props1 = {};
-    const b2 = comp1(props1, key + \`__1\`, node, this, null);
+    const b2 = comp1(props1, key + \`\\u00021\`, node, this, null);
     const props2 = {};
-    const b3 = comp2(props2, key + \`__2\`, node, this, null);
+    const b3 = comp2(props2, key + \`\\u00022\`, node, this, null);
     return block1([], [b2, b3]);
   }
 }"
@@ -1464,7 +1464,7 @@ exports[`schema defaults > factory defaults are resolved once per component inst
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].props.p.length, key, "__1");
+    const b2 = safeOutput(ctx['this'].props.p.length, node, key, "\\u00021");
     return block1([], [b2]);
   }
 }"
@@ -1481,7 +1481,7 @@ exports[`schema defaults > falsy default values are applied 1`] = `
   
   return function template(ctx, node, key = "") {
     const props1 = {};
-    const b2 = comp1(props1, key + \`__1\`, node, this, null);
+    const b2 = comp1(props1, key + \`\\u00021\`, node, this, null);
     return block1([], [b2]);
   }
 }"
@@ -1518,7 +1518,7 @@ exports[`schema defaults > schema defaults are applied whenever component is upd
   
   return function template(ctx, node, key = "") {
     const props1 = {p: ctx['this'].state.p};
-    const b2 = comp1(props1, key + \`__1\`, node, this, null);
+    const b2 = comp1(props1, key + \`\\u00021\`, node, this, null);
     return block1([], [b2]);
   }
 }"
@@ -1533,7 +1533,7 @@ exports[`schema defaults > schema defaults are applied whenever component is upd
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].props.p, key, "__1");
+    const b2 = safeOutput(ctx['this'].props.p, node, key, "\\u00021");
     return block1([], [b2]);
   }
 }"
@@ -1548,8 +1548,8 @@ exports[`schema defaults > schema defaults work next to optional props 1`] = `
   let block1 = createBlock(\`<div><block-child-0/>|<block-child-1/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].props.p, key, "__1");
-    const b3 = safeOutput(ctx['this'].props.q, key, "__2");
+    const b2 = safeOutput(ctx['this'].props.p, node, key, "\\u00021");
+    const b3 = safeOutput(ctx['this'].props.q, node, key, "\\u00022");
     return block1([], [b2, b3]);
   }
 }"
@@ -1594,7 +1594,7 @@ exports[`schema.toShape() > a composed (t.and) schema drives props via toShape()
   
   return function template(ctx, node, key = "") {
     const props1 = {message: 'hello',title: 'DEBUG'};
-    return comp1(props1, key + \`__1\`, node, this, null);
+    return comp1(props1, key + \`\\u00021\`, node, this, null);
   }
 }"
 `;
@@ -1623,7 +1623,7 @@ exports[`schema.toShape() > a schema's props reports genuinely missing required 
   
   return function template(ctx, node, key = "") {
     const props1 = {a: 'x'};
-    const b2 = comp1(props1, key + \`__1\`, node, this, null);
+    const b2 = comp1(props1, key + \`\\u00021\`, node, this, null);
     return block1([], [b2]);
   }
 }"
@@ -1640,7 +1640,7 @@ exports[`schema.toShape() > a schema's props still rejects invalid values 1`] = 
   
   return function template(ctx, node, key = "") {
     const props1 = {count: 'not a number'};
-    const b2 = comp1(props1, key + \`__1\`, node, this, null);
+    const b2 = comp1(props1, key + \`\\u00021\`, node, this, null);
     return block1([], [b2]);
   }
 }"
@@ -1657,7 +1657,7 @@ exports[`schema.toShape() > an object schema drives props via toShape() 1`] = `
   
   return function template(ctx, node, key = "") {
     const props1 = {title: 'hello'};
-    const b2 = comp1(props1, key + \`__1\`, node, this, null);
+    const b2 = comp1(props1, key + \`\\u00021\`, node, this, null);
     return block1([], [b2]);
   }
 }"
@@ -1672,7 +1672,7 @@ exports[`schema.toShape() > an object schema drives props via toShape() 2`] = `
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].props.title, key, "__1");
+    const b2 = safeOutput(ctx['this'].props.title, node, key, "\\u00021");
     return block1([], [b2]);
   }
 }"
@@ -1687,7 +1687,7 @@ exports[`schema.toShape() > applyDefaults completes nested defaults from the sam
   
   return function template(ctx, node, key = "") {
     const props1 = {message: 'hi',buttons: [{name:'ok'}]};
-    return comp1(props1, key + \`__1\`, node, this, null);
+    return comp1(props1, key + \`\\u00021\`, node, this, null);
   }
 }"
 `;

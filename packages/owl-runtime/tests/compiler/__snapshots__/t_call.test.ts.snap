@@ -9,7 +9,7 @@ exports[`t-call (template calling) > a static name is a string, whatever it cont
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = callTemplate(\`a\\\`b\\\\c\`, this, app, ctx[zero] ? withoutZero(ctx) : ctx, node, key + \`__1\`);
+    const b2 = callTemplate(\`a\\\`b\\\\c\`, this, app, ctx[zero] ? withoutZero(ctx) : ctx, node, key + \`\\u00021\`);
     return block1([], [b2]);
   }
 }"
@@ -42,7 +42,7 @@ exports[`t-call (template calling) > a t-call without a body gives the called te
     const ctx1 = Object.create(ctx);
     ctx1[zero] = callBody1;
     ctx1[zeroCtx] = ctx;
-    return callTemplate(\`outer\`, this, app, ctx1, node, key + \`__1\`);
+    return callTemplate(\`outer\`, this, app, ctx1, node, key + \`\\u00021\`);
   }
 }"
 `;
@@ -56,11 +56,11 @@ exports[`t-call (template calling) > a t-call without a body gives the called te
   let block1 = createBlock(\`<div><block-child-0/><block-child-1/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = callTemplate(\`inner\`, this, app, ctx[zero] ? withoutZero(ctx) : ctx, node, key + \`__1\`);
+    const b2 = callTemplate(\`inner\`, this, app, ctx[zero] ? withoutZero(ctx) : ctx, node, key + \`\\u00021\`);
     const ctx1 = Object.create(ctx);
     ctx1["a"] = 1;
     ctx1[zero] = null;
-    const b3 = callTemplate(\`inner\`, this, app, ctx1, node, key + \`__2\`);
+    const b3 = callTemplate(\`inner\`, this, app, ctx1, node, key + \`\\u00022\`);
     return block1([], [b2, b3]);
   }
 }"
@@ -75,7 +75,7 @@ exports[`t-call (template calling) > a t-call without a body gives the called te
   let block1 = createBlock(\`<p><block-child-0/></p>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = ctx[zero] ? ctx[zero].call(this, ctx[zeroCtx], node, key + \`__1\`) : text("");
+    const b2 = ctx[zero] ? ctx[zero].call(this, ctx[zeroCtx], node, key + \`\\u00021\`) : text("");
     return block1([], [b2]);
   }
 }"
@@ -90,7 +90,7 @@ exports[`t-call (template calling) > an interpolated name keeps the text around 
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = callTemplate(\`a\\\`b\\\\c.\${ctx['n']}\`, this, app, ctx[zero] ? withoutZero(ctx) : ctx, node, key + \`__1\`);
+    const b2 = callTemplate(\`a\\\`b\\\\c.\${ctx['n']}\`, this, app, ctx[zero] ? withoutZero(ctx) : ctx, node, key + \`\\u00021\`);
     return block1([], [b2]);
   }
 }"
@@ -118,7 +118,7 @@ exports[`t-call (template calling) > basic caller 1`] = `
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = callTemplate(\`_basic-callee\`, this, app, ctx[zero] ? withoutZero(ctx) : ctx, node, key + \`__1\`);
+    const b2 = callTemplate(\`_basic-callee\`, this, app, ctx[zero] ? withoutZero(ctx) : ctx, node, key + \`\\u00021\`);
     return block1([], [b2]);
   }
 }"
@@ -144,7 +144,7 @@ exports[`t-call (template calling) > basic caller, no parent node 1`] = `
   let { zero, withoutZero, callTemplate } = helpers;
   
   return function template(ctx, node, key = "") {
-    return callTemplate(\`_basic-callee\`, this, app, ctx[zero] ? withoutZero(ctx) : ctx, node, key + \`__1\`);
+    return callTemplate(\`_basic-callee\`, this, app, ctx[zero] ? withoutZero(ctx) : ctx, node, key + \`\\u00021\`);
   }
 }"
 `;
@@ -183,7 +183,7 @@ exports[`t-call (template calling) > call with several sub nodes on same line 1`
     const ctx1 = Object.create(ctx);
     ctx1[zero] = callBody1;
     ctx1[zeroCtx] = ctx;
-    const b2 = callTemplate(\`sub\`, this, app, ctx1, node, key + \`__1\`);
+    const b2 = callTemplate(\`sub\`, this, app, ctx1, node, key + \`\\u00021\`);
     return block1([], [b2]);
   }
 }"
@@ -198,7 +198,7 @@ exports[`t-call (template calling) > call with several sub nodes on same line 2`
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = ctx[zero] ? ctx[zero].call(this, ctx[zeroCtx], node, key + \`__1\`) : text("");
+    const b2 = ctx[zero] ? ctx[zero].call(this, ctx[zeroCtx], node, key + \`\\u00021\`) : text("");
     return block1([], [b2]);
   }
 }"
@@ -225,7 +225,7 @@ exports[`t-call (template calling) > cascading t-call t-out='0' 1`] = `
     const ctx1 = Object.create(ctx);
     ctx1[zero] = callBody1;
     ctx1[zeroCtx] = ctx;
-    const b2 = callTemplate(\`subTemplate\`, this, app, ctx1, node, key + \`__1\`);
+    const b2 = callTemplate(\`subTemplate\`, this, app, ctx1, node, key + \`\\u00021\`);
     return block1([], [b2]);
   }
 }"
@@ -242,7 +242,7 @@ exports[`t-call (template calling) > cascading t-call t-out='0' 2`] = `
   
   function callBody1(ctx, node, key = "") {
     const b4 = block4();
-    const b5 = ctx[zero] ? ctx[zero].call(this, ctx[zeroCtx], node, key + \`__1\`) : text("");
+    const b5 = ctx[zero] ? ctx[zero].call(this, ctx[zeroCtx], node, key + \`\\u00021\`) : text("");
     return multi([b4, b5]);
   }
   
@@ -250,7 +250,7 @@ exports[`t-call (template calling) > cascading t-call t-out='0' 2`] = `
     const ctx1 = Object.create(ctx);
     ctx1[zero] = callBody1;
     ctx1[zeroCtx] = ctx;
-    const b2 = callTemplate(\`subSubTemplate\`, this, app, ctx1, node, key + \`__2\`);
+    const b2 = callTemplate(\`subSubTemplate\`, this, app, ctx1, node, key + \`\\u00022\`);
     return block1([], [b2]);
   }
 }"
@@ -267,7 +267,7 @@ exports[`t-call (template calling) > cascading t-call t-out='0' 3`] = `
   
   function callBody1(ctx, node, key = "") {
     const b4 = block4();
-    const b5 = ctx[zero] ? ctx[zero].call(this, ctx[zeroCtx], node, key + \`__1\`) : text("");
+    const b5 = ctx[zero] ? ctx[zero].call(this, ctx[zeroCtx], node, key + \`\\u00021\`) : text("");
     return multi([b4, b5]);
   }
   
@@ -275,7 +275,7 @@ exports[`t-call (template calling) > cascading t-call t-out='0' 3`] = `
     const ctx1 = Object.create(ctx);
     ctx1[zero] = callBody1;
     ctx1[zeroCtx] = ctx;
-    const b2 = callTemplate(\`finalTemplate\`, this, app, ctx1, node, key + \`__2\`);
+    const b2 = callTemplate(\`finalTemplate\`, this, app, ctx1, node, key + \`\\u00022\`);
     return block1([], [b2]);
   }
 }"
@@ -290,7 +290,7 @@ exports[`t-call (template calling) > cascading t-call t-out='0' 4`] = `
   let block1 = createBlock(\`<div><span>cascade 2</span><block-child-0/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = ctx[zero] ? ctx[zero].call(this, ctx[zeroCtx], node, key + \`__1\`) : text("");
+    const b2 = ctx[zero] ? ctx[zero].call(this, ctx[zeroCtx], node, key + \`\\u00021\`) : text("");
     return block1([], [b2]);
   }
 }"
@@ -316,7 +316,7 @@ exports[`t-call (template calling) > cascading t-call t-out='0', without externa
     const ctx1 = Object.create(ctx);
     ctx1[zero] = callBody1;
     ctx1[zeroCtx] = ctx;
-    return callTemplate(\`subTemplate\`, this, app, ctx1, node, key + \`__1\`);
+    return callTemplate(\`subTemplate\`, this, app, ctx1, node, key + \`\\u00021\`);
   }
 }"
 `;
@@ -331,7 +331,7 @@ exports[`t-call (template calling) > cascading t-call t-out='0', without externa
   
   function callBody1(ctx, node, key = "") {
     const b3 = block3();
-    const b4 = ctx[zero] ? ctx[zero].call(this, ctx[zeroCtx], node, key + \`__1\`) : text("");
+    const b4 = ctx[zero] ? ctx[zero].call(this, ctx[zeroCtx], node, key + \`\\u00021\`) : text("");
     return multi([b3, b4]);
   }
   
@@ -339,7 +339,7 @@ exports[`t-call (template calling) > cascading t-call t-out='0', without externa
     const ctx1 = Object.create(ctx);
     ctx1[zero] = callBody1;
     ctx1[zeroCtx] = ctx;
-    return callTemplate(\`subSubTemplate\`, this, app, ctx1, node, key + \`__2\`);
+    return callTemplate(\`subSubTemplate\`, this, app, ctx1, node, key + \`\\u00022\`);
   }
 }"
 `;
@@ -354,7 +354,7 @@ exports[`t-call (template calling) > cascading t-call t-out='0', without externa
   
   function callBody1(ctx, node, key = "") {
     const b3 = block3();
-    const b4 = ctx[zero] ? ctx[zero].call(this, ctx[zeroCtx], node, key + \`__1\`) : text("");
+    const b4 = ctx[zero] ? ctx[zero].call(this, ctx[zeroCtx], node, key + \`\\u00021\`) : text("");
     return multi([b3, b4]);
   }
   
@@ -362,7 +362,7 @@ exports[`t-call (template calling) > cascading t-call t-out='0', without externa
     const ctx1 = Object.create(ctx);
     ctx1[zero] = callBody1;
     ctx1[zeroCtx] = ctx;
-    return callTemplate(\`finalTemplate\`, this, app, ctx1, node, key + \`__2\`);
+    return callTemplate(\`finalTemplate\`, this, app, ctx1, node, key + \`\\u00022\`);
   }
 }"
 `;
@@ -377,7 +377,7 @@ exports[`t-call (template calling) > cascading t-call t-out='0', without externa
   
   return function template(ctx, node, key = "") {
     const b2 = block2();
-    const b3 = ctx[zero] ? ctx[zero].call(this, ctx[zeroCtx], node, key + \`__1\`) : text("");
+    const b3 = ctx[zero] ? ctx[zero].call(this, ctx[zeroCtx], node, key + \`\\u00021\`) : text("");
     return multi([b2, b3]);
   }
 }"
@@ -395,7 +395,7 @@ exports[`t-call (template calling) > dynamic t-call 1`] = `
     const ctx1 = Object.create(ctx);
     ctx1["val"] = ctx['val'];
     ctx1[zero] = null;
-    const b2 = callTemplate((ctx['template']), this, app, ctx1, node, key + \`__1\`);
+    const b2 = callTemplate((ctx['template']), this, app, ctx1, node, key + \`\\u00021\`);
     return block1([], [b2]);
   }
 }"
@@ -410,7 +410,7 @@ exports[`t-call (template calling) > dynamic t-call 2`] = `
   let block1 = createBlock(\`<foo><block-child-0/></foo>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['val'], key, "__1");
+    const b2 = safeOutput(ctx['val'], node, key, "\\u00021");
     return block1([], [b2]);
   }
 }"
@@ -425,7 +425,7 @@ exports[`t-call (template calling) > dynamic t-call 3`] = `
   let block1 = createBlock(\`<bar><block-child-0/></bar>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['val'], key, "__1");
+    const b2 = safeOutput(ctx['val'], node, key, "\\u00021");
     return block1([], [b2]);
   }
 }"
@@ -446,7 +446,7 @@ exports[`t-call (template calling) > inherit context 1`] = `
     const ctx1 = Object.create(ctx);
     ctx1["bar"] = ctx['bar'];
     ctx1[zero] = null;
-    const b2 = callTemplate(\`sub\`, this, app, ctx1, node, key + \`__1\`);
+    const b2 = callTemplate(\`sub\`, this, app, ctx1, node, key + \`\\u00021\`);
     return block1([], [b2]);
   }
 }"
@@ -459,8 +459,8 @@ exports[`t-call (template calling) > inherit context 2`] = `
   let { safeOutput } = helpers;
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['foo'], key, "__1");
-    const b3 = safeOutput(ctx['bar'], key, "__2");
+    const b2 = safeOutput(ctx['foo'], node, key, "\\u00021");
+    const b3 = safeOutput(ctx['bar'], node, key, "\\u00022");
     return multi([b2, b3]);
   }
 }"
@@ -478,7 +478,7 @@ exports[`t-call (template calling) > nested t-calls with magic variable 0 1`] = 
     const ctx1 = Object.create(ctx);
     ctx1[zero] = callBody2;
     ctx1[zeroCtx] = ctx;
-    return callTemplate(\`grandchild\`, this, app, ctx1, node, key + \`__1\`);
+    return callTemplate(\`grandchild\`, this, app, ctx1, node, key + \`\\u00021\`);
   }
   
   function callBody2(ctx, node, key = "") {
@@ -489,7 +489,7 @@ exports[`t-call (template calling) > nested t-calls with magic variable 0 1`] = 
     const ctx2 = Object.create(ctx);
     ctx2[zero] = callBody1;
     ctx2[zeroCtx] = ctx;
-    return callTemplate(\`child\`, this, app, ctx2, node, key + \`__2\`);
+    return callTemplate(\`child\`, this, app, ctx2, node, key + \`\\u00022\`);
   }
 }"
 `;
@@ -501,7 +501,7 @@ exports[`t-call (template calling) > nested t-calls with magic variable 0 2`] = 
   let { zero, zeroCtx } = helpers;
   
   return function template(ctx, node, key = "") {
-    return ctx[zero] ? ctx[zero].call(this, ctx[zeroCtx], node, key + \`__1\`) : text("");
+    return ctx[zero] ? ctx[zero].call(this, ctx[zeroCtx], node, key + \`\\u00021\`) : text("");
   }
 }"
 `;
@@ -514,7 +514,7 @@ exports[`t-call (template calling) > nested t-calls with magic variable 0 3`] = 
   
   return function template(ctx, node, key = "") {
     const b2 = text(\`grandchild\`);
-    const b3 = ctx[zero] ? ctx[zero].call(this, ctx[zeroCtx], node, key + \`__1\`) : text("");
+    const b3 = ctx[zero] ? ctx[zero].call(this, ctx[zeroCtx], node, key + \`\\u00021\`) : text("");
     return multi([b2, b3]);
   }
 }"
@@ -531,7 +531,7 @@ exports[`t-call (template calling) > recursive template, part 1 1`] = `
   return function template(ctx, node, key = "") {
     let b2;
     if (false) {
-      b2 = callTemplate(\`recursive\`, this, app, ctx[zero] ? withoutZero(ctx) : ctx, node, key + \`__1\`);
+      b2 = callTemplate(\`recursive\`, this, app, ctx[zero] ? withoutZero(ctx) : ctx, node, key + \`\\u00021\`);
     }
     return block1([], [b2]);
   }
@@ -550,7 +550,7 @@ exports[`t-call (template calling) > recursive template, part 2 1`] = `
     const ctx1 = Object.create(ctx);
     ctx1["node"] = ctx['root'];
     ctx1[zero] = null;
-    const b2 = callTemplate(\`nodeTemplate\`, this, app, ctx1, node, key + \`__1\`);
+    const b2 = callTemplate(\`nodeTemplate\`, this, app, ctx1, node, key + \`\\u00021\`);
     return block1([], [b2]);
   }
 }"
@@ -565,7 +565,7 @@ exports[`t-call (template calling) > recursive template, part 2 2`] = `
   let block1 = createBlock(\`<div><p><block-child-0/></p><block-child-1/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['node'].val, key, "__1");
+    const b2 = safeOutput(ctx['node'].val, node, key, "\\u00021");
     const ctx1 = ctx;
     const [k_block3, v_block3, l_block3, c_block3] = prepareList(ctx['node'].children||[]);
     for (let i1 = 0; i1 < l_block3; i1++) {
@@ -580,7 +580,7 @@ exports[`t-call (template calling) > recursive template, part 2 2`] = `
       const ctx2 = Object.create(ctx);
       ctx2["node"] = ctx['subtree'];
       ctx2[zero] = null;
-      c_block3[i1] = withKey(callTemplate(\`nodeTemplate\`, this, app, ctx2, node, key + \`__2__\${skey1}\`), key1);
+      c_block3[i1] = withKey(callTemplate(\`nodeTemplate\`, this, app, ctx2, node, key + \`\\u00022\\u0002:\${skey1}\`), key1);
     }
     const b3 = list(c_block3);
     return block1([], [b2, b3]);
@@ -600,7 +600,7 @@ exports[`t-call (template calling) > recursive template, part 3 1`] = `
     const ctx1 = Object.create(ctx);
     ctx1["node"] = ctx['root'];
     ctx1[zero] = null;
-    const b2 = callTemplate(\`nodeTemplate\`, this, app, ctx1, node, key + \`__1\`);
+    const b2 = callTemplate(\`nodeTemplate\`, this, app, ctx1, node, key + \`\\u00021\`);
     return block1([], [b2]);
   }
 }"
@@ -615,7 +615,7 @@ exports[`t-call (template calling) > recursive template, part 3 2`] = `
   let block1 = createBlock(\`<div><p><block-child-0/></p><block-child-1/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['node'].val, key, "__1");
+    const b2 = safeOutput(ctx['node'].val, node, key, "\\u00021");
     const ctx1 = ctx;
     const [k_block3, v_block3, l_block3, c_block3] = prepareList(ctx['node'].children||[]);
     for (let i1 = 0; i1 < l_block3; i1++) {
@@ -630,7 +630,7 @@ exports[`t-call (template calling) > recursive template, part 3 2`] = `
       const ctx2 = Object.create(ctx);
       ctx2["node"] = ctx['subtree'];
       ctx2[zero] = null;
-      c_block3[i1] = withKey(callTemplate(\`nodeTemplate\`, this, app, ctx2, node, key + \`__2__\${skey1}\`), key1);
+      c_block3[i1] = withKey(callTemplate(\`nodeTemplate\`, this, app, ctx2, node, key + \`\\u00022\\u0002:\${skey1}\`), key1);
     }
     const b3 = list(c_block3);
     return block1([], [b2, b3]);
@@ -651,7 +651,7 @@ exports[`t-call (template calling) > recursive template, part 4: with t-set recu
     ctx1["recursive_idx"] = 1;
     ctx1["node"] = ctx['root'];
     ctx1[zero] = null;
-    const b2 = callTemplate(\`nodeTemplate\`, this, app, ctx1, node, key + \`__1\`);
+    const b2 = callTemplate(\`nodeTemplate\`, this, app, ctx1, node, key + \`\\u00021\`);
     return block1([], [b2]);
   }
 }"
@@ -668,8 +668,8 @@ exports[`t-call (template calling) > recursive template, part 4: with t-set recu
   return function template(ctx, node, key = "") {
     ctx = Object.create(ctx);
     ctx["recursive_idx"] = ctx['recursive_idx']+1;
-    const b2 = safeOutput(ctx['node'].val, key, "__1");
-    const b3 = safeOutput(ctx['recursive_idx'], key, "__2");
+    const b2 = safeOutput(ctx['node'].val, node, key, "\\u00021");
+    const b3 = safeOutput(ctx['recursive_idx'], node, key, "\\u00022");
     const ctx1 = ctx;
     const [k_block4, v_block4, l_block4, c_block4] = prepareList(ctx['node'].children||[]);
     for (let i1 = 0; i1 < l_block4; i1++) {
@@ -685,7 +685,7 @@ exports[`t-call (template calling) > recursive template, part 4: with t-set recu
       ctx2["node"] = ctx['subtree'];
       ctx2["recursive_idx"] = ctx['recursive_idx'];
       ctx2[zero] = null;
-      c_block4[i1] = withKey(callTemplate(\`nodeTemplate\`, this, app, ctx2, node, key + \`__3__\${skey1}\`), key1);
+      c_block4[i1] = withKey(callTemplate(\`nodeTemplate\`, this, app, ctx2, node, key + \`\\u00023\\u0002:\${skey1}\`), key1);
     }
     const b4 = list(c_block4);
     return block1([], [b2, b3, b4]);
@@ -715,7 +715,7 @@ exports[`t-call (template calling) > root t-call with body: t-foreach 1`] = `
     const ctx2 = Object.create(ctx);
     ctx2[zero] = callBody1;
     ctx2[zeroCtx] = ctx;
-    return callTemplate(\`subTemplate\`, this, app, ctx2, node, key + \`__1\`);
+    return callTemplate(\`subTemplate\`, this, app, ctx2, node, key + \`\\u00021\`);
   }
 }"
 `;
@@ -749,7 +749,7 @@ exports[`t-call (template calling) > root t-call with body: t-if false 1`] = `
     const ctx1 = Object.create(ctx);
     ctx1[zero] = callBody1;
     ctx1[zeroCtx] = ctx;
-    return callTemplate(\`subTemplate\`, this, app, ctx1, node, key + \`__1\`);
+    return callTemplate(\`subTemplate\`, this, app, ctx1, node, key + \`\\u00021\`);
   }
 }"
 `;
@@ -783,7 +783,7 @@ exports[`t-call (template calling) > root t-call with body: t-if true 1`] = `
     const ctx1 = Object.create(ctx);
     ctx1[zero] = callBody1;
     ctx1[zeroCtx] = ctx;
-    return callTemplate(\`subTemplate\`, this, app, ctx1, node, key + \`__1\`);
+    return callTemplate(\`subTemplate\`, this, app, ctx1, node, key + \`\\u00021\`);
   }
 }"
 `;
@@ -807,7 +807,7 @@ exports[`t-call (template calling) > root t-call with body: t-out with default 1
   
   function callBody1(ctx, node, key = "") {
     const out1 = ctx['nothing'];
-    return out1 === undefined || out1 === null ? toggler("default", defaultContent1.call(this, ctx, node, key + \`__1\`)) : safeOutput(out1, key, "__1");
+    return out1 === undefined || out1 === null ? toggler("default", defaultContent1.call(this, ctx, node, key + \`\\u00021\`)) : safeOutput(out1, node, key, "\\u00021");
   }
   
   function defaultContent1(ctx, node, key = "") {
@@ -818,7 +818,7 @@ exports[`t-call (template calling) > root t-call with body: t-out with default 1
     const ctx1 = Object.create(ctx);
     ctx1[zero] = callBody1;
     ctx1[zeroCtx] = ctx;
-    return callTemplate(\`subTemplate\`, this, app, ctx1, node, key + \`__2\`);
+    return callTemplate(\`subTemplate\`, this, app, ctx1, node, key + \`\\u00022\`);
   }
 }"
 `;
@@ -852,8 +852,8 @@ exports[`t-call (template calling) > scoped parameters 1`] = `
     const ctx1 = Object.create(ctx);
     ctx1[zero] = callBody1;
     ctx1[zeroCtx] = ctx;
-    const b2 = callTemplate(\`sub\`, this, app, ctx1, node, key + \`__1\`);
-    const b3 = safeOutput(ctx['foo'], key, "__2");
+    const b2 = callTemplate(\`sub\`, this, app, ctx1, node, key + \`\\u00021\`);
+    const b3 = safeOutput(ctx['foo'], node, key, "\\u00022");
     return block1([], [b2, b3]);
   }
 }"
@@ -881,7 +881,7 @@ exports[`t-call (template calling) > scoped parameters, part 2 1`] = `
   function callBody1(ctx, node, key = "") {
     ctx = Object.create(ctx);
     ctx["foo"] = 42;
-    return safeOutput(ctx['foo'], key, "__1");
+    return safeOutput(ctx['foo'], node, key, "\\u00021");
   }
   
   return function template(ctx, node, key = "") {
@@ -891,8 +891,8 @@ exports[`t-call (template calling) > scoped parameters, part 2 1`] = `
     ctx1["foo"] = 43;
     ctx1[zero] = callBody1;
     ctx1[zeroCtx] = ctx;
-    const b2 = callTemplate(\`sub\`, this, app, ctx1, node, key + \`__2\`);
-    const b4 = safeOutput(ctx['foo'], key, "__3");
+    const b2 = callTemplate(\`sub\`, this, app, ctx1, node, key + \`\\u00022\`);
+    const b4 = safeOutput(ctx['foo'], node, key, "\\u00023");
     return block1([], [b2, b4]);
   }
 }"
@@ -905,8 +905,8 @@ exports[`t-call (template calling) > scoped parameters, part 2 2`] = `
   let { safeOutput, zero, zeroCtx } = helpers;
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['foo'], key, "__1");
-    const b3 = ctx[zero] ? ctx[zero].call(this, ctx[zeroCtx], node, key + \`__2\`) : text("");
+    const b2 = safeOutput(ctx['foo'], node, key, "\\u00021");
+    const b3 = ctx[zero] ? ctx[zero].call(this, ctx[zeroCtx], node, key + \`\\u00022\`) : text("");
     return multi([b2, b3]);
   }
 }"
@@ -927,7 +927,7 @@ exports[`t-call (template calling) > t-call and translation contexts 1`] = `
     ctx1["title"] = 'title';
     ctx1[zero] = callBody1;
     ctx1[zeroCtx] = ctx;
-    return callTemplate(\`sub\`, this, app, ctx1, node, key + \`__1\`);
+    return callTemplate(\`sub\`, this, app, ctx1, node, key + \`\\u00021\`);
   }
 }"
 `;
@@ -941,8 +941,8 @@ exports[`t-call (template calling) > t-call and translation contexts 2`] = `
   let block1 = createBlock(\`<span title="title"><block-child-0/><block-child-1/></span>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['title'], key, "__1");
-    const b3 = ctx[zero] ? ctx[zero].call(this, ctx[zeroCtx], node, key + \`__2\`) : text("");
+    const b2 = safeOutput(ctx['title'], node, key, "\\u00021");
+    const b3 = ctx[zero] ? ctx[zero].call(this, ctx[zeroCtx], node, key + \`\\u00022\`) : text("");
     return block1([], [b2, b3]);
   }
 }"
@@ -963,7 +963,7 @@ exports[`t-call (template calling) > t-call and translation contexts, variation 
     ctx1["title"] = \`titulo\`;
     ctx1[zero] = callBody1;
     ctx1[zeroCtx] = ctx;
-    return callTemplate(\`sub\`, this, app, ctx1, node, key + \`__1\`);
+    return callTemplate(\`sub\`, this, app, ctx1, node, key + \`\\u00021\`);
   }
 }"
 `;
@@ -977,8 +977,8 @@ exports[`t-call (template calling) > t-call and translation contexts, variation 
   let block1 = createBlock(\`<span title="title"><block-child-0/><block-child-1/></span>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['title'], key, "__1");
-    const b3 = ctx[zero] ? ctx[zero].call(this, ctx[zeroCtx], node, key + \`__2\`) : text("");
+    const b2 = safeOutput(ctx['title'], node, key, "\\u00021");
+    const b3 = ctx[zero] ? ctx[zero].call(this, ctx[zeroCtx], node, key + \`\\u00022\`) : text("");
     return block1([], [b2, b3]);
   }
 }"
@@ -995,7 +995,7 @@ exports[`t-call (template calling) > t-call with attributes 1`] = `
     ctx1["v1"] = ctx['val1'];
     ctx1["v2"] = ctx['val2'];
     ctx1[zero] = null;
-    return callTemplate(\`sub\`, this, app, ctx1, node, key + \`__1\`);
+    return callTemplate(\`sub\`, this, app, ctx1, node, key + \`\\u00021\`);
   }
 }"
 `;
@@ -1009,8 +1009,8 @@ exports[`t-call (template calling) > t-call with attributes 2`] = `
   let block1 = createBlock(\`<span><block-child-0/><block-child-1/></span>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['v1'], key, "__1");
-    const b3 = safeOutput(ctx['v2'], key, "__2");
+    const b2 = safeOutput(ctx['v1'], node, key, "\\u00021");
+    const b3 = safeOutput(ctx['v2'], node, key, "\\u00022");
     return block1([], [b2, b3]);
   }
 }"
@@ -1024,7 +1024,7 @@ exports[`t-call (template calling) > t-call with attributes and t-call-context 1
   
   return function template(ctx, node, key = "") {
     const ctx1 = ctx['obj'];
-    return callTemplate(\`sub\`, this, app, Object.assign({}, ctx1, {this: ctx1, 'v1': ctx['val1'], 'v2': ctx['val2']}), node, key + \`__1\`);
+    return callTemplate(\`sub\`, this, app, Object.assign({}, ctx1, {this: ctx1, 'v1': ctx['val1'], 'v2': ctx['val2']}), node, key + \`\\u00021\`);
   }
 }"
 `;
@@ -1038,10 +1038,10 @@ exports[`t-call (template calling) > t-call with attributes and t-call-context 2
   let block1 = createBlock(\`<span><block-child-0/><block-child-1/><block-child-2/><block-child-3/></span>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['v1'], key, "__1");
-    const b3 = safeOutput(ctx['v2'], key, "__2");
-    const b4 = safeOutput(ctx['this'].v3, key, "__3");
-    const b5 = safeOutput(ctx['this'].v4, key, "__4");
+    const b2 = safeOutput(ctx['v1'], node, key, "\\u00021");
+    const b3 = safeOutput(ctx['v2'], node, key, "\\u00022");
+    const b4 = safeOutput(ctx['this'].v3, node, key, "\\u00023");
+    const b5 = safeOutput(ctx['this'].v4, node, key, "\\u00024");
     return block1([], [b2, b3, b4, b5]);
   }
 }"
@@ -1062,7 +1062,7 @@ exports[`t-call (template calling) > t-call with attributes and t-out='0' 1`] = 
     ctx1["v_2"] = 1;
     ctx1[zero] = callBody1;
     ctx1[zeroCtx] = ctx;
-    return callTemplate(\`sub\`, this, app, ctx1, node, key + \`__1\`);
+    return callTemplate(\`sub\`, this, app, ctx1, node, key + \`\\u00021\`);
   }
 }"
 `;
@@ -1076,8 +1076,8 @@ exports[`t-call (template calling) > t-call with attributes and t-out='0' 2`] = 
   let block1 = createBlock(\`<span><block-child-0/><block-child-1/></span>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['v_2'], key, "__1");
-    const b3 = ctx[zero] ? ctx[zero].call(this, ctx[zeroCtx], node, key + \`__2\`) : text("");
+    const b2 = safeOutput(ctx['v_2'], node, key, "\\u00021");
+    const b3 = ctx[zero] ? ctx[zero].call(this, ctx[zeroCtx], node, key + \`\\u00022\`) : text("");
     return block1([], [b2, b3]);
   }
 }"
@@ -1099,7 +1099,7 @@ exports[`t-call (template calling) > t-call with body content as root of a templ
     const ctx1 = Object.create(ctx);
     ctx1[zero] = callBody1;
     ctx1[zeroCtx] = ctx;
-    return callTemplate(\`antony\`, this, app, ctx1, node, key + \`__1\`);
+    return callTemplate(\`antony\`, this, app, ctx1, node, key + \`\\u00021\`);
   }
 }"
 `;
@@ -1113,7 +1113,7 @@ exports[`t-call (template calling) > t-call with body content as root of a templ
   let block1 = createBlock(\`<foo><block-child-0/></foo>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = ctx[zero] ? ctx[zero].call(this, ctx[zeroCtx], node, key + \`__1\`) : text("");
+    const b2 = ctx[zero] ? ctx[zero].call(this, ctx[zeroCtx], node, key + \`\\u00021\`) : text("");
     return block1([], [b2]);
   }
 }"
@@ -1130,7 +1130,7 @@ exports[`t-call (template calling) > t-call with t-if 1`] = `
   return function template(ctx, node, key = "") {
     let b2;
     if (ctx['flag']) {
-      b2 = callTemplate(\`sub\`, this, app, ctx[zero] ? withoutZero(ctx) : ctx, node, key + \`__1\`);
+      b2 = callTemplate(\`sub\`, this, app, ctx[zero] ? withoutZero(ctx) : ctx, node, key + \`\\u00021\`);
     }
     return block1([], [b2]);
   }
@@ -1164,7 +1164,7 @@ exports[`t-call (template calling) > t-call with t-set inside and body text cont
     const ctx1 = Object.create(ctx);
     ctx1["val"] = ctx['val'];
     ctx1[zero] = null;
-    const b2 = callTemplate(\`sub\`, this, app, ctx1, node, key + \`__1\`);
+    const b2 = callTemplate(\`sub\`, this, app, ctx1, node, key + \`\\u00021\`);
     return block1([], [b2]);
   }
 }"
@@ -1179,7 +1179,7 @@ exports[`t-call (template calling) > t-call with t-set inside and body text cont
   let block1 = createBlock(\`<p><block-child-0/></p>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['val'], key, "__1");
+    const b2 = safeOutput(ctx['val'], node, key, "\\u00021");
     return block1([], [b2]);
   }
 }"
@@ -1209,7 +1209,7 @@ exports[`t-call (template calling) > t-call with t-set inside and outside 1`] = 
       const ctx2 = Object.create(ctx);
       ctx2["val3"] = ctx['val']*3;
       ctx2[zero] = null;
-      c_block2[i1] = withKey(callTemplate(\`sub\`, this, app, ctx2, node, key + \`__1__\${skey1}\`), key1);
+      c_block2[i1] = withKey(callTemplate(\`sub\`, this, app, ctx2, node, key + \`\\u00021\\u0002:\${skey1}\`), key1);
     }
     const b2 = list(c_block2);
     return block1([], [b2]);
@@ -1226,7 +1226,7 @@ exports[`t-call (template calling) > t-call with t-set inside and outside 2`] = 
   let block1 = createBlock(\`<span><block-child-0/></span>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['val3'], key, "__1");
+    const b2 = safeOutput(ctx['val3'], node, key, "\\u00021");
     return block1([], [b2]);
   }
 }"
@@ -1247,7 +1247,7 @@ exports[`t-call (template calling) > t-call with t-set inside and outside. 2 1`]
     ctx1["w"] = ctx['w'];
     ctx1["list"] = ctx['list'];
     ctx1[zero] = null;
-    const b2 = callTemplate(\`main\`, this, app, ctx1, node, key + \`__1\`);
+    const b2 = callTemplate(\`main\`, this, app, ctx1, node, key + \`\\u00021\`);
     return block1([], [b2]);
   }
 }"
@@ -1278,7 +1278,7 @@ exports[`t-call (template calling) > t-call with t-set inside and outside. 2 2`]
       ctx2["val3"] = ctx['val']*3;
       ctx2["w"] = ctx['w'];
       ctx2[zero] = null;
-      c_block2[i1] = withKey(callTemplate(\`sub\`, this, app, ctx2, node, key + \`__1__\${skey1}\`), key1);
+      c_block2[i1] = withKey(callTemplate(\`sub\`, this, app, ctx2, node, key + \`\\u00021\\u0002:\${skey1}\`), key1);
     }
     const b2 = list(c_block2);
     return block1([], [b2]);
@@ -1295,9 +1295,9 @@ exports[`t-call (template calling) > t-call with t-set inside and outside. 2 3`]
   let block2 = createBlock(\`<span><block-child-0/></span>\`);
   
   return function template(ctx, node, key = "") {
-    const b3 = safeOutput(ctx['val3'], key, "__1");
+    const b3 = safeOutput(ctx['val3'], node, key, "\\u00021");
     const b2 = block2([], [b3]);
-    const b4 = safeOutput(ctx['w'], key, "__2");
+    const b4 = safeOutput(ctx['w'], node, key, "\\u00022");
     return multi([b2, b4]);
   }
 }"
@@ -1322,12 +1322,12 @@ exports[`t-call (template calling) > t-call, conditional and t-set in t-call bod
     let b2, b3;
     ctx["v1"] = 'elif';
     if (ctx['v1']==='if') {
-      b2 = callTemplate(\`callee1\`, this, app, ctx[zero] ? withoutZero(ctx) : ctx, node, key + \`__1\`);
+      b2 = callTemplate(\`callee1\`, this, app, ctx[zero] ? withoutZero(ctx) : ctx, node, key + \`\\u00021\`);
     } else if (ctx['v1']==='elif') {
       const ctx1 = Object.create(ctx);
       ctx1[zero] = callBody1;
       ctx1[zeroCtx] = ctx;
-      b3 = callTemplate(\`callee2\`, this, app, ctx1, node, key + \`__2\`);
+      b3 = callTemplate(\`callee2\`, this, app, ctx1, node, key + \`\\u00022\`);
     }
     return block1([], [b2, b3]);
   }
@@ -1343,7 +1343,7 @@ exports[`t-call (template calling) > t-call, conditional and t-set in t-call bod
   let block1 = createBlock(\`<div>callee2 <block-child-0/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['v'], key, "__1");
+    const b2 = safeOutput(ctx['v'], node, key, "\\u00021");
     return block1([], [b2]);
   }
 }"
@@ -1357,7 +1357,7 @@ exports[`t-call (template calling) > t-call-context 1`] = `
   
   return function template(ctx, node, key = "") {
     const ctx1 = ctx['obj'];
-    return callTemplate(\`sub\`, this, app, Object.assign({}, ctx1, {this: ctx1}), node, key + \`__1\`);
+    return callTemplate(\`sub\`, this, app, Object.assign({}, ctx1, {this: ctx1}), node, key + \`\\u00021\`);
   }
 }"
 `;
@@ -1371,7 +1371,7 @@ exports[`t-call (template calling) > t-call-context 2`] = `
   let block1 = createBlock(\`<span><block-child-0/></span>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].value, key, "__1");
+    const b2 = safeOutput(ctx['this'].value, node, key, "\\u00021");
     return block1([], [b2]);
   }
 }"
@@ -1391,7 +1391,7 @@ exports[`t-call (template calling) > t-call-context and value in body 1`] = `
   
   return function template(ctx, node, key = "") {
     const ctx1 = ctx['obj'];
-    return callTemplate(\`sub\`, this, app, Object.assign({}, ctx1, {this: ctx1, [zero]: callBody1, [zeroCtx]: ctx}), node, key + \`__1\`);
+    return callTemplate(\`sub\`, this, app, Object.assign({}, ctx1, {this: ctx1, [zero]: callBody1, [zeroCtx]: ctx}), node, key + \`\\u00021\`);
   }
 }"
 `;
@@ -1405,8 +1405,8 @@ exports[`t-call (template calling) > t-call-context and value in body 2`] = `
   let block1 = createBlock(\`<span><block-child-0/><block-child-1/></span>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].value1, key, "__1");
-    const b3 = safeOutput(ctx['this'].value2, key, "__2");
+    const b2 = safeOutput(ctx['this'].value1, node, key, "\\u00021");
+    const b3 = safeOutput(ctx['this'].value2, node, key, "\\u00022");
     return block1([], [b2, b3]);
   }
 }"
@@ -1423,7 +1423,7 @@ exports[`t-call (template calling) > t-out inside t-call, with t-set outside 1`]
   return function template(ctx, node, key = "") {
     ctx = Object.create(ctx);
     ctx["v"] = \`Hi\`;
-    const b2 = callTemplate(\`sub\`, this, app, ctx[zero] ? withoutZero(ctx) : ctx, node, key + \`__1\`);
+    const b2 = callTemplate(\`sub\`, this, app, ctx[zero] ? withoutZero(ctx) : ctx, node, key + \`\\u00021\`);
     return block1([], [b2]);
   }
 }"
@@ -1438,7 +1438,7 @@ exports[`t-call (template calling) > t-out inside t-call, with t-set outside 2`]
   let block1 = createBlock(\`<span><block-child-0/></span>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['v'], key, "__1");
+    const b2 = safeOutput(ctx['v'], node, key, "\\u00021");
     return block1([], [b2]);
   }
 }"
@@ -1457,11 +1457,11 @@ exports[`t-call (template calling) > t-out=0 renders its default body when the t
   }
   
   return function template(ctx, node, key = "") {
-    const b2 = callTemplate(\`sub\`, this, app, ctx[zero] ? withoutZero(ctx) : ctx, node, key + \`__1\`);
+    const b2 = callTemplate(\`sub\`, this, app, ctx[zero] ? withoutZero(ctx) : ctx, node, key + \`\\u00021\`);
     const ctx1 = Object.create(ctx);
     ctx1[zero] = callBody1;
     ctx1[zeroCtx] = ctx;
-    const b3 = callTemplate(\`sub\`, this, app, ctx1, node, key + \`__2\`);
+    const b3 = callTemplate(\`sub\`, this, app, ctx1, node, key + \`\\u00022\`);
     return block1([], [b2, b3]);
   }
 }"
@@ -1480,7 +1480,7 @@ exports[`t-call (template calling) > t-out=0 renders its default body when the t
   }
   
   return function template(ctx, node, key = "") {
-    const b2 = ctx[zero] ? ctx[zero].call(this, ctx[zeroCtx], node, key + \`__1\`) : defaultContent1.call(this, ctx, node, key + \`__1\`);
+    const b2 = ctx[zero] ? ctx[zero].call(this, ctx[zeroCtx], node, key + \`\\u00021\`) : defaultContent1.call(this, ctx, node, key + \`\\u00021\`);
     return block1([], [b2]);
   }
 }"
@@ -1495,8 +1495,8 @@ exports[`t-call (template calling) > two dynamic t-calls in a row are both dynam
   let block1 = createBlock(\`<div><block-child-0/><block-child-1/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = callTemplate((ctx['a']), this, app, ctx[zero] ? withoutZero(ctx) : ctx, node, key + \`__1\`);
-    const b3 = callTemplate((ctx['b']), this, app, ctx[zero] ? withoutZero(ctx) : ctx, node, key + \`__2\`);
+    const b2 = callTemplate((ctx['a']), this, app, ctx[zero] ? withoutZero(ctx) : ctx, node, key + \`\\u00021\`);
+    const b3 = callTemplate((ctx['b']), this, app, ctx[zero] ? withoutZero(ctx) : ctx, node, key + \`\\u00022\`);
     return block1([], [b2, b3]);
   }
 }"
@@ -1547,7 +1547,7 @@ exports[`t-call (template calling) > values set in body are in call context 1`] 
     ctx1["foo"] = 'ok';
     ctx1[zero] = callBody1;
     ctx1[zeroCtx] = ctx;
-    const b2 = callTemplate(\`sub\`, this, app, ctx1, node, key + \`__1\`);
+    const b2 = callTemplate(\`sub\`, this, app, ctx1, node, key + \`\\u00021\`);
     return block1([], [b2]);
   }
 }"
@@ -1560,7 +1560,7 @@ exports[`t-call (template calling) > values set in body are in call context 2`] 
   let { safeOutput } = helpers;
   
   return function template(ctx, node, key = "") {
-    return safeOutput(ctx['foo'], key, "__1");
+    return safeOutput(ctx['foo'], node, key, "\\u00021");
   }
 }"
 `;
@@ -1579,7 +1579,7 @@ exports[`t-call (template calling) > with unused body 1`] = `
     const ctx1 = Object.create(ctx);
     ctx1[zero] = callBody1;
     ctx1[zeroCtx] = ctx;
-    return callTemplate(\`sub\`, this, app, ctx1, node, key + \`__1\`);
+    return callTemplate(\`sub\`, this, app, ctx1, node, key + \`\\u00021\`);
   }
 }"
 `;
@@ -1613,7 +1613,7 @@ exports[`t-call (template calling) > with unused setbody 1`] = `
     const ctx1 = Object.create(ctx);
     ctx1[zero] = callBody1;
     ctx1[zeroCtx] = ctx;
-    return callTemplate(\`sub\`, this, app, ctx1, node, key + \`__1\`);
+    return callTemplate(\`sub\`, this, app, ctx1, node, key + \`\\u00021\`);
   }
 }"
 `;
@@ -1645,7 +1645,7 @@ exports[`t-call (template calling) > with used body 1`] = `
     const ctx1 = Object.create(ctx);
     ctx1[zero] = callBody1;
     ctx1[zeroCtx] = ctx;
-    return callTemplate(\`sub\`, this, app, ctx1, node, key + \`__1\`);
+    return callTemplate(\`sub\`, this, app, ctx1, node, key + \`\\u00021\`);
   }
 }"
 `;
@@ -1659,7 +1659,7 @@ exports[`t-call (template calling) > with used body 2`] = `
   let block1 = createBlock(\`<h1><block-child-0/></h1>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = ctx[zero] ? ctx[zero].call(this, ctx[zeroCtx], node, key + \`__1\`) : text("");
+    const b2 = ctx[zero] ? ctx[zero].call(this, ctx[zeroCtx], node, key + \`\\u00021\`) : text("");
     return block1([], [b2]);
   }
 }"

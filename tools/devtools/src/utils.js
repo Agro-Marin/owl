@@ -44,16 +44,29 @@ export function isElementInCenterViewport(el) {
   );
 }
 
-// Formatting for displaying the key of the component
+// Formatting for displaying the key of the component: a key is segments, each
+// \u0002, a tag and a payload, the \u0002 of a payload doubled (see keyOf in
+// owl-runtime's template_helpers). Shown: its loop keys and t-keys.
 export function minimizeKey(key) {
-  if (key.startsWith("__")) {
-    const split = key.split("__");
-    if (split.length > 2) {
-      key = key.substring(4 + split[1].length, key.length);
-    } else {
-      key = "";
+  const shown = [];
+  let i = key.indexOf("\u0002");
+  while (i !== -1 && i < key.length - 1) {
+    const tag = key[i + 1];
+    let end = i + 2;
+    let payload = "";
+    while (end < key.length) {
+      if (key[end] === "\u0002") {
+        if (key[end + 1] !== "\u0002") {
+          break;
+        }
+        end++;
+      }
+      payload += key[end++];
     }
-    return key;
+    if (tag === ":" || tag === "k") {
+      shown.push(payload.startsWith("'") ? payload.slice(1) : payload);
+    }
+    i = end < key.length ? end : -1;
   }
-  return key;
+  return shown.join(", ");
 }

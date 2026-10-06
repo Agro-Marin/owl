@@ -206,6 +206,12 @@ This is done via the `t-set` directive, which takes the name of the variable to 
 The `t-set` directive acts like a regular variable in most programming language.
 It is lexically scoped (inner nodes are sub scopes), can be shadowed, ...
 
+A body holding components renders them anew at each `t-out` of it, each output
+(and each loop item around it) with its own components. A body passed as a prop
+and output by another component renders in that component: its components are
+that component's children, rendered, and destroyed, with it, while the body's
+expressions still read the context it was written in.
+
 ### Conditionals
 
 The `t-if` directive is useful to conditionally render something. It evaluates
@@ -484,7 +490,11 @@ Then, the template could look like this:
 
 The `t-key` directive is useful for lists (`t-foreach`). A key should be
 unique within the list: a number, a string, or an object (compared by identity,
-never confused with a string key).
+never confused with a string key). Values of different types are different
+keys (`1` and `"1"`, `true` and `"true"`); an array is compared by its items, so
+a new array of the same items is the same key. Any string is a valid key,
+whatever characters it holds: the keys of nested lists never combine into the
+key of another item.
 
 Also, the key can be set on a `p` tag or on a wrapping `t` tag. The following
 variations are equivalent:

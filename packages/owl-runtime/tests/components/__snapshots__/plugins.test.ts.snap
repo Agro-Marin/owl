@@ -18,7 +18,7 @@ exports[`basic use (setup) 1`] = `
   let { safeOutput } = helpers;
   
   return function template(ctx, node, key = "") {
-    return safeOutput(ctx['this'].a.value, key, "__1");
+    return safeOutput(ctx['this'].a.value, node, key, "\\u00021");
   }
 }"
 `;
@@ -30,7 +30,7 @@ exports[`basic use 1`] = `
   let { safeOutput } = helpers;
   
   return function template(ctx, node, key = "") {
-    return safeOutput(ctx['this'].a.value, key, "__1");
+    return safeOutput(ctx['this'].a.value, node, key, "\\u00021");
   }
 }"
 `;
@@ -42,7 +42,7 @@ exports[`can be started with resource 1`] = `
   let { safeOutput } = helpers;
   
   return function template(ctx, node, key = "") {
-    return safeOutput(ctx['this'].a.value, key, "__1");
+    return safeOutput(ctx['this'].a.value, node, key, "\\u00021");
   }
 }"
 `;
@@ -54,9 +54,9 @@ exports[`components can give config to plugins 1`] = `
   let { safeOutput } = helpers;
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].a.inputA, key, "__1");
+    const b2 = safeOutput(ctx['this'].a.inputA, node, key, "\\u00021");
     const b3 = text(\`-\`);
-    const b4 = safeOutput(ctx['this'].b.inputB, key, "__2");
+    const b4 = safeOutput(ctx['this'].b.inputB, node, key, "\\u00022");
     return multi([b2, b3, b4]);
   }
 }"
@@ -71,7 +71,7 @@ exports[`components can register resources 1`] = `
   
   return function template(ctx, node, key = "") {
     const b2 = text(\`1 | \`);
-    const b3 = comp1({}, key + \`__1\`, node, this, null);
+    const b3 = comp1({}, key + \`\\u00021\`, node, this, null);
     return multi([b2, b3]);
   }
 }"
@@ -85,7 +85,7 @@ exports[`components can register resources 2`] = `
   
   return function template(ctx, node, key = "") {
     const b2 = text(\`2: \`);
-    const b3 = safeOutput(ctx['this'].a.value(), key, "__1");
+    const b3 = safeOutput(ctx['this'].a.value(), node, key, "\\u00021");
     const b4 = text(\` \`);
     return multi([b2, b3, b4]);
   }
@@ -99,9 +99,9 @@ exports[`components can start plugins 1`] = `
   let { safeOutput } = helpers;
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].a.value, key, "__1");
+    const b2 = safeOutput(ctx['this'].a.value, node, key, "\\u00021");
     const b3 = text(\` - \`);
-    const b4 = safeOutput(ctx['this'].b.value, key, "__2");
+    const b4 = safeOutput(ctx['this'].b.value, node, key, "\\u00022");
     return multi([b2, b3, b4]);
   }
 }"
@@ -114,7 +114,7 @@ exports[`components mounted by plugin 1`] = `
   let { safeOutput } = helpers;
   
   return function template(ctx, node, key = "") {
-    return safeOutput(ctx['this'].p.value, key, "__1");
+    return safeOutput(ctx['this'].p.value, node, key, "\\u00021");
   }
 }"
 `;
@@ -139,7 +139,7 @@ exports[`components start plugins at their level 1`] = `
   
   return function template(ctx, node, key = "") {
     const b2 = text(\`1 | \`);
-    const b3 = comp1({}, key + \`__1\`, node, this, null);
+    const b3 = comp1({}, key + \`\\u00021\`, node, this, null);
     return multi([b2, b3]);
   }
 }"
@@ -154,9 +154,9 @@ exports[`components start plugins at their level 2`] = `
   
   return function template(ctx, node, key = "") {
     const b2 = text(\`2: \`);
-    const b3 = safeOutput(ctx['this'].a.value, key, "__1");
+    const b3 = safeOutput(ctx['this'].a.value, node, key, "\\u00021");
     const b4 = text(\` | \`);
-    const b5 = comp1({}, key + \`__2\`, node, this, null);
+    const b5 = comp1({}, key + \`\\u00022\`, node, this, null);
     return multi([b2, b3, b4, b5]);
   }
 }"
@@ -170,9 +170,9 @@ exports[`components start plugins at their level 3`] = `
   
   return function template(ctx, node, key = "") {
     const b2 = text(\`3: \`);
-    const b3 = safeOutput(ctx['this'].a.value, key, "__1");
+    const b3 = safeOutput(ctx['this'].a.value, node, key, "\\u00021");
     const b4 = text(\` - \`);
-    const b5 = safeOutput(ctx['this'].b.value, key, "__2");
+    const b5 = safeOutput(ctx['this'].b.value, node, key, "\\u00022");
     return multi([b2, b3, b4, b5]);
   }
 }"
@@ -185,8 +185,8 @@ exports[`components, plugins, useEffect 1`] = `
   let { safeOutput } = helpers;
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].value(), key, "__1");
-    const b3 = safeOutput(ctx['this'].derived(), key, "__2");
+    const b2 = safeOutput(ctx['this'].value(), node, key, "\\u00021");
+    const b3 = safeOutput(ctx['this'].derived(), node, key, "\\u00022");
     return multi([b2, b3]);
   }
 }"
@@ -210,7 +210,7 @@ exports[`optional plugin config work as expected (no config given) 1`] = `
   let { safeOutput } = helpers;
   
   return function template(ctx, node, key = "") {
-    return safeOutput(ctx['this'].a.inputA, key, "__1");
+    return safeOutput(ctx['this'].a.inputA, node, key, "\\u00021");
   }
 }"
 `;
@@ -222,7 +222,7 @@ exports[`optional plugin config work as expected (no value given) 1`] = `
   let { safeOutput } = helpers;
   
   return function template(ctx, node, key = "") {
-    return safeOutput(ctx['this'].a.inputA, key, "__1");
+    return safeOutput(ctx['this'].a.inputA, node, key, "\\u00021");
   }
 }"
 `;
@@ -234,7 +234,7 @@ exports[`optional plugin config work as expected (value given) 1`] = `
   let { safeOutput } = helpers;
   
   return function template(ctx, node, key = "") {
-    return safeOutput(ctx['this'].a.inputA, key, "__1");
+    return safeOutput(ctx['this'].a.inputA, node, key, "\\u00021");
   }
 }"
 `;
@@ -246,7 +246,7 @@ exports[`plugin config are validated 1`] = `
   let { safeOutput } = helpers;
   
   return function template(ctx, node, key = "") {
-    return safeOutput(ctx['this'].a.inputA, key, "__1");
+    return safeOutput(ctx['this'].a.inputA, node, key, "\\u00021");
   }
 }"
 `;
@@ -270,7 +270,7 @@ exports[`providePlugins respects plugin sequence 1`] = `
   const comp1 = createComponent(app, \`Child\`, true, false, false, []);
   
   return function template(ctx, node, key = "") {
-    return comp1({}, key + \`__1\`, node, this, null);
+    return comp1({}, key + \`\\u00021\`, node, this, null);
   }
 }"
 `;
@@ -307,9 +307,9 @@ exports[`shadow plugin 1`] = `
   const comp1 = createComponent(app, \`Level2\`, true, false, false, []);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].a.value, key, "__1");
+    const b2 = safeOutput(ctx['this'].a.value, node, key, "\\u00021");
     const b3 = text(\` | \`);
-    const b4 = comp1({}, key + \`__2\`, node, this, null);
+    const b4 = comp1({}, key + \`\\u00022\`, node, this, null);
     return multi([b2, b3, b4]);
   }
 }"
@@ -323,7 +323,7 @@ exports[`shadow plugin 2`] = `
   const comp1 = createComponent(app, \`Level3\`, true, false, false, []);
   
   return function template(ctx, node, key = "") {
-    return comp1({}, key + \`__1\`, node, this, null);
+    return comp1({}, key + \`\\u00021\`, node, this, null);
   }
 }"
 `;
@@ -335,7 +335,7 @@ exports[`shadow plugin 3`] = `
   let { safeOutput } = helpers;
   
   return function template(ctx, node, key = "") {
-    return safeOutput(ctx['this'].a.value, key, "__1");
+    return safeOutput(ctx['this'].a.value, node, key, "\\u00021");
   }
 }"
 `;

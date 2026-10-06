@@ -11,7 +11,7 @@ exports[`t-component > can switch between dynamic components without the need fo
   
   return function template(ctx, node, key = "") {
     const Comp1 = ctx['this'].constructor.components[ctx['this'].state.child];
-    const b2 = toggler(Comp1, comp1({}, key + \`__1\`, node, this, Comp1));
+    const b2 = toggler(Comp1, comp1({}, key + \`\\u00021\`, node, this, Comp1));
     return block1([], [b2]);
   }
 }"
@@ -53,7 +53,7 @@ exports[`t-component > can use dynamic components (the class) if given (with dif
   return function template(ctx, node, key = "") {
     const tKey_1 = keyOf(ctx['this'].state.child);
     const Comp1 = ctx['this'].myComponent;
-    return toggler(tKey_1, toggler(Comp1, comp1({}, tKey_1 + key + \`__1\`, node, this, Comp1)));
+    return toggler(tKey_1, toggler(Comp1, comp1({}, key + \`\\u0002k\${tKey_1}\\u00021\`, node, this, Comp1)));
   }
 }"
 `;
@@ -94,7 +94,7 @@ exports[`t-component > can use dynamic components (the class) if given 1`] = `
   return function template(ctx, node, key = "") {
     const tKey_1 = keyOf(ctx['this'].state.child);
     const Comp1 = ctx['this'].myComponent;
-    return toggler(tKey_1, toggler(Comp1, comp1({}, tKey_1 + key + \`__1\`, node, this, Comp1)));
+    return toggler(tKey_1, toggler(Comp1, comp1({}, key + \`\\u0002k\${tKey_1}\\u00021\`, node, this, Comp1)));
   }
 }"
 `;
@@ -136,7 +136,7 @@ exports[`t-component > modifying a sub widget 1`] = `
   
   return function template(ctx, node, key = "") {
     const Comp1 = ctx['this'].Counter;
-    const b2 = toggler(Comp1, comp1({}, key + \`__1\`, node, this, Comp1));
+    const b2 = toggler(Comp1, comp1({}, key + \`\\u00021\`, node, this, Comp1));
     return block1([], [b2]);
   }
 }"
@@ -152,7 +152,7 @@ exports[`t-component > modifying a sub widget 2`] = `
   let block1 = createBlock(\`<div><block-child-0/><button block-handler-0="click">Inc</button></div>\`, [hdlr_fn1]);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].state.counter, key, "__1");
+    const b2 = safeOutput(ctx['this'].state.counter, node, key, "\\u00021");
     return block1([ctx], [b2]);
   }
 }"
@@ -167,7 +167,7 @@ exports[`t-component > switching dynamic component 1`] = `
   
   return function template(ctx, node, key = "") {
     const Comp1 = ctx['this'].Child;
-    return toggler(Comp1, comp1({}, key + \`__1\`, node, this, Comp1));
+    return toggler(Comp1, comp1({}, key + \`\\u00021\`, node, this, Comp1));
   }
 }"
 `;
@@ -205,7 +205,7 @@ exports[`t-component > t-component works in simple case 1`] = `
   
   return function template(ctx, node, key = "") {
     const Comp1 = ctx['this'].Child;
-    return toggler(Comp1, comp1({}, key + \`__1\`, node, this, Comp1));
+    return toggler(Comp1, comp1({}, key + \`\\u00021\`, node, this, Comp1));
   }
 }"
 `;
@@ -235,7 +235,7 @@ exports[`t-component with two classes of the same name > destroying the app whil
   return function template(ctx, node, key = "") {
     const props1 = {};
     const Comp1 = ctx['this'].state.C;
-    const b2 = toggler(Comp1, comp1(props1, key + \`__1\`, node, this, Comp1));
+    const b2 = toggler(Comp1, comp1(props1, key + \`\\u00021\`, node, this, Comp1));
     return block1([], [b2]);
   }
 }"
@@ -250,7 +250,7 @@ exports[`t-component with two classes of the same name > destroying the app whil
   let block1 = createBlock(\`<span>B<block-child-0/></span>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].state.n, key, "__1");
+    const b2 = safeOutput(ctx['this'].state.n, node, key, "\\u00021");
     return block1([], [b2]);
   }
 }"
@@ -280,7 +280,7 @@ exports[`t-component with two classes of the same name > switching back before t
   
   return function template(ctx, node, key = "") {
     const Comp1 = ctx['this'].state.C;
-    const b2 = toggler(Comp1, comp1({}, key + \`__1\`, node, this, Comp1));
+    const b2 = toggler(Comp1, comp1({}, key + \`\\u00021\`, node, this, Comp1));
     return block1([], [b2]);
   }
 }"
@@ -295,7 +295,7 @@ exports[`t-component with two classes of the same name > switching back before t
   let block1 = createBlock(\`<span>B<block-child-0/></span>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].state.n, key, "__1");
+    const b2 = safeOutput(ctx['this'].state.n, node, key, "\\u00021");
     return block1([], [b2]);
   }
 }"
@@ -325,7 +325,7 @@ exports[`t-component with two classes of the same name > the other class, once i
   
   return function template(ctx, node, key = "") {
     const Comp1 = ctx['this'].state.C;
-    const b2 = toggler(Comp1, comp1({}, key + \`__1\`, node, this, Comp1));
+    const b2 = toggler(Comp1, comp1({}, key + \`\\u00021\`, node, this, Comp1));
     return block1([], [b2]);
   }
 }"
@@ -340,7 +340,7 @@ exports[`t-component with two classes of the same name > the other class, once i
   let block1 = createBlock(\`<span>B<block-child-0/></span>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].state.n, key, "__1");
+    const b2 = safeOutput(ctx['this'].state.n, node, key, "\\u00021");
     return block1([], [b2]);
   }
 }"

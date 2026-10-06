@@ -10,7 +10,7 @@ exports[`a sub-root error handler runs after the root component's own onError 1`
   return function template(ctx, node, key = "") {
     let b2;
     if (!ctx['this'].failed()) {
-      b2 = comp1({}, key + \`__1\`, node, this, null);
+      b2 = comp1({}, key + \`\\u00021\`, node, this, null);
     }
     return multi([b2]);
   }
@@ -41,9 +41,9 @@ exports[`destroy a subroot while another component is mounted in main app 1`] = 
   return function template(ctx, node, key = "") {
     let b2, b3;
     if (ctx['this'].state.flag) {
-      b2 = comp1({}, key + \`__1\`, node, this, null);
+      b2 = comp1({}, key + \`\\u00021\`, node, this, null);
     } else {
-      b3 = comp2({}, key + \`__2\`, node, this, null);
+      b3 = comp2({}, key + \`\\u00022\`, node, this, null);
     }
     return multi([b2, b3]);
   }

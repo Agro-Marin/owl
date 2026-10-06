@@ -40,7 +40,7 @@ exports[`qweb t-tag > a tag name the block compiler would read otherwise is reje
   
   return function template(ctx, node, key = "") {
     const tag1 = checkTagName(ctx['tag']);
-    const b2 = safeOutput(ctx['v'], key, "__1");
+    const b2 = safeOutput(ctx['v'], node, key, "\\u00021");
     return toggler(tag1, block1(tag1)([], [b2]));
   }
 }"
