@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 
-// this is the "compile_owl_templates" command that owl makes available when
-// installed as a node_module.
+// `npm run compile_templates -- <paths>`: compiles the templates of the xml
+// files under <paths> into a templates.js module (see
+// doc/v3/owl/reference/precompiling_templates.md). Needs `npm run build:compiler`.
 import { existsSync, mkdirSync, writeFileSync } from "fs";
 import { dirname } from "path";
 import { compileTemplates } from "../packages/owl-compiler/dist/compile_templates.mjs";

@@ -1,7 +1,7 @@
 // -----------------------------------------------------------------------------
-// This file exports a function that allows compiling templates ahead of time.
-// It is used by the "compile_owl_template" command registered in the "bin"
-// section of owl's package.json
+// This file exports a function that compiles templates ahead of time. It is
+// built into dist/compile_templates.mjs, which tools/compile_owl_templates.mjs
+// (`npm run compile_templates` in this repository) runs.
 // -----------------------------------------------------------------------------
 
 import { readdir, readFile, stat } from "fs/promises";
@@ -75,7 +75,10 @@ export async function compileTemplates(paths: string[]) {
       }
       const fnName = `template_${slugify(name)}`;
       try {
-        const fn = compile(template).toString().replace("anonymous", fnName);
+        // __globals__ among the helpers: the runtime always passes it
+        const fn = compile(template, { name, hasGlobalValues: true })
+          .toString()
+          .replace("anonymous", fnName);
         templates.push(`${JSON.stringify(name)}: ${fn},\n`);
       } catch (e) {
         errors.push({ name, fileName, e });

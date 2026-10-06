@@ -37,4 +37,18 @@ describe("standalone compiler", () => {
     expect(output[1]).toMatch(/^error:.*Invalid XML in template/);
     expect(output[2]).toBe("log:0 templates compiled");
   });
+
+  test("a precompiled template is named and reads the app's global values", async () => {
+    await writeFile(
+      path.join(dir, "g.xml"),
+      `<templates><t t-name="web.g"><t t-out="__globals__.x"/></t></templates>`
+    );
+    const code = await compileTemplates([dir]);
+    expect(getConsoleOutput()).toEqual(["log:1 templates compiled"]);
+    const templates = new Function(code.replace("export const templates =", "return"))();
+    const source = String(templates["web.g"]);
+    // the runtime always passes __globals__ among its helpers
+    expect(source).toContain("let { __globals__, safeOutput } = helpers;");
+    expect(source).toContain(`// Template name: "web.g"`);
+  });
 });

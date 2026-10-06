@@ -10,28 +10,7 @@ const build = ["/packages/owl/dist/owl.cjs", "/dist/owl.cjs.js"]
 const owl = require(build);
 const isOwl3 = build.endsWith("/packages/owl/dist/owl.cjs");
 console.log(`owl build: ${build}`);
-// Odoo's custom directives (web/static/src/env.js, spreadsheet's
-// o_spreadsheet.js): a template using t-custom-* compiles only with them
-const customDirectives = {
-  click: (node, value, modifiers) => {
-    const mods = ["synthetic", "capture"].filter((m) => modifiers.includes(m)).map((m) => "." + m).join("");
-    const handler = `(ev) => __globals__.click(ev, (${value}).bind(this))`;
-    node.setAttribute(`t-on-click${mods}`, handler);
-    node.setAttribute(`t-on-auxclick${mods}`, handler);
-  },
-  ref: (node, value) => {
-    const refName = `"` + value.replaceAll(/\{\{(.+?)\}\}/g, `" + $1 + "`) + `"`;
-    node.setAttribute("t-ref", `__globals__.createRefSignal(this, ${refName})`);
-  },
-  model: (node, value, modifiers) => {
-    const attribute = ["t-model", ...modifiers].join(".");
-    node.setAttribute(attribute, `__globals__.createModelSignal(() => ${value}, (nv) => {${value} = nv;})`);
-  },
-  portal: (node, value) => {
-    node.setAttribute("t-component", "__globals__.Portal");
-    node.setAttribute("selector", value);
-  },
-};
+const customDirectives = require("./custom_directives.cjs");
 const config = { test: true, warnIfNoStaticProps: false, customDirectives, globalValues: { click() {} } };
 // jsdom refuses a prefixed attribute (xmlns:xlink) a browser accepts: such a
 // template is reported apart, not counted as a failure

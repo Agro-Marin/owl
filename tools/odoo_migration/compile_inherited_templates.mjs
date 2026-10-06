@@ -45,30 +45,7 @@ const { applyInheritance } = await import(
 const newOwl = await import(process.env.OWL + "/packages/owl/dist/owl.es.js");
 const oldOwl = await import(process.env.OLD);
 
-const customDirectives = {
-  click: (node, value, modifiers) => {
-    const mods = ["synthetic", "capture"]
-      .filter((m) => modifiers.includes(m))
-      .map((m) => "." + m)
-      .join("");
-    const handler = `(ev) => __globals__.click(ev, (${value}).bind(this))`;
-    node.setAttribute(`t-on-click${mods}`, handler);
-    node.setAttribute(`t-on-auxclick${mods}`, handler);
-  },
-  ref: (node, value) => {
-    node.setAttribute("t-ref", `__globals__.createRefSignal(this, "${value}")`);
-  },
-  model: (node, value, modifiers) => {
-    node.setAttribute(
-      ["t-model", ...modifiers].join("."),
-      `__globals__.createModelSignal(() => ${value}, (nv) => {${value} = nv;})`
-    );
-  },
-  portal: (node, value) => {
-    node.setAttribute("t-component", "__globals__.Portal");
-    node.setAttribute("selector", value);
-  },
-};
+const customDirectives = require("./custom_directives.cjs");
 const config = {
   test: true,
   warnIfNoStaticProps: false,
