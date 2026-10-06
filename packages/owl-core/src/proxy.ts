@@ -56,15 +56,74 @@ function possiblyReactive(val: any, shallow: boolean) {
 }
 
 const skipped = new WeakSet<Target>();
+// class prototypes marked raw: an object inheriting from one is raw too
+const rawPrototypes = new WeakSet<Target>();
+let hasRawPrototypes = false;
+
 /**
- * Mark an object or array so that it is ignored by the reactivity system
+ * Mark an object or array so that it is ignored by the reactivity system: a
+ * proxy hands it out as it is. Marking a class prototype (`markRaw(Foo.prototype)`)
+ * marks every instance of the class and of its subclasses, which a class with
+ * private members needs: a proxy cannot reach them.
  *
- * @param value the value to mark
- * @returns the object itself
+ * @param value the value to mark (a proxy marks its raw object)
+ * @returns the value itself
  */
 export function markRaw<T extends Target>(value: T): T {
-  skipped.add(value);
+  const raw = toRaw(value);
+  skipped.add(raw);
+  if (isClassPrototype(raw)) {
+    rawPrototypes.add(raw);
+    hasRawPrototypes = true;
+  }
   return value;
+}
+
+function isClassPrototype(value: any): boolean {
+  return (
+    objectHasOwnProperty.call(value, "constructor") &&
+    typeof value.constructor === "function" &&
+    value.constructor.prototype === value
+  );
+}
+
+function isMarkedRaw(target: Target): boolean {
+  if (skipped.has(target)) {
+    return true;
+  }
+  if (hasRawPrototypes) {
+    for (let proto = Object.getPrototypeOf(target); proto; proto = Object.getPrototypeOf(proto)) {
+      if (rawPrototypes.has(proto)) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+// A non-configurable, non-writable data property must be handed out as it is
+// (a Proxy invariant): it cannot be swapped for its proxy, or a view.
+function isLocked(target: Target, key: PropertyKey): boolean {
+  const desc = Reflect.getOwnPropertyDescriptor(target, key);
+  return desc !== undefined && desc.configurable === false && desc.writable === false;
+}
+
+// The TypeError an engine throws when a getter, setter or method reaches a
+// private member (`this.#x`) through a proxy, which does not have it: V8,
+// SpiderMonkey, JavaScriptCore.
+const PRIVATE_MEMBER_ERROR =
+  /^(Cannot (read|write) private member #|Receiver must be an instance of class |can't access private field or method|Cannot access invalid private field)/;
+
+function privateMemberError(error: unknown, target: Target, key: PropertyKey): unknown {
+  if (!(error instanceof TypeError) || !PRIVATE_MEMBER_ERROR.test(error.message)) {
+    return error;
+  }
+  const name = (target as any).constructor?.name || "TheClass";
+  return new OwlError(
+    `Cannot reach "${String(key)}" of a ${name} through a reactive proxy: ${error.message}. ` +
+      `A proxy has no private members: mark the class raw with markRaw(${name}.prototype)`,
+    { cause: error }
+  );
 }
 
 /**
@@ -274,7 +333,7 @@ export function proxifyTarget<T extends Target>(target: T, shallow: boolean): T 
     }
     target = raw as T;
   }
-  if (skipped.has(target)) {
+  if (isMarkedRaw(target)) {
     return target;
   }
   const cache = shallow ? shallowProxies : deepProxies;
@@ -373,7 +432,8 @@ export function observe<T extends Target>(target: T, callback: () => void): T {
             return isIterator(result) ? observedIterator(result) : wrap(result);
           };
         }
-        return wrap(value);
+        const result = wrap(value);
+        return result !== value && isLocked(raw, key) ? value : result;
       },
       has(r, key) {
         return read(() => Reflect.has(r, key));
@@ -455,7 +515,12 @@ class BasicHandler implements ProxyHandler<any> {
       }
       onReadAtom(atom);
     }
-    const value = Reflect.get(target, key, receiver);
+    let value;
+    try {
+      value = Reflect.get(target, key, receiver);
+    } catch (error) {
+      throw privateMemberError(error, target, key);
+    }
     if (typeof value === "function") {
       return arrayMethods.get(value) ?? value;
     }
@@ -466,12 +531,10 @@ class BasicHandler implements ProxyHandler<any> {
     // the proxy an object read before already has spares the checks
     // proxifyTarget would make (twice) to find it
     const reactive = deepProxies.get(value);
-    if (reactive ? skipped.has(value) : !canBeMadeReactive(value)) {
+    if (reactive ? isMarkedRaw(value) : !canBeMadeReactive(value)) {
       return value;
     }
-    // non-writable non-configurable properties cannot be made proxy
-    const desc = Object.getOwnPropertyDescriptor(target, key);
-    if (desc && !desc.writable && !desc.configurable) {
+    if (isLocked(target, key)) {
       return value;
     }
     return reactive ?? proxifyTarget(value, false);
@@ -480,9 +543,13 @@ class BasicHandler implements ProxyHandler<any> {
   set(target: any, key: PropertyKey, value: any, receiver: any): boolean {
     // a write subscribes nothing, though a getter or setter it runs reads
     // through the proxy
-    return isObserving()
-      ? untrack(() => writeKey(target, key, value, receiver))
-      : writeKey(target, key, value, receiver);
+    try {
+      return isObserving()
+        ? untrack(() => writeKey(target, key, value, receiver))
+        : writeKey(target, key, value, receiver);
+    } catch (error) {
+      throw privateMemberError(error, target, key);
+    }
   }
 
   deleteProperty(target: any, key: PropertyKey): boolean {
@@ -598,7 +665,7 @@ function deepItem(value: any): any {
     return value;
   }
   const reactive = deepProxies.get(value);
-  if (reactive ? skipped.has(value) : !canBeMadeReactive(value)) {
+  if (reactive ? isMarkedRaw(value) : !canBeMadeReactive(value)) {
     return value;
   }
   return reactive ?? proxifyTarget(value, false);
@@ -913,7 +980,8 @@ function collectionsProxyHandler<T extends Collection>(
         return target.size;
       }
       onReadTargetKey(target, key);
-      return possiblyReactive(target[key], shallow);
+      const value = target[key];
+      return isLocked(target, key) ? value : possiblyReactive(value, shallow);
     },
   }) as ProxyHandler<T>;
 }

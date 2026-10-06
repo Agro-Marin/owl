@@ -1,4 +1,4 @@
-import { batched, shallowEqual } from "../src";
+import { batched, OwlError, shallowEqual } from "../src";
 import { waitScheduler } from "./helpers";
 
 describe("shallowEqual", () => {
@@ -71,5 +71,12 @@ describe("batched", () => {
     update(4);
     await waitScheduler();
     expect(calls).toEqual([[2, 3], [4]]);
+  });
+});
+
+describe("OwlError", () => {
+  test("keeps the cause it is constructed with", () => {
+    const cause = new Error("inner");
+    expect(new OwlError("outer", { cause }).cause).toBe(cause);
   });
 });
