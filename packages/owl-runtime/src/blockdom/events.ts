@@ -45,12 +45,8 @@ function dispatchTo(
   currentTarget: EventTarget
 ) {
   const data = owner.data!;
-  const fn = owner.handlers[slot.fn];
-  if (slot.arg < 0) {
-    config.mainEventHandler(fn, mods, data[slot.ctx], ev, currentTarget);
-  } else {
-    config.mainEventHandler(fn, mods, data[slot.ctx], ev, currentTarget, data[slot.arg]);
-  }
+  const arg = slot.arg < 0 ? undefined : data[slot.arg];
+  config.mainEventHandler(owner.handlers[slot.fn], mods, data[slot.ctx], ev, currentTarget, arg);
 }
 
 // Native listener
@@ -62,10 +58,7 @@ function createElementHandler(
   slot: HandlerSlot,
   mods: number
 ): EventHandlerCreator {
-  let eventKey = `__event__${evName}_${nextNativeEventId++}`;
-  if (capture) {
-    eventKey = `${eventKey}_capture`;
-  }
+  const eventKey = `__event__${evName}_${nextNativeEventId++}${capture ? "_capture" : ""}`;
 
   function listener(ev: Event) {
     const currentTarget = ev.currentTarget as any;
@@ -110,21 +103,13 @@ function createSyntheticHandler(
   mods: number
 ): EventHandlerCreator {
   // one document listener per key: a passive one cannot serve preventDefault
-  let eventKey = `__event__synthetic_${evName}`;
-  if (capture) {
-    eventKey = `${eventKey}_capture`;
-  }
-  if (passive) {
-    eventKey = `${eventKey}_passive`;
-  }
+  const eventKey = `__event__synthetic_${evName}${capture ? "_capture" : ""}${passive ? "_passive" : ""}`;
   setupSyntheticEvent(evName, eventKey, capture, passive);
   const currentId = nextSyntheticEventId++;
   const ownerKey = `__event__synthetic_owner_${currentId}`;
   const handler: SyntheticHandler = { slot, mods, ownerKey };
   function setup(this: HTMLElement, owner: HandlerOwner) {
-    const handlers = (this as any)[eventKey] || {};
-    handlers[currentId] = handler;
-    (this as any)[eventKey] = handlers;
+    ((this as any)[eventKey] ||= {})[currentId] = handler;
     (this as any)[ownerKey] = owner;
   }
 
@@ -217,12 +202,7 @@ function listenOn(root: Node, event: SyntheticEvent) {
   root.addEventListener(event.evName, event.listener, event.options);
 }
 
-function setupSyntheticEvent(
-  evName: string,
-  eventKey: string,
-  capture: boolean = false,
-  passive: boolean = false
-) {
+function setupSyntheticEvent(evName: string, eventKey: string, capture: boolean, passive: boolean) {
   if (syntheticEvents.has(eventKey)) {
     return;
   }

@@ -8,6 +8,7 @@ import {
   patch,
   remove,
 } from "../../src/blockdom";
+import { setDebug, setDebugSink } from "@odoo/owl-core";
 import { makeTestFixture } from "./helpers";
 import { mainEventHandler } from "../../src/event_handling";
 
@@ -440,5 +441,33 @@ describe("catchers of one site sharing a parent", () => {
     content.patch(multi([span(["outer"]), inner("inner"), inner("late")]) as any, false);
     click("late");
     expect(calls).toEqual(["late", "outer"]);
+  });
+
+  test("a catcher mounted by a patch of the enclosing one knows it from that patch", () => {
+    const calls: string[] = [];
+    const lookups: string[] = [];
+    const inner = (name: string) => catcher(span([name]), log(calls, name));
+    const outer = (slot: any) => catcher(multi([span(["outer"]), slot]), log(calls, "outer"));
+    const tree = outer(undefined);
+    mount(tree, fixture);
+    // the outer catcher, mounted by no update of its parent, looks for its own
+    // enclosing catcher at its first dispatch
+    click("outer");
+    calls.length = 0;
+    setDebugSink((_channel, message) => {
+      if (message.startsWith("catcher found its outer one at dispatch")) {
+        lookups.push(message);
+      }
+    });
+    setDebug(["event"]);
+    try {
+      patch(tree, outer(inner("inner")));
+      click("inner");
+    } finally {
+      setDebug(false);
+      setDebugSink(null);
+    }
+    expect(calls).toEqual(["inner", "outer"]);
+    expect(lookups).toEqual([]);
   });
 });

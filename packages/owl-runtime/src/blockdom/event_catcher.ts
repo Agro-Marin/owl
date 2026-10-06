@@ -34,7 +34,7 @@ const byEnd = new WeakMap<Node, VCatcherBase>();
 // the catchers whose mount or patch is running: one mounted meanwhile in the
 // same parent element is nested in the innermost of them (a component with
 // several roots holding another one)
-const updating: { parent: Node; catcher: VCatcherBase }[] = [];
+const updating: VCatcherBase[] = [];
 
 // the listener an event key needs: the modifiers a native or synthetic
 // listener is created with, in a fixed order
@@ -58,6 +58,7 @@ interface VCatcherBase {
   // listener key -> the handlers it dispatches to
   groups: Map<string, CatcherHandler[]>;
   ctx: any;
+  parentEl?: HTMLElement;
   // the catcher enclosing this one in the same parent element, of any site;
   // undefined until found (see outerOf)
   outer: VCatcherBase | null | undefined;
@@ -75,10 +76,7 @@ function outerOf(catcher: VCatcherBase): VCatcherBase | null {
   if (catcher.outer === undefined) {
     catcher.outer = catcher.findOuter();
     if (debug.event) {
-      debugLog(
-        "event",
-        `catcher mounted by its own render: ${catcher.outer ? "an enclosing catcher" : "no enclosing catcher"} found at dispatch`
-      );
+      debugLog("event", `catcher found its outer one at dispatch: ${!!catcher.outer}`);
     }
   }
   return catcher.outer;
@@ -187,12 +185,12 @@ export function createCatcher(eventsSpec: EventsSpec, fns: (HandlerFn | null)[])
       nodeInsertBefore.call(parent, end, afterNode);
       byEnd.set(end, this);
       for (let i = updating.length - 1; i >= 0; i--) {
-        if (updating[i].parent === parent) {
-          this.outer = updating[i].catcher;
+        if (updating[i].parentEl === parent) {
+          this.outer = updating[i];
           break;
         }
       }
-      updating.push({ parent, catcher: this });
+      updating.push(this);
       try {
         this.child.mount(parent, end);
       } finally {
@@ -234,7 +232,7 @@ export function createCatcher(eventsSpec: EventsSpec, fns: (HandlerFn | null)[])
         return;
       }
       this.ctx = other.ctx;
-      updating.push({ parent: this.parentEl!, catcher: this });
+      updating.push(this);
       try {
         this.child.patch(other.child, withBeforeRemove);
       } finally {
