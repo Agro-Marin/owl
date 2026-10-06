@@ -76,6 +76,13 @@ describe("qweb t-tag", () => {
     expect(renderToString(template, { tag: "my-el" })).toBe("<my-el>x</my-el>");
   });
 
+  test("a tag name the block compiler would read otherwise is rejected", () => {
+    const template = `<t t-tag="tag">x<t t-out="v"/></t>`;
+    for (const tag of ["block-text-0", "block-child-0", "a:b"]) {
+      expect(() => renderToString(template, { tag, v: 1 })).toThrow(`Invalid tag name: '${tag}'`);
+    }
+  });
+
   test("a hyphenated default tag is replaced whole", () => {
     const template = `<my-el t-tag="tag">x</my-el>`;
     expect(renderToString(template, { tag: "section" })).toBe("<section>x</section>");

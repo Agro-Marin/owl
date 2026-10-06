@@ -62,6 +62,10 @@ export function createBlock(str: string): BlockType {
 
   // step 0: prepare html base element
   const doc = new DOMParser().parseFromString(`<t>${str}</t>`, "text/xml");
+  const error = doc.getElementsByTagName("parsererror")[0];
+  if (error) {
+    throw new OwlError(`Invalid block "${str}": ${error.textContent}`);
+  }
   const node = doc.firstChild!.firstChild!;
 
   // step 1: prepare intermediate tree
@@ -260,7 +264,7 @@ function buildTree(
       };
     }
   }
-  throw new OwlError("boom");
+  throw new OwlError(`Invalid block: unsupported ${node.nodeName} node`);
 }
 
 function addRef(tree: IntermediateTree) {

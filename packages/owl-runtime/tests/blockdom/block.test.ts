@@ -278,4 +278,9 @@ describe("misc", () => {
     expect(refs.length).toBe(3);
     expect(refs.every((r) => r !== undefined)).toBe(true);
   });
+
+  test("a block string blockdom cannot build is an error, not content", () => {
+    expect(() => createBlock("<a:b>x</a:b>")).toThrow("Invalid block");
+    expect(() => createBlock("<div><![CDATA[x]]></div>")).toThrow("Invalid block");
+  });
 });

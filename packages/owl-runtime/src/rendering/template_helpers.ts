@@ -564,8 +564,10 @@ function callTemplate(
 }
 
 // A t-tag value is spliced into block markup: anything that could close the
-// tag or open an attribute would be parsed as markup.
-const INVALID_TAG_NAME = /[\s"'<>\/=&`]/;
+// tag or open an attribute would be parsed as markup, a prefix needs a
+// namespace the block does not declare, and a block- name is one of the
+// block compiler's own placeholders.
+const INVALID_TAG_NAME = /[\s"'<>\/=&`:]|^block-/;
 
 function checkTagName(tag: unknown): unknown {
   if (tag && (typeof tag !== "string" || INVALID_TAG_NAME.test(tag))) {
