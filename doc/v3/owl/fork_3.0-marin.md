@@ -8,16 +8,18 @@ differently from upstream.
 
 ## Added API
 
-| API                                      | What it does                                                                                                                        | Reference                                                           |
-| ---------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
-| `immediateEffect(fn)`                    | an effect that runs synchronously on each change, not in the next microtask                                                         | [effects](reference/effects.md)                                     |
-| `observe(target, callback)`              | OWL 2's `reactive(target, callback)`: a view of `target` that calls `callback` once a value read through it changes                 | [proxies](reference/proxies.md#observe)                             |
-| `computed(fn, { detached: true })`       | a computed that outlives the scope that created it                                                                                  | [computed values](reference/computed_values.md)                     |
-| `selector(source)`                       | `isSelected(key)`, whose readers depend on the answer for their key only                                                            | [computed values](reference/computed_values.md#selectors)           |
-| `t-memo="[deps]"`                        | on a keyed `t-foreach`: an item whose dependencies are unchanged keeps its previous content (child components included)             | [template syntax](reference/template_syntax.md#memoized-list-items) |
-| `setDebug(channels)`, `setDebugSink(fn)` | opt-in debug logging per channel (reactivity, effect, computed, scope, plugin, scheduler, fiber, lifecycle, error, template, event) | [debug logging](reference/debug_logging.md)                         |
-| `@odoo/owl/runtime`                      | the runtime without the template compiler (`owl.runtime.es.js`, 34% smaller), for pages whose templates arrive precompiled          | —                                                                   |
-| `@odoo/owl/compiler`                     | the compiler alone (`owl.compiler.es.js`); importing it installs it into a runtime build loaded as `@odoo/owl`, which then compiles | —                                                                   |
+| API                                      | What it does                                                                                                                                                                                                               | Reference                                                           |
+| ---------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
+| `immediateEffect(fn)`                    | an effect that runs synchronously on each change, not in the next microtask                                                                                                                                                | [effects](reference/effects.md)                                     |
+| `observe(target, callback)`              | OWL 2's `reactive(target, callback)`: a view of `target` that calls `callback` once a value read through it changes                                                                                                        | [proxies](reference/proxies.md#observe)                             |
+| `computed(fn, { detached: true })`       | a computed that outlives the scope that created it                                                                                                                                                                         | [computed values](reference/computed_values.md)                     |
+| `selector(source)`                       | `isSelected(key)`, whose readers depend on the answer for their key only                                                                                                                                                   | [computed values](reference/computed_values.md#selectors)           |
+| `t-memo="[deps]"`                        | on a keyed `t-foreach`: an item whose dependencies are unchanged keeps its previous content (child components included)                                                                                                    | [template syntax](reference/template_syntax.md#memoized-list-items) |
+| `setDebug(channels)`, `setDebugSink(fn)` | opt-in debug logging per channel (reactivity, effect, computed, scope, plugin, scheduler, fiber, lifecycle, error, template, event)                                                                                        | [debug logging](reference/debug_logging.md)                         |
+| `@odoo/owl/runtime`                      | the runtime without the template compiler (`owl.runtime.es.js`, 34% smaller), for pages whose templates arrive precompiled                                                                                                 | —                                                                   |
+| `@odoo/owl/compiler`                     | the compiler alone (`owl.compiler.es.js`, `owl.compiler.iife.js`); it imports nothing and registers itself on `globalThis[Symbol.for("@odoo/owl/compiler")]`, where a runtime build of the same version and hash adopts it | [precompiling templates](reference/precompiling_templates.md)       |
+| `batch(fn)`                              | groups writes: immediate effects run once, after the outermost batch                                                                                                                                                       | [reactivity](reference/reactivity.md)                               |
+| `markRaw(Class.prototype)`               | every instance of the class and of its subclasses stays raw: what a class with private members (`#x`) needs                                                                                                                | [proxies](reference/proxies.md)                                     |
 
 ## Behaviour that differs from upstream
 
@@ -55,6 +57,102 @@ differently from upstream.
   mail `RecordList`, which answers its index reads through its own proxy) is
   iterated through its proxy, as upstream iterates every array.
 
+### Reactivity
+
+- **A computation read while it runs throws** `Cycle detected: <name> reads
+its own value` instead of recursing (upstream hangs); a computed that catches
+  it recovers once it stops reading itself.
+- **Disposing an effect disposes the computeds it was the last observer of**;
+  `untrack` also stops an `observe()` view from subscribing to its reads.
+- **An effect its own cleanup disposes does not run again**, and an effect
+  keeps only a returned function as its cleanup.
+- **A selector** notifies both keys of a change in one batch (a reader that
+  throws no longer starves the other key), rethrows its source's error for
+  every key and re-runs its readers on recovery, and follows its source only
+  while a key is read.
+- **`asyncComputed.currentPromise()`** also waits for a re-run a dependency
+  change or `refresh()` queued; `dispose()` sets `loading()` to false.
+- **`batched`** calls its callback with the latest call's arguments.
+
+### Proxies, validation, plugins, registries
+
+- **A getter or setter reaching a private member through a proxy** throws an
+  OwlError naming the class to mark with `markRaw(<Class>.prototype)`.
+- **A shallow proxy** (`signal.Array`, `signal.Object`) keeps a proxy written
+  into it, as shallow Maps and Sets did.
+- **`Object.defineProperty` through a proxy notifies like a write**, and
+  `obj.hasOwnProperty(k)` subscribes to the presence of `k`. `Object.hasOwn`
+  stays untracked (a descriptor trap slows every `Object.keys`).
+- **A locked (non-configurable, non-writable) property** is handed out as it
+  is by collections and `observe()` views too, as the Proxy invariant requires.
+- **A collection's own properties** are read with the proxy as `this` (a
+  subclass getter is tracked) and observed apart from its entries. Set
+  operations reject a non-set-like argument as the native ones do.
+- **`includes` / `indexOf` / `lastIndexOf`** on a proxied plain array
+  subscribe to its items as one atom and search the raw array; a subclass of
+  `Array` is searched through its proxy, as for `t-foreach`.
+- **Through an `observe()` view**, `push` / `pop` / `shift` / `unshift` /
+  `splice` do not subscribe the view, and `forEach` hands out views.
+- **A constructor in a type schema** (`{ a: String }`) throws instead of
+  accepting everything; a `customValidator` of an optional type is optional,
+  with that type's default.
+- **A plugin dependency cycle through `setup()`** throws "Circular plugin
+  dependency"; a synchronous start failure leaves no later batch pending.
+- **A forced `registry.use()`** restores the entry it overwrote when it ends.
+
+### Components and rendering
+
+- **A dynamic `t-component`** keys its child by an id of the class, not its
+  name: two classes with the same name are two components.
+- **`__owl__.children` lists committed children only**; a component a pending
+  render creates appears once that render is committed.
+- **A rejected `onWillStart` / `onWillUpdateProps`** of a render a newer one
+  replaced, or of a destroyed component, is dropped (logged on `error`).
+- **After a render pass fails** and its error is handled without a re-render,
+  its other components keep rendering on their own; a component a failed
+  commit already mounted gets `onMounted` (and only then `onWillUnmount`) from
+  the next commit.
+- **A Suspense's content belongs to its DOM**: it moves with the Suspense in
+  a list, and works under a shadow root.
+- **An error no handler catches under a Portal or Suspense** destroys the app
+  once, like any other.
+- **An `ErrorBoundary`** passes an error caught while its fallback shows to
+  its parent; **`mount()`** destroys the App it created when the mount fails;
+  **`render(true)`** renders every `t-memo` item again.
+
+### Blockdom and events
+
+- **A list that is its parent's only child** clears the parent in bulk only
+  when nothing else sits before or after it; a multi removes its children one
+  by one. Portal or widget content in that parent survives.
+- **A `value` property** (`t-att-value`, `t-model`) is set after the element's
+  other attributes and its children: a select finds its `t-foreach` options,
+  a range input its `max`. Bound properties are written only when the element
+  holds another value.
+- **Synthetic (`.synthetic`) handlers** also listen on the shadow root or other
+  document an app is mounted in.
+- **The components of one `t-on` site share one listener per parent element**;
+  nested instances of a site run innermost first. `t-on-*.self` on a component
+  means the event targets one of its root elements.
+- **`String()` of a `t-set` body is always HTML** (text escaped), and throws
+  when the body holds a component.
+- **`t-tag` rejects prefixed and `block-` names**; a malformed block string and
+  a `t-att` given a string or number throw an OwlError. A dynamic `t-call` key
+  cannot collide across loop items, and symbols are valid `t-key`s.
+
+### Templates
+
+- **A directive that needs an expression throws on an empty one**, naming it;
+  a `t-set-slot` nested directly in another throws.
+- **`t-model.number`** checks the radio, or selects the static option, whose
+  value equals the model's number.
+- **Template expressions skip comments**; a statement keyword in an arrow's
+  block body throws a named error; `delete` is an operator; `{{ }}` and `#{ }`
+  end at the brace that closes them; an arrow prop's free variables include
+  those its parameter defaults read.
+- **`__info__.hash`** is the commit, plus `-dirty-<digest>` when the sources
+  differ from it.
+
 ## Odoo integration contract
 
 Odoo reaches into these internals; a refactor must keep their shape:
@@ -62,7 +160,7 @@ Odoo reaches into these internals; a refactor must keep their shape:
 (`web/core/utils/render_hooks.js`, HOOT, o_spreadsheet);
 `app._compileTemplate(name, template)` is wrapped per instance
 (`web/core/template_compile_cache.js`); `node.__owl__.children` is read as a
-snapshot; `App.version` + `__info__.hash` scope the template compile cache.
+snapshot of the committed children; `App.version` + `__info__.hash` scope the template compile cache.
 
 ## Checks before re-vendoring into Odoo
 
@@ -72,14 +170,17 @@ snapshot; `App.version` + `__info__.hash` scope the template compile cache.
    compiles after Odoo's own template inheritance, with the new and the old
    build; it must print no `REGRESSION` line. `FREE_NAMES=1` also lists the
    component templates reading a context name nothing sets.
-3. The `@web` HOOT suites (`WebSuite`, `MobileWebSuite`) with the old and the
-   new `owl.es.js`, compared test by test.
+3. The `@web` HOOT suites (`WebSuite`, `MobileWebSuite`) and `@mail`'s
+   (`MailSuite`, `MobileMailSuite`) with the old and the new build, compared
+   test by test. Vendor the three files together (`owl.es.js`,
+   `owl.runtime.es.js`, `owl.compiler.es.js`): a compiler from another build
+   is refused.
 
 ## Test suites beyond upstream's
 
 - `owl-core/tests/conformance.test.ts`: the cross-framework reactive
-  conformance suite (`reactive-framework-test-suite`); 175 of 178 core cases,
-  the three deliberate divergences marked as expected failures.
+  conformance suite (`reactive-framework-test-suite`); 176 of 178 core cases,
+  the two deliberate divergences marked as expected failures.
 - `owl-compiler/tests/expression_fuzz.test.ts`: random expressions, compiled,
   against native evaluation.
 - `owl-runtime/tests/compiler/template_fuzz.test.ts`: random templates,
