@@ -22,7 +22,6 @@ const KEYCHANGES = Symbol("Key changes");
 type Target = object;
 type Reactive<T extends Target> = T;
 
-type Collection = Set<any> | Map<any, any> | WeakMap<any, any>;
 type CollectionRawType = "Set" | "Map" | "WeakMap";
 
 const objectToString = Object.prototype.toString;
@@ -45,11 +44,8 @@ function canBeMadeReactive(value: any): boolean {
   return objectToString.call(raw) === "[object Object]";
 }
 /**
- * Creates a proxy from the given object/callback if possible and returns it,
- * returns the original object otherwise.
- *
- * @param value the value make proxy
- * @returns a proxy for the given object when possible, the original otherwise
+ * The deep proxy of `val` when it can have one, `val` itself otherwise (and
+ * always for a shallow proxy, which hands its values out as stored).
  */
 function possiblyReactive(val: any, shallow: boolean) {
   return !shallow && canBeMadeReactive(val) ? proxy(val) : val;
@@ -195,12 +191,10 @@ function findAtom(target: Target, key: PropertyKey, atoms: KeyAtoms): Atom | und
 }
 
 /**
- * Observes a given key on a target with an callback. The callback will be
- * called when the given key changes on the target.
+ * Subscribes the current computation to the value of `key` on `target`.
  *
- * @param target the target whose key should be observed
- * @param key the key to observe (or Symbol(KEYCHANGES) for key creation
- *  or deletion)
+ * @param target the target whose key is read
+ * @param key the key read (or `KEYCHANGES` for the key list)
  */
 function onReadTargetKey(target: Target, key: PropertyKey): void {
   // a read nobody observes subscribes nothing, and creates no atom for its
@@ -211,13 +205,12 @@ function onReadTargetKey(target: Target, key: PropertyKey): void {
 }
 
 /**
- * Notify Reactives that are observing a given target that a key has changed on
- * the target.
+ * Notifies the readers of `key` on `target` that it changed, if it has any.
  *
- * @param target target whose Reactives should be notified that the target was
- *  changed.
- * @param key the key that changed (or Symbol `KEYCHANGES` if a key was created
- *   or deleted)
+ * @param target the target whose key changed
+ * @param key the key that changed (or `KEYCHANGES` if a key was created or
+ *   deleted)
+ * @param atoms the value atoms (default) or the presence atoms
  */
 function onWriteTargetKey(target: Target, key: PropertyKey, atoms: KeyAtoms = itemAtoms): void {
   const atom = findAtom(target, key, atoms);
@@ -265,7 +258,7 @@ function releaseKeyAtom(target: Target, key: PropertyKey, atoms: KeyAtoms): void
 }
 
 /**
- * Notify Reactives that are observing the indices an array dropped when its
+ * Notifies the readers of the indices an array dropped when its
  * length was written: such a write does not go through the deleteProperty trap.
  * Visits the dropped range or the atoms, whichever is smaller: a pop() drops
  * one index of an array whose every index may have an atom.
@@ -342,16 +335,8 @@ export function proxifyTarget<T extends Target>(target: T, shallow: boolean): T 
     return reactive as T;
   }
 
-  let handler: ProxyHandler<any>;
-  if (target instanceof Map) {
-    handler = collectionsProxyHandler(target as unknown as Collection, "Map", shallow);
-  } else if (target instanceof Set) {
-    handler = collectionsProxyHandler(target as unknown as Collection, "Set", shallow);
-  } else if (target instanceof WeakMap) {
-    handler = collectionsProxyHandler(target as unknown as Collection, "WeakMap", shallow);
-  } else {
-    handler = new BasicHandler(shallow);
-  }
+  const type = collectionType(target);
+  const handler = type ? new CollectionHandler(target, type, shallow) : new BasicHandler(shallow);
   const proxy = new Proxy(target, handler as ProxyHandler<T>) as Reactive<T>;
 
   cache.set(target, proxy);
@@ -494,10 +479,14 @@ class BasicHandler implements ProxyHandler<any> {
   shallow: boolean;
   // the value atoms of the target's keys
   keyAtoms: Map<PropertyKey, Atom> | undefined;
+  // what the atoms of the target's own properties are keyed by: the target,
+  // or for a collection an object standing for its properties
+  host: Target | null;
 
-  constructor(shallow: boolean) {
+  constructor(shallow: boolean, host: Target | null = null) {
     this.shallow = shallow;
     this.keyAtoms = undefined;
+    this.host = host;
   }
 
   get(target: any, key: PropertyKey, receiver: any): any {
@@ -544,10 +533,11 @@ class BasicHandler implements ProxyHandler<any> {
     // a write subscribes nothing, though a getter or setter it runs reads
     // through the proxy
     const shallow = this.shallow;
+    const atoms = this.host ?? target;
     try {
       return isObserving()
-        ? untrack(() => writeKey(target, key, value, receiver, shallow))
-        : writeKey(target, key, value, receiver, shallow);
+        ? untrack(() => writeKey(target, key, value, receiver, shallow, atoms))
+        : writeKey(target, key, value, receiver, shallow, atoms);
     } catch (error) {
       throw privateMemberError(error, target, key);
     }
@@ -557,9 +547,10 @@ class BasicHandler implements ProxyHandler<any> {
     const hadKey = objectHasOwnProperty.call(target, key);
     const ret = Reflect.deleteProperty(target, key);
     if (hadKey && ret) {
-      onWriteKeyPresence(target, key);
-      onWriteTargetKey(target, key);
-      releaseKey(target, key);
+      const atoms = this.host ?? target;
+      onWriteKeyPresence(atoms, key);
+      onWriteTargetKey(atoms, key);
+      releaseKey(atoms, key);
       if (Array.isArray(target)) {
         onWriteItems(target);
       }
@@ -582,26 +573,27 @@ class BasicHandler implements ProxyHandler<any> {
     }
     const ret = Reflect.defineProperty(target, key, descriptor);
     if (ret) {
+      const atoms = this.host ?? target;
       const after = Reflect.getOwnPropertyDescriptor(target, key)!;
       if (before !== undefined && before.enumerable !== after.enumerable) {
-        onWriteTargetKey(target, KEYCHANGES);
+        onWriteTargetKey(atoms, KEYCHANGES);
       }
       const changed =
         !Object.is(before?.value, after.value) ||
         before?.get !== after.get ||
         before?.set !== after.set;
-      onWriteKey(target, key, before !== undefined, changed, isArray, originalLength);
+      onWriteKey(target, key, before !== undefined, changed, isArray, originalLength, atoms);
     }
     return ret;
   }
 
   ownKeys(target: any): ArrayLike<string | symbol> {
-    onReadTargetKey(target, KEYCHANGES);
+    onReadTargetKey(this.host ?? target, KEYCHANGES);
     return Reflect.ownKeys(target);
   }
 
   has(target: any, key: PropertyKey): boolean {
-    onReadKeyPresence(target, key);
+    onReadKeyPresence(this.host ?? target, key);
     return Reflect.has(target, key);
   }
 }
@@ -615,7 +607,8 @@ function writeKey(
   key: PropertyKey,
   value: any,
   receiver: any,
-  shallow: boolean
+  shallow: boolean,
+  atoms: Target
 ): boolean {
   // a shallow proxy hands its values back as stored: it keeps a proxy
   const stored = shallow ? value : toRaw(value);
@@ -631,7 +624,7 @@ function writeKey(
     // target. Written on the target, it costs no trap.
     const ret = Reflect.set(target, key, stored);
     const changed = !(isArray && key === "length") && !Object.is(own?.value, target[key]);
-    onWriteKey(target, key, own !== undefined, changed, isArray, originalLength);
+    onWriteKey(target, key, own !== undefined, changed, isArray, originalLength, atoms);
     return ret;
   }
   // an accessor runs with the proxy as `this`, and a write through another
@@ -650,7 +643,7 @@ function writeKey(
   }
   const changed =
     !(isArray && key === "length") && !Object.is(originalValue, Reflect.get(target, key, receiver));
-  onWriteKey(target, key, own !== undefined, changed, isArray, originalLength);
+  onWriteKey(target, key, own !== undefined, changed, isArray, originalLength, atoms);
   return ret;
 }
 
@@ -683,10 +676,11 @@ function onWriteKey(
   hadKey: boolean,
   changed: boolean,
   isArray: boolean,
-  originalLength: number
+  originalLength: number,
+  atoms: Target
 ): void {
   if (!hadKey && objectHasOwnProperty.call(target, key)) {
-    onWriteKeyCreated(target, key, originalLength);
+    onWriteKeyCreated(atoms, key, originalLength);
     if (isArray && !changed) {
       onWriteItems(target);
     }
@@ -702,7 +696,7 @@ function onWriteKey(
       onWriteItems(target);
     }
   } else if (changed) {
-    onWriteTargetKey(target, key);
+    onWriteTargetKey(atoms, key);
     if (isArray) {
       onWriteItems(target);
     }
@@ -818,100 +812,125 @@ for (const name of ["includes", "indexOf", "lastIndexOf"] as const) {
 // hasOwnProperty reads the presence of the key it asks about, as `in` does
 replacedMethods.set(objectHasOwnProperty, function (this: object, key: PropertyKey) {
   const raw = toRaw(this);
-  onReadKeyPresence(raw, typeof key === "symbol" ? key : String(key));
+  onReadKeyPresence(propertyHosts.get(raw) ?? raw, typeof key === "symbol" ? key : String(key));
   return objectHasOwnProperty.call(raw, key);
 });
 
-// what the collection handlers inherit the traps they do not override from
-const deepHandler = new BasicHandler(false);
-const shallowHandler = new BasicHandler(true);
+function collectionType(target: Target): CollectionRawType | null {
+  return target instanceof Map
+    ? "Map"
+    : target instanceof Set
+      ? "Set"
+      : target instanceof WeakMap
+        ? "WeakMap"
+        : null;
+}
 
-/**
- * Creates a function that will observe the key that is passed to it when called
- * and delegates to the underlying method.
- *
- * @param methodName name of the method to delegate to
- * @param target @see proxy
- * @param callback @see proxy
- */
-function makeKeyObserver(methodName: "has" | "get", target: any, shallow: boolean) {
+// A collection's own properties (a subclass's fields, an expando) have atoms
+// of their own, keyed by this stand-in: an entry of the same key is another
+// value.
+const propertyHosts = new WeakMap<Target, Target>();
+
+function propertyHost(target: Target): Target {
+  let host = propertyHosts.get(target);
+  if (host === undefined) {
+    host = {};
+    propertyHosts.set(target, host);
+  }
+  return host;
+}
+
+// `has` and `get`, observing the key they are asked about
+function makeHas(target: any) {
   return (key: any) => {
     key = toRaw(key);
-    if (methodName === "has") {
-      onReadKeyPresence(target, key);
-    } else {
-      onReadTargetKey(target, key);
-    }
-    return possiblyReactive(target[methodName](key), shallow);
+    onReadKeyPresence(target, key);
+    return target.has(key);
   };
 }
+
+function makeGet(target: any, shallow: boolean) {
+  return (key: any) => {
+    key = toRaw(key);
+    onReadTargetKey(target, key);
+    return possiblyReactive(target.get(key), shallow);
+  };
+}
+
 /**
- * Creates an iterable that will delegate to the underlying iteration method and
- * observe keys as necessary.
- *
- * @param methodName name of the method to delegate to
- * @param target @see proxy
- * @param callback @see proxy
+ * Creates an iterator method (keys, values, entries, @@iterator) that observes
+ * the key list, and a Map's values as it reads them. A deep proxy yields the
+ * proxies of the objects. An entry is the fresh array the raw iterator made:
+ * proxying it would only subscribe its reader to atoms no write can reach.
  */
 function makeIteratorObserver(
   methodName: "keys" | "values" | "entries" | typeof Symbol.iterator,
   target: any,
   shallow: boolean
 ) {
-  // an entry is a fresh [key, value] array nobody else holds: proxying it would
-  // only subscribe the reader to atoms no write can ever reach
-  const yieldsEntries =
-    methodName === "entries" || (methodName === Symbol.iterator && target instanceof Map);
-  // a Set's keys, or a Map's, change only by being added or removed, which
-  // the key list notifies: only a Map's values need their keys' atoms
-  const readsValues = target instanceof Map && methodName !== "keys";
+  const isMap = target instanceof Map;
+  if (methodName === "entries" || (methodName === Symbol.iterator && isMap)) {
+    return function* () {
+      onReadTargetKey(target, KEYCHANGES);
+      for (const entry of target.entries()) {
+        if (isMap) {
+          onReadTargetKey(target, entry[0]);
+        }
+        if (!shallow) {
+          entry[0] = possiblyReactive(entry[0], false);
+          entry[1] = possiblyReactive(entry[1], false);
+        }
+        yield entry;
+      }
+    };
+  }
+  if (isMap && methodName === "values") {
+    return function* () {
+      onReadTargetKey(target, KEYCHANGES);
+      for (const [key, value] of target.entries()) {
+        onReadTargetKey(target, key);
+        yield possiblyReactive(value, shallow);
+      }
+    };
+  }
+  // a Set's members, or a Map's keys, change only by being added or removed,
+  // which the key list notifies
   return function* () {
     onReadTargetKey(target, KEYCHANGES);
-    for (const entry of target.entries()) {
-      if (readsValues) {
-        onReadTargetKey(target, entry[0]);
-      }
-      const item = yieldsEntries ? entry : methodName === "keys" ? entry[0] : entry[1];
-      if (shallow) {
-        yield item;
-      } else if (yieldsEntries) {
-        yield [possiblyReactive(entry[0], false), possiblyReactive(entry[1], false)];
-      } else {
-        yield possiblyReactive(item, false);
-      }
+    for (const key of target.keys()) {
+      yield possiblyReactive(key, shallow);
     }
   };
 }
+
 /**
- * Creates a forEach function that will delegate to forEach on the underlying
- * collection while observing key changes, and keys as they're iterated over,
- * and making the passed keys/values proxy.
- *
- * @param target @see proxy
- * @param callback @see proxy
+ * Creates a forEach that observes the key list, and a Map's values, and hands
+ * out the proxies of the objects, and the proxy it is called through as the
+ * collection.
  */
 function makeForEachObserver(target: any, shallow: boolean) {
   const readsValues = target instanceof Map;
-  return function forEach(forEachCb: (val: any, key: any, target: any) => void, thisArg: any) {
+  return function forEach(
+    this: unknown,
+    callback: (value: any, key: any, collection: any) => void,
+    thisArg?: any
+  ) {
+    const collection = this ?? possiblyReactive(target, shallow);
     onReadTargetKey(target, KEYCHANGES);
-    target.forEach(function (val: any, key: any, targetObj: any) {
+    target.forEach((value: any, key: any) => {
       if (readsValues) {
         onReadTargetKey(target, key);
       }
-      forEachCb.call(
+      callback.call(
         thisArg,
-        possiblyReactive(val, shallow),
+        possiblyReactive(value, shallow),
         possiblyReactive(key, shallow),
-        possiblyReactive(targetObj, shallow)
+        collection
       );
-    }, thisArg);
+    });
   };
 }
-/**
- * Creates a version of an ES2025 Set method (union, isSubsetOf...) that reads
- * the whole membership of the set. Its result is a fresh, plain Set or a
- * boolean. A reactive `other` is read through its proxy, and so observed too.
- */
+
 type SetOperation =
   | "difference"
   | "intersection"
@@ -921,26 +940,57 @@ type SetOperation =
   | "symmetricDifference"
   | "union";
 
+// The keys of the set-like argument of a set operation, checked as the native
+// operation checks it (GetSetRecord): a `size` that is a number, a callable
+// `has` and `keys`. Its keys() iterator need not be iterable itself.
+function setLikeKeys(other: any): Iterator<any> {
+  if (other === null || (typeof other !== "object" && typeof other !== "function")) {
+    throw new TypeError("The argument of a set operation must be an object");
+  }
+  const size = Number(other.size);
+  if (Number.isNaN(size)) {
+    throw new TypeError("The .size property is NaN");
+  }
+  if (size < 0) {
+    throw new RangeError("The .size property must not be negative");
+  }
+  if (typeof other.has !== "function") {
+    throw new TypeError("The .has property is not callable");
+  }
+  if (typeof other.keys !== "function") {
+    throw new TypeError("The .keys property is not callable");
+  }
+  const keys = other.keys();
+  if (keys === null || typeof keys !== "object") {
+    throw new TypeError("The .keys() result is not an object");
+  }
+  return keys;
+}
+
 // The members of a set-like by their raw object: a shallow set may hold
 // proxies, a deep one yields them, and either way a member is the same member
 // as its raw object.
-function membersByRaw(members: Iterable<any>): Map<any, any> {
+function membersByRaw(members: Iterator<any>): Map<any, any> {
   const byRaw = new Map();
-  for (const member of members) {
-    byRaw.set(toRaw(member), member);
+  for (let step = members.next(); !step.done; step = members.next()) {
+    byRaw.set(toRaw(step.value), step.value);
   }
   return byRaw;
 }
 
-// The ES2025 set operations, on members compared by their raw object, so that
-// any mix of shallow, deep and plain sets answers as the raw sets would; a
-// result holds the members as the sets hold them. Reading `other`'s keys
-// through it observes a reactive one.
+/**
+ * Creates a version of an ES2025 Set method (union, isSubsetOf...) that reads
+ * the whole membership of the set, on members compared by their raw object,
+ * so that any mix of shallow, deep and plain sets answers as the raw sets
+ * would; a result is a fresh, plain Set holding the members as the sets hold
+ * them, or a boolean. Reading `other`'s keys through it observes a reactive
+ * one.
+ */
 function makeSetOperation(name: SetOperation, target: Set<any>) {
   return (other: any) => {
+    const theirs = membersByRaw(setLikeKeys(other));
     onReadTargetKey(target, KEYCHANGES);
-    const mine = membersByRaw(target);
-    const theirs = membersByRaw(other.keys());
+    const mine = membersByRaw(target.values());
     const notIn = (a: Map<any, any>, b: Map<any, any>) =>
       [...a].filter(([raw]) => !b.has(raw)).map(([, member]) => member);
     switch (name) {
@@ -961,33 +1011,26 @@ function makeSetOperation(name: SetOperation, target: Set<any>) {
     }
   };
 }
+
 /**
- * Creates a function that will delegate to an underlying method, and check if
- * that method has modified the presence or value of a key, and notify the
- * proxys appropriately.
- *
- * @param setterName name of the method to delegate to
- * @param getterName name of the method which should be used to retrieve the
- *  value before calling the delegate method for comparison purposes
- * @param target @see proxy
+ * Creates a writing method (set, add, delete) that notifies the presence of
+ * its key when it changes, and the value of its key when it changes: a
+ * Map's or WeakMap's value, a Set's membership.
  */
-function delegateAndNotify(
-  setterName: "set" | "add" | "delete",
-  getterName: "has" | "get",
-  target: any,
-  shallow: boolean
-) {
+function delegateAndNotify(setterName: "set" | "add" | "delete", target: any, shallow: boolean) {
+  const readsValue = setterName === "set" || (setterName === "delete" && !(target instanceof Set));
   return (key: any, value: any) => {
     key = toRaw(key);
     const hadKey = target.has(key);
-    const originalValue = target[getterName](key);
+    const before = readsValue && hadKey ? target.get(key) : undefined;
     // a shallow collection hands its values back as stored: keep the proxy
     const ret = target[setterName](key, shallow ? value : toRaw(value));
-    const hasKey = target.has(key);
+    const hasKey = setterName !== "delete";
     if (hadKey !== hasKey) {
       onWriteKeyPresence(target, key);
     }
-    if (!Object.is(originalValue, target[getterName](key))) {
+    const after = readsValue && hasKey ? target.get(key) : undefined;
+    if (readsValue ? !Object.is(before, after) : hadKey !== hasKey) {
       onWriteTargetKey(target, key);
     }
     if (!hasKey) {
@@ -996,30 +1039,43 @@ function delegateAndNotify(
     return ret;
   };
 }
+
+// The atoms of a collection's keys may exist
+function hasKeyAtoms(target: Target): boolean {
+  return (
+    itemAtoms.keys.has(target) ||
+    itemAtoms.objectKeys.has(target) ||
+    presenceAtoms.keys.has(target) ||
+    presenceAtoms.objectKeys.has(target)
+  );
+}
+
 /**
- * Creates a function that will clear the underlying collection and notify that
- * the keys of the collection have changed.
- *
- * @param target @see proxy
+ * Creates a clear() that notifies the key list, and the presence and value of
+ * each key that had atoms. An empty collection notifies nothing.
  */
 function makeClearNotifier(target: Map<any, any> | Set<any>) {
   return () => {
-    const allKeys = [...target.keys()];
+    if (target.size === 0) {
+      return;
+    }
+    const keys = hasKeyAtoms(target) ? [...target.keys()] : [];
     target.clear();
     onWriteTargetKey(target, KEYCHANGES);
-    for (const key of allKeys) {
+    for (const key of keys) {
       onWriteTargetKey(target, key, presenceAtoms);
       onWriteTargetKey(target, key);
       releaseKey(target, key);
     }
   };
 }
+
 type MethodFactory = (target: any, shallow: boolean) => Function;
 
 const setMethods: [PropertyKey, MethodFactory][] = [
-  ["has", (target, shallow) => makeKeyObserver("has", target, shallow)],
-  ["add", (target, shallow) => delegateAndNotify("add", "has", target, shallow)],
-  ["delete", (target, shallow) => delegateAndNotify("delete", "has", target, shallow)],
+  ["has", (target) => makeHas(target)],
+  ["add", (target, shallow) => delegateAndNotify("add", target, shallow)],
+  ["delete", (target, shallow) => delegateAndNotify("delete", target, shallow)],
   ["keys", (target, shallow) => makeIteratorObserver("keys", target, shallow)],
   ["values", (target, shallow) => makeIteratorObserver("values", target, shallow)],
   ["entries", (target, shallow) => makeIteratorObserver("entries", target, shallow)],
@@ -1042,10 +1098,10 @@ const setOperations = (
   .filter((name) => name in Set.prototype)
   .map((name): [PropertyKey, MethodFactory] => [name, (target) => makeSetOperation(name, target)]);
 const weakMapMethods: [PropertyKey, MethodFactory][] = [
-  ["has", (target, shallow) => makeKeyObserver("has", target, shallow)],
-  ["get", (target, shallow) => makeKeyObserver("get", target, shallow)],
-  ["set", (target, shallow) => delegateAndNotify("set", "get", target, shallow)],
-  ["delete", (target, shallow) => delegateAndNotify("delete", "has", target, shallow)],
+  ["has", (target) => makeHas(target)],
+  ["get", (target, shallow) => makeGet(target, shallow)],
+  ["set", (target, shallow) => delegateAndNotify("set", target, shallow)],
+  ["delete", (target, shallow) => delegateAndNotify("delete", target, shallow)],
 ];
 
 /**
@@ -1060,36 +1116,46 @@ const methodFactories: Record<CollectionRawType, Map<PropertyKey, MethodFactory>
 };
 
 /**
- * Creates a proxy handler for collections (Set/Map/WeakMap). Its methods are
- * built on first read and kept for the proxy: most proxies use a few of them.
+ * The handler of a Set, Map or WeakMap proxy. Its methods are built on first
+ * read and kept for the proxy: most proxies use a few of them. Its own
+ * properties are read with the proxy as receiver, a subclass's getter reading
+ * the entries through it, and observed apart from the entries.
  */
-function collectionsProxyHandler<T extends Collection>(
-  target: T,
-  targetRawType: CollectionRawType,
-  shallow: boolean
-): ProxyHandler<T> {
-  const factories = methodFactories[targetRawType];
-  const hasSize = targetRawType !== "WeakMap";
-  const methods = new Map<PropertyKey, Function>();
-  return Object.assign(Object.create(shallow ? shallowHandler : deepHandler), {
-    // FIXME: probably broken when part of prototype chain since we ignore the receiver
-    get(target: any, key: PropertyKey) {
-      const factory = factories.get(key);
-      if (factory) {
-        let method = methods.get(key);
-        if (!method) {
-          method = factory(target, shallow);
-          methods.set(key, method);
-        }
-        return method;
+class CollectionHandler extends BasicHandler {
+  factories: Map<PropertyKey, MethodFactory>;
+  hasSize: boolean;
+  methods = new Map<PropertyKey, Function>();
+
+  constructor(target: Target, type: CollectionRawType, shallow: boolean) {
+    super(shallow, propertyHost(target));
+    this.factories = methodFactories[type];
+    this.hasSize = type !== "WeakMap";
+  }
+
+  get(target: any, key: PropertyKey, receiver: any): any {
+    const factory = this.factories.get(key);
+    if (factory) {
+      let method = this.methods.get(key);
+      if (!method) {
+        method = factory(target, this.shallow);
+        this.methods.set(key, method);
       }
-      if (key === "size" && hasSize) {
-        onReadTargetKey(target, KEYCHANGES);
-        return target.size;
-      }
-      onReadTargetKey(target, key);
-      const value = target[key];
-      return isLocked(target, key) ? value : possiblyReactive(value, shallow);
-    },
-  }) as ProxyHandler<T>;
+      return method;
+    }
+    if (key === "size" && this.hasSize) {
+      onReadTargetKey(target, KEYCHANGES);
+      return target.size;
+    }
+    onReadTargetKey(this.host!, key);
+    let value;
+    try {
+      value = Reflect.get(target, key, receiver);
+    } catch (error) {
+      throw privateMemberError(error, target, key);
+    }
+    if (typeof value === "function") {
+      return replacedMethods.get(value) ?? value;
+    }
+    return isLocked(target, key) ? value : possiblyReactive(value, this.shallow);
+  }
 }

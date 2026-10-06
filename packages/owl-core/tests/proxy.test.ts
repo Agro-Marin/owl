@@ -351,3 +351,127 @@ describe("writes", () => {
     expect(notifiedKeys(() => (list.length = 3))).toEqual([]);
   });
 });
+
+describe("collections", () => {
+  test("a getter of a Map subclass reads the entries through the proxy", async () => {
+    class Totals extends Map<string, number> {
+      get total() {
+        let sum = 0;
+        for (const value of this.values()) {
+          sum += value;
+        }
+        return sum;
+      }
+    }
+    const totals = proxy(new Totals([["a", 1]]));
+    const seen: number[] = [];
+    effect(() => {
+      seen.push(totals.total);
+    });
+    totals.set("b", 2);
+    await waitScheduler();
+    expect(seen).toEqual([1, 3]);
+  });
+
+  test("a property of a collection and an entry of the same name are apart", async () => {
+    const map: any = proxy(new Map([["foo", 1]]));
+    map.foo = 0;
+    let entryRuns = 0;
+    let propertyRuns = 0;
+    effect(() => {
+      entryRuns++;
+      map.get("foo");
+    });
+    effect(() => {
+      propertyRuns++;
+      map.foo;
+    });
+    map.foo = 7;
+    await waitScheduler();
+    expect([entryRuns, propertyRuns]).toEqual([1, 2]);
+    map.set("foo", 2);
+    await waitScheduler();
+    expect([entryRuns, propertyRuns]).toEqual([2, 2]);
+  });
+
+  test("a set operation rejects what is not set-like, as the native one does", () => {
+    if (!("union" in Set.prototype)) {
+      return;
+    }
+    const set: any = proxy(new Set([1, 2]));
+    for (const other of [[1, 2], null, { size: 1, has: () => true }, { size: NaN }]) {
+      let native: any;
+      let reactive: any;
+      try {
+        (new Set([1, 2]) as any).union(other);
+      } catch (e) {
+        native = e;
+      }
+      try {
+        set.union(other);
+      } catch (e) {
+        reactive = e;
+      }
+      expect(reactive?.constructor).toBe(native?.constructor);
+      expect(native).toBeDefined();
+    }
+  });
+
+  test("a set operation reads a set-like through its keys iterator", () => {
+    if (!("union" in Set.prototype)) {
+      return;
+    }
+    const set: any = proxy(new Set([1, 2]));
+    let index = 0;
+    const setLike = {
+      size: 2,
+      has: (value: number) => value === 2 || value === 3,
+      keys: () => ({
+        next: () =>
+          index < 2 ? { value: [2, 3][index++], done: false } : { value: undefined, done: true },
+      }),
+    };
+    expect([...set.union(setLike)]).toEqual([1, 2, 3]);
+  });
+
+  test("forEach hands out the proxy it was called through", () => {
+    const shallow = signal.Map(new Map([["a", 1]]));
+    const deep = proxy(new Map([["a", 1]]));
+    let third: any;
+    shallow().forEach((_value, _key, map) => (third = map));
+    expect(third).toBe(shallow());
+    deep.forEach((_value, _key, map) => (third = map));
+    expect(third).toBe(deep);
+  });
+
+  test("clearing an empty collection notifies nothing", () => {
+    const set = proxy(new Set<number>());
+    effect(() => set.size);
+    expect(notifiedKeys(() => set.clear())).toEqual([]);
+  });
+
+  test("iterating a set or a map yields the proxies of its objects", () => {
+    const item = { a: 1 };
+    const set = proxy(new Set([item]));
+    const map = proxy(new Map([[item, item]]));
+    const pItem = proxy(item);
+    expect([...set]).toEqual([pItem]);
+    expect([...set.values()][0]).toBe(pItem);
+    expect([...set.entries()][0]).toEqual([pItem, pItem]);
+    expect([...map.keys()][0]).toBe(pItem);
+    expect([...map.values()][0]).toBe(pItem);
+    const [key, value] = [...map][0];
+    expect(key).toBe(pItem);
+    expect(value).toBe(pItem);
+  });
+
+  test("a map write notifies its key's value and presence only when they change", () => {
+    const map = proxy(new Map([["a", 1]]));
+    effect(() => [map.get("a"), map.has("a"), map.get("b"), map.has("b")]);
+    expect(notifiedKeys(() => map.set("a", 1))).toEqual([]);
+    expect(notifiedKeys(() => map.set("a", 2))).toEqual(["a"]);
+    expect(notifiedKeys(() => map.set("b", 1))).toEqual(["b", "b"]);
+    expect(notifiedKeys(() => map.delete("b"))).toEqual(["b", "b"]);
+    expect(notifiedKeys(() => map.delete("b"))).toEqual([]);
+  });
+});
