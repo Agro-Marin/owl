@@ -354,7 +354,7 @@ export function proxifyTarget<T extends Target>(target: T, shallow: boolean): T 
   }
 
   const type = collectionType(target);
-  const handler = type ? new CollectionHandler(target, type, shallow) : new BasicHandler(shallow);
+  const handler = type ? new CollectionHandler(type, shallow) : new BasicHandler(shallow);
   const proxy = new Proxy(target, handler as ProxyHandler<T>) as Reactive<T>;
 
   cache.set(target, proxy);
@@ -917,6 +917,8 @@ for (const name of ["includes", "indexOf", "lastIndexOf"] as const) {
 // hasOwnProperty reads the presence of the key it asks about, as `in` does
 const hasOwnPropertyReader = function (this: object, key: PropertyKey) {
   const raw = toRaw(this);
+  // a collection's proxy made its properties' stand-in when it was asked for
+  // this method
   onReadKeyPresence(propertyHosts.get(raw) ?? raw, typeof key === "symbol" ? key : String(key));
   return objectHasOwnProperty.call(raw, key);
 };
@@ -1226,15 +1228,17 @@ const methodFactories: Record<CollectionRawType, Map<PropertyKey, MethodFactory>
  * The handler of a Set, Map or WeakMap proxy. Its methods are built on first
  * read and kept for the proxy: most proxies use a few of them. Its own
  * properties are read with the proxy as receiver, a subclass's getter reading
- * the entries through it, and observed apart from the entries.
+ * the entries through it, and observed apart from the entries. The table of
+ * its methods and the stand-in its properties' atoms are keyed by are made
+ * when first needed: most collection proxies are made, iterated and dropped.
  */
 class CollectionHandler extends BasicHandler {
   factories: Map<PropertyKey, MethodFactory>;
   hasSize: boolean;
-  methods = new Map<PropertyKey, Function>();
+  methods: Map<PropertyKey, Function> | undefined = undefined;
 
-  constructor(target: Target, type: CollectionRawType, shallow: boolean) {
-    super(shallow, propertyHost(target));
+  constructor(type: CollectionRawType, shallow: boolean) {
+    super(shallow);
     this.factories = methodFactories[type];
     this.hasSize = type !== "WeakMap";
   }
@@ -1242,10 +1246,11 @@ class CollectionHandler extends BasicHandler {
   get(target: any, key: PropertyKey, receiver: any): any {
     const factory = this.factories.get(key);
     if (factory) {
-      let method = this.methods.get(key);
+      const methods = (this.methods ??= new Map());
+      let method = methods.get(key);
       if (!method) {
         method = factory(target, this.shallow);
-        this.methods.set(key, method);
+        methods.set(key, method);
       }
       return method;
     }
@@ -1253,7 +1258,7 @@ class CollectionHandler extends BasicHandler {
       onReadTargetKey(target, KEYCHANGES);
       return target.size;
     }
-    onReadTargetKey(this.host!, key);
+    onReadTargetKey((this.host ??= propertyHost(target)), key);
     let value;
     try {
       value = Reflect.get(target, key, receiver);
@@ -1264,5 +1269,30 @@ class CollectionHandler extends BasicHandler {
       return replacedMethods.get(value) ?? value;
     }
     return isLocked(target, key) ? value : possiblyReactive(value, this.shallow);
+  }
+
+  set(target: any, key: PropertyKey, value: any, receiver: any): boolean {
+    this.host ??= propertyHost(target);
+    return super.set(target, key, value, receiver);
+  }
+
+  deleteProperty(target: any, key: PropertyKey): boolean {
+    this.host ??= propertyHost(target);
+    return super.deleteProperty(target, key);
+  }
+
+  defineProperty(target: any, key: PropertyKey, descriptor: PropertyDescriptor): boolean {
+    this.host ??= propertyHost(target);
+    return super.defineProperty(target, key, descriptor);
+  }
+
+  ownKeys(target: any): ArrayLike<string | symbol> {
+    this.host ??= propertyHost(target);
+    return super.ownKeys(target);
+  }
+
+  has(target: any, key: PropertyKey): boolean {
+    this.host ??= propertyHost(target);
+    return super.has(target, key);
   }
 }

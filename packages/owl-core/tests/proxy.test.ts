@@ -430,6 +430,20 @@ describe("collections", () => {
     expect([entryRuns, propertyRuns]).toEqual([2, 2]);
   });
 
+  test("hasOwnProperty is the first property read of a collection: it observes the property, not the entry", async () => {
+    const map: any = proxy(new Map());
+    const seen: boolean[] = [];
+    effect(() => {
+      seen.push(map.hasOwnProperty("foo"));
+    });
+    map.set("foo", 1);
+    await waitScheduler();
+    expect(seen).toEqual([false]);
+    map.foo = 1;
+    await waitScheduler();
+    expect(seen).toEqual([false, true]);
+  });
+
   test("a set operation rejects what is not set-like, as the native one does", () => {
     if (!("union" in Set.prototype)) {
       return;
