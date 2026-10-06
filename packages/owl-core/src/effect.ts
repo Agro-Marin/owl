@@ -149,7 +149,7 @@ export function adopt(dispose: () => void): ComputationAtom | undefined {
 // Runs the cleanup function and disposes the child effects of `effect`, with
 // nothing tracking their reads or owning what they create.
 function releaseUntracked(effect: ComputationAtom) {
-  runUnowned(() => release(effect));
+  runUnowned(release, effect);
 }
 
 // Releases everything even when a cleanup throws, then rethrows the first

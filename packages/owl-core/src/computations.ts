@@ -146,6 +146,9 @@ export interface ComputationAtom<T = any> extends Atom<T> {
   // true while its compute runs: a write it makes can reach a computation that
   // would otherwise pull it forward as its owner
   running: boolean;
+  // scopeStack.length when its last run began: it owns the effects created
+  // during that run only while no scope pushed since is being set up
+  ownerDepth: number;
   // A derived computation out of date whose observers may not know it: a
   // write reached it while one of them ran, and that one ran on. The next
   // write that reaches it goes on to its observers, as through an up-to-date
@@ -209,11 +212,14 @@ export const atomSymbol = Symbol("Atom");
 // up (a render constructing a child component, an effect starting plugins).
 export const scopeStack: object[] = [];
 
-// The computation whose run is in progress, tracked or not: `untrack` stops
-// the tracking, not the ownership. An effect created during the run belongs
-// to it, unless a scope was pushed since the run began (ownerDepth).
+// The owner of the effects created now is the computation whose run is in
+// progress, tracked or not: the current computation while it tracks, and the
+// one `untrack` suspended while it does not (untrack stops the tracking, not
+// the ownership; runUnowned stops both). It owns them unless a scope was
+// pushed since its run began (ownerDepth). Kept apart from the computation a
+// run sets, so that a run, far more frequent than an untrack inside one, does
+// not save and restore it.
 let currentOwner: ComputationAtom | undefined;
-let ownerDepth = 0;
 
 let observers: ComputationAtom[] = [];
 let immediateObservers: ComputationAtom[] = [];
@@ -258,6 +264,7 @@ export function createComputation(
     owner: null,
     isEffect: false,
     running: false,
+    ownerDepth: 0,
     forward: false,
     name,
   };
@@ -749,7 +756,7 @@ export function releaseOwned(computation: ComputationAtom, why: string): { error
     );
   }
   try {
-    runUnowned(() => disposeOwned(computation));
+    runUnowned(disposeOwned, computation);
     return null;
   } catch (error) {
     return { error };
@@ -760,7 +767,7 @@ export function releaseOwned(computation: ComputationAtom, why: string): { error
 // links go stale (a new version), and wait for the run that tracks.
 function detachAndRun(computation: ComputationAtom) {
   computation.version++;
-  return runUnowned(computation.compute);
+  return runUnowned(computation.compute, undefined);
 }
 
 // out of date already, its observers maybe not: a write goes on to them
@@ -825,23 +832,18 @@ function endInvalidatedRun(computation: ComputationAtom) {
 export function runTracked<T>(computation: ComputationAtom, fn: () => T): T {
   const previousComputation = currentComputation;
   const previousObserver = currentObserver;
-  const previousOwner = currentOwner;
-  const previousOwnerDepth = ownerDepth;
   computation.version++;
+  computation.ownerDepth = scopeStack.length;
   computation.depsTail = undefined;
   computation.prepared = false;
   currentComputation = computation;
   currentObserver = undefined;
-  currentOwner = computation;
-  ownerDepth = scopeStack.length;
   try {
     return fn();
   } finally {
     // restored even if fn threw, so a later read does not attach to it
     currentComputation = previousComputation;
     currentObserver = previousObserver;
-    currentOwner = previousOwner;
-    ownerDepth = previousOwnerDepth;
     endTracking(computation);
   }
 }
@@ -851,7 +853,8 @@ export function runTracked<T>(computation: ComputationAtom, fn: () => T): T {
  * progress, tracked or not, unless a scope is being set up inside that run.
  */
 export function getOwner(): ComputationAtom | undefined {
-  return ownerDepth === scopeStack.length ? currentOwner : undefined;
+  const owner = currentComputation ?? currentOwner;
+  return owner !== undefined && owner.ownerDepth === scopeStack.length ? owner : undefined;
 }
 
 function endTracking(computation: ComputationAtom) {
@@ -1017,6 +1020,20 @@ function markDownstream(computation: ComputationAtom) {
 export function untrack<T>(fn: (...args: any[]) => T): T {
   const previousComputation = currentComputation;
   const previousObserver = currentObserver;
+  if (previousComputation === undefined) {
+    if (previousObserver === undefined) {
+      // nothing tracks: nothing to suspend
+      return fn();
+    }
+    currentObserver = undefined;
+    try {
+      return fn();
+    } finally {
+      currentObserver = previousObserver;
+    }
+  }
+  const previousOwner = currentOwner;
+  currentOwner = previousComputation;
   currentComputation = undefined;
   currentObserver = undefined;
   try {
@@ -1024,18 +1041,25 @@ export function untrack<T>(fn: (...args: any[]) => T): T {
   } finally {
     currentComputation = previousComputation;
     currentObserver = previousObserver;
+    currentOwner = previousOwner;
   }
 }
 
 /**
- * Runs `fn` untracked, and with no owner for the effects it creates.
+ * Runs `fn(arg)` untracked, and with no owner for the effects it creates.
  */
-export function runUnowned<T>(fn: () => T): T {
+export function runUnowned<A, T>(fn: (arg: A) => T, arg: A): T {
+  const previousComputation = currentComputation;
+  const previousObserver = currentObserver;
   const previousOwner = currentOwner;
+  currentComputation = undefined;
+  currentObserver = undefined;
   currentOwner = undefined;
   try {
-    return untrack(fn);
+    return fn(arg);
   } finally {
+    currentComputation = previousComputation;
+    currentObserver = previousObserver;
     currentOwner = previousOwner;
   }
 }

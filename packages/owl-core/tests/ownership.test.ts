@@ -307,6 +307,59 @@ describe("an effect created inside untrack", () => {
     expect(live).toBe(0);
   });
 
+  test("around a computed it pulls: the getter owns what it creates, the effect what the block creates after", async () => {
+    const s = signal(0);
+    const t = signal(0);
+    let getterLive = 0;
+    const c = computed(() => {
+      effect(() => {
+        getterLive++;
+        return () => {
+          getterLive--;
+        };
+      });
+      return s();
+    });
+    const dispose = effect(() => {
+      t();
+      untrack(() => {
+        c();
+        owned();
+      });
+    });
+    expect([getterLive, live]).toEqual([1, 1]);
+    t.set(1);
+    await waitScheduler();
+    // the effect's run replaced its own, not the computed's
+    expect([getterLive, live]).toEqual([1, 1]);
+    s.set(1);
+    c();
+    expect([getterLive, live]).toEqual([1, 1]);
+    // once the block is over, nothing owns what is created outside the run
+    const disposeTop = owned("top");
+    dispose();
+    expect(live).toBe(1);
+    disposeTop();
+    expect(live).toBe(0);
+  });
+
+  test("in an effect's cleanup belongs to nothing, untracked or not", async () => {
+    const s = signal(0);
+    const dispose = effect(() => {
+      s();
+      return () => {
+        if (live === 0) {
+          untrack(() => owned("from cleanup"));
+        }
+      };
+    });
+    s.set(1);
+    await waitScheduler();
+    expect(live).toBe(1);
+    dispose();
+    expect(live).toBe(1);
+  });
+
   test("with { detached: true } belongs to nothing: it outlives the effect that created it", async () => {
     const s = signal(0);
     let disposeInner: (() => void) | undefined;
