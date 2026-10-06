@@ -55,19 +55,6 @@ interface VCatcherBase {
   holds(node: Node): boolean;
 }
 
-// A list that is its parent's only child clears that parent with
-// textContent = "" instead of removing each child, so the catchers it held
-// never run remove(): the clear releases their listeners from here.
-export function releaseCatchers(parent: Node) {
-  const listeners = listenersByParent.get(parent);
-  if (listeners) {
-    listenersByParent.delete(parent);
-    for (const { handler } of listeners.values()) {
-      handler.remove.call(parent as HTMLElement);
-    }
-  }
-}
-
 // Each listener reads the latest handler data at dispatch, and applies its
 // modifiers only to an event from inside a child: the listener sits on the
 // parent, which the children share with their siblings. The child's root node
@@ -126,11 +113,7 @@ function listen(keys: string[], parent: HTMLElement) {
 }
 
 function unlisten(keys: string[], parent: HTMLElement) {
-  const listeners = listenersByParent.get(parent);
-  if (!listeners) {
-    // released in bulk already
-    return;
-  }
+  const listeners = listenersByParent.get(parent)!;
   for (const key of keys) {
     const listener = listeners.get(key)!;
     if (--listener.count === 0) {

@@ -104,7 +104,8 @@ interface DynamicInfo {
   idx: number;
   refIdx?: number;
   type: "text" | "child" | "handler" | "attribute" | "attributes" | "property" | "ref";
-  isOnlyChild?: boolean;
+  // the parent holds nothing else: the child needs no anchor
+  withoutAnchor?: boolean;
   name?: string;
   event?: string;
   sharedClass?: Updater<HTMLElement>;
@@ -249,7 +250,7 @@ function buildTree(
         ) {
           const tagName = (childNode as Element).tagName;
           const index = parseInt(tagName.slice(12), 10);
-          info.push({ idx: index, type: "child", isOnlyChild: true });
+          info.push({ idx: index, type: "child", withoutAnchor: true });
         } else {
           tree.firstChild = buildTree(node.firstChild, tree, tree);
           el.appendChild(tree.firstChild.el);
@@ -329,7 +330,6 @@ interface IndexedLocation extends Location {
 interface Child {
   parentRefIdx: number;
   afterRefIdx?: number;
-  isOnlyChild?: boolean;
 }
 
 interface BlockCtx {
@@ -390,12 +390,9 @@ function updateCtx(ctx: BlockCtx, tree: IntermediateTree) {
         });
         break;
       case "child":
-        if (info.isOnlyChild) {
+        if (info.withoutAnchor) {
           // tree is the parentnode here
-          ctx.children[info.idx] = {
-            parentRefIdx: info.refIdx!,
-            isOnlyChild: true,
-          };
+          ctx.children[info.idx] = { parentRefIdx: info.refIdx! };
         } else {
           // tree is the anchor text node
           ctx.children[info.idx] = {
@@ -529,12 +526,9 @@ function createBlockClass(template: HTMLElement, ctx: BlockCtx): BlockClass {
   );
 
   // Bitpack children locations into uint32 array
-  // Layout: bits 0-14: parentRefIdx, bit 15: isOnlyChild, bits 16-30: afterRefIdx
+  // Layout: bits 0-14: parentRefIdx, bits 16-30: afterRefIdx
   const childInfos: number[] = children.map(
-    (c) =>
-      (c.parentRefIdx & 0x7fff) |
-      ((c.isOnlyChild ? 1 : 0) << 15) |
-      (((c.afterRefIdx ?? 0) & 0x7fff) << 16)
+    (c) => (c.parentRefIdx & 0x7fff) | (((c.afterRefIdx ?? 0) & 0x7fff) << 16)
   );
 
   // read when the class is built, not once for all with the other DOM methods
@@ -624,7 +618,6 @@ function createBlockClass(template: HTMLElement, ctx: BlockCtx): BlockClass {
             const info = childInfos[i];
             const afterRefIdx = (info >> 16) & 0x7fff;
             const afterNode = afterRefIdx ? refs[afterRefIdx] : null;
-            child.isOnlyChild = !!(info & (1 << 15));
             child.mount(refs[info & 0x7fff] as any, afterNode);
           }
         }
@@ -695,7 +688,6 @@ function createBlockClass(template: HTMLElement, ctx: BlockCtx): BlockClass {
             const info = childInfos[i];
             const afterRefIdx = (info >> 16) & 0x7fff;
             const afterNode = afterRefIdx ? refs[afterRefIdx] : null;
-            child2.isOnlyChild = !!(info & (1 << 15));
             child2.mount(refs[info & 0x7fff] as any, afterNode);
             children1![i] = child2;
           }

@@ -590,7 +590,7 @@ describe("refs", () => {
     expect(steps).toEqual(["add"]);
   });
 
-  test("set-like ref drops the items of a list cleared in bulk", async () => {
+  test("set-like ref drops the items of an emptied list", async () => {
     class Test extends Component {
       static template = xml`
         <div><t t-foreach="this.items()" t-as="i" t-key="i"><p t-ref="this.refs"/></t></div>`;

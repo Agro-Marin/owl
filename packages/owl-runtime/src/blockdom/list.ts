@@ -1,7 +1,5 @@
-import { debug, debugLog } from "@odoo/owl-core";
-import { releaseCatchers } from "./event_catcher";
 import type { VNode } from "./index";
-import { nodeAppendChild, nodeInsertBefore, nodeRemoveChild, nodeSetTextContent } from "./dom";
+import { nodeInsertBefore, nodeRemoveChild } from "./dom";
 
 // -----------------------------------------------------------------------------
 // List Node
@@ -11,7 +9,6 @@ class VList {
   children: VNode[];
   anchor: Node | undefined;
   parentEl?: HTMLElement | undefined;
-  isOnlyChild?: boolean | undefined;
 
   constructor(children: VNode[]) {
     this.children = children;
@@ -74,21 +71,7 @@ class VList {
     } = proto;
 
     const _anchor = this.anchor!;
-    const isOnlyChild = this.isOnlyChild;
     const parent = this.parentEl!;
-
-    // fast path: no new child => only remove
-    if (ch2.length === 0 && isOnlyChild && ownsParent(parent, cFirstNode.call(ch1[0]), _anchor)) {
-      if (withBeforeRemove) {
-        for (let i = 0, l = ch1.length; i < l; i++) {
-          beforeRemove.call(ch1[i]);
-        }
-      }
-      nodeSetTextContent.call(parent, "");
-      releaseCatchers(parent);
-      nodeAppendChild.call(parent, _anchor);
-      return;
-    }
 
     let startIdx1 = 0;
     let startIdx2 = 0;
@@ -214,21 +197,19 @@ class VList {
   }
 
   remove() {
+    // child by child, even as its parent's only child: the parent may hold
+    // nodes put there by someone else (a Portal's content, a widget's DOM),
+    // anywhere among the list's own
     const { parentEl, anchor } = this;
-    if (this.isOnlyChild && ownsParent(parentEl!, this.firstNode(), anchor!)) {
-      nodeSetTextContent.call(parentEl!, "");
-      releaseCatchers(parentEl!);
-    } else {
-      const children = this.children;
-      const l = children.length;
-      if (l) {
-        const remove = children[0].remove;
-        for (let i = 0; i < l; i++) {
-          remove.call(children[i]);
-        }
+    const children = this.children;
+    const l = children.length;
+    if (l) {
+      const remove = children[0].remove;
+      for (let i = 0; i < l; i++) {
+        remove.call(children[i]);
       }
-      nodeRemoveChild.call(parentEl, anchor!);
     }
+    nodeRemoveChild.call(parentEl, anchor!);
   }
 
   firstNode(): Node | undefined {
@@ -256,17 +237,4 @@ function createMapping(ch1: VNode[], startIdx1: number, endIdx1: number): Map<an
     mapping.set(ch1[i].key, i);
   }
   return mapping;
-}
-
-// An only child clears its parent in bulk, unless the parent holds nodes put
-// there by someone else (a Portal's content, a widget's DOM) before its first
-// node or after its anchor: those must survive.
-function ownsParent(parent: HTMLElement, first: Node | undefined, anchor: Node): boolean {
-  if (parent.firstChild === first && parent.lastChild === anchor) {
-    return true;
-  }
-  if (debug.template) {
-    debugLog("template", "list removed child by child: its parent holds nodes it does not own");
-  }
-  return false;
 }

@@ -659,7 +659,7 @@ exports[`refs > set-like ref drops the elements of an enclosing block removed in
 }"
 `;
 
-exports[`refs > set-like ref drops the items of a list cleared in bulk 1`] = `
+exports[`refs > set-like ref drops the items of an emptied list 1`] = `
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;

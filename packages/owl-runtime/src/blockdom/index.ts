@@ -23,7 +23,6 @@ export interface VNode<T = any> {
 
   el?: undefined | HTMLElement | Text;
   parentEl?: undefined | HTMLElement;
-  isOnlyChild?: boolean | undefined;
   key?: any;
 }
 

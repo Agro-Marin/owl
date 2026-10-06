@@ -109,9 +109,6 @@ export class VMulti {
     }
   }
 
-  // Child by child even as its parent's only child: the multi has no end
-  // anchor telling where its nodes stop, so clearing the parent in bulk would
-  // also remove nodes put there by someone else (a Portal's content).
   remove() {
     const parentEl = this.parentEl;
     const children = this.children;

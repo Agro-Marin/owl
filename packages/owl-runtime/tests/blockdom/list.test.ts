@@ -499,14 +499,13 @@ describe("miscellaneous operations", () => {
     expect(fixture.textContent).toBe("za");
   });
 
-  test("a list mounted by a patch into an only-child slot is an only child", () => {
+  test("a list mounted by a patch into an only-child slot", () => {
     const block = createBlock("<div><block-child-0/></div>");
     const tree = block([], []);
     mount(tree, fixture);
     const items = list([1, 2].map(n));
     patch(tree, block([], [items]));
     expect(fixture.innerHTML).toBe("<div>12</div>");
-    expect(items.isOnlyChild).toBe(true);
 
     patch(tree, block([], [list([])]));
     expect(fixture.innerHTML).toBe("<div></div>");
@@ -527,6 +526,19 @@ describe("miscellaneous operations", () => {
     expect(div.innerHTML).toBe("<b></b>3<i></i>");
     patch(tree, block([], []));
     expect(div.innerHTML).toBe("<b></b><i></i>");
+  });
+
+  test("an only child emptied keeps a node put between its items", () => {
+    const block = createBlock("<div><block-child-0/></div>");
+    const tree = block([], [list([1, 2, 3].map(n))]);
+    mount(tree, fixture);
+    const div = fixture.firstChild as HTMLElement;
+    div.insertBefore(document.createElement("b"), div.childNodes[1]);
+    patch(tree, block([], [list([])]));
+    expect(div.innerHTML).toBe("<b></b>");
+    patch(tree, block([], [list([4, 5].map(n))]));
+    patch(tree, block([], []));
+    expect(div.innerHTML).toBe("<b></b>");
   });
 
   test("a NaN key matched through the key map is not used as an anchor again", () => {
