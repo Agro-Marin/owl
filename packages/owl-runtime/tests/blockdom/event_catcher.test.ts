@@ -351,7 +351,8 @@ describe("a parent cleared in bulk releases the catchers listening on it", () =>
       patch(tree, host([], [list([])]));
       patch(tree, host([], [list([1, 2, 3].map(item))]));
     }
-    expect(live.size).toBe(3);
+    // one listener for the three catchers of the site
+    expect(live.size).toBe(1);
     patch(tree, host([], [list([])]));
     expect(div.innerHTML).toBe("");
     expect(live.size).toBe(0);
@@ -371,5 +372,53 @@ describe("a parent cleared in bulk releases the catchers listening on it", () =>
       expect(syntheticEntries(div)).toBe(0);
       remove(tree);
     }
+  });
+});
+
+describe("catchers of one site sharing a parent", () => {
+  const span = createBlock("<span><block-text-0/></span>");
+  const catcher = createCatcher({ click: 0 });
+  const log = (calls: string[], name: string) => [() => calls.push(name), {}];
+  const click = (text: string) =>
+    [...fixture.querySelectorAll("span")].find((s) => s.textContent === text)!.click();
+
+  test("an element outside every catcher reaches none", () => {
+    const calls: string[] = [];
+    const tree = multi([
+      span(["before"]),
+      list(
+        [1, 2].map((k) =>
+          Object.assign(catcher(span([`c${k}`]), [log(calls, `c${k}`)]), { key: k })
+        )
+      ),
+      span(["after"]),
+    ]);
+    mount(tree, fixture);
+    click("before");
+    click("after");
+    expect(calls).toEqual([]);
+    click("c2");
+    click("c1");
+    expect(calls).toEqual(["c2", "c1"]);
+  });
+
+  test("a catcher nested in another one's child runs before it", () => {
+    const calls: string[] = [];
+    const inner = (name: string) => catcher(span([name]), [log(calls, name)]);
+    const content = multi([span(["outer"]), inner("inner"), undefined]);
+    const tree = catcher(content, [log(calls, "outer")]);
+    mount(tree, fixture);
+    click("inner");
+    expect(calls).toEqual(["inner", "outer"]);
+    calls.length = 0;
+    click("outer");
+    expect(calls).toEqual(["outer"]);
+
+    // a slot of the outer child filled by a render of its own (a component
+    // re-rendering alone), not by a patch of the outer catcher
+    calls.length = 0;
+    content.patch(multi([span(["outer"]), inner("inner"), inner("late")]), false);
+    click("late");
+    expect(calls).toEqual(["late", "outer"]);
   });
 });
