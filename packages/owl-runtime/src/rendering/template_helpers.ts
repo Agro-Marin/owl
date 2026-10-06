@@ -258,8 +258,18 @@ function makeRefCallback(ref: any, node: ComponentNode): RefCallback {
         if (atom.value === prevEl) ref.set(null);
       };
     } else {
-      add = ref.set.bind(ref);
-      remove = () => ref.set(null);
+      // as above: the element unbound may no longer be the one the ref holds
+      let current: HTMLElement | null = null;
+      add = (el: HTMLElement) => {
+        current = el;
+        ref.set(el);
+      };
+      remove = (prevEl: HTMLElement) => {
+        if (current === prevEl) {
+          current = null;
+          ref.set(null);
+        }
+      };
     }
   } else {
     throw new OwlError(

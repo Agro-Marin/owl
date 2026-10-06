@@ -645,4 +645,27 @@ describe("refs", () => {
     await nextTick();
     expect(root.refs.size).toBe(0);
   });
+
+  test("a plain {set} ref shared by t-if and t-else follows the branch shown", async () => {
+    class Test extends Component {
+      static template = xml`
+        <div><span t-if="this.a()" t-ref="this.r">A</span><b t-else="" t-ref="this.r">B</b></div>`;
+      a = signal(false);
+      r = {
+        el: null as HTMLElement | null,
+        set(el: HTMLElement | null) {
+          this.el = el;
+        },
+      };
+    }
+    const test = await mount(Test, fixture);
+    const seen = [test.r.el?.tagName];
+    test.a.set(true);
+    await nextTick();
+    seen.push(test.r.el?.tagName);
+    test.a.set(false);
+    await nextTick();
+    seen.push(test.r.el?.tagName);
+    expect(seen).toEqual(["B", "SPAN", "B"]);
+  });
 });
