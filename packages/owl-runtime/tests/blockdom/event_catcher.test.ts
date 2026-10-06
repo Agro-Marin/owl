@@ -161,6 +161,112 @@ describe("synthetic events follow native propagation", () => {
     expect(n).toBe(1);
   });
 
+  test("passive and other handlers of an event are replayed in one pass, in path order", async () => {
+    const calls: string[] = [];
+    const block = createBlock(
+      '<div block-handler-0="keyup.synthetic"><p block-handler-1="keyup.synthetic.passive">x</p></div>',
+      [run, run]
+    );
+    const outer = () => calls.push("outer");
+    const tree = block([outer, () => calls.push("inner")]);
+    mount(tree, fixture);
+    const p = fixture.querySelector("p")!;
+    p.dispatchEvent(new Event("keyup", { bubbles: true }));
+    expect(calls).toEqual(["inner", "outer"]);
+    calls.length = 0;
+    patch(tree, block([outer, (ev: Event) => (calls.push("inner"), ev.stopPropagation())]));
+    p.dispatchEvent(new Event("keyup", { bubbles: true }));
+    expect(calls).toEqual(["inner"]);
+  });
+
+  test("a passive handler cannot prevent the default when the listener is not passive", async () => {
+    const block = createBlock(
+      '<div block-handler-0="keypress.synthetic"><p block-handler-1="keypress.synthetic.passive">x</p></div>',
+      [run, run]
+    );
+    const prevent = (ev: Event) => ev.preventDefault();
+    const tree = block([() => {}, prevent]);
+    mount(tree, fixture);
+    const p = fixture.querySelector("p")!;
+    const fromPassive = new Event("keypress", { bubbles: true, cancelable: true });
+    p.dispatchEvent(fromPassive);
+    expect(fromPassive.defaultPrevented).toBe(false);
+    patch(tree, block([prevent, () => {}]));
+    const fromOther = new Event("keypress", { bubbles: true, cancelable: true });
+    p.dispatchEvent(fromOther);
+    expect(fromOther.defaultPrevented).toBe(true);
+  });
+
+  test("a composed event from a shadow root: each root replays its own nodes", async () => {
+    const calls: string[] = [];
+    const outerBlock = createBlock(
+      '<div block-handler-0="mouseover.synthetic.capture" block-handler-1="mouseover.synthetic"><block-child-0/></div>',
+      [run, run]
+    );
+    const host = document.createElement("section");
+    mount(
+      outerBlock(
+        [
+          (ev: Event) => calls.push(`outer capture ${(ev.target as Element).tagName}`),
+          () => calls.push("outer bubble"),
+        ],
+        []
+      ),
+      fixture
+    );
+    fixture.firstChild!.appendChild(host);
+    host.addEventListener("mouseover", () => calls.push("host"));
+    const shadow = host.attachShadow({ mode: "open" });
+    const inner = createBlock(
+      '<p block-handler-0="mouseover.synthetic.capture.self" block-handler-1="mouseover.synthetic"><block-child-0/></p>',
+      [run, run]
+    );
+    const catcher = createCatcher({ "mouseover.synthetic.capture": 0 }, [
+      (ctx: any, ev: Event) => calls.push(`catcher ${(ev.target as Element).tagName}`),
+    ]);
+    const span = createBlock("<span>s</span>");
+    mount(
+      inner(
+        [
+          (ev: Event) => calls.push(`inner capture ${(ev.target as Element).tagName}`),
+          () => calls.push("inner bubble"),
+        ],
+        [catcher(span(), {})]
+      ),
+      shadow as any
+    );
+    shadow
+      .querySelector("p")!
+      .dispatchEvent(new Event("mouseover", { bubbles: true, composed: true }));
+    expect(calls).toEqual([
+      "outer capture SECTION",
+      "inner capture P",
+      "inner bubble",
+      "host",
+      "outer bubble",
+    ]);
+    calls.length = 0;
+    shadow
+      .querySelector("span")!
+      .dispatchEvent(new Event("mouseover", { bubbles: true, composed: true }));
+    expect(calls).toEqual([
+      "outer capture SECTION",
+      "catcher SPAN",
+      "inner bubble",
+      "host",
+      "outer bubble",
+    ]);
+  });
+
+  test("a capture handler in a closed shadow root runs for a composed event", async () => {
+    const shadow = fixture.attachShadow({ mode: "closed" });
+    let n = 0;
+    const block = createBlock('<p block-handler-0="mouseout.synthetic.capture">x</p>', [run]);
+    mount(block([() => n++]), shadow as any);
+    shadow.firstChild!.dispatchEvent(new Event("mouseout", { bubbles: true, composed: true }));
+    expect(n).toBe(1);
+  });
+
   test("a passive registration does not make a later one passive", async () => {
     const passive = createBlock('<p block-handler-0="wheel.synthetic.passive">x</p>', [run]);
     mount(passive([() => {}]), fixture);

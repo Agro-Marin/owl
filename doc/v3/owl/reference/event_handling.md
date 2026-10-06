@@ -76,6 +76,13 @@ properly call the handler, just as expected.
 The only difference with regular events is that the event is caught at the
 document (or that root), so it cannot be stopped before it actually gets
 there. Since it may be surprising in some cases, it is not enabled by default.
+The synthetic handlers of an event then run in the order the event would
+reach their elements: `.capture` ones outermost first, before any native
+listener of the root's tree, the others innermost first, after them, passive
+or not alike (a passive one still cannot prevent the default), up to the
+element where a handler stops the propagation. An event leaving a shadow root
+reaches the handlers inside it from that root, and those outside from the
+document, each with the target a native listener there would see.
 
 To enable it, one can just use the `.synthetic` suffix:
 
