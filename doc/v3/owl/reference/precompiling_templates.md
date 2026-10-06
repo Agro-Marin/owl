@@ -46,8 +46,9 @@ globally for every subsequently created `App`.
 
 A page whose templates are mostly precompiled, but that may meet one that is
 not, can load the compiler later: importing `@odoo/owl/compiler`
-(`owl.compiler.es.js`, or `owl.compiler.iife.js` beside `owl.runtime.iife.js`)
-installs it into the runtime, whichever way the two files are resolved. The
+(`owl.compiler.es.js`, `owl.compiler.cjs` for `require()`, or
+`owl.compiler.iife.js` beside `owl.runtime.iife.js`) installs it into the
+runtime, whichever way the two files are resolved. The
 compiler registers itself under its build (version and hash), and a runtime
 takes the compiler of its own build only, so two owl builds on one page each
 find theirs. A runtime whose build's compiler is not loaded compiles nothing:

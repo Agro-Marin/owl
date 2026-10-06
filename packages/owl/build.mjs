@@ -1,7 +1,7 @@
 import * as esbuild from "esbuild";
 import { execSync } from "child_process";
 import { buildHash } from "./build_hash.mjs";
-import { readFileSync, mkdirSync } from "fs";
+import { existsSync, readFileSync, mkdirSync } from "fs";
 import { relative, resolve } from "path";
 
 const pkg = JSON.parse(readFileSync("./package.json", "utf-8"));
@@ -62,9 +62,11 @@ const COMPILER_INPUTS = [
   /^packages\/owl-runtime\/src\/(version|build_info)\.ts$/,
 ];
 
-// dist/owl.compiler.es.js (and .iife.js): the compiler for a page whose owl is
-// the runtime build. It imports nothing: it registers itself under a global
-// key the runtime reads, and the runtime checks that it is of its own build.
+// dist/owl.compiler.es.js (and .cjs, .iife.js): the compiler for a page whose
+// owl is the runtime build. It imports nothing: it registers itself under a
+// global key the runtime reads, and the runtime checks that it is of its own
+// build. The .cjs is for require() on a Node that cannot require an ES module
+// (before 20.19; engines allows 20).
 async function buildCompilerModule() {
   const common = {
     entryPoints: ["src/compiler.ts"],
@@ -76,12 +78,25 @@ async function buildCompilerModule() {
   };
   const results = await Promise.all([
     esbuild.build({ ...common, format: "esm", outfile: "dist/owl.compiler.es.js" }),
+    esbuild.build({ ...common, format: "cjs", outfile: "dist/owl.compiler.cjs" }),
     esbuild.build({ ...common, format: "iife", outfile: "dist/owl.compiler.iife.js" }),
   ]);
-  for (const input of Object.keys(results[0].metafile.inputs)) {
+  for (const input of results.flatMap((result) => Object.keys(result.metafile.inputs))) {
     const path = relative("../..", resolve(input));
     if (!COMPILER_INPUTS.some((re) => re.test(path))) {
       throw new Error(`the compiler module must not bundle ${path}: it would be a second copy`);
+    }
+  }
+}
+
+// every file package.json exports, but the types (`build types`), is built
+function checkExportedFiles() {
+  const targets = Object.values(pkg.exports).flatMap((target) =>
+    typeof target === "string" ? [target] : Object.values(target)
+  );
+  for (const target of targets) {
+    if (!target.includes("*") && !target.startsWith("./dist/types/") && !existsSync(target)) {
+      throw new Error(`package.json exports ${target}, which the build does not make`);
     }
   }
 }
@@ -108,4 +123,5 @@ switch (target) {
     await buildVariant("src/index.ts");
     await buildVariant("src/runtime.ts", "runtime");
     await buildCompilerModule();
+    checkExportedFiles();
 }

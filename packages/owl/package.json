@@ -21,6 +21,7 @@
     "./compiler": {
       "types": "./dist/types/compiler.d.ts",
       "import": "./dist/owl.compiler.es.js",
+      "require": "./dist/owl.compiler.cjs",
       "default": "./dist/owl.compiler.es.js"
     },
     "./dist/*": "./dist/*",
