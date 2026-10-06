@@ -28,72 +28,33 @@ export function makeChildFiber(node: ComponentNode, parent: Fiber): Fiber {
     cancelFibers(current.children);
     current.root = null;
   }
-  return new Fiber(node, parent);
+  const fiber = new Fiber(node, parent);
+  queueOwedMounted(fiber);
+  return fiber;
 }
 
 export function makeRootFiber(node: ComponentNode): Fiber {
-  let current = node.fiber;
+  const current = node.fiber;
   if (current) {
-    let root = current.root!;
-    // This fiber is being re-rendered before it was ever committed to the DOM.
-    // In a healthy app a fiber is committed (and node.fiber nulled) before the
-    // next render, so this only climbs without bound in a render loop (#1968).
-    // The count is per fiber, NOT on the root: under a long-lived uncommitted
-    // root, many sibling subtrees may legitimately re-render once each, and a
-    // shared counter would add those up and flag a loop where there is none.
-    current.renderState += 2; // bump the recycle count held in bits 1+
+    const root = current.root!;
+    if (
+      root === current ||
+      current.phase === FiberPhase.NEW ||
+      !fibersInError.has(root) ||
+      fibersInError.has(current)
+    ) {
+      return recycleFiber(node, current, root);
+    }
+    // rendered for a pass another component failed: recycled, it would stay in
+    // that pass, which the scheduler drops every frame until it recovers
     if (debug.fiber) {
       debugLog(
         "fiber",
-        `re-render ${node.componentName} before its commit (recycle ${current.renderState >> 1})`
+        `render ${node.componentName} on its own: ${root.node.componentName}'s pass failed`
       );
     }
-    // lock root fiber because canceling children fibers may destroy components,
-    // which means any arbitrary code can be run in onWillDestroy, which may
-    // trigger new renderings
-    root.locked = true;
-    // a fiber that never rendered (its onWillStart or onWillUpdateProps
-    // failed) is still counted from its creation
-    const rendered = current.phase === FiberPhase.NEW ? 0 : 1;
-    root.setCounter(root.counter + rendered - cancelFibers(current.children));
-    root.locked = false;
-    current.children = [];
-    current.childrenMap = null;
-    current.bdom = null;
-    current.phase = FiberPhase.NEW;
-    if (root instanceof MountFiber && root.prepared) {
-      // re-rendered between prepare and commit: commit() must wait again
-      root.prepared = false;
-      root.renderState &= ~APPLIED_TO_DOM;
-    }
-    if (fibersInError.has(current)) {
-      fibersInError.delete(current);
-      let failedElsewhere = false;
-      const failed = root.failed;
-      if (failed) {
-        failed.delete(current);
-        for (const fiber of failed) {
-          // a cancelled failure no longer belongs to the pass
-          if (fiber.node.fiber === fiber) {
-            failedElsewhere = true;
-            break;
-          }
-        }
-      }
-      if (!failedElsewhere) {
-        fibersInError.delete(root);
-        root.failed = null;
-      }
-      current.renderState &= ~APPLIED_TO_DOM;
-      if (current instanceof RootFiber) {
-        // it is possible that this fiber is a fiber that crashed while being
-        // mounted, so the mounted list is possibly corrupted. We restore it to
-        // its normal initial state (which is empty list or a list with a mount
-        // fiber.
-        current.mounted = current instanceof MountFiber ? [current] : [];
-      }
-    }
-    return current;
+    root.counter -= cancelFibers(current.children);
+    current.root = null;
   }
   const fiber = new RootFiber(node, null);
   if (node.willPatch.length) {
@@ -102,7 +63,73 @@ export function makeRootFiber(node: ComponentNode): Fiber {
   if (node.patched.length) {
     fiber.patched.push(fiber);
   }
+  queueOwedMounted(fiber);
   return fiber;
+}
+
+/**
+ * Renders `current` again in its pass, before that pass was committed.
+ */
+function recycleFiber(node: ComponentNode, current: Fiber, root: RootFiber): Fiber {
+  // This fiber is being re-rendered before it was ever committed to the DOM.
+  // In a healthy app a fiber is committed (and node.fiber nulled) before the
+  // next render, so this only climbs without bound in a render loop (#1968).
+  // The count is per fiber, NOT on the root: under a long-lived uncommitted
+  // root, many sibling subtrees may legitimately re-render once each, and a
+  // shared counter would add those up and flag a loop where there is none.
+  current.renderState += 2; // bump the recycle count held in bits 1+
+  if (debug.fiber) {
+    debugLog(
+      "fiber",
+      `re-render ${node.componentName} before its commit (recycle ${current.renderState >> 1})`
+    );
+  }
+  // lock root fiber because canceling children fibers may destroy components,
+  // which means any arbitrary code can be run in onWillDestroy, which may
+  // trigger new renderings
+  root.locked = true;
+  // a fiber that never rendered (its onWillStart or onWillUpdateProps
+  // failed) is still counted from its creation
+  const rendered = current.phase === FiberPhase.NEW ? 0 : 1;
+  root.setCounter(root.counter + rendered - cancelFibers(current.children));
+  root.locked = false;
+  current.children = [];
+  current.childrenMap = null;
+  current.bdom = null;
+  current.phase = FiberPhase.NEW;
+  if (root instanceof MountFiber && root.prepared) {
+    // re-rendered between prepare and commit: commit() must wait again
+    root.prepared = false;
+    root.renderState &= ~APPLIED_TO_DOM;
+  }
+  if (fibersInError.has(current)) {
+    fibersInError.delete(current);
+    let failedElsewhere = false;
+    const failed = root.failed;
+    if (failed) {
+      failed.delete(current);
+      for (const fiber of failed) {
+        // a cancelled failure no longer belongs to the pass
+        if (fiber.node.fiber === fiber) {
+          failedElsewhere = true;
+          break;
+        }
+      }
+    }
+    if (!failedElsewhere) {
+      fibersInError.delete(root);
+      root.failed = null;
+    }
+    current.renderState &= ~APPLIED_TO_DOM;
+    if (current instanceof RootFiber) {
+      // it is possible that this fiber is a fiber that crashed while being
+      // mounted, so the mounted list is possibly corrupted. We restore it to
+      // its normal initial state (which is empty list or a list with a mount
+      // fiber.
+      current.mounted = current instanceof MountFiber ? [current] : [];
+    }
+  }
+  return current;
 }
 
 function throwOnRender() {
@@ -355,10 +382,11 @@ export class RootFiber extends Fiber {
       node._patch();
       this.locked = false;
     } catch (e) {
-      // the pass never reached the document: none of its onMounted runs, and
-      // neither does the onWillUnmount of a component it would have mounted
+      // none of the pass's onMounted runs: a component it mounted before the
+      // error has it called by the commit of a recovering render, and no
+      // onWillUnmount until then
       for (let fiber of this.mounted) {
-        fiber.node.willUnmount = [];
+        oweMounted(fiber.node);
       }
       this.locked = false;
       handleError({ fiber: current || this, error: e });
@@ -380,9 +408,32 @@ export class RootFiber extends Fiber {
   }
 }
 
-// The onWillUnmount hooks of a component skipped by a failed commit, held
-// until the commit of the recovering render calls its onMounted.
-const deferredWillUnmount = new WeakMap<ComponentNode, Function[]>();
+// The components a commit mounted without calling their onMounted (the commit
+// failed, or a hook of their chain did), with their onWillUnmount hooks, held
+// until a later commit calls their onMounted.
+const owedMounted = new WeakMap<ComponentNode, Function[]>();
+
+function oweMounted(node: ComponentNode) {
+  if (!owedMounted.has(node)) {
+    owedMounted.set(node, node.willUnmount);
+    node.willUnmount = [];
+  }
+}
+
+// A new fiber of a component still owed its onMounted is in the list of the
+// pass, in place of an older fiber of that component.
+function queueOwedMounted(fiber: Fiber) {
+  const node = fiber.node;
+  if (owedMounted.has(node)) {
+    const mounted = fiber.root!.mounted;
+    const i = mounted.findIndex((f) => f.node === node);
+    if (i < 0) {
+      mounted.push(fiber);
+    } else {
+      mounted[i] = fiber;
+    }
+  }
+}
 
 /**
  * Calls the onMounted (or onPatched) hooks of the fibers a commit applied,
@@ -408,9 +459,8 @@ function callCommitHooks(
   while ((current = fibers.pop())) {
     const node = current.node;
     if (skipped && (!(current.renderState & APPLIED_TO_DOM) || fibersInError.has(current))) {
-      if (mounting && node.willUnmount.length) {
-        deferredWillUnmount.set(node, node.willUnmount);
-        node.willUnmount = [];
+      if (mounting) {
+        oweMounted(node);
       }
       skipped.push(current);
       continue;
@@ -419,10 +469,10 @@ function callCommitHooks(
       continue;
     }
     if (mounting) {
-      const deferred = deferredWillUnmount.get(node);
-      if (deferred) {
-        deferredWillUnmount.delete(node);
-        node.willUnmount = deferred;
+      const held = owedMounted.get(node);
+      if (held) {
+        owedMounted.delete(node);
+        node.willUnmount = held;
       }
     }
     if (debug.lifecycle && node[hook].length) {

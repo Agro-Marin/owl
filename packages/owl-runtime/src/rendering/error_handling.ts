@@ -70,7 +70,10 @@ export function handleError(params: ErrorParams) {
     // new renderings can be properly included in the initial one, if any.
     let current: Fiber | null = fiber;
     do {
-      current.node.fiber = current;
+      // a component a newer render was requested for keeps it
+      if (current.node.fiber === null) {
+        current.node.fiber = current;
+      }
       fibersInError.set(current, error);
       current = current.parent;
     } while (current);

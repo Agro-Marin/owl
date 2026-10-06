@@ -206,3 +206,135 @@ test("a render delayed behind a pass that fails on its last pending render waits
   // B renders once, in the recovered pass, never with the props of the failed one
   expect(bSeen).toEqual(["failed=true v=2"]);
 });
+
+describe("a pass failed by one component, handled without a re-render", () => {
+  class A extends Component {
+    static template = xml`<a><t t-out="this.props.v"/>-<t t-out="this.state.n"/></a>`;
+    props = props();
+    state = proxy({ n: 0 });
+  }
+  class Bad extends Component {
+    static template = xml`<b t-out="this.props.v > 1 ? this.boom.x : 'ok'"/>`;
+    props = props();
+  }
+  class Parent extends Component {
+    static template = xml`<div><A v="this.state.v"/><Bad v="this.state.v"/></div>`;
+    static components = { A, Bad };
+    state = proxy({ v: 1 });
+    setup() {
+      onError((e) => log.push(e.message.slice(0, 30)));
+    }
+  }
+
+  test("a sibling updated in that pass still renders on its own", async () => {
+    const parent = await mount(Parent, fixture);
+    const a = Object.values(parent.__owl__.children)[0].component as A;
+    parent.state.v = 2;
+    await nextTick();
+    expect(log.length).toBe(1);
+    a.state.n = 7;
+    await nextTick();
+    expect(fixture.innerHTML).toBe("<div><a>2-7</a><b>ok</b></div>");
+  });
+
+  test("its own renders do not add up to a render loop", async () => {
+    const parent = await mount(Parent, fixture);
+    const a = Object.values(parent.__owl__.children)[0].component as A;
+    parent.state.v = 2;
+    await nextTick();
+    for (let i = 1; i <= 1005; i++) {
+      a.state.n = i;
+      await nextMicroTick();
+      await nextMicroTick();
+      await nextMicroTick();
+      if (i % 100 === 0) {
+        await nextTick(); // its renders are committed: none is recycled 1000 times
+      }
+    }
+    await nextTick();
+    expect(log.length).toBe(1);
+    expect(fixture.innerHTML).toBe("<div><a>2-1005</a><b>ok</b></div>");
+  });
+});
+
+test("a child a commit mounted before its patch threw gets onMounted, then onWillUnmount", async () => {
+  let throwOnce = true;
+  class A extends Component {
+    static template = xml`<a/>`;
+    setup() {
+      trackLifecycle("A");
+    }
+  }
+  class B extends Component {
+    static template = xml`<b/>`;
+    setup() {
+      onWillUnmount(() => {
+        if (throwOnce) {
+          throwOnce = false;
+          throw new Error("B willUnmount");
+        }
+      });
+    }
+  }
+  class Parent extends Component {
+    static template = xml`<div><t t-if="this.state.on"><A/></t><t t-if="!this.state.on"><B/></t><t t-out="this.state.n"/></div>`;
+    static components = { A, B };
+    state = proxy({ on: false, n: 0 });
+    setup() {
+      onError((e) => {
+        log.push(`caught ${e.message}`);
+        this.state.n++;
+      });
+    }
+  }
+  const parent = await mount(Parent, fixture);
+  parent.state.on = true;
+  await nextTick();
+  await nextTick();
+  expect(fixture.innerHTML).toBe("<div><a></a>1</div>");
+  parent.state.on = false;
+  await nextTick();
+  expect(fixture.innerHTML).toBe("<div><b></b>1</div>");
+  expect(log).toEqual(["caught B willUnmount", "A:mounted", "A:willUnmount", "A:willDestroy"]);
+});
+
+test("an onMounted error does not drop a render of its component requested earlier in the commit", async () => {
+  let x: any;
+  class X extends Component {
+    static template = xml`<x t-out="this.state.n"/>`;
+    state = proxy({ n: 0 });
+    setup() {
+      x = this;
+      onMounted(() => {
+        throw new Error("X mounted");
+      });
+    }
+  }
+  class Y extends Component {
+    static template = xml`<y/>`;
+    setup() {
+      // Y's onMounted runs before X's: later siblings first
+      onMounted(() => {
+        x.state.n = 1;
+        x.__owl__.render(false);
+      });
+    }
+  }
+  class Parent extends Component {
+    static template = xml`<div><t t-if="this.state.show"><X/><Y/></t></div>`;
+    static components = { X, Y };
+    state = proxy({ show: false });
+    setup() {
+      onError((e) => log.push(e.message));
+    }
+  }
+  const parent = await mount(Parent, fixture);
+  parent.state.show = true;
+  await nextTick();
+  await nextTick();
+  expect(fixture.innerHTML).toBe("<div><x>1</x><y></y></div>");
+  x.state.n = 2;
+  await nextTick();
+  expect(fixture.innerHTML).toBe("<div><x>2</x><y></y></div>");
+  expect(log).toEqual(["X mounted"]);
+});
