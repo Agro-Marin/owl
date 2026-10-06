@@ -15,8 +15,12 @@ import {
 } from "./computations";
 import { debug, debugLog } from "./debug";
 
-// Special key to subscribe to, to be notified of key creation/deletion
-const KEYCHANGES = Symbol("Key changes");
+// Special keys to subscribe to: the key list, notified of a key's creation or
+// deletion; an array's items as one atom, notified by any write of an index or
+// of the length (read by readArrayItems and the searches). Their descriptions
+// name them in the debug log.
+const KEYCHANGES = Symbol("(keys)");
+const ITEMS = Symbol("items");
 
 // The following types only exist to signify places where objects are expected
 // to be proxy or not, they provide no type checking benefit over "object"
@@ -190,69 +194,66 @@ interface KeyAtoms {
   objectKeys: WeakMap<Target, WeakMap<object, Atom>>;
 }
 
+interface AtomTable {
+  get(key: any): Atom | undefined;
+  set(key: any, atom: Atom): unknown;
+  delete(key: any): boolean;
+}
+
 // a key's value, read by a get
 const itemAtoms: KeyAtoms = { keys: new WeakMap(), objectKeys: new WeakMap() };
 // a key's presence, read by `in` / has(): notified when the key appears or
 // disappears, not when its value changes
 const presenceAtoms: KeyAtoms = { keys: new WeakMap(), objectKeys: new WeakMap() };
+const allAtoms = [itemAtoms, presenceAtoms];
 
 function isObjectKey(key: unknown): key is object {
   return (typeof key === "object" && key !== null) || typeof key === "function";
 }
 
-function getTargetKeyAtom(target: Target, key: PropertyKey, atoms: KeyAtoms = itemAtoms): Atom {
-  if (isObjectKey(key)) {
-    let table = atoms.objectKeys.get(target);
-    if (table === undefined) {
-      table = new WeakMap();
-      atoms.objectKeys.set(target, table);
-    }
-    let atom = table.get(key);
-    if (atom === undefined) {
-      atom = createAtom(undefined, "key");
-      table.set(key, atom);
-    }
-    return atom;
-  }
-  const table = getKeyAtoms(target, atoms);
-  let atom = table.get(key);
-  if (atom === undefined) {
-    atom = createAtom(undefined, "key");
-    table.set(key, atom);
-  }
-  return atom;
+function tablesOf(atoms: KeyAtoms, key: unknown): WeakMap<Target, AtomTable> {
+  return isObjectKey(key) ? atoms.objectKeys : atoms.keys;
 }
 
-// the atoms of the property keys of `target`, created on first use
-function getKeyAtoms(target: Target, atoms: KeyAtoms): Map<PropertyKey, Atom> {
-  let table = atoms.keys.get(target);
+// the table of the atoms of `target`'s keys of the kind of `key`, made on first use
+function keyTable(target: Target, key: unknown, atoms: KeyAtoms): AtomTable {
+  const tables = tablesOf(atoms, key);
+  let table = tables.get(target);
   if (table === undefined) {
-    table = new Map();
-    atoms.keys.set(target, table);
+    tables.set(target, (table = isObjectKey(key) ? new WeakMap() : new Map()));
   }
   return table;
 }
 
-function findAtom(target: Target, key: PropertyKey, atoms: KeyAtoms): Atom | undefined {
-  return isObjectKey(key)
-    ? atoms.objectKeys.get(target)?.get(key)
-    : atoms.keys.get(target)?.get(key);
+function atomOf(table: AtomTable, key: unknown): Atom {
+  let atom = table.get(key);
+  if (atom === undefined) {
+    table.set(key, (atom = createAtom(undefined, "key")));
+  }
+  return atom;
+}
+
+function findAtom(target: Target, key: unknown, atoms: KeyAtoms): Atom | undefined {
+  return tablesOf(atoms, key).get(target)?.get(key);
 }
 
 /**
- * Subscribes the current computation to the value of `key` on `target`.
+ * Subscribes the current computation to the value (or the presence) of `key`
+ * on `target`.
  *
  * @param target the target whose key is read
- * @param key the key read (or `KEYCHANGES` for the key list)
+ * @param key the key read (or `KEYCHANGES` for the key list, `ITEMS` for an
+ *   array's items)
+ * @param atoms the value atoms (default) or the presence atoms
  */
-function onReadTargetKey(target: Target, key: PropertyKey): void {
+function onReadTargetKey(target: Target, key: unknown, atoms: KeyAtoms = itemAtoms): void {
   // a read nobody observes subscribes nothing, and creates no atom for its
   // key: a model building its records outside any render reads thousands
   if (isObserving()) {
     if (debug.reactivity) {
-      debugRead(describeKey(key), target);
+      debugRead(target, key, atoms);
     }
-    onReadAtom(getTargetKeyAtom(target, key));
+    onReadAtom(atomOf(keyTable(target, key, atoms), key));
   }
 }
 
@@ -264,7 +265,7 @@ function onReadTargetKey(target: Target, key: PropertyKey): void {
  *   deleted)
  * @param atoms the value atoms (default) or the presence atoms
  */
-function onWriteTargetKey(target: Target, key: PropertyKey, atoms: KeyAtoms = itemAtoms): void {
+function onWriteTargetKey(target: Target, key: unknown, atoms: KeyAtoms = itemAtoms): void {
   const atom = findAtom(target, key, atoms);
   if (atom) {
     if (debug.reactivity) {
@@ -274,14 +275,15 @@ function onWriteTargetKey(target: Target, key: PropertyKey, atoms: KeyAtoms = it
   }
 }
 
-function describeKey(key: PropertyKey): string {
-  return key === KEYCHANGES ? "(keys)" : String(key);
+function describeKey(key: unknown): string {
+  return key === KEYCHANGES || key === ITEMS ? key.description! : String(key);
 }
 
 // which atom a tracked proxy read subscribes to, and who reads it: what a
 // "why does this not re-render" question needs
-function debugRead(what: string, target: Target): void {
+function debugRead(target: Target, key: unknown, atoms: KeyAtoms): void {
   const reader = getCurrentComputation();
+  const what = atoms === presenceAtoms ? `presence of ${String(key)}` : describeKey(key);
   debugLog(
     "reactivity",
     `proxy read ${what} by ${reader ? reader.name || "a computation" : "an observe() view"}`,
@@ -289,17 +291,8 @@ function debugRead(what: string, target: Target): void {
   );
 }
 
-function onReadKeyPresence(target: Target, key: PropertyKey): void {
-  if (isObserving()) {
-    if (debug.reactivity) {
-      debugRead(`presence of ${String(key)}`, target);
-    }
-    onReadAtom(getTargetKeyAtom(target, key, presenceAtoms));
-  }
-}
-
-// a key appeared or disappeared: the key list, the key's presence, its value
-function onWriteKeyPresence(target: Target, key: PropertyKey): void {
+// a key appeared or disappeared: the key list and the key's presence
+function onWriteKeyPresence(target: Target, key: unknown): void {
   onWriteTargetKey(target, KEYCHANGES);
   onWriteTargetKey(target, key, presenceAtoms);
 }
@@ -307,18 +300,12 @@ function onWriteKeyPresence(target: Target, key: PropertyKey): void {
 // A removed key's atoms that nothing observes are dropped: kept, every key a
 // long-lived object ever had would stay allocated, object keys included. A
 // later read creates them again.
-function releaseKey(target: Target, key: PropertyKey): void {
-  releaseKeyAtom(target, key, itemAtoms);
-  releaseKeyAtom(target, key, presenceAtoms);
-}
-
-function releaseKeyAtom(target: Target, key: PropertyKey, atoms: KeyAtoms): void {
-  const atom = findAtom(target, key, atoms);
-  if (atom !== undefined && !hasObservers(atom)) {
-    if (isObjectKey(key)) {
-      atoms.objectKeys.get(target)!.delete(key);
-    } else {
-      atoms.keys.get(target)!.delete(key);
+function releaseKey(target: Target, key: unknown): void {
+  for (const atoms of allAtoms) {
+    const table = tablesOf(atoms, key).get(target);
+    const atom = table?.get(key);
+    if (atom !== undefined && !hasObservers(atom)) {
+      table!.delete(key);
     }
   }
 }
@@ -334,26 +321,18 @@ function releaseKeyAtom(target: Target, key: PropertyKey, atoms: KeyAtoms): void
  * @param oldLength the length before the write
  */
 function onWriteDroppedIndices(target: Target, newLength: number, oldLength: number): void {
-  onWriteDroppedIndicesIn(target, newLength, oldLength, itemAtoms);
-  onWriteDroppedIndicesIn(target, newLength, oldLength, presenceAtoms);
-}
-
-function onWriteDroppedIndicesIn(
-  target: Target,
-  newLength: number,
-  oldLength: number,
-  atoms: KeyAtoms
-): void {
-  const table = atoms.keys.get(target);
-  if (table !== undefined) {
-    if (oldLength - newLength <= table.size) {
-      for (let i = newLength; i < oldLength; i++) {
-        onWriteDroppedIndex(target, String(i), atoms);
-      }
-    } else {
-      for (const key of table.keys()) {
-        if (typeof key === "string" && isIndexIn(key, newLength, oldLength)) {
-          onWriteDroppedIndex(target, key, atoms);
+  for (const atoms of allAtoms) {
+    const table = atoms.keys.get(target);
+    if (table !== undefined) {
+      if (oldLength - newLength <= table.size) {
+        for (let i = newLength; i < oldLength; i++) {
+          onWriteDroppedIndex(target, String(i), atoms);
+        }
+      } else {
+        for (const key of table.keys()) {
+          if (typeof key === "string" && isIndexIn(key, newLength, oldLength)) {
+            onWriteDroppedIndex(target, key, atoms);
+          }
         }
       }
     }
@@ -577,7 +556,7 @@ function isIterator(value: any): value is Iterator<any> {
 class BasicHandler implements ProxyHandler<any> {
   shallow: boolean;
   // the value atoms of the target's keys
-  keyAtoms: Map<PropertyKey, Atom> | undefined;
+  keyAtoms: AtomTable | undefined;
   // what the atoms of the target's own properties are keyed by: the target,
   // or for a collection an object standing for its properties
   host: Target | null;
@@ -592,19 +571,10 @@ class BasicHandler implements ProxyHandler<any> {
     // a read nobody observes subscribes nothing, and creates no atom for its
     // key: a model building its records outside any render reads thousands
     if (isObserving()) {
-      let table = this.keyAtoms;
-      if (table === undefined) {
-        table = this.keyAtoms = getKeyAtoms(target, itemAtoms);
-      }
-      let atom = table.get(key);
-      if (atom === undefined) {
-        atom = createAtom(undefined, "key");
-        table.set(key, atom);
-      }
       if (debug.reactivity) {
-        debugRead(describeKey(key), target);
+        debugRead(target, key, itemAtoms);
       }
-      onReadAtom(atom);
+      onReadAtom(atomOf((this.keyAtoms ??= keyTable(target, key, itemAtoms)), key));
     }
     let value;
     try {
@@ -666,7 +636,7 @@ class BasicHandler implements ProxyHandler<any> {
   }
 
   has(target: any, key: PropertyKey): boolean {
-    onReadKeyPresence(this.host ?? target, key);
+    onReadTargetKey(this.host ?? target, key, presenceAtoms);
     return Reflect.has(target, key);
   }
 }
@@ -751,12 +721,10 @@ function onWriteKey(
   }
 }
 
-// An array's items, as one atom: read by a loop that reads them all at once
-// (readArrayItems), notified by any write of an index or of the length.
-const itemsAtoms = new WeakMap<Target, Atom>();
-
+// The items atom of an array (ITEMS) is notified without a debug line: the
+// line of the index or length written stands for it.
 function onWriteItems(target: Target): void {
-  const atom = itemsAtoms.get(target);
+  const atom = findAtom(target, ITEMS, itemAtoms);
   if (atom !== undefined) {
     onWriteAtom(atom);
   }
@@ -766,20 +734,6 @@ function onWriteItems(target: Target): void {
 // of a plain array, not of a subclass, which may answer from elsewhere
 function isPlainArray(raw: object): boolean {
   return Object.getPrototypeOf(raw) === Array.prototype;
-}
-
-function onReadItems(raw: Target): void {
-  if (isObserving()) {
-    if (debug.reactivity) {
-      debugRead("items", raw);
-    }
-    let atom = itemsAtoms.get(raw);
-    if (atom === undefined) {
-      atom = createAtom(undefined, "key");
-      itemsAtoms.set(raw, atom);
-    }
-    onReadAtom(atom);
-  }
 }
 
 /**
@@ -796,7 +750,7 @@ export function readArrayItems<T>(array: T[]): T[] {
   if (raw === undefined || deepProxies.get(raw) !== array || !isPlainArray(raw)) {
     return array;
   }
-  onReadItems(raw);
+  onReadTargetKey(raw, ITEMS);
   // the get trap hands out a frozen array's items raw (a proxy invariant)
   if (Object.isFrozen(raw)) {
     return raw.slice();
@@ -871,7 +825,7 @@ for (const name of ["includes", "indexOf", "lastIndexOf"] as const) {
     const raw = toRaw(this);
     const plain = isPlainArray(raw);
     if (plain) {
-      onReadItems(raw);
+      onReadTargetKey(raw, ITEMS);
     }
     const result = method.apply(plain ? raw : this, args);
     const item = args[0];
@@ -894,7 +848,11 @@ const hasOwnPropertyReader = function (this: object, key: PropertyKey) {
   const raw = toRaw(this);
   // a collection's proxy made its properties' stand-in when it was asked for
   // this method
-  onReadKeyPresence(propertyHosts.get(raw) ?? raw, typeof key === "symbol" ? key : String(key));
+  onReadTargetKey(
+    propertyHosts.get(raw) ?? raw,
+    typeof key === "symbol" ? key : String(key),
+    presenceAtoms
+  );
   return objectHasOwnProperty.call(raw, key);
 };
 replacedMethods.set(objectHasOwnProperty, hasOwnPropertyReader);
@@ -928,7 +886,7 @@ function propertyHost(target: Target): Target {
 function makeHas(target: any) {
   return (key: any) => {
     key = toRaw(key);
-    onReadKeyPresence(target, key);
+    onReadTargetKey(target, key, presenceAtoms);
     return target.has(key);
   };
 }
