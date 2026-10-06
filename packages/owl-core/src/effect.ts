@@ -5,7 +5,7 @@ import {
   disposeOwned,
   getCurrentComputation,
   removeSources,
-  setComputation,
+  untrack,
   updateComputation,
   createComputation,
 } from "./computations";
@@ -45,20 +45,33 @@ function createEffect<T>(fn: () => T, immediate: boolean, options?: EffectOption
           failure = { error };
         }
       }
+      if (disposed) {
+        // disposed by its own cleanup: it does not run again
+        if (debug.effect) {
+          debugLog("effect", `${computation.name} disposed by its own cleanup, not run again`);
+        }
+        if (failure) {
+          throw failure.error;
+        }
+        return undefined;
+      }
       const result = fn();
+      // only a cleanup function is kept: any other value would be retained
+      // until the next run for nothing
+      const cleanup = typeof result === "function" ? result : undefined;
       if (disposed) {
         // disposed by its own run: what it read, created or returned after
         // the dispose is released too
-        computation.value = result;
+        computation.value = cleanup;
         removeSources(computation);
         releaseUntracked(computation);
         return undefined;
       }
       if (failure) {
-        computation.value = result;
+        computation.value = cleanup;
         throw failure.error;
       }
-      return result;
+      return cleanup;
     },
     false,
     ComputationState.STALE,
@@ -122,15 +135,9 @@ function createEffect<T>(fn: () => T, immediate: boolean, options?: EffectOption
 }
 
 // Runs the cleanup function and disposes the child effects of `effect`, with
-// no computation tracking their reads.
+// nothing tracking their reads.
 function releaseUntracked(effect: ComputationAtom) {
-  const previousComputation = getCurrentComputation();
-  setComputation(undefined);
-  try {
-    release(effect);
-  } finally {
-    setComputation(previousComputation);
-  }
+  untrack(() => release(effect));
 }
 
 // Releases everything even when a cleanup throws, then rethrows the first
@@ -155,10 +162,10 @@ function release(effect: ComputationAtom) {
 }
 
 function runCleanup(effect: ComputationAtom) {
-  // the computation.value of an effect is a cleanup function, called once
+  // the computation.value of an effect is its cleanup function, called once
   const cleanupFn = effect.value;
   effect.value = undefined;
-  if (typeof cleanupFn === "function") {
+  if (cleanupFn) {
     cleanupFn();
   }
 }

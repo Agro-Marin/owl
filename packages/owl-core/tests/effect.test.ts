@@ -3,6 +3,7 @@ import {
   computed,
   disposeComputation,
   effect,
+  getCurrentComputation,
   immediateEffect,
   observersOf,
   proxy,
@@ -865,5 +866,41 @@ describe("cleanup order", () => {
     log.length = 0;
     dispose();
     expect(log).toEqual(["inner:cleanup", "outer:cleanup"]);
+  });
+});
+
+describe("disposed by its own cleanup", () => {
+  test("an effect its cleanup disposes does not run again", async () => {
+    const s = signal(0);
+    const log: string[] = [];
+    const dispose = effect(() => {
+      log.push(`run ${s()}`);
+      return () => {
+        log.push("cleanup");
+        if (s() === 1) {
+          dispose();
+        }
+      };
+    });
+    s.set(1);
+    await waitScheduler();
+    expect(log).toEqual(["run 0", "cleanup"]);
+    expect(observersOf((s as any)[atomSymbol])).toEqual([]);
+    s.set(2);
+    await waitScheduler();
+    expect(log).toEqual(["run 0", "cleanup"]);
+  });
+});
+
+describe("returned value", () => {
+  test("an effect keeps what it returns only when it is a cleanup function", () => {
+    const list = signal([1, 2, 3]);
+    let computation: any;
+    const dispose = effect(() => {
+      computation = getCurrentComputation();
+      return list();
+    });
+    expect(computation.value).toBeUndefined();
+    dispose();
   });
 });
