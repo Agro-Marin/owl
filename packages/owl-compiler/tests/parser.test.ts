@@ -2297,4 +2297,66 @@ describe("parse cache", () => {
     const directives = mark("c");
     expect(parse(elem, directives)).toBe(parse(elem, directives));
   });
+
+  test("no custom directives and an empty set of them share one cache", () => {
+    const elem = parseXML(`<div>a</div>`).firstChild as Element;
+    expect(parse(elem, {})).toBe(parse(elem));
+    expect(parse(elem, {})).toBe(parse(elem, {}));
+  });
+});
+
+describe("directives that need an expression", () => {
+  test("an empty one is rejected with the directive's name", () => {
+    const cases = [
+      [`<t t-out=""/>`, "t-out"],
+      [`<span t-esc=" "/>`, "t-esc"],
+      [`<div t-if="">x</div>`, "t-if"],
+      [`<div t-if="a"/><div t-elif="">x</div>`, "t-elif"],
+      [`<div t-att-foo=""/>`, "t-att-foo"],
+      [`<div t-att=""/>`, "t-att"],
+      [`<t t-foreach="" t-as="a" t-key="a"/>`, "t-foreach"],
+      [`<t t-foreach="l" t-as="a" t-key=""/>`, "t-key"],
+      [`<div t-key=" ">x</div>`, "t-key"],
+      [`<input t-model=""/>`, "t-model"],
+      [`<div t-ref=""/>`, "t-ref"],
+      [`<t t-call-block=""/>`, "t-call-block"],
+      [`<C t-props=""/>`, "t-props"],
+    ];
+    for (const [template, directive] of cases) {
+      expect(() => parse(template)).toThrow(`Directive '${directive}' needs an expression`);
+    }
+    expect(getConsoleOutput()).toEqual([
+      'warn:t-esc has been deprecated in favor of t-out. If the value to render is not wrapped by the "markup" function, it will be escaped',
+    ]);
+    // an empty handler, an empty t-attf and an empty t-value stay allowed
+    expect(() =>
+      parse(`<div t-on-click="" t-attf-class=""><t t-set="x" t-value=""/></div>`)
+    ).not.toThrow();
+  });
+});
+
+describe("no representation", () => {
+  test("a t-debug, t-log or translation directive without content renders nothing", () => {
+    for (const template of [
+      `<t t-debug=""/>`,
+      `<t t-log="x"/>`,
+      `<t t-translation="off"/>`,
+      `<t t-translation-context="c"/>`,
+    ]) {
+      expect(parse(template).hasNoRepresentation).toBe(true);
+    }
+    expect(parse(`<div t-debug=""/>`).hasNoRepresentation).toBeUndefined();
+  });
+});
+
+describe("nested t-set-slot", () => {
+  test("a t-set-slot directly inside another one is rejected", () => {
+    expect(() => parse(`<C><t t-set-slot="a"><t t-set-slot="b">x</t></t></C>`)).toThrow(
+      'Directive \'t-set-slot\' cannot be nested in another t-set-slot (slot "b" in slot "a")'
+    );
+    // in a sub component, it is that component's slot
+    expect(() =>
+      parse(`<C><t t-set-slot="a"><D><t t-set-slot="b">x</t></D></t></C>`)
+    ).not.toThrow();
+  });
 });

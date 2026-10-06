@@ -83,6 +83,13 @@ function isProp(tag: string, key: string): boolean {
 }
 
 /**
+ * The key a prop of name `name` takes in a generated object literal.
+ */
+function propKey(name: string): string {
+  return /^[a-z_]+$/i.test(name) ? name : `'${name}'`;
+}
+
+/**
  * Returns a template literal that evaluates to str. You can add interpolation
  * sigils into the string if required
  */
@@ -176,7 +183,9 @@ interface Context {
   translationCtx: string;
   tKeyExpr: string | null;
   nameSpace?: string;
-  tModelSelectedExpr?: string;
+  // in a <select t-model> with dynamic options: the model's value, to which
+  // an option's value is compared, as a number with .number
+  tModelSelected?: { expr: string; number: boolean };
   inPreTag?: boolean;
 }
 
@@ -190,7 +199,7 @@ function createContext(parentCtx: Context, params?: Partial<Context>): Context {
       translationCtx: parentCtx.translationCtx,
       tKeyExpr: null,
       nameSpace: parentCtx.nameSpace,
-      tModelSelectedExpr: parentCtx.tModelSelectedExpr,
+      tModelSelected: parentCtx.tModelSelected,
       inPreTag: parentCtx.inPreTag,
     },
     params
@@ -391,7 +400,7 @@ export class CodeGenerator {
     const target = new CodeTarget(name, on);
     this.targets.push(target);
     this.target = target;
-    this.compileAST(ast, createContext(ctx, { tModelSelectedExpr: undefined }));
+    this.compileAST(ast, createContext(ctx, { tModelSelected: undefined }));
     this.target = initialTarget;
     return name;
   }
@@ -649,15 +658,17 @@ export class CodeGenerator {
         attrs[key] = ast.attrs[key];
       }
 
-      if (attrName === "value" && ctx.tModelSelectedExpr) {
+      if (attrName === "value" && ctx.tModelSelected) {
+        const { expr: selected, number } = ctx.tModelSelected;
         const value = key.startsWith("t-att") ? valueVar : expr;
-        let selectedId = block!.insertData(`${ctx.tModelSelectedExpr} === ${value}`, "attr");
+        const target = number ? `toNumber(${value})` : value;
+        let selectedId = block!.insertData(`${selected} === ${target}`, "attr");
         attrs[`block-attribute-${selectedId}`] = "selected";
       }
     }
 
     // t-model
-    let tModelSelectedExpr;
+    let tModelSelected: Context["tModelSelected"];
     if (ast.model) {
       const {
         hasDynamicChildren,
@@ -696,14 +707,18 @@ export class CodeGenerator {
 
       let idx: number;
       if (specialInitTargetAttr) {
-        const targetExpr =
+        let targetExpr =
           targetAttr in attrs ? JSON.stringify(attrs[targetAttr]) : valueVar || "false";
+        if (shouldNumberize) {
+          // the handler sets the model to the number of the value
+          targetExpr = `toNumber(${targetExpr})`;
+        }
         idx = block!.insertData(`${readExpr} === ${targetExpr}`, "prop");
         attrs[`block-property-${idx}`] = specialInitTargetAttr;
       } else if (hasDynamicChildren) {
         const bValueId = this.generateId("bValue");
-        tModelSelectedExpr = `${bValueId}`;
-        this.define(tModelSelectedExpr, readExpr);
+        tModelSelected = { expr: bValueId, number: shouldNumberize };
+        this.define(bValueId, readExpr);
       } else {
         idx = block!.insertData(readExpr, "prop");
         attrs[`block-property-${idx}`] = targetAttr;
@@ -753,7 +768,7 @@ export class CodeGenerator {
           forceNewBlock: false,
           tKeyExpr: ctx.tKeyExpr,
           nameSpace,
-          tModelSelectedExpr: tModelSelectedExpr || ctx.tModelSelectedExpr,
+          tModelSelected: tModelSelected || ctx.tModelSelected,
           inPreTag: ctx.inPreTag || ast.tag === "pre",
         });
         this.compileAST(child, subCtx);
@@ -1198,8 +1213,7 @@ export class CodeGenerator {
           throw new OwlError(`Invalid prop suffix: ${suffix}`);
       }
     }
-    name = /^[a-z_]+$/i.test(name) ? name : `'${name}'`;
-    return `${name}: ${value || undefined}`;
+    return `${propKey(name)}: ${value || undefined}`;
   }
 
   formatPropObject(
@@ -1232,8 +1246,7 @@ export class CodeGenerator {
       let [name, suffix] = p.split(".");
 
       if (suffix === "signal") {
-        const propName = /^[a-z_]+$/i.test(name) ? name : `'${name}'`;
-        props.push(`${propName}: ${compileExpr(ast.props![p]) || undefined}`);
+        props.push(`${propKey(name)}: ${compileExpr(ast.props![p]) || undefined}`);
         signalProps.push(JSON.stringify(name));
         continue;
       }
@@ -1246,8 +1259,7 @@ export class CodeGenerator {
 
       const { expr: compiledValue, freeVariables } = processExpr(ast.props![p]);
 
-      const propName = /^[a-z_]+$/i.test(name) ? name : `'${name}'`;
-      props.push(`${propName}: ${compiledValue || undefined}`);
+      props.push(`${propKey(name)}: ${compiledValue || undefined}`);
 
       if (freeVariables) {
         for (const varName of freeVariables) {

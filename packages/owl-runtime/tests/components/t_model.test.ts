@@ -865,6 +865,42 @@ describe("t-model directive", () => {
     divEl.click();
     expect(steps).toEqual(["group: scotty", "group: beam", "group: beam"]);
   });
+
+  test(".number on radio inputs: the input of the model's number is checked", async () => {
+    class SomeComponent extends Component {
+      static template = xml`<div>
+            <input type="radio" value="1" t-model.number="this.choice"/>
+            <input type="radio" value="2" t-model.number="this.choice"/>
+        </div>`;
+      choice = signal<any>(2);
+    }
+    const comp = await mount(SomeComponent, fixture);
+    const [one, two] = fixture.querySelectorAll("input");
+    expect([one.checked, two.checked]).toEqual([false, true]);
+    one.click();
+    await nextTick();
+    expect(comp.choice()).toBe(1);
+    comp.choice.set(2);
+    await nextTick();
+    expect([one.checked, two.checked]).toEqual([false, true]);
+  });
+
+  test(".number on a select: a static option is selected by a number", async () => {
+    class Test extends Component {
+      static template = xml`
+          <select t-model.number="this.value">
+            <option value="1">one</option>
+            <option value="2">two</option>
+            <t t-foreach="this.options" t-as="o" t-key="o">
+                <option t-att-value="o" t-out="o"/>
+            </t>
+          </select>`;
+      value = signal(2);
+      options = [3];
+    }
+    await mount(Test, fixture);
+    expect(fixture.querySelector("select")!.value).toBe("2");
+  });
 });
 
 describe("t-model.proxy directive", () => {

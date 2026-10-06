@@ -53,4 +53,10 @@ describe("debugging", () => {
     snapshotTemplate(template);
     renderToString(template);
   });
+
+  test("a t-log or t-debug without content before a t-set renders nothing", () => {
+    expect(renderToString(`<t t-log="1"/><t t-set="x" t-value="1"/>`)).toBe("");
+    expect(getConsoleOutput()).toEqual(["log:1"]);
+    expect(renderToString(`<t t-debug=""/><t t-set="x" t-value="1"/>`)).toBe("");
+  });
 });

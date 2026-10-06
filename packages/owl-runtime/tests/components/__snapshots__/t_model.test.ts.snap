@@ -38,6 +38,60 @@ exports[`t-model directive > .number modifier 1`] = `
 }"
 `;
 
+exports[`t-model directive > .number on a select: a static option is selected by a number 1`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { toNumber, modelExpr, prepareList, safeOutput, withKey } = helpers;
+  const hdlr_fn1 = (ctx, ev, model) => model.set(toNumber(ev.target.value));
+  
+  let block1 = createBlock(\`<select block-handler-0="change"><option value="1" block-attribute-1="selected">one</option><option value="2" block-attribute-2="selected">two</option><block-child-0/></select>\`);
+  let block3 = createBlock(\`<option block-attribute-0="value" block-attribute-1="selected"><block-child-0/></option>\`);
+  
+  return function template(ctx, node, key = "") {
+    const expr1 = modelExpr(ctx['this'].value);
+    const bValue1 = expr1();
+    let hdlr1 = [hdlr_fn1, ctx, 0, expr1];
+    let attr1 = bValue1 === toNumber("1");
+    let attr2 = bValue1 === toNumber("2");
+    const ctx1 = ctx;
+    const [k_block2, v_block2, l_block2, c_block2] = prepareList(ctx['this'].options);
+    for (let i1 = 0; i1 < l_block2; i1++) {
+      let ctx = Object.create(ctx1);
+      ctx["o"] = k_block2[i1];
+      const key1 = ctx['o'];
+      let attr3 = ctx['o'];
+      let attr4 = bValue1 === toNumber(attr3);
+      const b4 = safeOutput(ctx['o'], key, "__1", 1, key1);
+      c_block2[i1] = withKey(block3([attr3, attr4], [b4]), key1);
+    }
+    const b2 = list(c_block2);
+    return block1([hdlr1, attr1, attr2], [b2]);
+  }
+}"
+`;
+
+exports[`t-model directive > .number on radio inputs: the input of the model's number is checked 1`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { toNumber, modelExpr } = helpers;
+  const hdlr_fn1 = (ctx, ev, model) => model.set(toNumber(ev.target.value));
+  
+  let block1 = createBlock(\`<div><input type="radio" value="1" block-property-0="checked" block-handler-1="click"/><input type="radio" value="2" block-property-2="checked" block-handler-3="click"/></div>\`);
+  
+  return function template(ctx, node, key = "") {
+    const expr1 = modelExpr(ctx['this'].choice);
+    let prop1 = expr1() === toNumber("1");
+    let hdlr1 = [hdlr_fn1, ctx, 0, expr1];
+    const expr2 = modelExpr(ctx['this'].choice);
+    let prop2 = expr2() === toNumber("2");
+    let hdlr2 = [hdlr_fn1, ctx, 0, expr2];
+    return block1([prop1, hdlr1, prop2, hdlr2]);
+  }
+}"
+`;
+
 exports[`t-model directive > .trim modifier 1`] = `
 "function anonymous(app, bdom, helpers
 ) {
@@ -647,7 +701,7 @@ exports[`t-model directive > t-model with dynamic number values on select option
       ctx["o"] = k_block2[i1];
       const key1 = ctx['o'].value;
       let attr1 = ctx['o'].value;
-      let attr2 = bValue1 === attr1;
+      let attr2 = bValue1 === toNumber(attr1);
       const b4 = safeOutput(ctx['o'].value, key, "__1", 1, key1);
       c_block2[i1] = withKey(block3([attr1, attr2], [b4]), key1);
     }

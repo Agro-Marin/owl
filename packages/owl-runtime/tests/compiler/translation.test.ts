@@ -410,4 +410,12 @@ describe("translation context", () => {
     await mount(SomeComponent, fixture);
     expect(fixture.outerHTML).toBe("<div><div><div></div><div></div></div></div>");
   });
+
+  test("a translation directive without content before a t-set renders nothing", async () => {
+    class SomeComponent extends Component {
+      static template = xml`<t t-translation="off"/><t t-set="x" t-value="1"/>`;
+    }
+    await mount(SomeComponent, fixture);
+    expect(fixture.innerHTML).toBe("");
+  });
 });

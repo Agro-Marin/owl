@@ -206,15 +206,14 @@ const NO_DIRECTIVES = {};
 const cache: WeakMap<object, WeakMap<Element, AST>> = new WeakMap();
 
 export function parse(xml: string | Element, customDir?: CustomDirectives): AST {
-  const ctx = {
-    inPreTag: false,
-    customDirectives: customDir,
-  };
+  // no custom directive and an empty set of them parse alike: one cache
+  const customDirectives = customDir && Object.keys(customDir).length ? customDir : undefined;
+  const ctx = { inPreTag: false, customDirectives };
   if (typeof xml === "string") {
     const elem = parseXML(`<t>${xml}</t>`).firstChild as Element;
     return _parse(elem, ctx);
   }
-  const directivesKey = customDir || NO_DIRECTIVES;
+  const directivesKey = customDirectives || NO_DIRECTIVES;
   let astCache = cache.get(directivesKey);
   if (!astCache) {
     astCache = new WeakMap();
@@ -269,7 +268,7 @@ function parseNode(node: Node, ctx: ParsingContext): AST | null {
 // -----------------------------------------------------------------------------
 
 function isTranslationContext(attribute: string): boolean {
-  return attribute === "t-translation-context" || attribute.startsWith("t-translation-context-");
+  return attribute === "t-translation-context" || attribute.startsWith(TRANSLATION_CONTEXT_PREFIX);
 }
 
 function unsupportedDirectiveError(directive: string, where: string): OwlError {
@@ -280,6 +279,66 @@ function tRefError(node: Element): OwlError {
   return new OwlError(
     `Directive 't-ref' can only be used on DOM nodes (used on a <${node.tagName}>)`
   );
+}
+
+/**
+ * The value of the directive `attr` of `node`, which must be an expression
+ * when present: an empty one would compile to invalid code.
+ */
+function exprAttr(node: Element, attr: string): string | null {
+  const value = node.getAttribute(attr);
+  if (value !== null && !value.trim()) {
+    throw emptyExprError(attr, node);
+  }
+  return value;
+}
+
+function emptyExprError(attr: string, node: Element): OwlError {
+  return new OwlError(`Directive '${attr}' needs an expression (on a <${node.tagName}>)`);
+}
+
+/**
+ * Marks `ast` as rendering nothing when the content it wraps renders nothing.
+ */
+function wrapping<T extends AST>(ast: T, content: AST | null): T {
+  if (!content || content.hasNoRepresentation) {
+    ast.hasNoRepresentation = true;
+  }
+  return ast;
+}
+
+function isComponentNode(el: Element): boolean {
+  const first = el.tagName[0];
+  return first === first.toUpperCase() || el.hasAttribute("t-component");
+}
+
+const TRANSLATION_CONTEXT_PREFIX = "t-translation-context-";
+
+interface NodeHandlers {
+  on: EventHandlers | null;
+  translationCtx: Attrs | null;
+}
+
+/**
+ * Collects the attribute `name` into `found` if it is a translation context
+ * (`t-translation-context-<attr>`) or, with `events`, an event handler
+ * (`t-on-<event>`), and tells whether it did.
+ */
+function collectHandler(
+  found: NodeHandlers,
+  name: string,
+  value: string,
+  events: boolean = true
+): boolean {
+  if (name.startsWith(TRANSLATION_CONTEXT_PREFIX)) {
+    (found.translationCtx ||= {})[name.slice(TRANSLATION_CONTEXT_PREFIX.length)] = value;
+    return true;
+  }
+  if (events && name.startsWith("t-on-")) {
+    (found.on ||= {})[name.slice(5)] = value;
+    return true;
+  }
+  return false;
 }
 
 function parseTNode(node: Element, ctx: ParsingContext): AST | null {
@@ -349,29 +408,14 @@ function parseTDebugLog(node: Element, ctx: ParsingContext): AST | null {
   if (node.hasAttribute("t-debug")) {
     node.removeAttribute("t-debug");
     const content = parseNode(node, ctx);
-    const ast: ASTDebug = {
-      type: ASTType.TDebug,
-      content,
-    };
-    if (content?.hasNoRepresentation) {
-      ast.hasNoRepresentation = true;
-    }
-    return ast;
+    return wrapping<ASTDebug>({ type: ASTType.TDebug, content }, content);
   }
 
   if (node.hasAttribute("t-log")) {
     const expr = node.getAttribute("t-log")!;
     node.removeAttribute("t-log");
     const content = parseNode(node, ctx);
-    const ast: ASTLog = {
-      type: ASTType.TLog,
-      expr,
-      content,
-    };
-    if (content?.hasNoRepresentation) {
-      ast.hasNoRepresentation = true;
-    }
-    return ast;
+    return wrapping<ASTLog>({ type: ASTType.TLog, expr, content }, content);
   }
   return null;
 }
@@ -416,13 +460,12 @@ function parseDOMNode(node: Element, ctx: ParsingContext): AST | null {
   }
 
   let ns = !ctx.nameSpace && ROOT_SVG_TAGS.has(tagName) ? "http://www.w3.org/2000/svg" : null;
-  const ref = node.getAttribute("t-ref");
+  const ref = exprAttr(node, "t-ref");
   node.removeAttribute("t-ref");
 
   const nodeAttrsNames = node.getAttributeNames();
   let attrs: ASTDomNode["attrs"] = null;
-  let attrsTranslationCtx: ASTDomNode["attrsTranslationCtx"] = null;
-  let on: EventHandlers | null = null;
+  const handlers: NodeHandlers = { on: null, translationCtx: null };
   let model: TModelInfo | null = null;
 
   for (let attr of nodeAttrsNames) {
@@ -430,14 +473,17 @@ function parseDOMNode(node: Element, ctx: ParsingContext): AST | null {
     if (attr === "t-on" || attr === "t-on-") {
       throw new OwlError("Missing event name with t-on directive");
     }
-    if (attr.startsWith("t-on-")) {
-      on = on || {};
-      on[attr.slice(5)] = value;
-    } else if (attr === "t-model" || attr.startsWith("t-model.")) {
+    if (collectHandler(handlers, attr, value)) {
+      continue;
+    }
+    if (attr === "t-model" || attr.startsWith("t-model.")) {
       if (!["input", "select", "textarea"].includes(tagName)) {
         throw new OwlError(
           "The t-model directive only works with <input>, <textarea> and <select>"
         );
+      }
+      if (!value.trim()) {
+        throw emptyExprError(attr, node);
       }
       const typeAttr = node.getAttribute("type");
       const isInput = tagName === "input";
@@ -475,13 +521,14 @@ function parseDOMNode(node: Element, ctx: ParsingContext): AST | null {
       throw new OwlError(`Invalid attribute: '${attr}'`);
     } else if (attr === "xmlns") {
       ns = value;
-    } else if (attr.startsWith("t-translation-context-")) {
-      const attrName = attr.slice(22);
-      attrsTranslationCtx = attrsTranslationCtx || {};
-      attrsTranslationCtx[attrName] = value;
     } else if (attr !== "t-name") {
-      if (attr.startsWith("t-") && !ATT_DIRECTIVE_RE.test(attr)) {
-        throw new OwlError(`Unknown QWeb directive: '${attr}'`);
+      if (attr.startsWith("t-")) {
+        if (!ATT_DIRECTIVE_RE.test(attr)) {
+          throw new OwlError(`Unknown QWeb directive: '${attr}'`);
+        }
+        if (!attr.startsWith("t-attf") && !value.trim()) {
+          throw emptyExprError(attr, node);
+        }
       }
       const tModel = ctx.tModelInfo;
       if (tModel && ["t-att-value", "t-attf-value"].includes(attr)) {
@@ -501,8 +548,8 @@ function parseDOMNode(node: Element, ctx: ParsingContext): AST | null {
     tag: tagName,
     dynamicTag,
     attrs,
-    attrsTranslationCtx,
-    on,
+    attrsTranslationCtx: handlers.translationCtx,
+    on: handlers.on,
     ref,
     content: children,
     model,
@@ -523,7 +570,7 @@ function parseTOutNode(node: Element, ctx: ParsingContext): AST | null {
       `t-esc has been deprecated in favor of t-out. If the value to render is not wrapped by the "markup" function, it will be escaped`
     );
   }
-  const expr = (node.getAttribute("t-out") || node.getAttribute("t-esc"))!;
+  const expr = exprAttr(node, node.hasAttribute("t-out") ? "t-out" : "t-esc")!;
   node.removeAttribute("t-out");
   node.removeAttribute("t-esc");
 
@@ -544,7 +591,7 @@ function parseTOutNode(node: Element, ctx: ParsingContext): AST | null {
     tOut.body = body.length ? body : null;
     return tOut;
   }
-  const ref = node.getAttribute("t-ref");
+  const ref = exprAttr(node, "t-ref");
   node.removeAttribute("t-ref");
   const ast = parseNode(node, ctx);
   if (ast?.type !== ASTType.DomNode) {
@@ -567,7 +614,7 @@ function parseTForEach(node: Element, ctx: ParsingContext): AST | null {
     return null;
   }
   const html = node.outerHTML;
-  const collection = node.getAttribute("t-foreach")!;
+  const collection = exprAttr(node, "t-foreach")!;
   node.removeAttribute("t-foreach");
   const elem = node.getAttribute("t-as");
   if (!elem) {
@@ -576,14 +623,14 @@ function parseTForEach(node: Element, ctx: ParsingContext): AST | null {
     );
   }
   node.removeAttribute("t-as");
-  const key = node.getAttribute("t-key");
+  const key = exprAttr(node, "t-key");
   if (!key) {
     throw new OwlError(
       `"Directive t-foreach should always be used with a t-key!" (expression: t-foreach="${collection}" t-as="${elem}")`
     );
   }
   node.removeAttribute("t-key");
-  const memo = node.getAttribute("t-memo");
+  const memo = exprAttr(node, "t-memo");
   node.removeAttribute("t-memo");
   const body = parseNode(node, ctx);
 
@@ -625,10 +672,7 @@ function parseTForEach(node: Element, ctx: ParsingContext): AST | null {
       ast.memoContent = true;
     }
   }
-  if (body.hasNoRepresentation) {
-    ast.hasNoRepresentation = true;
-  }
-  return ast;
+  return wrapping(ast, body);
 }
 
 const UNVISITABLE: Partial<Record<ASTType, string>> = {
@@ -688,21 +732,13 @@ function parseTKey(node: Element, ctx: ParsingContext): AST | null {
   if (!node.hasAttribute("t-key")) {
     return null;
   }
-  const key = node.getAttribute("t-key")!;
+  const key = exprAttr(node, "t-key")!;
   node.removeAttribute("t-key");
   const content = parseNode(node, ctx);
   if (!content) {
     return null;
   }
-  const ast: ASTTKey = {
-    type: ASTType.TKey,
-    expr: key,
-    content,
-  };
-  if (content.hasNoRepresentation) {
-    ast.hasNoRepresentation = true;
-  }
-  return ast;
+  return wrapping<ASTTKey>({ type: ASTType.TKey, expr: key, content }, content);
 }
 
 // -----------------------------------------------------------------------------
@@ -719,24 +755,22 @@ function parseTCall(node: Element, ctx: ParsingContext): AST | null {
     );
   }
   const subTemplate = node.getAttribute("t-call")!;
-  const context = node.getAttribute("t-call-context");
+  const context = exprAttr(node, "t-call-context");
   node.removeAttribute("t-call");
   node.removeAttribute("t-call-context");
 
   let attrs: Attrs | null = null;
-  let attrsTranslationCtx: Attrs | null = null;
+  const handlers: NodeHandlers = { on: null, translationCtx: null };
   for (let attributeName of node.getAttributeNames()) {
     const value = node.getAttribute(attributeName)!;
-    if (attributeName.startsWith("t-translation-context-")) {
-      const attrName = attributeName.slice(22);
-      attrsTranslationCtx = attrsTranslationCtx || {};
-      attrsTranslationCtx[attrName] = value;
-    } else if (attributeName.startsWith("t-")) {
-      throw unsupportedDirectiveError(attributeName, "a t-call node");
-    } else {
-      attrs = attrs || {};
-      attrs[attributeName] = value;
+    if (collectHandler(handlers, attributeName, value, false)) {
+      continue;
     }
+    if (attributeName.startsWith("t-")) {
+      throw unsupportedDirectiveError(attributeName, "a t-call node");
+    }
+    attrs = attrs || {};
+    attrs[attributeName] = value;
   }
 
   const body = parseChildNodes(node, ctx);
@@ -744,7 +778,7 @@ function parseTCall(node: Element, ctx: ParsingContext): AST | null {
     type: ASTType.TCall,
     name: subTemplate,
     attrs,
-    attrsTranslationCtx,
+    attrsTranslationCtx: handlers.translationCtx,
     body,
     context,
   };
@@ -758,7 +792,7 @@ function parseTCallBlock(node: Element, ctx: ParsingContext): AST | null {
   if (!node.hasAttribute("t-call-block")) {
     return null;
   }
-  const name = node.getAttribute("t-call-block")!;
+  const name = exprAttr(node, "t-call-block")!;
   const directive = node
     .getAttributeNames()
     .find((a) => a.startsWith("t-") && a !== "t-call-block" && !isTranslationContext(a));
@@ -779,7 +813,7 @@ function parseTIf(node: Element, ctx: ParsingContext): AST | null {
   if (!node.hasAttribute("t-if")) {
     return null;
   }
-  const condition = node.getAttribute("t-if")!;
+  const condition = exprAttr(node, "t-if")!;
   node.removeAttribute("t-if");
   const content = parseNode(node, ctx) || { type: ASTType.Text, value: "" };
 
@@ -787,7 +821,7 @@ function parseTIf(node: Element, ctx: ParsingContext): AST | null {
   // t-elifs
   const tElifs: any[] = [];
   while (nextElement && nextElement.hasAttribute("t-elif")) {
-    const condition = nextElement.getAttribute("t-elif");
+    const condition = exprAttr(nextElement, "t-elif");
     nextElement.removeAttribute("t-elif");
     const tElif = parseNode(nextElement, ctx) || { type: ASTType.Text, value: "" };
     const next = nextElement.nextElementSibling;
@@ -856,7 +890,6 @@ const directiveErrorMap = new Map([
 
 function parseComponent(node: Element, ctx: ParsingContext): AST | null {
   let name = node.tagName;
-  const firstLetter = name[0];
   let isDynamic = node.hasAttribute("t-component");
 
   if (isDynamic && name !== "t") {
@@ -865,41 +898,32 @@ function parseComponent(node: Element, ctx: ParsingContext): AST | null {
     );
   }
 
-  if (!(firstLetter === firstLetter.toUpperCase() || isDynamic)) {
+  if (!isComponentNode(node)) {
     return null;
   }
   if (isDynamic) {
-    name = node.getAttribute("t-component")!;
+    name = exprAttr(node, "t-component")!;
     node.removeAttribute("t-component");
   }
 
-  const dynamicProps = node.getAttribute("t-props");
+  const dynamicProps = exprAttr(node, "t-props");
   node.removeAttribute("t-props");
 
   const defaultSlotScope = node.getAttribute("t-slot-scope");
   node.removeAttribute("t-slot-scope");
-  let on: ASTComponent["on"] = null;
-
+  const handlers: NodeHandlers = { on: null, translationCtx: null };
   let props: ASTComponent["props"] = null;
-  let propsTranslationCtx: ASTComponent["propsTranslationCtx"] = null;
   for (let name of node.getAttributeNames()) {
     const value = node.getAttribute(name)!;
-    if (name.startsWith("t-translation-context-")) {
-      const attrName = name.slice(22);
-      propsTranslationCtx = propsTranslationCtx || {};
-      propsTranslationCtx[attrName] = value;
-    } else if (name.startsWith("t-")) {
-      if (name.startsWith("t-on-")) {
-        on = on || {};
-        on[name.slice(5)] = value;
-      } else {
-        const message = directiveErrorMap.get(name.split("-").slice(0, 2).join("-"));
-        throw new OwlError(message || `unsupported directive on Component: ${name}`);
-      }
-    } else {
-      props = props || {};
-      props[name] = value;
+    if (collectHandler(handlers, name, value)) {
+      continue;
     }
+    if (name.startsWith("t-")) {
+      const message = directiveErrorMap.get(name.split("-").slice(0, 2).join("-"));
+      throw new OwlError(message || `unsupported directive on Component: ${name}`);
+    }
+    props = props || {};
+    props[name] = value;
   }
 
   let slots: ASTComponent["slots"] | null = null;
@@ -907,46 +931,17 @@ function parseComponent(node: Element, ctx: ParsingContext): AST | null {
     const clone = <Element>node.cloneNode(true);
 
     // named slots
-    const slotNodes = Array.from(clone.querySelectorAll("[t-set-slot]"));
+    // the slots of this component, found before any is parsed: parsing a
+    // sub component's node takes its directives off
+    const slotNodes = Array.from(clone.querySelectorAll("[t-set-slot]")).filter((slotNode) =>
+      isOwnSlot(slotNode, clone)
+    );
     for (let slotNode of slotNodes) {
-      if (slotNode.tagName !== "t") {
-        throw new OwlError(
-          `Directive 't-set-slot' can only be used on <t> nodes (used on a <${slotNode.tagName}>)`
-        );
-      }
       const name = slotNode.getAttribute("t-set-slot")!;
-
-      // check if this is defined in a sub component (in which case it should
-      // be ignored)
-      let el = slotNode.parentElement!;
-      let isInSubComponent = false;
-      let directiveAbove: string | null = null;
-      while (el && el !== clone) {
-        if (el!.hasAttribute("t-component") || el!.tagName[0] === el!.tagName[0].toUpperCase()) {
-          isInSubComponent = true;
-          break;
-        }
-        const directive = el.getAttributeNames().find((a) => SLOT_HIDING_DIRECTIVES.has(a));
-        if (directive && !directiveAbove) {
-          directiveAbove = `${directive} on a <${el.tagName}>`;
-        }
-        el = el.parentElement!;
-      }
-      if (isInSubComponent || !el) {
-        continue;
-      }
-      if (directiveAbove) {
-        // the slot would be lifted out of the directive and always be defined
-        throw new OwlError(
-          `Directive 't-set-slot' cannot be used under a directive (${directiveAbove}) inside a component`
-        );
-      }
-
       slotNode.removeAttribute("t-set-slot");
       slotNode.remove();
-      let on: SlotDefinition["on"] = null;
+      const slotHandlers: NodeHandlers = { on: null, translationCtx: null };
       let attrs: Attrs | null = null;
-      let attrsTranslationCtx: Attrs | null = null;
       let scope: string | null = null;
       // on a <t>, the directives of the slot definition go before its content
       // is parsed: a t-out or a t-call on the same node would reject them (an
@@ -956,14 +951,7 @@ function parseComponent(node: Element, ctx: ParsingContext): AST | null {
         const value = slotNode.getAttribute(attributeName)!;
         if (attributeName === "t-slot-scope") {
           scope = value;
-        } else if (attributeName.startsWith("t-translation-context-")) {
-          const attrName = attributeName.slice(22);
-          attrsTranslationCtx = attrsTranslationCtx || {};
-          attrsTranslationCtx[attrName] = value;
-        } else if (attributeName.startsWith("t-on-")) {
-          on = on || {};
-          on[attributeName.slice(5)] = value;
-        } else {
+        } else if (!collectHandler(slotHandlers, attributeName, value)) {
           continue;
         }
         if (isT) {
@@ -975,7 +963,7 @@ function parseComponent(node: Element, ctx: ParsingContext): AST | null {
       for (let attributeName of slotNode.getAttributeNames()) {
         if (
           attributeName === "t-slot-scope" ||
-          attributeName.startsWith("t-translation-context-") ||
+          attributeName.startsWith(TRANSLATION_CONTEXT_PREFIX) ||
           attributeName.startsWith("t-on-")
         ) {
           continue;
@@ -984,7 +972,13 @@ function parseComponent(node: Element, ctx: ParsingContext): AST | null {
         attrs[attributeName] = slotNode.getAttribute(attributeName)!;
       }
       slots = slots || {};
-      slots[name] = { content: slotAst, on, attrs, attrsTranslationCtx, scope };
+      slots[name] = {
+        content: slotAst,
+        on: slotHandlers.on,
+        attrs,
+        attrsTranslationCtx: slotHandlers.translationCtx,
+        scope,
+      };
     }
 
     // default slot
@@ -1007,10 +1001,44 @@ function parseComponent(node: Element, ctx: ParsingContext): AST | null {
     isDynamic,
     dynamicProps,
     props,
-    propsTranslationCtx,
+    propsTranslationCtx: handlers.translationCtx,
     slots,
-    on,
+    on: handlers.on,
   };
+}
+
+/**
+ * Whether the t-set-slot `slotNode` defines a slot of the component whose
+ * content is `root`, and not of a sub component. Throws where it cannot be
+ * one: on an element, nested in another t-set-slot, or under a directive that
+ * would make it conditional.
+ */
+function isOwnSlot(slotNode: Element, root: Element): boolean {
+  if (slotNode.tagName !== "t") {
+    throw new OwlError(
+      `Directive 't-set-slot' can only be used on <t> nodes (used on a <${slotNode.tagName}>)`
+    );
+  }
+  let directiveAbove: string | null = null;
+  for (let el = slotNode.parentElement!; el !== root; el = el.parentElement!) {
+    if (isComponentNode(el)) {
+      return false;
+    }
+    if (el.hasAttribute("t-set-slot")) {
+      throw new OwlError(
+        `Directive 't-set-slot' cannot be nested in another t-set-slot (slot "${slotNode.getAttribute("t-set-slot")}" in slot "${el.getAttribute("t-set-slot")}")`
+      );
+    }
+    const directive = el.getAttributeNames().find((a) => SLOT_HIDING_DIRECTIVES.has(a));
+    directiveAbove ||= directive ? `${directive} on a <${el.tagName}>` : null;
+  }
+  if (directiveAbove) {
+    // the slot would be lifted out of the directive and always be defined
+    throw new OwlError(
+      `Directive 't-set-slot' cannot be used under a directive (${directiveAbove}) inside a component`
+    );
+  }
+  return true;
 }
 
 // -----------------------------------------------------------------------------
@@ -1027,31 +1055,26 @@ function parseTCallSlot(node: Element, ctx: ParsingContext): AST | null {
   const name = (node.getAttribute("t-call-slot") || node.getAttribute("t-slot"))!;
   node.removeAttribute("t-call-slot");
   node.removeAttribute("t-slot");
+  exprAttr(node, "t-props");
   let attrs: Attrs | null = null;
-  let attrsTranslationCtx: Attrs | null = null;
-  let on: ASTComponent["on"] = null;
+  const handlers: NodeHandlers = { on: null, translationCtx: null };
   for (let attributeName of node.getAttributeNames()) {
     const value = node.getAttribute(attributeName)!;
-    if (attributeName.startsWith("t-on-")) {
-      on = on || {};
-      on[attributeName.slice(5)] = value;
-    } else if (attributeName.startsWith("t-translation-context-")) {
-      const attrName = attributeName.slice(22);
-      attrsTranslationCtx = attrsTranslationCtx || {};
-      attrsTranslationCtx[attrName] = value;
-    } else if (attributeName.startsWith("t-") && attributeName !== "t-props") {
-      throw unsupportedDirectiveError(attributeName, "a t-call-slot node");
-    } else {
-      attrs = attrs || {};
-      attrs[attributeName] = value;
+    if (collectHandler(handlers, attributeName, value)) {
+      continue;
     }
+    if (attributeName.startsWith("t-") && attributeName !== "t-props") {
+      throw unsupportedDirectiveError(attributeName, "a t-call-slot node");
+    }
+    attrs = attrs || {};
+    attrs[attributeName] = value;
   }
   return {
     type: ASTType.TCallSlot,
     name,
     attrs,
-    attrsTranslationCtx,
-    on,
+    attrsTranslationCtx: handlers.translationCtx,
+    on: handlers.on,
     defaultContent: parseChildNodes(node, ctx),
   };
 }
@@ -1061,11 +1084,7 @@ function parseTCallSlot(node: Element, ctx: ParsingContext): AST | null {
 // -----------------------------------------------------------------------------
 
 function wrapInTTranslationAST(r: AST | null) {
-  const ast: ASTTranslation = { type: ASTType.TTranslation, content: r };
-  if (r?.hasNoRepresentation) {
-    ast.hasNoRepresentation = true;
-  }
-  return ast;
+  return wrapping<ASTTranslation>({ type: ASTType.TTranslation, content: r }, r);
 }
 
 function parseTTranslation(node: Element, ctx: ParsingContext): AST | null {
@@ -1086,15 +1105,10 @@ function parseTTranslation(node: Element, ctx: ParsingContext): AST | null {
 // -----------------------------------------------------------------------------
 
 function wrapInTTranslationContextAST(r: AST | null, translationCtx: string) {
-  const ast: ASTTranslationContext = {
-    type: ASTType.TTranslationContext,
-    content: r,
-    translationCtx,
-  };
-  if (r?.hasNoRepresentation) {
-    ast.hasNoRepresentation = true;
-  }
-  return ast;
+  return wrapping<ASTTranslationContext>(
+    { type: ASTType.TTranslationContext, content: r, translationCtx },
+    r
+  );
 }
 
 function parseTTranslationContext(node: Element, ctx: ParsingContext): AST | null {
@@ -1216,9 +1230,7 @@ function normalizeTIf(el: Element) {
  * @param el the element containing the tree that should be normalized
  */
 function normalizeTOut(el: Element) {
-  const elements = [...el.querySelectorAll(`[t-out], [t-esc]`)].filter(
-    (el) => el.tagName[0] === el.tagName[0].toUpperCase() || el.hasAttribute("t-component")
-  );
+  const elements = [...el.querySelectorAll(`[t-out], [t-esc]`)].filter(isComponentNode);
   for (const el of elements) {
     if (el.childNodes.length) {
       throw new OwlError(`Cannot have t-out on a component that already has content`);

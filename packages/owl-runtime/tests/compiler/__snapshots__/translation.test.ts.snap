@@ -1,5 +1,18 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`translation context > a translation directive without content before a t-set renders nothing 1`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  
+  return function template(ctx, node, key = "") {
+    ctx = Object.create(ctx);
+    ctx["x"] = 1;
+  return text('');
+  }
+}"
+`;
+
 exports[`translation context > body of t-sets are translated in context 1`] = `
 "function anonymous(app, bdom, helpers
 ) {
