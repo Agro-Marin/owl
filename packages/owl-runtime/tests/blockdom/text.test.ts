@@ -48,6 +48,29 @@ describe("adding/patching text", () => {
     }
   });
 
+  test("bigint and symbol values in text nodes", () => {
+    for (const [value, result] of [
+      [0n, "0"],
+      [12n, "12"],
+      [Symbol("s"), "Symbol(s)"],
+    ]) {
+      const fixture = makeTestFixture();
+      const tree = text(value as any);
+      mount(tree, fixture);
+      expect(fixture.innerHTML).toBe(result);
+      patch(tree, text(1 as any));
+      patch(tree, text(value as any));
+      expect(fixture.innerHTML).toBe(result);
+    }
+  });
+
+  test("a text node stringifies to the HTML it renders", () => {
+    const tree = text("a < b & c > d");
+    mount(tree, fixture);
+    expect(tree.toString()).toBe(fixture.innerHTML);
+    expect(tree.toString()).toBe("a &lt; b &amp; c &gt; d");
+  });
+
   test("vtext node can be used as text", () => {
     const t = text("foo") as any;
     mount(text(t), fixture);

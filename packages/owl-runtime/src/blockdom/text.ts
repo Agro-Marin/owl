@@ -1,6 +1,15 @@
 import type { VNode } from "./index";
 import { characterDataSetData, nodeInsertBefore, nodeRemoveChild } from "./dom";
 
+// what serializing a text node escapes
+const HTML_TEXT_CHARS = /[&<>\u00a0]/g;
+const HTML_TEXT_ESCAPES: Record<string, string> = {
+  "&": "&amp;",
+  "<": "&lt;",
+  ">": "&gt;",
+  "\u00a0": "&nbsp;",
+};
+
 class VText {
   text: string | String;
   parentEl?: HTMLElement | undefined;
@@ -43,8 +52,10 @@ class VText {
     }
   }
 
+  // the HTML this node renders, as a block's toString gives its markup: a t-set
+  // body stringifies the same whether it holds text or elements
   toString() {
-    return this.text;
+    return toText(this.text).replace(HTML_TEXT_CHARS, (c) => HTML_TEXT_ESCAPES[c]);
   }
 }
 
@@ -57,6 +68,8 @@ export function toText(value: any): string {
     case "string":
       return value;
     case "number":
+    case "bigint":
+    case "symbol":
       return String(value);
     case "boolean":
       return value ? "true" : "false";

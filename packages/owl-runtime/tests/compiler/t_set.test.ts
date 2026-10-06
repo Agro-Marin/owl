@@ -434,4 +434,19 @@ describe("t-set", () => {
     await mount(Root, fixture);
     expect(fixture.innerHTML).toBe("<div><i>c</i><i>c</i></div>");
   });
+
+  test("a t-set body stringifies to HTML whether it holds text or an element", () => {
+    const y = "<img src=x onerror=alert(1)>";
+    const title = (template: string) => {
+      const div = document.createElement("div");
+      div.innerHTML = renderToString(template, { y });
+      return div.querySelector("p")!.title;
+    };
+    expect(title(`<t t-set="x"><t t-out="y"/></t><p t-att-title="x"/>`)).toBe(
+      "&lt;img src=x onerror=alert(1)&gt;"
+    );
+    expect(title(`<t t-set="x"><b t-out="y"/></t><p t-att-title="x"/>`)).toBe(
+      "<b>&lt;img src=x onerror=alert(1)&gt;</b>"
+    );
+  });
 });

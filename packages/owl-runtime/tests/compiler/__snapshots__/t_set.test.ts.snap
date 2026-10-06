@@ -162,6 +162,50 @@ exports[`t-set > a t-set body holding a component keeps one component per site a
 }"
 `;
 
+exports[`t-set > a t-set body stringifies to HTML whether it holds text or an element 1`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { LazyValue, safeOutput } = helpers;
+  
+  let block2 = createBlock(\`<p block-attribute-0="title"/>\`);
+  
+  function value1(ctx, node, key = "") {
+    return safeOutput(ctx['y'], key, "__1");
+  }
+  
+  return function template(ctx, node, key = "") {
+    ctx = Object.create(ctx);
+    ctx["x"] = new LazyValue(value1, ctx, this, node, key);
+    let attr1 = ctx['x'];
+    return block2([attr1]);
+  }
+}"
+`;
+
+exports[`t-set > a t-set body stringifies to HTML whether it holds text or an element 2`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { LazyValue, safeOutput } = helpers;
+  
+  let block1 = createBlock(\`<b><block-child-0/></b>\`);
+  let block3 = createBlock(\`<p block-attribute-0="title"/>\`);
+  
+  function value1(ctx, node, key = "") {
+    const b2 = safeOutput(ctx['y'], key, "__1");
+    return block1([], [b2]);
+  }
+  
+  return function template(ctx, node, key = "") {
+    ctx = Object.create(ctx);
+    ctx["x"] = new LazyValue(value1, ctx, this, node, key);
+    let attr1 = ctx['x'];
+    return block3([attr1]);
+  }
+}"
+`;
+
 exports[`t-set > a t-set in an ended loop does not change scoping in a later loop 1`] = `
 "function anonymous(app, bdom, helpers
 ) {
