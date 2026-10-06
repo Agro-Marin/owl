@@ -641,6 +641,70 @@ describe("collections", () => {
     expect([...set.union(setLike)]).toEqual([1, 2, 3]);
   });
 
+  test("a set operation answers as on the raw sets, each member as its set holds it, in order", () => {
+    if (!("union" in Set.prototype)) {
+      return;
+    }
+    const [a, b, c, d] = ["a", "b", "c", "d"].map((id) => ({ id }));
+    const deep: any = proxy(new Set([a, b, c]));
+    const shallow: any = signal.Set(new Set([proxy(d), proxy(c), proxy(b)]))();
+    const plain = new Set([c, b]);
+    // a member's id, starred when it is a proxy
+    const ids = (result: any) =>
+      typeof result === "boolean"
+        ? result
+        : [...result].map((m: any) => m.id + (toRaw(m) === m ? "" : "*")).join("");
+    const operations = [
+      "union",
+      "intersection",
+      "difference",
+      "symmetricDifference",
+      "isSubsetOf",
+      "isSupersetOf",
+      "isDisjointFrom",
+    ];
+    const answers = (set: any, other: any) => operations.map((name) => ids(set[name](other)));
+    expect(answers(deep, shallow)).toEqual(["abcd*", "bc", "a", "ad*", false, false, false]);
+    expect(answers(deep, plain)).toEqual(["abc", "bc", "a", "a", false, true, false]);
+    expect(answers(shallow, deep)).toEqual(["d*c*b*a*", "c*b*", "d*", "d*a*", false, false, false]);
+    expect(answers(shallow, plain)).toEqual(["d*c*b*", "c*b*", "d*", "d*", false, true, false]);
+    expect(answers(proxy(new Set([b])), deep)).toEqual([
+      "ba*c*",
+      "b",
+      "",
+      "a*c*",
+      true,
+      false,
+      false,
+    ]);
+    expect(answers(proxy(new Set([d])), plain)).toEqual([
+      "dcb",
+      "",
+      "d",
+      "dcb",
+      false,
+      false,
+      true,
+    ]);
+  });
+
+  test("a set operation observes the set and a reactive argument", async () => {
+    if (!("union" in Set.prototype)) {
+      return;
+    }
+    const mine: any = proxy(new Set([1]));
+    const theirs: any = proxy(new Set([2]));
+    const seen: number[] = [];
+    effect(() => {
+      seen.push(mine.union(theirs).size);
+    });
+    mine.add(3);
+    await waitScheduler();
+    theirs.add(4);
+    await waitScheduler();
+    expect(seen).toEqual([2, 3, 4]);
+  });
+
   test("a map proxy, or a view of one, has no add method, as a map has none", () => {
     const map: any = proxy(new Map());
     expect(map.add).toBeUndefined();

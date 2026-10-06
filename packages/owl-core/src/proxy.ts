@@ -462,7 +462,7 @@ export function observe<T extends Target>(target: T, callback: () => void): T {
     }
     const raw = toRaw(reactive);
     const type = collectionType(raw);
-    const collectionMethods = type ? methodFactories[type] : null;
+    const methodKeys = type ? collectionMethods[type] : null;
     // the functions handed out for the methods the view runs on its proxy
     let methods: Map<Function, Function> | null = null;
     const method = (value: Function, make: () => Function): Function => {
@@ -479,7 +479,7 @@ export function observe<T extends Target>(target: T, callback: () => void): T {
         // proxy, reads through it and so subscribes the callback
         const value = read(() => Reflect.get(r, key, receiver));
         if (typeof value === "function") {
-          if (collectionMethods?.has(key)) {
+          if (methodKeys?.has(key)) {
             return method(value, () =>
               key === "forEach"
                 ? (callback: Function, thisArg?: any) => {
@@ -845,65 +845,69 @@ function propertyHost(target: Target): Target {
   return host;
 }
 
-// `has` and `get`, observing the key they are asked about
-function makeHas(target: any) {
-  return (key: any) => {
-    key = toRaw(key);
-    onReadTargetKey(target, key, presenceAtoms);
-    return target.has(key);
-  };
-}
-
-function makeGet(target: any, shallow: boolean) {
-  return (key: any) => {
-    key = toRaw(key);
-    onReadTargetKey(target, key);
-    return reactiveValue(target.get(key), shallow);
-  };
+/**
+ * The method of a collection proxy that replaces the method `key` (one of
+ * collectionMethods): it observes, or notifies, the keys it touches. Eg: `has`
+ * on a proxy set observes the key it is asked about, `add` notifies it.
+ */
+function makeMethod(key: PropertyKey, target: any, shallow: boolean): Function {
+  switch (key) {
+    case "has":
+      return (item: any) => {
+        item = toRaw(item);
+        onReadTargetKey(target, item, presenceAtoms);
+        return target.has(item);
+      };
+    case "get":
+      return (item: any) => {
+        item = toRaw(item);
+        onReadTargetKey(target, item);
+        return reactiveValue(target.get(item), shallow);
+      };
+    case "add":
+    case "set":
+    case "delete":
+      return delegateAndNotify(key, target, shallow);
+    case "clear":
+      return makeClearNotifier(target);
+    case "forEach":
+      return makeForEachObserver(target, shallow);
+    case "keys":
+    case "values":
+    case "entries":
+    case Symbol.iterator:
+      return makeIteratorObserver(key, target, shallow);
+  }
+  return makeSetOperation(key as string, target);
 }
 
 /**
  * Creates an iterator method (keys, values, entries, @@iterator) that observes
  * the key list, and a Map's values as it reads them. A deep proxy yields the
  * proxies of the objects. An entry is the fresh array the raw iterator made:
- * proxying it would only subscribe its reader to atoms no write can reach.
+ * proxying it would only subscribe its reader to atoms no write can reach. A
+ * Set's members, or a Map's keys, change only by being added or removed, which
+ * the key list notifies.
  */
-function makeIteratorObserver(
-  methodName: "keys" | "values" | "entries" | typeof Symbol.iterator,
-  target: any,
-  shallow: boolean
-) {
+function makeIteratorObserver(methodName: PropertyKey, target: any, shallow: boolean) {
   const isMap = target instanceof Map;
-  if (methodName === "entries" || (methodName === Symbol.iterator && isMap)) {
-    return function* () {
-      onReadTargetKey(target, KEYCHANGES);
-      for (const entry of target.entries()) {
-        if (isMap) {
-          onReadTargetKey(target, entry[0]);
-        }
-        if (!shallow) {
-          entry[0] = reactiveValue(entry[0], false);
-          entry[1] = reactiveValue(entry[1], false);
-        }
-        yield entry;
-      }
-    };
-  }
-  if (isMap && methodName === "values") {
-    return function* () {
-      onReadTargetKey(target, KEYCHANGES);
-      for (const [key, value] of target.entries()) {
-        onReadTargetKey(target, key);
-        yield reactiveValue(value, shallow);
-      }
-    };
-  }
-  // a Set's members, or a Map's keys, change only by being added or removed,
-  // which the key list notifies
+  const entries = methodName === "entries" || (methodName === Symbol.iterator && isMap);
+  const readsValues = isMap && methodName !== "keys";
   return function* () {
     onReadTargetKey(target, KEYCHANGES);
-    for (const key of target.keys()) {
-      yield reactiveValue(key, shallow);
+    for (const item of entries || readsValues ? target.entries() : target.keys()) {
+      if (readsValues) {
+        onReadTargetKey(target, item[0]);
+      }
+      if (!entries) {
+        yield reactiveValue(readsValues ? item[1] : item, shallow);
+      } else {
+        if (!shallow) {
+          item[0] = reactiveValue(item[0], false);
+          item[1] = reactiveValue(item[1], false);
+        }
+        yield item;
+      }
     }
   };
 }
@@ -936,42 +940,6 @@ function makeForEachObserver(target: any, shallow: boolean) {
   };
 }
 
-type SetOperation =
-  | "difference"
-  | "intersection"
-  | "isDisjointFrom"
-  | "isSubsetOf"
-  | "isSupersetOf"
-  | "symmetricDifference"
-  | "union";
-
-// The keys of the set-like argument of a set operation, checked as the native
-// operation checks it (GetSetRecord): a `size` that is a number, a callable
-// `has` and `keys`. Its keys() iterator need not be iterable itself.
-function setLikeKeys(other: any): Iterator<any> {
-  if (other === null || (typeof other !== "object" && typeof other !== "function")) {
-    throw new TypeError("The argument of a set operation must be an object");
-  }
-  const size = Number(other.size);
-  if (Number.isNaN(size)) {
-    throw new TypeError("The .size property is NaN");
-  }
-  if (size < 0) {
-    throw new RangeError("The .size property must not be negative");
-  }
-  if (typeof other.has !== "function") {
-    throw new TypeError("The .has property is not callable");
-  }
-  if (typeof other.keys !== "function") {
-    throw new TypeError("The .keys property is not callable");
-  }
-  const keys = other.keys();
-  if (keys === null || typeof keys !== "object") {
-    throw new TypeError("The .keys() result is not an object");
-  }
-  return keys;
-}
-
 // The members of a set-like by their raw object: a shallow set may hold
 // proxies, a deep one yields them, and either way a member is the same member
 // as its raw object.
@@ -987,33 +955,28 @@ function membersByRaw(members: Iterator<any>): Map<any, any> {
  * Creates a version of an ES2025 Set method (union, isSubsetOf...) that reads
  * the whole membership of the set, on members compared by their raw object,
  * so that any mix of shallow, deep and plain sets answers as the raw sets
- * would; a result is a fresh, plain Set holding the members as the sets hold
- * them, or a boolean. Reading `other`'s keys through it observes a reactive
- * one.
+ * would. The native method computes it on the raw members; a set result is a
+ * fresh, plain Set holding them as the sets hold them (the target's first), in
+ * the target's order, then `other`'s. `other` is checked as the native method
+ * checks it (an empty set's isSubsetOf reads nothing else), then read through
+ * its keys() iterator, which need not be iterable: a reactive one is observed.
  */
-function makeSetOperation(name: SetOperation, target: Set<any>) {
+function makeSetOperation(name: string, target: Set<any>) {
   return (other: any) => {
-    const theirs = membersByRaw(setLikeKeys(other));
+    (new Set() as any).isSubsetOf(other);
+    const theirs = membersByRaw(other.keys());
     onReadTargetKey(target, KEYCHANGES);
     const mine = membersByRaw(target.values());
-    const notIn = (a: Map<any, any>, b: Map<any, any>) =>
-      [...a].filter(([raw]) => !b.has(raw)).map(([, member]) => member);
-    switch (name) {
-      case "union":
-        return new Set([...target, ...notIn(theirs, mine)]);
-      case "intersection":
-        return new Set([...mine].filter(([raw]) => theirs.has(raw)).map(([, member]) => member));
-      case "difference":
-        return new Set(notIn(mine, theirs));
-      case "symmetricDifference":
-        return new Set([...notIn(mine, theirs), ...notIn(theirs, mine)]);
-      case "isSubsetOf":
-        return notIn(mine, theirs).length === 0;
-      case "isSupersetOf":
-        return notIn(theirs, mine).length === 0;
-      case "isDisjointFrom":
-        return [...mine.keys()].every((raw) => !theirs.has(raw));
+    const result = (new Set(mine.keys()) as any)[name](new Set(theirs.keys()));
+    if (typeof result === "boolean") {
+      return result;
     }
+    for (const [raw, member] of theirs) {
+      if (!mine.has(raw)) {
+        mine.set(raw, member);
+      }
+    }
+    return new Set([...mine].filter(([raw]) => result.has(raw)).map(([, member]) => member));
   };
 }
 
@@ -1075,49 +1038,33 @@ function makeClearNotifier(target: Map<any, any> | Set<any>) {
   };
 }
 
-type MethodFactory = (target: any, shallow: boolean) => Function;
-
-const setMethods: [PropertyKey, MethodFactory][] = [
-  ["has", (target) => makeHas(target)],
-  ["add", (target, shallow) => delegateAndNotify("add", target, shallow)],
-  ["delete", (target, shallow) => delegateAndNotify("delete", target, shallow)],
-  ["keys", (target, shallow) => makeIteratorObserver("keys", target, shallow)],
-  ["values", (target, shallow) => makeIteratorObserver("values", target, shallow)],
-  ["entries", (target, shallow) => makeIteratorObserver("entries", target, shallow)],
-  [Symbol.iterator, (target, shallow) => makeIteratorObserver(Symbol.iterator, target, shallow)],
-  ["forEach", (target, shallow) => makeForEachObserver(target, shallow)],
-  ["clear", (target) => makeClearNotifier(target)],
+const setLikeMethods: PropertyKey[] = [
+  "has",
+  "delete",
+  "clear",
+  "forEach",
+  "keys",
+  "values",
+  "entries",
+  Symbol.iterator,
 ];
+const weakMapMethods: PropertyKey[] = ["has", "get", "set", "delete"];
 // ES2025 Set methods, where the engine has them
-const setOperations = (
-  [
-    "difference",
-    "intersection",
-    "isDisjointFrom",
-    "isSubsetOf",
-    "isSupersetOf",
-    "symmetricDifference",
-    "union",
-  ] as const
-)
-  .filter((name) => name in Set.prototype)
-  .map((name): [PropertyKey, MethodFactory] => [name, (target) => makeSetOperation(name, target)]);
-const weakMapMethods: [PropertyKey, MethodFactory][] = [
-  ["has", (target) => makeHas(target)],
-  ["get", (target, shallow) => makeGet(target, shallow)],
-  ["set", (target, shallow) => delegateAndNotify("set", target, shallow)],
-  ["delete", (target, shallow) => delegateAndNotify("delete", target, shallow)],
-];
+const setOperations = [
+  "difference",
+  "intersection",
+  "isDisjointFrom",
+  "isSubsetOf",
+  "isSupersetOf",
+  "symmetricDifference",
+  "union",
+].filter((name) => name in Set.prototype);
 
-/**
- * The methods a collection proxy replaces, by raw type: reading one returns a
- * version that observes (or notifies) the keys it touches. Eg: `has` on a proxy
- * set observes the key it is asked about, `add` notifies it.
- */
-const methodFactories: Record<CollectionRawType, Map<PropertyKey, MethodFactory>> = {
-  Set: new Map([...setMethods, ...setOperations]),
-  Map: new Map([...setMethods.filter(([key]) => key !== "add"), ...weakMapMethods]),
-  WeakMap: new Map(weakMapMethods),
+// the methods a collection proxy replaces (see makeMethod), by raw type
+const collectionMethods: Record<CollectionRawType, Set<PropertyKey>> = {
+  Set: new Set([...setLikeMethods, "add", ...setOperations]),
+  Map: new Set([...setLikeMethods, ...weakMapMethods]),
+  WeakMap: new Set(weakMapMethods),
 };
 
 /**
@@ -1129,25 +1076,23 @@ const methodFactories: Record<CollectionRawType, Map<PropertyKey, MethodFactory>
  * when first needed: most collection proxies are made, iterated and dropped.
  */
 class CollectionHandler extends BasicHandler {
-  factories: Map<PropertyKey, MethodFactory>;
+  methodKeys: Set<PropertyKey>;
   hasSize: boolean;
   methods: Map<PropertyKey, Function> | undefined = undefined;
   properties: Target | undefined = undefined;
 
   constructor(type: CollectionRawType, shallow: boolean) {
     super(shallow);
-    this.factories = methodFactories[type];
+    this.methodKeys = collectionMethods[type];
     this.hasSize = type !== "WeakMap";
   }
 
   get(target: any, key: PropertyKey, receiver: any): any {
-    const factory = this.factories.get(key);
-    if (factory) {
+    if (this.methodKeys.has(key)) {
       const methods = (this.methods ??= new Map());
       let method = methods.get(key);
       if (!method) {
-        method = factory(target, this.shallow);
-        methods.set(key, method);
+        methods.set(key, (method = makeMethod(key, target, this.shallow)));
       }
       return method;
     }
