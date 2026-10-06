@@ -123,3 +123,18 @@ test("a property already holding its value is not written again", () => {
   patch(tree, block(data()));
   expect(input.value).toBe("x");
 });
+
+test("a value is written on every patch, even when the element already reads it", () => {
+  // a number input holding a partial "1e" reads "", and setting "" clears it
+  const block = createBlock(`<input block-property-0="value"/>`);
+  const tree = block([new String("")]);
+  mount(tree, fixture);
+  const input = fixture.querySelector("input")!;
+  const writes: string[] = [];
+  Object.defineProperty(input, "value", {
+    get: () => "",
+    set: (v: string) => writes.push(v),
+  });
+  patch(tree, block([new String("")]));
+  expect(writes).toEqual([""]);
+});

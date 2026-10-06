@@ -36,10 +36,12 @@ function makePropSetter(name: string): Setter<HTMLElement> {
     // support 0, fallback to empty string for other falsy values
     const prop = value === 0 ? 0 : value ? value.valueOf() : "";
     // the compiler wraps each value in a new object so that a value the user
-    // changed is set back on every patch: the element is read instead, and
-    // written only when it differs (a reflected property such as disabled
-    // writes its attribute even when unchanged)
-    if ((this as any)[name] !== prop) {
+    // changed is set back on every patch. A flag is read first and written only
+    // when it differs (a reflected one such as disabled writes its attribute
+    // even when unchanged); a value is always written: its getter can read the
+    // same while the element shows something else (a number input holding a
+    // partial "1e" reads "")
+    if (name === "value" || (this as any)[name] !== prop) {
       (this as any)[name] = prop;
     }
   };
