@@ -296,6 +296,30 @@ function notifiedKeys(fn: () => void): string[] {
 }
 
 describe("writes", () => {
+  test("a write that fails, or creates a key with the value it inherited, notifies no reader of the value", () => {
+    Object.defineProperty(Object.prototype, "lockedEverywhere", {
+      value: 1,
+      writable: false,
+      configurable: true,
+    });
+    try {
+      const state: any = proxy({});
+      let runs = 0;
+      immediateEffect(() => {
+        state.constructor;
+        state.lockedEverywhere;
+        runs++;
+      });
+      expect(Reflect.set(state, "lockedEverywhere", 2)).toBe(false);
+      expect(runs).toBe(1);
+      state.constructor = Object;
+      expect(runs).toBe(1);
+      expect(Object.prototype.hasOwnProperty.call(toRaw(state), "constructor")).toBe(true);
+    } finally {
+      delete (Object.prototype as any).lockedEverywhere;
+    }
+  });
+
   test("a shallow array and a shallow object keep the proxy written into them", async () => {
     const item = proxy({ done: false });
     const list = signal.Array<any>([]);

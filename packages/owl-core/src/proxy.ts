@@ -725,21 +725,24 @@ function writeKey(
   const isArray = Array.isArray(target);
   const originalLength = isArray ? target.length : 0;
   const own = Reflect.getOwnPropertyDescriptor(target, key);
-  if (
-    targets.get(receiver) === target &&
-    hasOrdinaryPrototype(target) &&
-    (own !== undefined ? "value" in own : !inheritsAccessor(target, key))
-  ) {
+  if (targets.get(receiver) === target && hasOrdinaryPrototype(target)) {
     // A data property of a plain object or array written through its own
     // proxy: the engine would only come back through the proxy's
     // defineProperty trap, to define it on the target. Written on the target,
     // it costs no trap. Any other target (a class instance, which may sit
     // behind its own Proxy whose set trap tells writes apart by their
-    // receiver) is written with the reactive proxy as the receiver.
-    const ret = Reflect.set(target, key, stored);
-    const changed = !(isArray && key === "length") && !Object.is(own?.value, target[key]);
-    onWriteKey(target, key, own !== undefined, changed, isArray, originalLength, atoms);
-    return ret;
+    // receiver) is written with the reactive proxy as the receiver. A key the
+    // target does not own is compared with the value it inherits, and a write
+    // that failed changed nothing.
+    const data = own !== undefined ? ("value" in own ? own : null) : inheritedData(target, key);
+    if (data !== null) {
+      if (!Reflect.set(target, key, stored)) {
+        return false;
+      }
+      const changed = !(isArray && key === "length") && !Object.is(data.value, target[key]);
+      onWriteKey(target, key, own !== undefined, changed, isArray, originalLength, atoms);
+      return true;
+    }
   }
   // an accessor runs with the proxy as `this`, and a write through another
   // receiver defines the key on it
@@ -766,23 +769,26 @@ function hasOrdinaryPrototype(target: Target): boolean {
   return proto === Object.prototype || proto === Array.prototype || proto === null;
 }
 
-// Whether a write of a key `target` does not own reaches a setter, or a
-// proxy, up its prototype chain.
-function inheritsAccessor(target: Target, key: PropertyKey): boolean {
+const NO_PROPERTY: PropertyDescriptor = Object.freeze({ value: undefined });
+
+// The data property a write of a key `target` does not own would shadow
+// (NO_PROPERTY if none), or null when the write reaches a setter, or a proxy,
+// up the prototype chain.
+function inheritedData(target: Target, key: PropertyKey): PropertyDescriptor | null {
   for (
     let proto = Object.getPrototypeOf(target);
     proto !== null;
     proto = Object.getPrototypeOf(proto)
   ) {
     if (targets.has(proto)) {
-      return true;
+      return null;
     }
     const desc = Reflect.getOwnPropertyDescriptor(proto, key);
     if (desc !== undefined) {
-      return !("value" in desc);
+      return "value" in desc ? desc : null;
     }
   }
-  return false;
+  return NO_PROPERTY;
 }
 
 // Notifies a write of `key`: its creation, its value, and for an array its
