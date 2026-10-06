@@ -2,6 +2,7 @@ import { describe, expect, test } from "vitest";
 import {
   applyDefaults,
   assertType,
+  OwlError,
   computed,
   getDefault,
   signal,
@@ -1338,4 +1339,78 @@ test("assertType prints one large array met many times once", () => {
   }
   expect(message).toContain("[Repeated]");
   expect(message.length).toBeLessThan(500_000);
+});
+
+describe("values and schemas validation used to mishandle", () => {
+  test("a BigInt in the value is printed, and the error is an OwlError", () => {
+    let error: any;
+    try {
+      assertType({ n: 10n }, t.object({ n: t.number() }));
+    } catch (e) {
+      error = e;
+    }
+    expect(error).toBeInstanceOf(OwlError);
+    expect(error.message).toContain('"10n"');
+  });
+
+  test("a constructor or a non-function in a shape is rejected, not silently accepted", () => {
+    expect(() => validateType({ a: 1 }, t.object({ a: String as any }))).toThrow(OwlError);
+    expect(() => validateType({ a: 1 }, t.object({ a: String as any }))).toThrow(
+      "String is a constructor, not a type"
+    );
+    expect(() => validateType({ a: 1 }, t.object({ a: A as any }))).toThrow(
+      "A is a constructor, not a type"
+    );
+    expect(() => validateType({ a: 1 }, t.object({ a: null as any }))).toThrow(
+      "null is not a type"
+    );
+  });
+
+  test("a hand-written validator function is still a type", () => {
+    const even = (context: any) => {
+      if (context.value % 2) {
+        context.addIssue({ message: "odd" });
+      }
+    };
+    expect(validateType(3, even)).toEqual([{ message: "odd", path: "", received: 3 }]);
+    expect(validateType(3, even.bind(null))).toHaveLength(1);
+  });
+
+  test("a customValidator wrapping an optional type may be omitted, and is not called on undefined", () => {
+    let calls = 0;
+    const positive = t.customValidator(t.number().optional(), (n) => {
+      calls++;
+      return n! > 0;
+    });
+    expect(validateType({}, t.object({ a: positive }))).toEqual([]);
+    expect(validateType({ a: undefined }, t.object({ a: positive }))).toEqual([]);
+    expect(calls).toBe(0);
+    expect(validateType({ a: -1 }, t.object({ a: positive }))).toHaveLength(1);
+  });
+
+  test("a customValidator wrapping a defaulted type carries the default", () => {
+    const positive = t.customValidator(t.number().optional(5), (n) => n > 0);
+    expect(applyDefaults({}, t.object({ a: positive }))).toEqual({ a: 5 });
+    expect(getDefault(positive)!()).toBe(5);
+  });
+
+  test("a union member that passed after a deep failing probe does not look deep", () => {
+    const deep = t.or([t.object({ x: t.object({ y: t.number() }) }), t.any()]);
+    const both = t.and([deep, t.object({ z: t.number() })]);
+    const issues = validateType({ x: { y: "s" } }, t.or([both, t.object({ w: t.string() })]));
+    expect(issues.map((issue) => issue.message)).toEqual(["value does not match union type"]);
+  });
+
+  test("a customValidator whose type fails deep keeps that depth for an enclosing union", () => {
+    const deep = t.customValidator(t.object({ x: t.object({ y: t.number() }) }), () => true);
+    const issues = validateType({ x: { y: "s" } }, t.or([t.string(), deep]));
+    expect(issues).toEqual([{ message: "value is not a number", path: "x > y", received: "s" }]);
+  });
+
+  test("strictObject and record read the own keys of the value", () => {
+    const value = Object.create({ inherited: "x" });
+    value.own = 1;
+    expect(validateType(value, t.strictObject({ own: t.number() }))).toEqual([]);
+    expect(validateType(value, t.record(t.number()))).toEqual([]);
+  });
 });

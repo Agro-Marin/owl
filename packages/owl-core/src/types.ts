@@ -333,11 +333,17 @@ function customValidator<T>(
   validator: (value: StripBrands<T>) => boolean,
   errorMessage: string = "value does not match custom validation"
 ): Type<StripBrands<T>> {
+  // wrapping an optional type, it is optional too, with the type's default
+  const isOptional = isOptionalType(type);
   const validate = makeType(function validateCustom(context: ValidationContext) {
+    if (isOptional && context.value === undefined) {
+      return;
+    }
     const typeIssues: ValidationIssue[] = [];
-    context.withIssues(typeIssues).validate(type);
+    const typeContext = context.withIssues(typeIssues);
+    typeContext.validate(type);
     if (typeIssues.length) {
-      context.mergeIssues(typeIssues);
+      context.mergeIssues(typeIssues, typeContext.issueDepth);
       return;
     }
     if (!validator(context.value)) {
@@ -345,6 +351,13 @@ function customValidator<T>(
     }
   });
   validate[innerTypeSymbol] = type;
+  if (isOptional) {
+    validate[optionalSymbol] = true;
+    const factory = getDefault(type);
+    if (factory) {
+      validate[defaultSymbol] = factory;
+    }
+  }
   return validate;
 }
 
@@ -413,62 +426,50 @@ function literalSelection<const T extends LiteralTypes>(literals: T[]): Type<T> 
   return union(literals.map(literalType)) as any;
 }
 
-function validateObject(context: ValidationContext, schema: any, isStrict: boolean) {
-  if (typeof context.value !== "object" || Array.isArray(context.value) || context.value === null) {
-    context.addIssue({ message: "value is not an object" });
-    return;
-  }
-  if (!schema) {
-    return;
-  }
-
-  const isShape = !Array.isArray(schema);
-  let shape: Record<string, any>;
-  let keys: string[];
-  if (isShape) {
-    keys = Object.keys(schema);
-    shape = schema;
-  } else {
-    keys = schema;
-    shape = {};
+// The validator of an object schema: a shape (`{ key: type }`) or a key list.
+// Its keys are read once, not on every validation.
+function objectValidator(schema: any, isStrict: boolean) {
+  const isShape = schema && !Array.isArray(schema);
+  const keys: string[] = !schema ? [] : isShape ? Object.keys(schema) : schema;
+  const known = new Set(keys);
+  return function validateObject(context: ValidationContext) {
+    const value = context.value;
+    if (typeof value !== "object" || Array.isArray(value) || value === null) {
+      context.addIssue({ message: "value is not an object" });
+      return;
+    }
+    if (!schema) {
+      return;
+    }
+    const missingKeys: string[] = [];
     for (const key of keys) {
-      shape[key] = null;
-    }
-  }
-
-  const missingKeys: string[] = [];
-  for (const key of keys) {
-    if (context.value[key] === undefined) {
-      // optional keys (with or without a default) may be omitted
-      if (!isOptionalType(shape[key])) {
-        missingKeys.push(key);
+      if (value[key] === undefined) {
+        // optional keys (with or without a default) may be omitted
+        if (!isShape || !isOptionalType(schema[key])) {
+          missingKeys.push(key);
+        }
+        continue;
       }
-      continue;
-    }
-    if (isShape) {
-      context.withKey(key).validate(shape[key]);
-    }
-  }
-  if (missingKeys.length) {
-    context.addIssue({
-      message: "object value has missing keys",
-      missingKeys,
-    });
-  }
-  if (isStrict) {
-    const unknownKeys: string[] = [];
-    for (const key in context.value) {
-      if (!keys.includes(key)) {
-        unknownKeys.push(key);
+      if (isShape) {
+        context.withKey(key).validate(schema[key]);
       }
     }
-    if (unknownKeys.length) {
+    if (missingKeys.length) {
       context.addIssue({
-        message: "object value has unknown keys",
-        unknownKeys,
+        message: "object value has missing keys",
+        missingKeys,
       });
     }
-  }
+    if (isStrict) {
+      const unknownKeys = Object.keys(value).filter((key) => !known.has(key));
+      if (unknownKeys.length) {
+        context.addIssue({
+          message: "object value has unknown keys",
+          unknownKeys,
+        });
+      }
+    }
+  };
 }
 
 function objectType(): ShapeType<Record<string, any>, Record<string, any>>;
@@ -480,9 +481,7 @@ function objectType<Shape extends {}>(
   shape: Shape
 ): ShapeType<Shape, ResolveOptionalEntries<Shape>>;
 function objectType(schema = {}): any {
-  const validate = makeType(function validateLooseObject(context: ValidationContext) {
-    validateObject(context, schema, false);
-  });
+  const validate = makeType(objectValidator(schema, false));
   if (!Array.isArray(schema)) {
     validate[shapeSymbol] = schema;
   }
@@ -497,9 +496,7 @@ function strictObjectType<Shape extends {}>(
   shape: Shape
 ): ShapeType<Shape, ResolveOptionalEntries<Shape>>;
 function strictObjectType(schema: any): any {
-  const validate = makeType(function validateStrictObject(context: ValidationContext) {
-    validateObject(context, schema, true);
-  });
+  const validate = makeType(objectValidator(schema, true));
   if (!Array.isArray(schema)) {
     validate[shapeSymbol] = schema;
   }
@@ -532,7 +529,7 @@ function recordType(valueType?: any): any {
     if (!valueType) {
       return;
     }
-    for (const key in context.value) {
+    for (const key of Object.keys(context.value)) {
       context.withKey(key).validate(valueType);
     }
   });
@@ -578,7 +575,7 @@ function union<T extends unknown[]>(types: T): Type<StripBrands<T[number]>> {
       subIssues.push(...memberIssues);
     }
     if (deepestIssues) {
-      context.mergeIssues(deepestIssues);
+      context.mergeIssues(deepestIssues, deepest);
       return;
     }
     context.addIssue({

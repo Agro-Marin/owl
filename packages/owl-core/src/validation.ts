@@ -10,7 +10,7 @@ export interface ValidationIssue {
 export interface ValidationContext {
   addIssue(issue: ValidationIssue): void;
   issueDepth: number;
-  mergeIssues(issues: ValidationIssue[]): void;
+  mergeIssues(issues: ValidationIssue[], depth?: number): void;
   path: PropertyKey[];
   validate(type: any): void;
   value: any;
@@ -33,6 +33,9 @@ function makeSafeReplacer() {
   return function (this: object, _key: string, value: any): any {
     if (typeof value === "function") {
       return value.name || "[Function]";
+    }
+    if (typeof value === "bigint") {
+      return `${value}n`;
     }
     if (value && typeof value === "object") {
       const ctor = value.constructor;
@@ -70,16 +73,38 @@ export function assertType(
   }
 }
 
+// A schema entry that is not a validator: a constructor (OWL 2's `{ a: String
+// }` props syntax) would be called with the context and accept anything.
+const checkedTypes = new WeakMap<Function, string | null>();
+
+function typeError(type: unknown): string | null {
+  if (typeof type !== "function") {
+    return `${type === null ? "null" : typeof type} is not a type`;
+  }
+  let error = checkedTypes.get(type);
+  if (error === undefined) {
+    const source = Function.prototype.toString.call(type);
+    // a bound function prints as native code too, but has no prototype
+    const isConstructor =
+      source.startsWith("class") ||
+      (Object.hasOwn(type, "prototype") && /\{\s*\[native code\]\s*\}$/.test(source));
+    error = isConstructor
+      ? `${type.name || "an anonymous class"} is a constructor, not a type (use t.string(), t.instanceOf(...), ...)`
+      : null;
+    checkedTypes.set(type, error);
+  }
+  return error;
+}
+
+// A context for `value` at `path`. A `withKey` child reports to its parent
+// how deep below it an issue was found; a `withIssues` probe (a union member,
+// a customValidator's type) does not: its caller reads its depth, and merges
+// its issues with that depth only when it keeps them.
 function createContext(
   issues: ValidationIssue[],
   value: any,
   path: PropertyKey[],
-  parent?: ValidationContext,
-  // depth of this context's value relative to its parent: a `withKey` child is
-  // one level below, a `withIssues` probe (union member) stays at the same
-  // level. Union probe failures must not look like deep failures to an
-  // enclosing union, or it would stop trying the remaining members.
-  depthOffset = 1
+  parent?: ValidationContext
 ): ValidationContext {
   return {
     issueDepth: 0,
@@ -92,19 +117,24 @@ function createContext(
         ...issue,
       });
     },
-    mergeIssues(newIssues) {
+    mergeIssues(newIssues, depth = 0) {
       issues.push(...newIssues);
+      this.issueDepth = Math.max(this.issueDepth, depth);
     },
     validate(type: any) {
+      const error = typeError(type);
+      if (error) {
+        throw new OwlError(`Invalid schema at "${this.path.join(" > ")}": ${error}`);
+      }
       // `issues` may already hold a sibling's issues: only this call's count
       const before = issues.length;
       type(this);
       if (issues.length > before && parent) {
-        parent.issueDepth = Math.max(parent.issueDepth, this.issueDepth + depthOffset);
+        parent.issueDepth = Math.max(parent.issueDepth, this.issueDepth + 1);
       }
     },
     withIssues(issues) {
-      return createContext(issues, this.value, this.path, this, 0);
+      return createContext(issues, this.value, this.path);
     },
     withKey(key) {
       return createContext(issues, this.value[key], this.path.concat(key), this);
