@@ -602,7 +602,7 @@ exports[`t-model directive > t-model on select with a dynamic option inside a t-
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { modelExpr, zero, callTemplate } = helpers;
+  let { modelExpr, zero, zeroCtx, callTemplate } = helpers;
   const hdlr_fn1 = (ctx, ev, model) => model.set(ev.target.value);
   
   let block1 = createBlock(\`<select block-handler-0="change"><option value="a" block-attribute-1="selected">A</option><block-child-0/></select>\`);
@@ -618,8 +618,10 @@ exports[`t-model directive > t-model on select with a dynamic option inside a t-
     const bValue1 = expr1();
     let hdlr1 = [hdlr_fn1, ctx, 0, expr1];
     let attr1 = bValue1 === "a";
-    const lazyBlock1 = callBody1.bind(this, ctx);
-    const b2 = callTemplate(\`sub\`, this, app, Object.assign(Object.create(ctx), {[zero]: lazyBlock1}), node, key + \`__1\`);
+    const ctx1 = Object.create(ctx);
+    ctx1[zero] = callBody1;
+    ctx1[zeroCtx] = ctx;
+    const b2 = callTemplate(\`sub\`, this, app, ctx1, node, key + \`__1\`);
     return block1([hdlr1, attr1], [b2]);
   }
 }"
@@ -629,10 +631,10 @@ exports[`t-model directive > t-model on select with a dynamic option inside a t-
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { zero } = helpers;
+  let { zero, zeroCtx } = helpers;
   
   return function template(ctx, node, key = "") {
-    return ctx[zero] ? ctx[zero](node, key) : text("");
+    return ctx[zero] ? ctx[zero].call(this, ctx[zeroCtx], node, key) : text("");
   }
 }"
 `;

@@ -343,7 +343,7 @@ exports[`rendering semantics > works as expected for dynamic number of props 1`]
   const comp1 = createComponent(app, \`Child\`, true, false, true, []);
   
   return function template(ctx, node, key = "") {
-    return comp1(Object.assign({}, ctx['this'].state), key + \`__1\`, node, this, null);
+    return comp1({...ctx['this'].state}, key + \`__1\`, node, this, null);
   }
 }"
 `;

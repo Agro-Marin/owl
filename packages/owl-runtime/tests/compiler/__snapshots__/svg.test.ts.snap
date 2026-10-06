@@ -96,7 +96,9 @@ exports[`properly support svg > svg namespace added to sub templates if root tag
   let block1 = createBlock(\`<svg xmlns="http://www.w3.org/2000/svg"><block-child-0 xmlns=""/></svg>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = callTemplate(\`path\`, this, app, Object.assign(Object.create(ctx), {[zero]: null}), node, key + \`__1\`);
+    const ctx1 = Object.create(ctx);
+    ctx1[zero] = null;
+    const b2 = callTemplate(\`path\`, this, app, ctx1, node, key + \`__1\`);
     return block1([], [b2]);
   }
 }"

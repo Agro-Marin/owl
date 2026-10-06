@@ -246,8 +246,16 @@ exports[`t-memo > a memoized list in a template called twice keeps each call's i
   return function template(ctx, node, key = "") {
     const b3 = safeOutput(ctx['this'].state.title, key, "__1");
     const b2 = block2([], [b3]);
-    const b4 = callTemplate(\`__template__999\`, this, app, Object.assign(Object.create(ctx), {rows: ctx['this'].state.left, side: 'left', [zero]: null}), node, key + \`__2\`);
-    const b5 = callTemplate(\`__template__999\`, this, app, Object.assign(Object.create(ctx), {rows: ctx['this'].state.right, side: 'right', [zero]: null}), node, key + \`__3\`);
+    const ctx1 = Object.create(ctx);
+    ctx1["rows"] = ctx['this'].state.left;
+    ctx1["side"] = 'left';
+    ctx1[zero] = null;
+    const b4 = callTemplate(\`__template__999\`, this, app, ctx1, node, key + \`__2\`);
+    const ctx2 = Object.create(ctx);
+    ctx2["rows"] = ctx['this'].state.right;
+    ctx2["side"] = 'right';
+    ctx2[zero] = null;
+    const b5 = callTemplate(\`__template__999\`, this, app, ctx2, node, key + \`__3\`);
     return multi([b2, b4, b5]);
   }
 }"

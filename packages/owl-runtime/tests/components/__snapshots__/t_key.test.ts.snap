@@ -8,7 +8,9 @@ exports[`t-key > a t-key on the t-call node itself recreates it when the key cha
   
   return function template(ctx, node, key = "") {
     const tKey_1 = keyOf(ctx['this'].state.k);
-    return toggler(tKey_1, callTemplate(\`sub\`, this, app, Object.assign(Object.create(ctx), {[zero]: null}), node, tKey_1 + key + \`__1\`));
+    const ctx1 = Object.create(ctx);
+    ctx1[zero] = null;
+    return toggler(tKey_1, callTemplate(\`sub\`, this, app, ctx1, node, tKey_1 + key + \`__1\`));
   }
 }"
 `;
@@ -187,7 +189,9 @@ exports[`t-key > t-call under a t-key is recreated when the key changes 1`] = `
   
   return function template(ctx, node, key = "") {
     const tKey_1 = keyOf(ctx['this'].state.k);
-    return toggler(tKey_1, callTemplate(\`sub\`, this, app, Object.assign(Object.create(ctx), {[zero]: null}), node, tKey_1 + key + \`__1\`));
+    const ctx1 = Object.create(ctx);
+    ctx1[zero] = null;
+    return toggler(tKey_1, callTemplate(\`sub\`, this, app, ctx1, node, tKey_1 + key + \`__1\`));
   }
 }"
 `;
@@ -407,8 +411,14 @@ exports[`t-key > t-key on multiple Components with t-call 1 1`] = `
   let block1 = createBlock(\`<span><block-child-0/><block-child-1/></span>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = callTemplate(\`calledTemplate\`, this, app, Object.assign(Object.create(ctx), {key: ctx['this'].key1, [zero]: null}), node, key + \`__1\`);
-    const b3 = callTemplate(\`calledTemplate\`, this, app, Object.assign(Object.create(ctx), {key: ctx['this'].key2, [zero]: null}), node, key + \`__2\`);
+    const ctx1 = Object.create(ctx);
+    ctx1["key"] = ctx['this'].key1;
+    ctx1[zero] = null;
+    const b2 = callTemplate(\`calledTemplate\`, this, app, ctx1, node, key + \`__1\`);
+    const ctx2 = Object.create(ctx);
+    ctx2["key"] = ctx['this'].key2;
+    ctx2[zero] = null;
+    const b3 = callTemplate(\`calledTemplate\`, this, app, ctx2, node, key + \`__2\`);
     return block1([], [b2, b3]);
   }
 }"
@@ -452,7 +462,11 @@ exports[`t-key > t-key on multiple Components with t-call 2 1`] = `
   let block1 = createBlock(\`<span><block-child-0/></span>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = callTemplate(\`calledTemplate\`, this, app, Object.assign(Object.create(ctx), {'key1': ctx['this'].key1, 'key2': ctx['this'].key2, [zero]: null}), node, key + \`__1\`);
+    const ctx1 = Object.create(ctx);
+    ctx1["key1"] = ctx['this'].key1;
+    ctx1["key2"] = ctx['this'].key2;
+    ctx1[zero] = null;
+    const b2 = callTemplate(\`calledTemplate\`, this, app, ctx1, node, key + \`__1\`);
     return block1([], [b2]);
   }
 }"

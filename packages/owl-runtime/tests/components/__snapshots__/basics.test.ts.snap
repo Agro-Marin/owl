@@ -197,7 +197,9 @@ exports[`basics > can inject values in tagged templates 1`] = `
   let { zero, callTemplate } = helpers;
   
   return function template(ctx, node, key = "") {
-    return callTemplate(\`__template__999\`, this, app, Object.assign(Object.create(ctx), {[zero]: null}), node, key + \`__1\`);
+    const ctx1 = Object.create(ctx);
+    ctx1[zero] = null;
+    return callTemplate(\`__template__999\`, this, app, ctx1, node, key + \`__1\`);
   }
 }"
 `;
@@ -1121,7 +1123,7 @@ exports[`basics > update props of component without concrete own node 1`] = `
   
   return function template(ctx, node, key = "") {
     const tKey_1 = keyOf(ctx['this'].childProps.key);
-    const b2 = toggler(tKey_1, comp1(Object.assign({}, ctx['this'].childProps), tKey_1 + key + \`__1\`, node, this, null));
+    const b2 = toggler(tKey_1, comp1({...ctx['this'].childProps}, tKey_1 + key + \`__1\`, node, this, null));
     return block1([], [b2]);
   }
 }"

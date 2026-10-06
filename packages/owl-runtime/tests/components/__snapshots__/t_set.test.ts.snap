@@ -19,7 +19,7 @@ exports[`t-set > slot setted value (with t-set) not accessible with t-out 1`] = 
     ctx = Object.create(ctx);
     ctx["iter"] = 'source';
     const b2 = safeOutput(ctx['iter'], key, "__1");
-    const b3 = comp1({slots: markRaw({"default": {__render: slot1.bind(this), __ctx: ctx}})}, key + \`__2\`, node, this, null);
+    const b3 = comp1({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`__2\`, node, this, null);
     const b4 = safeOutput(ctx['iter'], key, "__3");
     return block1([], [b2, b3, b4]);
   }
@@ -65,7 +65,7 @@ exports[`t-set > slots with a t-set with a component in body 1`] = `
   }
   
   return function template(ctx, node, key = "") {
-    return comp2({slots: markRaw({"default": {__render: slot1.bind(this), __ctx: ctx}})}, key + \`__3\`, node, this, null);
+    return comp2({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`__3\`, node, this, null);
   }
 }"
 `;
@@ -78,7 +78,7 @@ exports[`t-set > slots with a t-set with a component in body 2`] = `
   
   return function template(ctx, node, key = "") {
     const b2 = text(\`Child \`);
-    const b3 = callSlot(ctx, node, key, "default", false, {});
+    const b3 = callSlot(ctx, node, key, "default", false, null);
     return multi([b2, b3]);
   }
 }"
@@ -120,7 +120,7 @@ exports[`t-set > slots with an t-set with a component in body 1`] = `
   }
   
   return function template(ctx, node, key = "") {
-    return comp2({slots: markRaw({"default": {__render: slot1.bind(this), __ctx: ctx}})}, key + \`__3\`, node, this, null);
+    return comp2({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`__3\`, node, this, null);
   }
 }"
 `;
@@ -133,7 +133,7 @@ exports[`t-set > slots with an t-set with a component in body 2`] = `
   
   return function template(ctx, node, key = "") {
     const b2 = text(\`Blorg \`);
-    const b3 = callSlot(ctx, node, key, "default", false, {});
+    const b3 = callSlot(ctx, node, key, "default", false, null);
     return multi([b2, b3]);
   }
 }"
@@ -169,7 +169,7 @@ exports[`t-set > slots with an unused t-set with a component in body 1`] = `
   }
   
   return function template(ctx, node, key = "") {
-    return comp2({slots: markRaw({"default": {__render: slot1.bind(this), __ctx: ctx}})}, key + \`__2\`, node, this, null);
+    return comp2({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`__2\`, node, this, null);
   }
 }"
 `;
@@ -182,7 +182,7 @@ exports[`t-set > slots with an unused t-set with a component in body 2`] = `
   
   return function template(ctx, node, key = "") {
     const b2 = text(\`Child \`);
-    const b3 = callSlot(ctx, node, key, "default", false, {});
+    const b3 = callSlot(ctx, node, key, "default", false, null);
     return multi([b2, b3]);
   }
 }"

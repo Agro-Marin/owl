@@ -245,7 +245,9 @@ exports[`.signal suffix: one signal per child > a .signal in a template and one 
   
   return function template(ctx, node, key = "") {
     const b2 = comp1({v: 'main'}, key + \`__1\`, node, this, null);
-    const b3 = callTemplate(\`sub\`, this, app, Object.assign(Object.create(ctx), {[zero]: null}), node, key + \`__2\`);
+    const ctx1 = Object.create(ctx);
+    ctx1[zero] = null;
+    const b3 = callTemplate(\`sub\`, this, app, ctx1, node, key + \`__2\`);
     return block1([], [b2, b3]);
   }
 }"
@@ -292,7 +294,7 @@ exports[`.signal suffix: one signal per child > a .signal in slot content and on
   }
   
   return function template(ctx, node, key = "") {
-    return comp2({slots: markRaw({"default": {__render: slot1.bind(this), __ctx: ctx}})}, key + \`__2\`, node, this, null);
+    return comp2({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`__2\`, node, this, null);
   }
 }"
 `;
@@ -308,7 +310,7 @@ exports[`.signal suffix: one signal per child > a .signal in slot content and on
   
   return function template(ctx, node, key = "") {
     const b2 = comp1({v: 'child'}, key + \`__1\`, node, this, null);
-    const b3 = callSlot(ctx, node, key, "default", false, {});
+    const b3 = callSlot(ctx, node, key, "default", false, null);
     return block1([], [b2, b3]);
   }
 }"
@@ -378,8 +380,14 @@ exports[`.signal suffix: one signal per child > a template with a .signal called
   let block1 = createBlock(\`<div><block-child-0/><block-child-1/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = callTemplate(\`sub\`, this, app, Object.assign(Object.create(ctx), {x: ctx['this'].state.a, [zero]: null}), node, key + \`__1\`);
-    const b3 = callTemplate(\`sub\`, this, app, Object.assign(Object.create(ctx), {x: ctx['this'].state.b, [zero]: null}), node, key + \`__2\`);
+    const ctx1 = Object.create(ctx);
+    ctx1["x"] = ctx['this'].state.a;
+    ctx1[zero] = null;
+    const b2 = callTemplate(\`sub\`, this, app, ctx1, node, key + \`__1\`);
+    const ctx2 = Object.create(ctx);
+    ctx2["x"] = ctx['this'].state.b;
+    ctx2[zero] = null;
+    const b3 = callTemplate(\`sub\`, this, app, ctx2, node, key + \`__2\`);
     return block1([], [b2, b3]);
   }
 }"
@@ -1189,7 +1197,7 @@ exports[`default props don't cause spurious updates with t-props 1`] = `
     let hdlr1 = [hdlr_fn1, ctx];
     const b3 = safeOutput(ctx['this'].v(), key, "__1");
     const b2 = block2([hdlr1], [b3]);
-    const b4 = comp1(Object.assign({}, ctx['this'].makeProps()), key + \`__2\`, node, this, null);
+    const b4 = comp1({...ctx['this'].makeProps()}, key + \`__2\`, node, this, null);
     return multi([b2, b4]);
   }
 }"
@@ -1356,7 +1364,7 @@ exports[`reactive props (issue #1908) > props() tracks new and deleted keys from
   const comp1 = createComponent(app, \`Child\`, true, false, true, []);
   
   return function template(ctx, node, key = "") {
-    return comp1(Object.assign({}, ctx['this'].childProps()), key + \`__1\`, node, this, null);
+    return comp1({...ctx['this'].childProps()}, key + \`__1\`, node, this, null);
   }
 }"
 `;
@@ -1549,7 +1557,7 @@ exports[`schema-less view key set > a computed over a key read before it existed
   const comp1 = createComponent(app, \`Child\`, true, false, true, []);
   
   return function template(ctx, node, key = "") {
-    return comp1(Object.assign({}, ctx['this'].p()), key + \`__1\`, node, this, null);
+    return comp1({...ctx['this'].p()}, key + \`__1\`, node, this, null);
   }
 }"
 `;
@@ -1577,7 +1585,7 @@ exports[`schema-less view key set > a computed over a key that disappears sees u
   const comp1 = createComponent(app, \`Child\`, true, false, true, []);
   
   return function template(ctx, node, key = "") {
-    return comp1(Object.assign({}, ctx['this'].p()), key + \`__1\`, node, this, null);
+    return comp1({...ctx['this'].p()}, key + \`__1\`, node, this, null);
   }
 }"
 `;
@@ -1605,7 +1613,7 @@ exports[`schema-less view key set > a computed over the key list follows keys ad
   const comp1 = createComponent(app, \`Child\`, true, false, true, []);
   
   return function template(ctx, node, key = "") {
-    return comp1(Object.assign({}, ctx['this'].p()), key + \`__1\`, node, this, null);
+    return comp1({...ctx['this'].p()}, key + \`__1\`, node, this, null);
   }
 }"
 `;
@@ -1633,7 +1641,7 @@ exports[`schema-less view key set > a key list first read after the keys changed
   const comp1 = createComponent(app, \`Child\`, true, false, true, []);
   
   return function template(ctx, node, key = "") {
-    return comp1(Object.assign({}, ctx['this'].p()), key + \`__1\`, node, this, null);
+    return comp1({...ctx['this'].p()}, key + \`__1\`, node, this, null);
   }
 }"
 `;

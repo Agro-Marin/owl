@@ -799,6 +799,7 @@ export class CodeGenerator {
 
   compileZero(ast: ASTTOut, ctx: Context) {
     this.helpers.add("zero");
+    this.helpers.add("zeroCtx");
     const isMultiple = this.slotNames.has(zero);
     this.slotNames.add(zero);
     const key = this.scopeKey(ctx, isMultiple);
@@ -808,7 +809,9 @@ export class CodeGenerator {
       const name = this.compileInNewTarget("defaultContent", bodyAst, ctx);
       defaultContent = `${name}.call(this, ctx, node, ${key})`;
     }
-    return `ctx[zero] ? ctx[zero](node, ${key}) : ${defaultContent}`;
+    // a t-call body is static: the context it runs in is the caller's, which
+    // the call stores beside it; its owner is the caller's, which is this one's
+    return `ctx[zero] ? ctx[zero].call(this, ctx[zeroCtx], node, ${key}) : ${defaultContent}`;
   }
 
   compileTOut(ast: ASTTOut, ctx: Context): string {
@@ -840,14 +843,17 @@ export class CodeGenerator {
         keyArgs = `${this.scopeKey(ctx, false, site)}, ""`;
       }
       const expr = compileExpr(ast.expr);
+      this.helpers.add("safeOutput");
       if (ast.body) {
         const bodyAst: AST = { type: ASTType.Multi, content: ast.body };
         const name = this.compileInNewTarget("defaultContent", bodyAst, ctx);
         const key = this.scopeKey(ctx, false, site);
-        this.helpers.add("safeOutputOr");
-        blockStr = `safeOutputOr(${expr}, () => ${name}.call(this, ctx, node, ${key}), ${keyArgs})`;
+        const value = this.generateId("out");
+        this.define(value, expr);
+        blockStr =
+          `${value} === undefined || ${value} === null ? toggler("default", ${name}.call(this, ctx, node, ${key}))` +
+          ` : safeOutput(${value}, ${keyArgs})`;
       } else {
-        this.helpers.add("safeOutput");
         blockStr = `safeOutput(${expr}, ${keyArgs})`;
       }
     }
@@ -1079,36 +1085,48 @@ export class CodeGenerator {
   compileTCall(ast: ASTTCall, ctx: Context): string {
     let { block } = ctx;
 
-    const attrs: string[] = ast.attrs
-      ? this.formatPropObject(ast.attrs, ast.attrsTranslationCtx, ctx)
-      : [];
+    const attrs = ast.attrs ? this.propEntries(ast.attrs, ast.attrsTranslationCtx, ctx) : [];
     const isDynamic = isInterpolated(ast.name);
     const subTemplate = isDynamic ? interpolate(ast.name) : toStringExpression(ast.name);
     block = this.createBlock(block, "multi");
+    // the body is a static function: the called template's t-out="0" runs it
+    // in the context stored beside it, with its own `this`, which is the
+    // caller's (callTemplate passes it on)
+    const zero: [string, string][] = [];
     if (ast.body) {
       const name = this.compileInNewTarget("callBody", ast.body, ctx);
-      const zeroStr = this.generateId("lazyBlock");
-      this.define(zeroStr, `${name}.bind(this, ctx)`);
       this.helpers.add("zero");
-      attrs.push(`[zero]: ${zeroStr}`);
+      this.helpers.add("zeroCtx");
+      zero.push(["[zero]", name], ["[zeroCtx]", "ctx"]);
     } else if (!ast.context) {
       // a call without a body must not let the called template see the 0 of
       // the template that calls it
       this.helpers.add("zero");
-      attrs.push(`[zero]: null`);
+      zero.push(["[zero]", "null"]);
     }
 
     let ctxExpr: string;
-    const ctxString = `{${attrs.join(", ")}}`;
     if (ast.context) {
       const dynCtxVar = this.generateId("ctx");
       this.addLine(`const ${dynCtxVar} = ${compileExpr(ast.context)};`);
       // the context is the called template's `this`, and its keys are also its
       // variables: Odoo's arch templates read `record`, `__comp__`... by name
-      const extra = attrs.length ? `, ${ctxString}` : "";
-      ctxExpr = `Object.assign({}, ${dynCtxVar}, {this: ${dynCtxVar}}${extra})`;
+      const entries = [
+        `this: ${dynCtxVar}`,
+        ...attrs.map(([name, value]) => `${propKey(name)}: ${value}`),
+        ...zero.map(([key, value]) => `${key}: ${value}`),
+      ];
+      ctxExpr = `Object.assign({}, ${dynCtxVar}, {${entries.join(", ")}})`;
     } else {
-      ctxExpr = `Object.assign(Object.create(ctx), ${ctxString})`;
+      // assigned one by one, as Object.assign would, without a literal to copy
+      ctxExpr = this.generateId("ctx");
+      this.define(ctxExpr, `Object.create(ctx)`);
+      for (const [name, value] of attrs) {
+        this.addLine(`${ctxExpr}[${JSON.stringify(name)}] = ${value};`);
+      }
+      for (const [key, value] of zero) {
+        this.addLine(`${ctxExpr}${key} = ${value};`);
+      }
     }
     const key = this.scopeKey(ctx, true);
     this.helpers.add("callTemplate");
@@ -1192,6 +1210,20 @@ export class CodeGenerator {
     attrsTranslationCtx: { [name: string]: string } | null,
     ctx: Context
   ): string {
+    const [key, code] = this.propEntry(name, value, attrsTranslationCtx, ctx);
+    return `${propKey(key)}: ${code}`;
+  }
+
+  /**
+   * The name a prop or t-call attribute `name` (suffix stripped) defines, and
+   * the code of its value.
+   */
+  propEntry(
+    name: string,
+    value: string,
+    attrsTranslationCtx: { [name: string]: string } | null,
+    ctx: Context
+  ): [string, string] {
     if (name.endsWith(".translate")) {
       const attrTranslationCtx = attrsTranslationCtx?.[name] || ctx.translationCtx;
       value = toStringExpression(ctx.translate ? this.translate(value, attrTranslationCtx) : value);
@@ -1212,7 +1244,7 @@ export class CodeGenerator {
           throw new OwlError(`Invalid prop suffix: ${suffix}`);
       }
     }
-    return `${propKey(name)}: ${value || undefined}`;
+    return [name, value || "undefined"];
   }
 
   formatPropObject(
@@ -1223,14 +1255,18 @@ export class CodeGenerator {
     return Object.entries(obj).map(([k, v]) => this.formatProp(k, v, attrsTranslationCtx, ctx));
   }
 
+  propEntries(
+    obj: { [prop: string]: any },
+    attrsTranslationCtx: { [name: string]: string } | null,
+    ctx: Context
+  ): [string, string][] {
+    return Object.entries(obj).map(([k, v]) => this.propEntry(k, v, attrsTranslationCtx, ctx));
+  }
+
   getPropString(props: string[], dynProps: string | null): string {
-    let propString = `{${props.join(",")}}`;
-    if (dynProps) {
-      propString = `Object.assign({}, ${compileExpr(dynProps)}${
-        props.length ? ", " + propString : ""
-      })`;
-    }
-    return propString;
+    // spread, not Object.assign: no literal of the static props to copy
+    const entries = dynProps ? [`...${compileExpr(dynProps)}`, ...props] : props;
+    return `{${entries.join(",")}}`;
   }
 
   compileComponent(ast: ASTComponent, ctx: Context): string {
@@ -1280,7 +1316,8 @@ export class CodeGenerator {
         const params = [];
         if (slotAst.content) {
           const name = this.compileInNewTarget("slot", slotAst.content, ctx, slotAst.on);
-          params.push(`__render: ${name}.bind(this), __ctx: ctx`);
+          // static: callSlot runs it with the owner the descriptor carries
+          params.push(`__render: ${name}, __ctx: ctx, __owner: this`);
         }
         const scope = ast.slots[slotName].scope;
         if (scope) {
@@ -1395,10 +1432,12 @@ export class CodeGenerator {
     const key = this.scopeKey(ctx, isMultiple);
 
     const props = ast.attrs ? this.formatPropObject(attrs, ast.attrsTranslationCtx, ctx) : [];
-    const scope = this.getPropString(props, dynProps);
+    // a slot scope without attributes is an object callSlot makes when the
+    // slot declares a scope
+    const scope = props.length || dynProps ? this.getPropString(props, dynProps) : "null";
     if (ast.defaultContent) {
       const name = this.compileInNewTarget("defaultContent", ast.defaultContent, ctx);
-      blockString = `callSlot(ctx, node, ${key}, ${slotName}, ${dynamic}, ${scope}, ${name}.bind(this))`;
+      blockString = `callSlot(ctx, node, ${key}, ${slotName}, ${dynamic}, ${scope}, ${name}, this)`;
     } else {
       if (dynamic) {
         let name = this.generateId("slot");

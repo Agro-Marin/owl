@@ -31,6 +31,14 @@ function withDefault(value: any, defaultValue: any): any {
   return value === undefined || value === null || value === false ? defaultValue : value;
 }
 
+/**
+ * Renders the slot `name` of the component of `ctx`. A slot descriptor is
+ * data: its static render function (`__render`), the context it was written
+ * in (`__ctx`) and the `this` of the template that wrote it (`__owner`), its
+ * slot scope name (`__scope`) and its attributes. `extra` is the scope the
+ * call site gives (null without attributes); a default content is a static
+ * function too, run with `owner`, the `this` of the calling template.
+ */
 function callSlot(
   ctx: any,
   parent: any,
@@ -38,23 +46,27 @@ function callSlot(
   name: string,
   dynamic: boolean,
   extra: any,
-  defaultContent?: (ctx: any, node: any, key: string) => BDom
+  defaultContent?: (ctx: any, node: any, key: string) => BDom,
+  owner?: any
 ): BDom {
   key = key + "__slot_" + name;
-  const slots = ctx.__owl__.props.slots || {};
-  const { __render, __ctx, __scope } = slots[name] || {};
-  const slotScope = ObjectCreate(__ctx || {});
-  if (__scope) {
-    slotScope[__scope] = extra;
+  const slots = ctx.__owl__.props.slots;
+  const slot = slots && slots[name];
+  let slotBDom: BDom | null = null;
+  if (slot && slot.__render) {
+    const slotCtx = ObjectCreate(slot.__ctx || {});
+    if (slot.__scope) {
+      slotCtx[slot.__scope] = extra || {};
+    }
+    slotBDom = slot.__render.call(slot.__owner, slotCtx, parent, key);
   }
-  const slotBDom = __render ? __render(slotScope, parent, key) : null;
   if (defaultContent) {
     let child1: BDom | undefined = undefined;
     let child2: BDom | undefined = undefined;
     if (slotBDom) {
       child1 = dynamic ? toggler(name, slotBDom) : slotBDom;
     } else {
-      child2 = defaultContent(ctx, parent, key);
+      child2 = defaultContent.call(owner, ctx, parent, key);
     }
     return multi([child1, child2]);
   }
@@ -223,25 +235,6 @@ export function safeOutput(
     block = text(value);
   }
   return toggler(safeKey, block);
-}
-
-/*
- * safeOutput, with a default content for a missing value
- */
-function safeOutputOr(
-  value: any,
-  defaultContent: () => BDom,
-  key: string,
-  site: string,
-  depth?: number,
-  k1?: any,
-  k2?: any,
-  k3?: any
-): ReturnType<typeof toggler> {
-  if (value === undefined || value === null) {
-    return toggler("default", defaultContent());
-  }
-  return safeOutput(value, key, site, depth, k1, k2, k3);
 }
 
 function createRef(ref: any, node: ComponentNode) {
@@ -570,6 +563,10 @@ function createComponent<P extends Record<string, any>>(
   };
 }
 
+// the 0 of a t-call body (helpers.zero), and the context the body runs in
+const zero = Symbol("zero");
+const zeroCtx = Symbol("zeroCtx");
+
 function callTemplate(
   subTemplate: string,
   owner: any,
@@ -600,7 +597,8 @@ function checkTagName(tag: unknown): unknown {
 export const helpers = {
   withDefault,
   checkTagName,
-  zero: Symbol("zero"),
+  zero,
+  zeroCtx,
   callSlot,
   withKey,
   keyOf,
@@ -608,7 +606,6 @@ export const helpers = {
   toNumber,
   LazyValue,
   safeOutput,
-  safeOutputOr,
   createCatcher,
   markRaw,
   OwlError,

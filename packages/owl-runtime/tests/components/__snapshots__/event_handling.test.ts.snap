@@ -221,7 +221,7 @@ exports[`event handling > unnamed slot should call the event only once 1`] = `
   
   return function template(ctx, node, key = "") {
     const hdlr1 = [hdlr_fn1, ctx];
-    return catcher1(comp1({slots: markRaw({"named": {__render: slot1.bind(this), __ctx: ctx}, "default": {__render: slot2.bind(this), __ctx: ctx}})}, key + \`__1\`, node, this, null), [hdlr1]);
+    return catcher1(comp1({slots: markRaw({"named": {__render: slot1, __ctx: ctx, __owner: this}, "default": {__render: slot2, __ctx: ctx, __owner: this}})}, key + \`__1\`, node, this, null), [hdlr1]);
   }
 }"
 `;
@@ -233,8 +233,8 @@ exports[`event handling > unnamed slot should call the event only once 2`] = `
   let { callSlot } = helpers;
   
   return function template(ctx, node, key = "") {
-    const b2 = callSlot(ctx, node, key, "named", false, {});
-    const b3 = callSlot(ctx, node, key, "default", false, {});
+    const b2 = callSlot(ctx, node, key, "named", false, null);
+    const b3 = callSlot(ctx, node, key, "default", false, null);
     return multi([b2, b3]);
   }
 }"
