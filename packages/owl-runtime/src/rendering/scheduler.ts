@@ -88,6 +88,14 @@ export class Scheduler {
       return;
     }
     this.processing = true;
+    try {
+      this.runTasks();
+    } finally {
+      this.processing = false;
+    }
+  }
+
+  private runTasks() {
     this.frame = 0;
     let failed = false;
     if (debug.scheduler) {
@@ -143,6 +151,5 @@ export class Scheduler {
     if (!this.tasks.size) {
       Scheduler.active.delete(this);
     }
-    this.processing = false;
   }
 }

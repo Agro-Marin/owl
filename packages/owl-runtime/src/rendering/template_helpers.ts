@@ -463,8 +463,6 @@ function createComponent<P extends Record<string, any>>(
     };
   }
 
-  const initiateRender = ComponentNode.prototype.initiateRender;
-
   return (props: P, key: string, ctx: ComponentNode, parent: any, C: any) => {
     if (isDynamic) {
       key = classKey(C) + key;
@@ -512,16 +510,7 @@ function createComponent<P extends Record<string, any>>(
       }
       // only in the render's children: the node joins ctx.childMap once
       // that render is committed
-      const fiber = new Fiber(node, parentFiber);
-      if (node.willStart.length) {
-        initiateRender.call(node, fiber);
-      } else {
-        node.fiber = fiber;
-        if (node.mounted.length) {
-          fiber.root!.mounted.push(fiber);
-        }
-        fiber.render();
-      }
+      node.start(new Fiber(node, parentFiber));
     }
     (parentFiber.childrenMap ||= new Map()).set(key, node);
     memoCollectChild(key);

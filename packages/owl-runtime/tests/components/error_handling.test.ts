@@ -192,7 +192,7 @@ describe("basics", () => {
   });
 
   test("currentComputation does not leak when a willStart promise rejects after await", async () => {
-    // initiateRender captures the parent's signalComputation as `prev` before
+    // awaitWillStart captures the parent's signalComputation as `prev` before
     // running willStart. If the willStart promise rejects post-await, the
     // catch must NOT restore currentComputation to `prev` — by then we are in
     // a fresh microtask and `prev` is stale; pinning currentComputation to it

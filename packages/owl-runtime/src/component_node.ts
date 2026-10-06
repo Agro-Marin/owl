@@ -17,14 +17,7 @@ import type { App } from "./app";
 import { BDom, RefCallback, VNode } from "./blockdom";
 import { Component, ComponentConstructor } from "./component";
 import { fibersInError, handleError, handleHookRejection } from "./rendering/error_handling";
-import {
-  APPLIED_TO_DOM,
-  Fiber,
-  FiberPhase,
-  makeRootFiber,
-  MountFiber,
-  RootFiber,
-} from "./rendering/fibers";
+import { APPLIED_TO_DOM, Fiber, FiberPhase, makeRootFiber, RootFiber } from "./rendering/fibers";
 import type { MemoSite } from "./rendering/memo";
 import { STATUS } from "./status";
 
@@ -183,11 +176,23 @@ export class ComponentNode extends Scope implements VNode<ComponentNode> {
     return f.bind(component, scope);
   }
 
-  async initiateRender(fiber: Fiber | MountFiber) {
+  /**
+   * Starts this node's first render, as `fiber`: once its onWillStart hooks
+   * have settled, if it has some.
+   */
+  start(fiber: Fiber) {
     this.fiber = fiber;
     if (this.mounted.length) {
       fiber.root!.mounted.push(fiber);
     }
+    if (this.willStart.length) {
+      this.awaitWillStart(fiber);
+    } else {
+      fiber.render();
+    }
+  }
+
+  private async awaitWillStart(fiber: Fiber) {
     const component = this.component;
     if (debug.lifecycle) {
       debugLog("lifecycle", `willStart ${this.componentName}: ${this.willStart.length} hook(s)`);
@@ -405,17 +410,7 @@ export class ComponentNode extends Scope implements VNode<ComponentNode> {
       // if we get here, this is the component that handled the error and rerendered
       // itself, so we can simply patch the dom: what the new render dropped is
       // destroyed by the patch, and must leave the children map with it
-      this.childMap = this.fiber!.childrenMap;
-      removalDepth++;
-      try {
-        this.bdom!.patch(this.fiber!.bdom, true);
-      } finally {
-        removalDepth--;
-      }
-      this.sweepRefs();
-      sweepRemovedRefs();
-      this.fiber!.renderState |= APPLIED_TO_DOM;
-      this.fiber = null;
+      this._patch(true);
     }
   }
 
@@ -480,13 +475,12 @@ export class ComponentNode extends Scope implements VNode<ComponentNode> {
       this._patch();
     }
   }
-  _patch() {
-    const hasChildren = !!this.childMap?.size;
+  _patch(withBeforeRemove: boolean = !!this.childMap?.size) {
     const fiber = this.fiber!;
     this.childMap = fiber.childrenMap;
     removalDepth++;
     try {
-      this.bdom!.patch(fiber.bdom!, hasChildren);
+      this.bdom!.patch(fiber.bdom!, withBeforeRemove);
     } finally {
       removalDepth--;
     }

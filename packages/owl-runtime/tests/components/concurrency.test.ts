@@ -4296,11 +4296,11 @@ test("component destroyed just after render", async () => {
 
 // When a component has no willStart hook, the rendering takes a fast path that
 // renders the template synchronously during the parent's template execution,
-// skipping the microtick from initiateRender. Owl does not guarantee a specific
+// skipping the microtick from awaitWillStart. Owl does not guarantee a specific
 // rendering order for siblings. This test documents the current behavior.
 
 test("sibling rendering: child without willStart renders before async sibling", async () => {
-  // ChildA has willStart (async path): goes through initiateRender which yields
+  // ChildA has willStart (async path): goes through awaitWillStart which yields
   // a microtick before rendering the template.
   // ChildB has no willStart (fast path): renders synchronously during the
   // parent's template execution.
@@ -4308,7 +4308,7 @@ test("sibling rendering: child without willStart renders before async sibling", 
   // itself runs after a microtick), so neither template has executed before
   // the first microtick boundary. But within the same microtask, ChildB (fast
   // path) renders its template before ChildA (async path) because ChildA
-  // needs an additional microtick from initiateRender's await.
+  // needs an additional microtick from awaitWillStart's await.
   class ChildA extends Component {
     static template = xml`<span t-out="this.log()"/>`;
     log() {
@@ -4342,9 +4342,9 @@ test("sibling rendering: child without willStart renders before async sibling", 
 
   await prom;
   // ChildB's template executes before ChildA's: ChildB renders synchronously
-  // (fast path) while ChildA waits for an extra microtick from initiateRender.
+  // (fast path) while ChildA waits for an extra microtick from awaitWillStart.
   // Without the fast path optimization, ChildA's template would execute first
-  // (template order) since both would go through initiateRender.
+  // (template order) since both would go through awaitWillStart.
   expect(steps.splice(0)).toMatchInlineSnapshot(`
     [
       "A:template",
@@ -4416,7 +4416,7 @@ test("slot content renders after microtick when child has willStart", async () =
 
   await mount(Parent, fixture);
   // Sibling renders first (fast path), then Child renders after the
-  // microtick from initiateRender, which includes the slot content.
+  // microtick from awaitWillStart, which includes the slot content.
   expect(steps.splice(0)).toMatchInlineSnapshot(`
     [
       "sibling:template",

@@ -231,18 +231,10 @@ export class App extends TemplateSet {
         // root renders, so plugin state is populated during first render.
         node.willStart.unshift(() => this.pluginManager.ready);
       }
-      if (node.willStart.length) {
-        node.initiateRender(fiber);
-      } else {
-        node.fiber = fiber;
-        if (node.mounted.length) {
-          fiber.root!.mounted.push(fiber);
-        }
-        try {
-          fiber.render();
-        } catch (e) {
-          reject(e);
-        }
+      try {
+        node.start(fiber);
+      } catch (e) {
+        reject(e);
       }
       return preparedPromise;
     };

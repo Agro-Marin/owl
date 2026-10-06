@@ -91,7 +91,7 @@ function recycleFiber(node: ComponentNode, current: Fiber, root: RootFiber): Fib
   // a fiber that never rendered (its onWillStart or onWillUpdateProps
   // failed) is still counted from its creation
   const rendered = current.phase === FiberPhase.NEW ? 0 : 1;
-  root.setCounter(root.counter + rendered - cancelFibers(current.children));
+  root.counter += rendered - cancelFibers(current.children);
   root.locked = false;
   current.children = [];
   current.childrenMap = null;
@@ -132,10 +132,6 @@ function recycleFiber(node: ComponentNode, current: Fiber, root: RootFiber): Fib
   return current;
 }
 
-function throwOnRender() {
-  throw new OwlError("Attempted to render cancelled fiber");
-}
-
 // Host component node of each sub-root node (Portal/Suspense content), seeded
 // by createRoot. Sparse metadata kept out of ComponentNode itself (same
 // pattern as nodeErrorHandlers): only sub-roots have entries, and they are
@@ -162,7 +158,6 @@ function cancelFibers(fibers: Fiber[]): number {
   let result = 0;
   for (let fiber of fibers) {
     let node = fiber.node;
-    fiber.render = throwOnRender;
     if (node.status === STATUS.NEW) {
       node._destroy();
     }
@@ -214,7 +209,7 @@ export class Fiber {
     if (parent) {
       this.deep = parent.deep;
       const root = parent.root!;
-      root.setCounter(root.counter + 1);
+      root.counter++;
       this.root = root;
       parent.children.push(this);
     } else {
@@ -397,13 +392,6 @@ export class RootFiber extends Fiber {
     const failed = callCommitHooks(this.mounted, "mounted");
     if (failed !== null) {
       callCommitHooks(this.patched, "patched", failed);
-    }
-  }
-
-  setCounter(newValue: number) {
-    this.counter = newValue;
-    if (newValue === 0) {
-      this.node.app.scheduler.flush();
     }
   }
 }
