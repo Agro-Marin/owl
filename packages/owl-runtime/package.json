@@ -2,28 +2,21 @@
   "name": "@odoo/owl-runtime",
   "version": "3.0.0-alpha.49",
   "description": "Component runtime and blockdom for Odoo Web Library (OWL)",
-  "main": "dist/owl-runtime.cjs.js",
-  "module": "dist/owl-runtime.es.js",
-  "types": "dist/types/index.d.ts",
+  "main": "src/index.ts",
+  "module": "src/index.ts",
+  "types": "src/index.ts",
   "exports": {
-    ".": {
-      "types": "./dist/types/index.d.ts",
-      "import": "./dist/owl-runtime.es.js",
-      "require": "./dist/owl-runtime.cjs.js",
-      "default": "./dist/owl-runtime.es.js"
-    },
+    ".": "./src/index.ts",
     "./package.json": "./package.json"
   },
   "type": "module",
   "files": [
-    "dist"
+    "src"
   ],
   "engines": {
     "node": ">=20.0.0"
   },
   "scripts": {
-    "build": "node build.mjs",
-    "build:types": "node build.mjs types",
     "test": "vitest run",
     "test:types": "tsc --project tsconfig.tests.json",
     "test:watch": "vitest"

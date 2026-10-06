@@ -11,11 +11,8 @@
     "node": ">=20.0.0"
   },
   "scripts": {
-    "build": "npm run build -w packages/owl-core && npm run build -w packages/owl-compiler && npm run build -w packages/owl-runtime && npm run build -w packages/owl",
-    "build:bundle": "npm run build -w packages/owl-core && npm run build -w packages/owl-compiler && npm run build -w packages/owl-runtime && npm run build:bundle -w packages/owl",
-    "build:runtime": "npm run build -w packages/owl-core && npm run build -w packages/owl-runtime",
-    "build:compiler": "npm run build -w packages/owl-core && npm run build -w packages/owl-compiler",
-    "build:core": "npm run build -w packages/owl-core",
+    "build": "npm run build -w packages/owl-compiler && npm run build -w packages/owl",
+    "build:compiler": "npm run build -w packages/owl-compiler",
     "build:types": "npm run build:types -w packages/owl",
     "build:devtools": "node tools/devtools/build.mjs",
     "dev:devtools-chrome": "node tools/devtools/build.mjs --browser=chrome",

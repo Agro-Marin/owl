@@ -3,6 +3,7 @@ import type { compile, CustomDirectives, Template, TemplateFunction } from "@odo
 import { createBlock, html, list, multi, text, toggler } from "./blockdom";
 import { helpers } from "./rendering/template_helpers";
 import { ComponentNode } from "./component_node";
+import { buildHash, version } from "./build_info";
 
 const bdom = { text, createBlock, list, multi, html, toggler };
 
@@ -19,10 +20,49 @@ export interface TemplateSetConfig {
 export interface TemplateCompiler {
   compile: typeof compile;
   parseXML: (xml: string) => Document;
+  // a compiler module's build, which must be the runtime's, and the class of
+  // the errors it throws, which the runtime rethrows as its own OwlError
+  version?: string;
+  hash?: string;
+  OwlError?: new (...args: any[]) => Error;
+}
+
+// where the compiler module (@odoo/owl/compiler) registers itself: a key every
+// owl build agrees on, so that the module and the runtime need not resolve to
+// one module instance (an import map, a bundler and Node's package exports
+// each resolve them their own way)
+export const COMPILER_KEY = Symbol.for("@odoo/owl/compiler");
+
+let ownCompiler: TemplateCompiler | null = null;
+
+/**
+ * The compiler the compiler module registered, if any, once checked to be of
+ * this runtime's build: its code calls the runtime's helpers by name.
+ */
+function registeredCompiler(): TemplateCompiler | null {
+  const compiler: TemplateCompiler | undefined = (globalThis as any)[COMPILER_KEY];
+  if (!compiler) {
+    return null;
+  }
+  if (compiler.version !== version || compiler.hash !== buildHash) {
+    throw new OwlError(
+      `The template compiler module is build ${compiler.version}+${compiler.hash}, but the runtime is ${version}+${buildHash}: load the owl.compiler.es.js built with this runtime`
+    );
+  }
+  if (debug.template) {
+    debugLog("template", `compiler module ${compiler.version}+${compiler.hash} installed`);
+  }
+  return compiler;
 }
 
 export class TemplateSet {
-  static compiler: TemplateCompiler | null = null;
+  // the full build sets it; the runtime build takes the registered one
+  static get compiler(): TemplateCompiler | null {
+    return (ownCompiler ||= registeredCompiler());
+  }
+  static set compiler(compiler: TemplateCompiler | null) {
+    ownCompiler = compiler;
+  }
   static registerTemplate(name: string, fn: TemplateFunction) {
     globalTemplates[name] = fn;
   }
@@ -122,29 +162,53 @@ export class TemplateSet {
   }
 
   _compileTemplate(name: string, template: string | Element): TemplateFunction {
-    if (!TemplateSet.compiler) {
+    const compiler = TemplateSet.compiler;
+    if (!compiler) {
       throw new OwlError(
         `Unable to compile a template: load the compiler module (@odoo/owl/compiler) or use the full build`
       );
     }
-    return TemplateSet.compiler.compile(template, {
-      name,
-      dev: this.dev,
-      translateFn: this.translateFn,
-      translatableAttributes: this.translatableAttributes,
-      customDirectives: this.customDirectives,
-      hasGlobalValues: this.hasGlobalValues,
-    });
+    try {
+      return compiler.compile(template, {
+        name,
+        dev: this.dev,
+        translateFn: this.translateFn,
+        translatableAttributes: this.translatableAttributes,
+        customDirectives: this.customDirectives,
+        hasGlobalValues: this.hasGlobalValues,
+      });
+    } catch (error) {
+      throw asOwnError(error, compiler);
+    }
   }
 
   private _parseXML(xml: string): Document {
-    if (!TemplateSet.compiler) {
+    const compiler = TemplateSet.compiler;
+    if (!compiler) {
       throw new OwlError(
         `Unable to parse XML templates: load the compiler module (@odoo/owl/compiler), use the full build, or pass a Document instance`
       );
     }
-    return TemplateSet.compiler.parseXML(xml);
+    try {
+      return compiler.parseXML(xml);
+    } catch (error) {
+      throw asOwnError(error, compiler);
+    }
   }
+}
+
+/**
+ * An error of the compiler module's own OwlError class as this runtime's: the
+ * page catches the runtime's class.
+ */
+function asOwnError(error: unknown, compiler: TemplateCompiler): unknown {
+  const ForeignError = compiler.OwlError;
+  if (!ForeignError || ForeignError === OwlError || !(error instanceof ForeignError)) {
+    return error;
+  }
+  const ownError = new OwlError(error.message);
+  ownError.cause = error;
+  return ownError;
 }
 
 // -----------------------------------------------------------------------------

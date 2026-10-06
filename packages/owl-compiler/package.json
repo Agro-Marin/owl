@@ -2,16 +2,11 @@
   "name": "@odoo/owl-compiler",
   "version": "3.0.0-alpha.49",
   "description": "Template compiler for Odoo Web Library (OWL)",
-  "main": "dist/owl-compiler.cjs.js",
-  "module": "dist/owl-compiler.es.js",
-  "types": "dist/types/index.d.ts",
+  "main": "src/index.ts",
+  "module": "src/index.ts",
+  "types": "src/index.ts",
   "exports": {
-    ".": {
-      "types": "./dist/types/index.d.ts",
-      "import": "./dist/owl-compiler.es.js",
-      "require": "./dist/owl-compiler.cjs.js",
-      "default": "./dist/owl-compiler.es.js"
-    },
+    ".": "./src/index.ts",
     "./standalone": {
       "import": "./dist/compile_templates.mjs",
       "default": "./dist/compile_templates.mjs"
@@ -20,6 +15,7 @@
   },
   "type": "module",
   "files": [
+    "src",
     "dist"
   ],
   "engines": {
@@ -27,7 +23,6 @@
   },
   "scripts": {
     "build": "node build.mjs",
-    "build:types": "node build.mjs types",
     "test": "vitest run",
     "test:types": "tsc --project tsconfig.tests.json",
     "test:watch": "vitest"

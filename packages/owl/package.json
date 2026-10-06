@@ -34,8 +34,7 @@
     "node": ">=20.0.0"
   },
   "scripts": {
-    "build:bundle": "node build.mjs",
-    "build": "npm run build:bundle",
+    "build": "node build.mjs",
     "build:types": "node build.mjs types",
     "test": "vitest run",
     "test:watch": "vitest",

@@ -34,3 +34,58 @@ test("a template the compiler module rejects throws the runtime's OwlError", asy
   expect(error).toBeInstanceOf(OwlError);
   app.destroy();
 });
+
+describe("the compiler module's registration", () => {
+  const KEY = Symbol.for("@odoo/owl/compiler");
+
+  afterEach(() => {
+    TemplateSet.compiler = null;
+  });
+
+  test("it registers under a global key, which a runtime of another module instance reads", async () => {
+    await import("../src/compiler");
+    const registered = (globalThis as any)[KEY];
+    expect(registered.version).toBe(App.version);
+    TemplateSet.compiler = null;
+    expect(TemplateSet.compiler).toBe(registered);
+  });
+
+  test("a compiler of another build is refused", async () => {
+    await import("../src/compiler");
+    const registered = (globalThis as any)[KEY];
+    (globalThis as any)[KEY] = { ...registered, hash: "other" };
+    try {
+      TemplateSet.compiler = null;
+      expect(() => TemplateSet.compiler).toThrow(
+        `The template compiler module is build ${App.version}+other, but the runtime is ${App.version}+dev`
+      );
+    } finally {
+      (globalThis as any)[KEY] = registered;
+    }
+  });
+
+  test("an error of the compiler's own OwlError class is rethrown as the runtime's", () => {
+    class ForeignError extends Error {}
+    TemplateSet.compiler = {
+      compile() {
+        throw new ForeignError("bad template");
+      },
+      parseXML() {
+        throw new ForeignError("bad xml");
+      },
+      OwlError: ForeignError,
+    };
+    const templates = new TemplateSet();
+    templates.addTemplate("t", "<div/>");
+    let error: any;
+    try {
+      templates.getTemplate("t");
+    } catch (e) {
+      error = e;
+    }
+    expect(error).toBeInstanceOf(OwlError);
+    expect(error.message).toBe("bad template");
+    expect(error.cause).toBeInstanceOf(ForeignError);
+    expect(() => templates.addTemplates("<templates/>")).toThrow(OwlError);
+  });
+});
