@@ -87,7 +87,7 @@ test("the error channel says who handled an error", async () => {
   }
   setDebug("error");
   await mount(Parent, fixture);
-  expect(lines).toEqual(["error: Boom: error handled by an ancestor's onError"]);
+  expect(lines).toEqual(["error: Boom: error handled by Parent's onError"]);
 });
 
 test("the event channel traces a handled event", async () => {

@@ -7,6 +7,8 @@ import {
   onWillStart,
   props,
   proxy,
+  setDebug,
+  setDebugSink,
   signal,
   Suspense,
   xml,
@@ -509,4 +511,43 @@ describe("Suspense content in the DOM", () => {
     await nextTick();
     expect(shadow.innerHTML).toBe("<i>1</i>");
   });
+});
+
+test("an error nobody handles under Suspense destroys the app, reported as not handled", async () => {
+  const def = makeDeferred();
+  class Child extends Component {
+    static template = xml`<span>child</span>`;
+    setup() {
+      onWillStart(() => def);
+    }
+  }
+  class Parent extends Component {
+    static template = xml`<div><Suspense><Child/><t t-set-slot="fallback">wait</t></Suspense></div>`;
+    static components = { Suspense, Child };
+  }
+  const app = new App({ test: true });
+  const lines: string[] = [];
+  const rejections: string[] = [];
+  const onRejection = (e: any) => rejections.push(e.message);
+  process.on("unhandledRejection", onRejection);
+  setDebugSink((channel, message) => lines.push(`${channel}: ${message}`));
+  try {
+    await app.createRoot(Parent).mount(fixture);
+    setDebug(["error", "lifecycle"]);
+    def.reject(new Error("willStart failed"));
+    await nextTick();
+    await nextTick();
+  } finally {
+    setDebug(false);
+    setDebugSink(null);
+    process.off("unhandledRejection", onRejection);
+  }
+  expect(app.destroyed).toBe(true);
+  expect(rejections).toEqual(["willStart failed"]);
+  expect(lines.filter((l) => l.startsWith("error:"))).toEqual([
+    "error: Child: error not handled, the app is destroyed",
+  ]);
+  expect(lines.filter((l) => l.includes("destroy app"))).toEqual([
+    "lifecycle: destroy app, 2 root(s)",
+  ]);
 });

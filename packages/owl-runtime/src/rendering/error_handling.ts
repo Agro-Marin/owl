@@ -10,6 +10,10 @@ export const nodeErrorHandlers: WeakMap<
   ((error: any, finalize: Function) => void)[]
 > = new WeakMap();
 
+// The component whose onError handler caught the error being handled: the
+// innermost one, when a handler forwards it to another chain (a sub-root's)
+let handledBy: ComponentNode | null = null;
+
 // Walks up from `node` (inclusive), invoking the latest error handler at each
 // level. Returns whether a handler caught and the final (possibly rethrown)
 // error.
@@ -24,6 +28,7 @@ function invokeErrorHandlers(
       for (let i = handlers.length - 1; i >= 0; i--) {
         try {
           handlers[i](error, finalize);
+          handledBy ||= node;
           return { handled: true, error };
         } catch (e) {
           error = e;
@@ -38,7 +43,9 @@ function invokeErrorHandlers(
 // Builds a sub-root error handler that re-routes errors to `boundary`'s
 // parent chain. Used by Suspense/Portal so a descendant failure reaches the
 // consumer's `onError` without the main `handleError` entry point (which
-// would mark the outer tree's fibers as in-error and stall its mount).
+// would mark the outer tree's fibers as in-error and stall its mount). An
+// error no handler there catches is rethrown: handleError then destroys the
+// app and reports it, as for any other component.
 export function forwardErrorToParent(boundary: ComponentNode) {
   return (error: any, finalize: Function): void => {
     if (boundary.app.destroyed) {
@@ -46,8 +53,7 @@ export function forwardErrorToParent(boundary: ComponentNode) {
     }
     const result = invokeErrorHandlers(boundary, error, finalize);
     if (!result.handled) {
-      finalize();
-      boundary.app._handleError(result.error);
+      throw result.error;
     }
   };
 }
@@ -91,12 +97,14 @@ export function handleError(params: ErrorParams) {
     }
   };
 
+  handledBy = null;
   const result = invokeErrorHandlers(node, error, finalize);
   if (debug.error) {
+    // a root's own handler, rejecting its mount, destroys the app
     debugLog(
       "error",
-      result.handled
-        ? `${node!.componentName}: error handled by an ancestor's onError`
+      result.handled && !app.destroyed
+        ? `${node!.componentName}: error handled by ${handledBy === node ? "its own" : `${handledBy!.componentName}'s`} onError`
         : `${node!.componentName}: error not handled, the app is destroyed`,
       error
     );

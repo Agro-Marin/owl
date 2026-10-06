@@ -146,11 +146,11 @@ export class App extends TemplateSet {
     });
     let node: ComponentNode;
     let error: any = null;
+    // Sub-roots (Portal/Suspense) thread their host's scope and error routing
+    // in through internal config, applied before the render phase begins.
+    const subConfig = config as SubRootConfig<any>;
     try {
       node = new ComponentNode(Root, props, this, null, null);
-      // Sub-roots (Portal/Suspense) thread their host's scope and error routing
-      // in through internal config, applied before the render phase begins.
-      const subConfig = config as SubRootConfig<any>;
       if (subConfig.pluginManager) {
         node.pluginManager = subConfig.pluginManager;
       }
@@ -190,18 +190,22 @@ export class App extends TemplateSet {
       }
       fiber = new MountFiber(node, null);
 
-      // Set up error handler. We install it at prepare() time so that errors
-      // during the render phase (e.g. a descendant's onWillStart rejecting)
-      // reject both `promise` (the mount result) and the prepared promise.
-      let handlers = nodeErrorHandlers.get(node);
-      if (!handlers) {
-        handlers = [];
-        nodeErrorHandlers.set(node, handlers);
+      // Until it is mounted, an error no handler of the root catches rejects
+      // the mount (and destroys the app). Not for a sub-root: nobody waits
+      // for its mount, its errors go to its host's chain.
+      let rejectMount: ((error: any, finalize: Function) => void) | null = null;
+      if (!subConfig.onError) {
+        rejectMount = (error, finalize) => {
+          finalize();
+          reject(error);
+        };
+        let handlers = nodeErrorHandlers.get(node);
+        if (!handlers) {
+          handlers = [];
+          nodeErrorHandlers.set(node, handlers);
+        }
+        handlers.unshift(rejectMount);
       }
-      handlers.unshift((error, finalize) => {
-        finalize();
-        reject(error);
-      });
 
       const ready = new Promise<void>((res) => {
         resolvePrepared = res;
@@ -215,7 +219,10 @@ export class App extends TemplateSet {
       // the commit-after-prepare sequence.
       node.addHook("mounted", () => {
         resolve(node.component);
-        handlers!.shift();
+        if (rejectMount) {
+          const handlers = nodeErrorHandlers.get(node)!;
+          handlers.splice(handlers.indexOf(rejectMount), 1);
+        }
       });
 
       this.scheduler.addFiber(fiber);
