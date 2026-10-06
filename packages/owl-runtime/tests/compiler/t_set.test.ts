@@ -1,4 +1,4 @@
-import { Component, mount, proxy, xml } from "../../src";
+import { Component, mount, onMounted, proxy, xml } from "../../src";
 import {
   makeTestFixture,
   nextTick,
@@ -448,5 +448,23 @@ describe("t-set", () => {
     expect(title(`<t t-set="x"><b t-out="y"/></t><p t-att-title="x"/>`)).toBe(
       "<b>&lt;img src=x onerror=alert(1)&gt;</b>"
     );
+  });
+
+  test("a t-set body holding a component cannot be stringified", async () => {
+    let mounted = 0;
+    class Child extends Component {
+      static template = xml`<i>c</i>`;
+      setup() {
+        onMounted(() => mounted++);
+      }
+    }
+    class Root extends Component {
+      static template = xml`<t t-set="v"><div><Child/></div></t><p t-att-title="v"/>`;
+      static components = { Child };
+    }
+    await expect(mount(Root, fixture)).rejects.toThrow(
+      "A t-set body holding a component cannot be stringified"
+    );
+    expect(mounted).toBe(0);
   });
 });

@@ -141,9 +141,32 @@ class LazyValue {
     return this.fn.call(this.component, this.ctx, this.node, this.key + siteKey);
   }
 
+  // what an attribute or an interpolation makes of a t-set body: its HTML. A
+  // component would be created for a string, never mounted, and kept alive
   toString() {
-    return this.evaluate().toString();
+    const bdom = this.evaluate();
+    if (holdsComponent(bdom)) {
+      throw new OwlError(
+        "A t-set body holding a component cannot be stringified (used in an attribute or an interpolation): output it with t-out"
+      );
+    }
+    return bdom.toString();
   }
+}
+
+function holdsComponent(bdom: any): boolean {
+  if (bdom instanceof ComponentNode) {
+    return true;
+  }
+  const children: any[] | undefined = bdom.children;
+  if (children) {
+    for (const child of children) {
+      if (child && holdsComponent(child)) {
+        return true;
+      }
+    }
+  }
+  return bdom.child ? holdsComponent(bdom.child) : false;
 }
 
 /*

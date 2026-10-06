@@ -79,6 +79,43 @@ exports[`t-set > a t-set body holding a component can be output twice 2`] = `
 }"
 `;
 
+exports[`t-set > a t-set body holding a component cannot be stringified 1`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { LazyValue, createComponent } = helpers;
+  const comp1 = createComponent(app, \`Child\`, true, false, false, []);
+  
+  let block1 = createBlock(\`<div><block-child-0/></div>\`);
+  let block3 = createBlock(\`<p block-attribute-0="title"/>\`);
+  
+  function value1(ctx, node, key = "") {
+    const b2 = comp1({}, key + \`__1\`, node, this, null);
+    return block1([], [b2]);
+  }
+  
+  return function template(ctx, node, key = "") {
+    ctx = Object.create(ctx);
+    ctx["v"] = new LazyValue(value1, ctx, this, node, key);
+    let attr1 = ctx['v'];
+    return block3([attr1]);
+  }
+}"
+`;
+
+exports[`t-set > a t-set body holding a component cannot be stringified 2`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  
+  let block1 = createBlock(\`<i>c</i>\`);
+  
+  return function template(ctx, node, key = "") {
+    return block1();
+  }
+}"
+`;
+
 exports[`t-set > a t-set body holding a component keeps one component per site and iteration, nested loops included 1`] = `
 "function anonymous(app, bdom, helpers
 ) {
