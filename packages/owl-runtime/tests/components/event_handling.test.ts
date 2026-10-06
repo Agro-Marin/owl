@@ -33,6 +33,34 @@ describe("event handling", () => {
     expect(fixture.innerHTML).toBe("<span><div>simple vnode</div>2</span>");
   });
 
+  test("each element runs its own handler when a child block sits among them (Odoo's CustomColorPicker)", async () => {
+    const calls: string[] = [];
+    class Picker extends Component {
+      static template = xml`
+        <div class="root" t-on-click="() => this.log('click')" t-on-keydown="() => this.log('rootkey')">
+          <div class="area" t-on-pointerdown="() => this.log('area')">
+            <div id="pointer" t-on-keydown="() => this.log('pointerkey')"/>
+          </div>
+          <div class="slider" t-if="this.show" t-on-pointerdown="() => this.log('slider')">
+            <div class="sp" t-on-keydown="() => this.log('sliderkey')"/>
+          </div>
+          <input class="hex" t-on-input="() => this.log('input')"/>
+        </div>`;
+      show = true;
+      log(name: string) {
+        calls.push(name);
+      }
+    }
+    await mount(Picker, fixture);
+    fixture
+      .querySelector("#pointer")!
+      .dispatchEvent(new KeyboardEvent("keydown", { bubbles: true }));
+    fixture.querySelector(".sp")!.dispatchEvent(new KeyboardEvent("keydown", { bubbles: true }));
+    fixture.querySelector(".hex")!.dispatchEvent(new Event("input", { bubbles: true }));
+    fixture.querySelector(".area")!.dispatchEvent(new Event("pointerdown", { bubbles: true }));
+    expect(calls).toEqual(["pointerkey", "rootkey", "sliderkey", "rootkey", "input", "area"]);
+  });
+
   test("Invalid handler throws an error", async () => {
     window.addEventListener(
       "error",

@@ -29,6 +29,31 @@ exports[`event handling > Invalid handler throws an error 1`] = `
 }"
 `;
 
+exports[`event handling > each element runs its own handler when a child block sits among them (Odoo's CustomColorPicker) 1`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  const hdlr_fn1 = (ctx)=>ctx['this'].log('click');
+  const hdlr_fn2 = (ctx)=>ctx['this'].log('rootkey');
+  const hdlr_fn3 = (ctx)=>ctx['this'].log('area');
+  const hdlr_fn4 = (ctx)=>ctx['this'].log('pointerkey');
+  const hdlr_fn5 = (ctx)=>ctx['this'].log('slider');
+  const hdlr_fn6 = (ctx)=>ctx['this'].log('sliderkey');
+  const hdlr_fn7 = (ctx)=>ctx['this'].log('input');
+  
+  let block1 = createBlock(\`<div class="root" block-handler-0="click" block-handler-1="keydown"><div class="area" block-handler-2="pointerdown"><div id="pointer" block-handler-3="keydown"/></div><block-child-0/><input class="hex" block-handler-4="input"/></div>\`, [hdlr_fn1, hdlr_fn2, hdlr_fn3, hdlr_fn4, hdlr_fn7]);
+  let block2 = createBlock(\`<div class="slider" block-handler-0="pointerdown"><div class="sp" block-handler-1="keydown"/></div>\`, [hdlr_fn5, hdlr_fn6]);
+  
+  return function template(ctx, node, key = "") {
+    let b2;
+    if (ctx['this'].show) {
+      b2 = block2([ctx, ctx]);
+    }
+    return block1([ctx, ctx, ctx, ctx, ctx], [b2]);
+  }
+}"
+`;
+
 exports[`event handling > handler is not called if component is destroyed 1`] = `
 "function anonymous(app, bdom, helpers
 ) {

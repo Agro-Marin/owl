@@ -633,7 +633,9 @@ function createBlockClass(template: HTMLElement, ctx: BlockCtx): BlockClass {
   const locSetters: Setter[] = locations.map((l) => l.setData);
   const locUpdaters: Updater[] = locations.map((l) => l.updateData);
   // the handlers, in the order of their data index: the code of the n-th is
-  // the n-th of its block's handlers
+  // the n-th of its block's handlers. They are collected in the order the
+  // tree is walked, which a child block among them breaks.
+  ctx.handlers.sort((a, b) => a.idx - b.idx);
   const handlerN = ctx.handlers.length;
   const handlerRefIdxs: number[] = ctx.handlers.map((h) => h.refIdx);
   const handlerSetups = ctx.handlers.map(
