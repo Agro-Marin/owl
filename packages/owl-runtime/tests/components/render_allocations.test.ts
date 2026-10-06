@@ -490,7 +490,7 @@ describe("contexts made under a loop item", () => {
     class Parent extends Component {
       static template = xml`
         <t t-foreach="[1]" t-as="a" t-key="a">
-          <button class="w" t-on-click="v = 'set'"/>
+          <button class="w" t-on-click="() => v = 'set'"/>
           <t t-foreach="[1]" t-as="b" t-key="b"><button class="r" t-on-click="() => this.seen.push(v)"/></t>
           <t t-call="${xml`<button class="c" t-on-click="() => this.seen.push(v + x)"/>`}" x="'!'"/>
         </t>`;
