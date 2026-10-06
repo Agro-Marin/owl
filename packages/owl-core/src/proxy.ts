@@ -735,9 +735,10 @@ export function readArrayItems<T>(array: T[]): T[] {
 }
 
 // Methods a proxy replaces, by the function its read would return. The array
-// methods that write several keys run as one batch: an immediate computation sees the array before or after the
-// call, not in between. Those that search an item by identity also find the
-// raw object of an item they read as its proxy.
+// methods that write several keys run as one batch: an immediate computation
+// sees the array before or after the call, not in between. Those that search
+// an item by identity also find the raw object of an item they read as its
+// proxy.
 const replacedMethods = new Map<Function, Function>();
 for (const name of ["copyWithin", "fill", "reverse", "sort"] as const) {
   const method = Array.prototype[name] as Function;
@@ -984,12 +985,7 @@ function delegateAndNotify(setterName: "set" | "add" | "delete", target: any, sh
 
 // The atoms of a collection's keys may exist
 function hasKeyAtoms(target: Target): boolean {
-  return (
-    itemAtoms.keys.has(target) ||
-    itemAtoms.objectKeys.has(target) ||
-    presenceAtoms.keys.has(target) ||
-    presenceAtoms.objectKeys.has(target)
-  );
+  return allAtoms.some((atoms) => atoms.keys.has(target) || atoms.objectKeys.has(target));
 }
 
 /**

@@ -756,6 +756,19 @@ describe("collections", () => {
     expect(third).toBe(deep);
   });
 
+  test("clearing a collection notifies the key list and each observed key, value or presence", () => {
+    const key = { k: 1 };
+    const map = proxy(
+      new Map<any, number>([
+        ["a", 1],
+        [key, 2],
+        ["b", 3],
+      ])
+    );
+    effect(() => [map.get("a"), map.has(key), map.size]);
+    expect(notifiedKeys(() => map.clear())).toEqual(["(keys)", "a", "[object Object]"]);
+  });
+
   test("clearing an empty collection notifies nothing", () => {
     const set = proxy(new Set<number>());
     effect(() => set.size);
