@@ -25,6 +25,10 @@ export class Registry<T> {
   private _order = 0;
   private _name: string;
   private _validation?: T;
+  // the entry a use() overwrote, put back when that use() ends, and the use()
+  // entries that ended: a restore skips them
+  private _overwritten = new WeakMap<Entry<T>, Entry<T>>();
+  private _ended = new WeakSet<Entry<T>>();
 
   constructor(options: RegistryOptions<T> = {}) {
     this._name = options.name || "registry";
@@ -107,11 +111,28 @@ export class Registry<T> {
 
   use(key: string, value: Item<T>, options: RegistryAddOptions = {}): Registry<T> {
     const scope = useScope();
+    const previous = untrack(() => this._map()[key]);
     const entry = this._add(key, value, options);
+    if (previous) {
+      this._overwritten.set(entry, previous);
+    }
     scope.onDestroy(() => {
-      if (untrack(() => this._map()[key]) === entry) {
-        this.delete(key);
-      }
+      this._ended.add(entry);
+      untrack(() => {
+        const map = this._map();
+        if (map[key] !== entry) {
+          return;
+        }
+        let restored = this._overwritten.get(entry);
+        while (restored && this._ended.has(restored)) {
+          restored = this._overwritten.get(restored);
+        }
+        if (restored) {
+          map[key] = restored;
+        } else {
+          delete map[key];
+        }
+      });
     });
     return this;
   }

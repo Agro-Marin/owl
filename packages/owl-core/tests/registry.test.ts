@@ -334,9 +334,9 @@ describe("registry", () => {
       manager.startPlugins([A]);
       expect(shared.get("k")).toBe("from-A");
 
-      // On destroy the key is removed entirely (no restore of the previous value).
+      // on destroy, the entry it overwrote is back
       manager.destroy();
-      expect(shared.has("k")).toBe(false);
+      expect(shared.get("k")).toBe("permanent");
     });
 
     test("useById with { force: true } overwrites an existing id", () => {
@@ -354,7 +354,42 @@ describe("registry", () => {
       expect(shared.get("x").v).toBe(2);
 
       manager.destroy();
-      expect(shared.has("x")).toBe(false);
+      expect(shared.get("x").v).toBe(1);
+    });
+
+    test("overrides stacked with { force: true } restore the nearest one still in use", () => {
+      const shared = new Registry<string>();
+      shared.add("k", "permanent", { sequence: 10 });
+      shared.add("other", "other", { sequence: 20 });
+      const scopeA = new TestScope({});
+      const scopeB = new TestScope({});
+      scopeA.run(() => shared.use("k", "from-A", { force: true }));
+      scopeB.run(() => shared.use("k", "from-B", { force: true }));
+      expect(shared.get("k")).toBe("from-B");
+      scopeB.finalize(() => {});
+      expect(shared.get("k")).toBe("from-A");
+      scopeA.finalize(() => {});
+      expect(shared.get("k")).toBe("permanent");
+      // the restored entry keeps its sequence and place
+      expect(shared.items()).toEqual(["permanent", "other"]);
+
+      const scopeC = new TestScope({});
+      const scopeD = new TestScope({});
+      scopeC.run(() => shared.use("k", "from-C", { force: true }));
+      scopeD.run(() => shared.use("k", "from-D", { force: true }));
+      scopeC.finalize(() => {});
+      expect(shared.get("k")).toBe("from-D");
+      scopeD.finalize(() => {});
+      expect(shared.get("k")).toBe("permanent");
+    });
+
+    test("an entry added over a use() stays when that use() ends", () => {
+      const shared = new Registry<string>();
+      const scope = new TestScope({});
+      scope.run(() => shared.use("k", "scoped"));
+      shared.add("k", "permanent", { force: true });
+      scope.finalize(() => {});
+      expect(shared.get("k")).toBe("permanent");
     });
 
     test("is chainable", () => {

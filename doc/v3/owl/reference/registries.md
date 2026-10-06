@@ -99,9 +99,10 @@ component `setup()` or a plugin `setup()`.
 Like `add()`, `use()` throws if the key is already registered. Pass
 `{ force: true }` to overwrite explicitly. On destroy, the entry is removed
 only if the current value is still the one it registered — so an active
-override by another owner is never clobbered by a stale cleanup. Note that
-`use()` does **not** restore any previous value on destroy: if you `force`
-over an existing entry, that entry is gone once your scope ends.
+override by another owner is never clobbered by a stale cleanup. An entry
+`use()` overwrote with `force` is put back when it ends, with its sequence and
+place: overrides stack, and ending one restores the nearest one still in use
+(or the permanent entry under them all).
 
 ### `useById(item, options?)`
 
