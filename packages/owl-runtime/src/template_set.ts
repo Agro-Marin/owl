@@ -27,40 +27,64 @@ export interface TemplateCompiler {
   OwlError?: new (...args: any[]) => Error;
 }
 
-// where the compiler module (@odoo/owl/compiler) registers itself: a key every
-// owl build agrees on, so that the module and the runtime need not resolve to
-// one module instance (an import map, a bundler and Node's package exports
-// each resolve them their own way)
+// where the compiler modules (@odoo/owl/compiler) register themselves, each
+// under its build ("<version>+<hash>"): a key every owl build agrees on, so
+// that a compiler module and its runtime need not resolve to one module
+// instance (an import map, a bundler and Node's package exports each resolve
+// them their own way), and two runtime builds on one page each find their own
 export const COMPILER_KEY = Symbol.for("@odoo/owl/compiler");
 
-let ownCompiler: TemplateCompiler | null = null;
+const BUILD = `${version}+${buildHash}`;
+
+// undefined: the compiler module of this build, once registered; null: none
+let ownCompiler: TemplateCompiler | null | undefined;
+
+function registeredBuilds(): string[] {
+  return Object.keys((globalThis as any)[COMPILER_KEY] || {});
+}
 
 /**
- * The compiler the compiler module registered, if any, once checked to be of
- * this runtime's build: its code calls the runtime's helpers by name.
+ * Refuses a compiler of another build: its code calls the runtime's helpers by
+ * name.
  */
-function registeredCompiler(): TemplateCompiler | null {
-  const compiler: TemplateCompiler | undefined = (globalThis as any)[COMPILER_KEY];
-  if (!compiler) {
-    return null;
-  }
-  if (compiler.version !== version || compiler.hash !== buildHash) {
+function checkBuild(compiler: TemplateCompiler) {
+  if (compiler.version === undefined || compiler.hash === undefined) {
     throw new OwlError(
-      `The template compiler module is build ${compiler.version}+${compiler.hash}, but the runtime is ${version}+${buildHash}: load the owl.compiler.es.js built with this runtime`
+      `The template compiler does not name its build, as the compiler module of an owl older than this runtime (${BUILD}) does: load the owl.compiler.es.js built with this runtime`
     );
   }
-  if (debug.template) {
-    debugLog("template", `compiler module ${compiler.version}+${compiler.hash} installed`);
+  const build = `${compiler.version}+${compiler.hash}`;
+  if (build !== BUILD) {
+    throw new OwlError(
+      `The template compiler is build ${build}, but the runtime is ${BUILD}: load the owl.compiler.es.js built with this runtime`
+    );
   }
-  return compiler;
 }
 
 export class TemplateSet {
-  // the full build sets it; the runtime build takes the registered one
+  /**
+   * The compiler: the one the full build sets, else the compiler module of
+   * this runtime's build once it is registered. Setting a compiler checks
+   * that it is of this build; null leaves the runtime without one, undefined
+   * takes the registered one again.
+   */
   static get compiler(): TemplateCompiler | null {
-    return (ownCompiler ||= registeredCompiler());
+    if (ownCompiler === undefined) {
+      const registered: TemplateCompiler | undefined = (globalThis as any)[COMPILER_KEY]?.[BUILD];
+      if (!registered) {
+        return null;
+      }
+      if (debug.template) {
+        debugLog("template", `compiler module ${BUILD} installed`);
+      }
+      ownCompiler = registered;
+    }
+    return ownCompiler;
   }
-  static set compiler(compiler: TemplateCompiler | null) {
+  static set compiler(compiler: TemplateCompiler | null | undefined) {
+    if (compiler) {
+      checkBuild(compiler);
+    }
     ownCompiler = compiler;
   }
   static registerTemplate(name: string, fn: TemplateFunction) {
@@ -165,7 +189,7 @@ export class TemplateSet {
     const compiler = TemplateSet.compiler;
     if (!compiler) {
       throw new OwlError(
-        `Unable to compile a template: load the compiler module (@odoo/owl/compiler) or use the full build`
+        `Unable to compile a template: load the compiler module (@odoo/owl/compiler) of this runtime's build or use the full build${missingCompiler()}`
       );
     }
     try {
@@ -186,7 +210,7 @@ export class TemplateSet {
     const compiler = TemplateSet.compiler;
     if (!compiler) {
       throw new OwlError(
-        `Unable to parse XML templates: load the compiler module (@odoo/owl/compiler), use the full build, or pass a Document instance`
+        `Unable to parse XML templates: load the compiler module (@odoo/owl/compiler) of this runtime's build, use the full build, or pass a Document instance${missingCompiler()}`
       );
     }
     try {
@@ -195,6 +219,20 @@ export class TemplateSet {
       throw asOwnError(error, compiler);
     }
   }
+}
+
+/**
+ * What the runtime lacks a compiler for, when it is not the obvious: compiler
+ * modules of other builds only, or none by choice.
+ */
+function missingCompiler(): string {
+  if (ownCompiler === null) {
+    return ` (TemplateSet.compiler was set to null)`;
+  }
+  const builds = registeredBuilds();
+  return builds.length
+    ? ` (the runtime is ${BUILD}; the compiler modules loaded are ${builds.join(", ")})`
+    : "";
 }
 
 /**

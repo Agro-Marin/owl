@@ -32,7 +32,7 @@ test("the runtime build refuses a template it would have to compile", async () =
   }
   const app = new App();
   await expect(app.createRoot(Hello).mount(makeFixture())).rejects.toThrow(
-    "Unable to compile a template: load the compiler module (@odoo/owl/compiler) or use the full build"
+    "Unable to compile a template: load the compiler module (@odoo/owl/compiler) of this runtime's build or use the full build"
   );
   app.destroy();
 });

@@ -3,9 +3,10 @@
 // effects (which would overwrite config.mainEventHandler and break blockdom
 // tests that rely on the default).
 import { compile, parseXML } from "@odoo/owl-compiler";
+import { buildHash, version } from "../src/build_info";
 import { TemplateSet } from "../src/template_set";
 
-TemplateSet.compiler = { compile, parseXML };
+TemplateSet.compiler = { compile, parseXML, version, hash: buildHash };
 
 const consoleOutput: string[] = [];
 (globalThis as any).__owl_console_output = consoleOutput;

@@ -37,31 +37,71 @@ test("a template the compiler module rejects throws the runtime's OwlError", asy
 
 describe("the compiler module's registration", () => {
   const KEY = Symbol.for("@odoo/owl/compiler");
+  const BUILD = `${App.version}+dev`;
+  const registry = () => (globalThis as any)[KEY];
 
   afterEach(() => {
-    TemplateSet.compiler = null;
+    TemplateSet.compiler = undefined;
   });
 
-  test("it registers under a global key, which a runtime of another module instance reads", async () => {
+  test("it registers under its build, where a runtime of another module instance reads it", async () => {
     await import("../src/compiler");
-    const registered = (globalThis as any)[KEY];
+    const registered = registry()[BUILD];
     expect(registered.version).toBe(App.version);
-    TemplateSet.compiler = null;
+    expect(registered.hash).toBe("dev");
+    TemplateSet.compiler = undefined;
     expect(TemplateSet.compiler).toBe(registered);
   });
 
-  test("a compiler of another build is refused", async () => {
+  test("a runtime takes its own build's compiler beside another build's, and only that", async () => {
     await import("../src/compiler");
-    const registered = (globalThis as any)[KEY];
-    (globalThis as any)[KEY] = { ...registered, hash: "other" };
+    const own = registry()[BUILD];
+    const other = { ...own, hash: "other" };
+    registry()[`${App.version}+other`] = other;
     try {
-      TemplateSet.compiler = null;
-      expect(() => TemplateSet.compiler).toThrow(
-        `The template compiler module is build ${App.version}+other, but the runtime is ${App.version}+dev`
+      TemplateSet.compiler = undefined;
+      expect(TemplateSet.compiler).toBe(own);
+      delete registry()[BUILD];
+      TemplateSet.compiler = undefined;
+      expect(TemplateSet.compiler).toBe(null);
+      const templates = new TemplateSet();
+      templates.addTemplate("t", "<div/>");
+      expect(() => templates.getTemplate("t")).toThrow(
+        `Unable to compile a template: load the compiler module (@odoo/owl/compiler) of this runtime's build or use the full build (the runtime is ${BUILD}; the compiler modules loaded are ${App.version}+other)`
       );
     } finally {
-      (globalThis as any)[KEY] = registered;
+      delete registry()[`${App.version}+other`];
+      registry()[BUILD] = own;
     }
+  });
+
+  test("a compiler set by hand is checked to be of the runtime's build", async () => {
+    await import("../src/compiler");
+    const own = registry()[BUILD];
+    // the compiler module of an older owl sets TemplateSet.compiler to this
+    expect(() => {
+      TemplateSet.compiler = { compile: own.compile, parseXML: own.parseXML };
+    }).toThrow(
+      `The template compiler does not name its build, as the compiler module of an owl older than this runtime (${BUILD}) does: load the owl.compiler.es.js built with this runtime`
+    );
+    expect(() => {
+      TemplateSet.compiler = { ...own, hash: "other" };
+    }).toThrow(
+      `The template compiler is build ${App.version}+other, but the runtime is ${BUILD}: load the owl.compiler.es.js built with this runtime`
+    );
+    TemplateSet.compiler = undefined;
+    expect(TemplateSet.compiler).toBe(own);
+  });
+
+  test("null leaves the runtime without the registered compiler", async () => {
+    await import("../src/compiler");
+    TemplateSet.compiler = null;
+    expect(TemplateSet.compiler).toBe(null);
+    const templates = new TemplateSet();
+    templates.addTemplate("t", "<div/>");
+    expect(() => templates.getTemplate("t")).toThrow("(TemplateSet.compiler was set to null)");
+    TemplateSet.compiler = undefined;
+    expect(TemplateSet.compiler).toBe(registry()[BUILD]);
   });
 
   test("an error of the compiler's own OwlError class is rethrown as the runtime's", () => {
@@ -73,6 +113,8 @@ describe("the compiler module's registration", () => {
       parseXML() {
         throw new ForeignError("bad xml");
       },
+      version: App.version,
+      hash: "dev",
       OwlError: ForeignError,
     };
     const templates = new TemplateSet();
