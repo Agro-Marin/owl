@@ -230,17 +230,25 @@ describe("observe", () => {
     expect(inner).toBe(0);
   });
 
-  test("a write that shifts an array through the view does not call the callback by itself", () => {
+  test("a write that shifts an array through the view calls the callback, as OWL 2's reactive() did", () => {
     let calls = 0;
     const view = observe({ list: [1, 2, 3] }, () => calls++);
     const list = view.list;
     list.push(4);
+    expect(calls).toBe(1);
     list.pop();
     list.unshift(0);
     list.shift();
     list.splice(1, 1);
-    expect(calls).toBe(0);
+    expect(calls).toBe(5);
     expect(toRaw(list)).toEqual([1, 3]);
+  });
+
+  test("a push into an observed empty array calls the callback (Odoo website's ResourceEditor errors)", () => {
+    let calls = 0;
+    const errors = observe([] as { line: number }[], () => calls++);
+    errors.push({ line: 3 });
+    expect(calls).toBe(1);
   });
 
   test("a write that shifts an array calls the callback when the view read what it changed", () => {
@@ -255,6 +263,7 @@ describe("observe", () => {
     let calls = 0;
     const view = observe({ list: [{ a: 1 }] }, () => calls++);
     const item = view.list.pop()!;
+    calls = 0;
     void item.a;
     item.a = 2;
     expect(calls).toBe(1);

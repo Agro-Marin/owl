@@ -446,8 +446,8 @@ const viewBases = new WeakMap<object, any>();
  * values read through the view again are observed. Objects read through the
  * view are views too, with the same callback; reads keep subscribing the
  * computation they happen in (a render, an effect) as a plain proxy read does.
- * An array method that changes the length (push, splice...) reads it as its
- * own business, not as a read of the view, as it does through a proxy.
+ * An array method that changes the length (push, splice...) reads it through
+ * the view, so a push calls the callback, as OWL 2's reactive() did.
  *
  * @param target the object to observe
  * @param callback called when an observed value changes
@@ -503,14 +503,6 @@ export function observe<T extends Target>(target: T, callback: () => void): T {
                     const result = read(() => value.apply(r, args));
                     return isIterator(result) ? observedIterator(result) : wrap(result);
                   }
-            );
-          }
-          if (lengthWriters.has(value)) {
-            return method(
-              value,
-              () =>
-                (...args: any[]) =>
-                  wrap(value.apply(r, args))
             );
           }
           if (viewReaders.has(value)) {
@@ -927,15 +919,13 @@ for (const name of ["copyWithin", "fill", "reverse", "sort"] as const) {
 // pushes would re-run on every push of another, and two of them would re-run
 // each other forever. The others stay tracked: a sort reads the items its
 // comparator orders, and its caller depends on them (as in Vue).
-// An observe() view runs them on its proxy, unobserved, for the same reason.
-const lengthWriters = new Set<Function>();
+// Called on an observe() view they still read through it, which subscribes
+// the view: a push through it calls its callback, as OWL 2's reactive() did.
 for (const name of ["pop", "push", "shift", "splice", "unshift"] as const) {
   const method = Array.prototype[name] as Function;
-  const writer = function (this: unknown[], ...args: unknown[]) {
+  replacedMethods.set(method, function (this: unknown[], ...args: unknown[]) {
     return batch(() => untrack(() => method.apply(this, args)));
-  };
-  replacedMethods.set(method, writer);
-  lengthWriters.add(writer);
+  });
 }
 // The replaced methods that read through something other than the proxy's
 // traps: an observe() view runs them on its proxy, observed.
