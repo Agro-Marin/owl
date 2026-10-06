@@ -82,6 +82,23 @@ describe("objects a proxy cannot reach into", () => {
     expect(() => (state.secret.value = 2)).toThrow("markRaw(Secret.prototype)");
   });
 
+  test("markRaw of a built-in prototype throws instead of leaving every such object unobserved", () => {
+    for (const proto of [
+      Object.prototype,
+      Array.prototype,
+      Map.prototype,
+      Set.prototype,
+      WeakMap.prototype,
+      Function.prototype,
+    ]) {
+      expect(() => markRaw(proto as any)).toThrow(OwlError);
+    }
+    const state = proxy({ plain: {}, list: [] as number[], map: new Map() });
+    expect(toRaw(state.plain)).not.toBe(state.plain);
+    expect(toRaw(state.list)).not.toBe(state.list);
+    expect(toRaw(state.map)).not.toBe(state.map);
+  });
+
   test("a private method called through a getter throws the same OwlError", () => {
     class Locked {
       #check() {

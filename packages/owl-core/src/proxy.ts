@@ -56,6 +56,15 @@ const skipped = new WeakSet<Target>();
 // class prototypes marked raw: an object inheriting from one is raw too
 const rawPrototypes = new WeakSet<Target>();
 let hasRawPrototypes = false;
+// what every plain object, array, collection or function inherits from
+const builtinPrototypes = new Set<object>([
+  Object.prototype,
+  Array.prototype,
+  Map.prototype,
+  Set.prototype,
+  WeakMap.prototype,
+  Function.prototype,
+]);
 
 /**
  * Mark an object or array so that it is ignored by the reactivity system: a
@@ -68,6 +77,12 @@ let hasRawPrototypes = false;
  */
 export function markRaw<T extends Target>(value: T): T {
   const raw = toRaw(value);
+  if (builtinPrototypes.has(raw)) {
+    throw new OwlError(
+      `markRaw(${raw.constructor.name}.prototype) would leave every ${raw.constructor.name} ` +
+        `unobserved: mark the objects themselves, or the prototype of a class of your own`
+    );
+  }
   skipped.add(raw);
   if (isClassPrototype(raw)) {
     rawPrototypes.add(raw);

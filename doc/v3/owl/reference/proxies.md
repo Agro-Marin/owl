@@ -67,7 +67,9 @@ subclasses, is handed out as it is. A class with private members (`#x`) needs
 it, since a proxy does not have them: a getter or setter reaching one through
 a proxy throws an error that names the class to mark. A private member error
 the object's own classes do not declare (a bug in code the getter calls) is
-rethrown as the engine threw it.
+rethrown as the engine threw it. The prototype of a built-in (`Object`, `Array`,
+`Map`, `Set`, `WeakMap`, `Function`) cannot be marked: `markRaw` throws
+rather than leave every plain object or array unobserved.
 
 ```js
 class Secret {
