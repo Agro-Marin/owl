@@ -64,11 +64,14 @@ describe("adding/patching text", () => {
     }
   });
 
-  test("a text node stringifies to the HTML it renders", () => {
-    const tree = text("a < b & c > d");
+  test("a text node stringifies to its text, and renders it as text again", () => {
+    const tree = text("a < b & c > d\u00a0e");
     mount(tree, fixture);
-    expect(tree.toString()).toBe(fixture.innerHTML);
-    expect(tree.toString()).toBe("a &lt; b &amp; c &gt; d");
+    expect(tree.toString()).toBe("a < b & c > d\u00a0e");
+    expect(tree.toString()).toBe(fixture.textContent);
+    const fixture2 = makeTestFixture();
+    mount(text(text("R&D") as any), fixture2);
+    expect(fixture2.textContent).toBe("R&D");
   });
 
   test("vtext node can be used as text", () => {

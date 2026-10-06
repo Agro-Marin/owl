@@ -435,18 +435,26 @@ describe("t-set", () => {
     expect(fixture.innerHTML).toBe("<div><i>c</i><i>c</i></div>");
   });
 
-  test("a t-set body stringifies to HTML whether it holds text or an element", () => {
-    const y = "<img src=x onerror=alert(1)>";
-    const title = (template: string) => {
+  test("an attribute of a t-set body holding only text is that text", () => {
+    // what Odoo writes: <t t-set="label"><t t-if="c">Relation to follow</t>...</t>
+    // then t-att-aria-label="label", or a cell value passed on as a label
+    const y = `R&D <x> "q"\u00a0z`;
+    const attrs = (template: string) => {
       const div = document.createElement("div");
       div.innerHTML = renderToString(template, { y });
-      return div.querySelector("p")!.title;
+      const p = div.querySelector("p")!;
+      return [p.title, p.getAttribute("aria-label")];
     };
-    expect(title(`<t t-set="x"><t t-out="y"/></t><p t-att-title="x"/>`)).toBe(
-      "&lt;img src=x onerror=alert(1)&gt;"
-    );
-    expect(title(`<t t-set="x"><b t-out="y"/></t><p t-att-title="x"/>`)).toBe(
-      "<b>&lt;img src=x onerror=alert(1)&gt;</b>"
+    const use = `<p t-att-title="x" t-attf-aria-label="L: {{x}}"/>`;
+    expect(attrs(`<t t-set="x"><t t-out="y"/></t>${use}`)).toEqual([y, `L: ${y}`]);
+    expect(attrs(`<t t-set="x">A: <t t-out="y"/></t>${use}`)).toEqual([`A: ${y}`, `L: A: ${y}`]);
+    expect(attrs(`<t t-set="x"><t t-if="y">A &amp; B</t><t t-else="">C</t></t>${use}`)).toEqual([
+      "A & B",
+      "L: A & B",
+    ]);
+    // a body holding elements still stringifies to its markup
+    expect(attrs(`<t t-set="x"><b t-out="y"/></t>${use}`)[0]).toBe(
+      '<b>R&amp;D &lt;x&gt; "q"&nbsp;z</b>'
     );
   });
 

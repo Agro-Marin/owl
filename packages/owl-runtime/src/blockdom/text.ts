@@ -1,15 +1,6 @@
 import type { VNode } from "./index";
 import { characterDataSetData, nodeInsertBefore, nodeRemoveChild } from "./dom";
 
-// what serializing a text node escapes
-const HTML_TEXT_CHARS = /[&<>\u00a0]/g;
-const HTML_TEXT_ESCAPES: Record<string, string> = {
-  "&": "&amp;",
-  "<": "&lt;",
-  ">": "&gt;",
-  "\u00a0": "&nbsp;",
-};
-
 class VText {
   text: string | String;
   parentEl?: HTMLElement | undefined;
@@ -52,10 +43,10 @@ class VText {
     }
   }
 
-  // the HTML this node renders, as a block's toString gives its markup: a t-set
-  // body stringifies the same whether it holds text or elements
-  toString() {
-    return toText(this.text).replace(HTML_TEXT_CHARS, (c) => HTML_TEXT_ESCAPES[c]);
+  // its text, not markup: what an attribute or an interpolation of a t-set
+  // body needs (t-att-title="label"), and what text(vtext) renders
+  toString(): string {
+    return "" + toText(this.text);
   }
 }
 
