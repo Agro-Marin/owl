@@ -229,4 +229,75 @@ describe("observe", () => {
     expect(outer).toBe(1);
     expect(inner).toBe(0);
   });
+
+  test("a write that shifts an array through the view does not call the callback by itself", () => {
+    let calls = 0;
+    const view = observe({ list: [1, 2, 3] }, () => calls++);
+    const list = view.list;
+    list.push(4);
+    list.pop();
+    list.unshift(0);
+    list.shift();
+    list.splice(1, 1);
+    expect(calls).toBe(0);
+    expect(toRaw(list)).toEqual([1, 3]);
+  });
+
+  test("a write that shifts an array calls the callback when the view read what it changed", () => {
+    let calls = 0;
+    const view = observe({ list: [1, 2] }, () => calls++);
+    void view.list.length;
+    view.list.push(3);
+    expect(calls).toBe(1);
+  });
+
+  test("an item a shifting write returns is a view", () => {
+    let calls = 0;
+    const view = observe({ list: [{ a: 1 }] }, () => calls++);
+    const item = view.list.pop()!;
+    void item.a;
+    item.a = 2;
+    expect(calls).toBe(1);
+  });
+
+  test("forEach through a map view hands out views, and the view as the map", () => {
+    let calls = 0;
+    const view = observe(new Map([["k", { a: 1 }]]), () => calls++);
+    let value: any;
+    let map: any;
+    view.forEach((v, _k, m) => {
+      value = v;
+      map = m;
+    });
+    expect(map).toBe(view);
+    expect(value).toBe([...view.values()][0]);
+    void value.a;
+    proxy(toRaw(value)).a = 2;
+    expect(calls).toBe(1);
+  });
+
+  test("forEach through a view observes the entries, not what its callback reads elsewhere", () => {
+    let calls = 0;
+    const other = proxy({ x: 1 });
+    const view = observe(new Set([1]), () => calls++);
+    view.forEach(() => other.x);
+    other.x = 2;
+    expect(calls).toBe(0);
+    view.add(2);
+    expect(calls).toBe(1);
+  });
+
+  test("a collection view hands out its constructor, and other functions, as they are", () => {
+    const view: any = observe(new Map(), () => {});
+    expect(view.constructor).toBe(Map);
+    expect(new view.constructor([[1, 2]]).get(1)).toBe(2);
+  });
+
+  test("hasOwnProperty through the view observes the presence of its key", () => {
+    let calls = 0;
+    const view: any = observe({ a: 1 }, () => calls++);
+    expect(view.hasOwnProperty("b")).toBe(false);
+    proxy(toRaw(view)).b = 1;
+    expect(calls).toBe(1);
+  });
 });

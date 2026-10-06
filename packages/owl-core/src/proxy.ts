@@ -369,6 +369,10 @@ export function proxy<T extends Target>(target: T): T {
   return proxifyTarget(target, false);
 }
 
+// the proxy each observe() view reads through, so that a view of a view
+// observes the same target instead of stacking observers
+const viewBases = new WeakMap<object, any>();
+
 /**
  * Returns a view of `target` that calls `callback` the first time a value read
  * through the view changes, synchronously, as OWL 2's `reactive(target,
@@ -376,15 +380,13 @@ export function proxy<T extends Target>(target: T): T {
  * values read through the view again are observed. Objects read through the
  * view are views too, with the same callback; reads keep subscribing the
  * computation they happen in (a render, an effect) as a plain proxy read does.
+ * An array method that changes the length (push, splice...) reads it as its
+ * own business, not as a read of the view, as it does through a proxy.
  *
  * @param target the object to observe
  * @param callback called when an observed value changes
  * @returns a view of the proxy of `target`
  */
-// the proxy each observe() view reads through, so that a view of a view
-// observes the same target instead of stacking observers
-const viewBases = new WeakMap<object, any>();
-
 export function observe<T extends Target>(target: T, callback: () => void): T {
   const computation = createComputation(
     () => untrack(callback),
@@ -405,17 +407,55 @@ export function observe<T extends Target>(target: T, callback: () => void): T {
       return result;
     }
     const raw = toRaw(reactive);
-    const isCollection = raw instanceof Map || raw instanceof Set || raw instanceof WeakMap;
-    result = new Proxy(reactive, {
+    const type = collectionType(raw);
+    const collectionMethods = type ? methodFactories[type] : null;
+    // the functions handed out for the methods the view runs on its proxy
+    let methods: Map<Function, Function> | null = null;
+    const method = (value: Function, make: () => Function): Function => {
+      let result = (methods ??= new Map()).get(value);
+      if (result === undefined) {
+        result = make();
+        methods.set(value, result);
+      }
+      return result;
+    };
+    const self: any = new Proxy(reactive, {
       get(r, key, receiver) {
         // the view is the receiver: a getter, or a target that is itself a
         // proxy, reads through it and so subscribes the callback
         const value = read(() => Reflect.get(r, key, receiver));
-        if (isCollection && typeof value === "function") {
-          return (...args: any[]) => {
-            const result = read(() => value.apply(r, args));
-            return isIterator(result) ? observedIterator(result) : wrap(result);
-          };
+        if (typeof value === "function") {
+          if (collectionMethods?.has(key)) {
+            return method(value, () =>
+              key === "forEach"
+                ? (callback: Function, thisArg?: any) => {
+                    for (const [k, v] of observedIterator(read(() => r.entries()))) {
+                      callback.call(thisArg, v, k, self);
+                    }
+                  }
+                : (...args: any[]) => {
+                    const result = read(() => value.apply(r, args));
+                    return isIterator(result) ? observedIterator(result) : wrap(result);
+                  }
+            );
+          }
+          if (lengthWriters.has(value)) {
+            return method(
+              value,
+              () =>
+                (...args: any[]) =>
+                  wrap(value.apply(r, args))
+            );
+          }
+          if (viewReaders.has(value)) {
+            return method(
+              value,
+              () =>
+                (...args: any[]) =>
+                  read(() => value.apply(r, args))
+            );
+          }
+          return value;
         }
         const result = wrap(value);
         return result !== value && isLocked(raw, key) ? value : result;
@@ -436,6 +476,7 @@ export function observe<T extends Target>(target: T, callback: () => void): T {
         return Reflect.deleteProperty(r, key);
       },
     });
+    result = self;
     views.set(reactive, result);
     viewBases.set(result, reactive);
     targets.set(result, raw);
@@ -791,11 +832,15 @@ for (const name of ["copyWithin", "fill", "reverse", "sort"] as const) {
 // pushes would re-run on every push of another, and two of them would re-run
 // each other forever. The others stay tracked: a sort reads the items its
 // comparator orders, and its caller depends on them (as in Vue).
+// An observe() view runs them on its proxy, unobserved, for the same reason.
+const lengthWriters = new Set<Function>();
 for (const name of ["pop", "push", "shift", "splice", "unshift"] as const) {
   const method = Array.prototype[name] as Function;
-  replacedMethods.set(method, function (this: unknown[], ...args: unknown[]) {
+  const writer = function (this: unknown[], ...args: unknown[]) {
     return batch(() => untrack(() => method.apply(this, args)));
-  });
+  };
+  replacedMethods.set(method, writer);
+  lengthWriters.add(writer);
 }
 for (const name of ["includes", "indexOf", "lastIndexOf"] as const) {
   const method = Array.prototype[name] as Function;
@@ -809,12 +854,18 @@ for (const name of ["includes", "indexOf", "lastIndexOf"] as const) {
   });
 }
 
+// The replaced methods that read through something other than the proxy's
+// traps: an observe() view runs them on its proxy, observed.
+const viewReaders = new Set<Function>();
+
 // hasOwnProperty reads the presence of the key it asks about, as `in` does
-replacedMethods.set(objectHasOwnProperty, function (this: object, key: PropertyKey) {
+const hasOwnPropertyReader = function (this: object, key: PropertyKey) {
   const raw = toRaw(this);
   onReadKeyPresence(propertyHosts.get(raw) ?? raw, typeof key === "symbol" ? key : String(key));
   return objectHasOwnProperty.call(raw, key);
-});
+};
+replacedMethods.set(objectHasOwnProperty, hasOwnPropertyReader);
+viewReaders.add(hasOwnPropertyReader);
 
 function collectionType(target: Target): CollectionRawType | null {
   return target instanceof Map

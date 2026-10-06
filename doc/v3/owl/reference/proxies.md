@@ -62,6 +62,22 @@ state.items[0] === raw; // true — not proxified
 use `markRaw` when you know the object won't change, or when profiling reveals
 that proxy creation is a performance bottleneck.
 
+Marking a class prototype marks the class: every instance of it, and of its
+subclasses, is handed out as it is. A class with private members (`#x`) needs
+it, since a proxy does not have them: a getter or setter reaching one through
+a proxy throws an error that names the class to mark.
+
+```js
+class Secret {
+  #value = 1;
+  get value() {
+    return this.#value;
+  }
+}
+markRaw(Secret.prototype);
+proxy({ secret: new Secret() }).secret.value; // 1
+```
+
 ## toRaw
 
 Given a proxy, returns the underlying non-proxy object. Useful for identity
@@ -98,5 +114,9 @@ view.count; // read again: observed again
 - Objects read through the view are views too, with the same callback.
 - Reads through the view still subscribe the computation they happen in (a
   render, an effect), as a plain proxy read does.
+- An array method that changes the length (`push`, `pop`, `shift`, `unshift`,
+  `splice`) does not subscribe the view to what it reads to do so: pushing
+  through the view calls `callback` only if the view read the length or the
+  items before.
 - Use it to bridge to code that expects a callback; within components, prefer
   `proxy` with `effect` or a render.
