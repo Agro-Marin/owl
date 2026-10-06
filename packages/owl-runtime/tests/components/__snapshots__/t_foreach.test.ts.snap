@@ -261,6 +261,46 @@ exports[`list of components > dev mode: keys the list tells apart but the compon
 }"
 `;
 
+exports[`list of components > emptied, keeps a node one of its components put among the items as it unmounts 1`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { prepareList, createComponent, withKey, keyOf } = helpers;
+  const comp1 = createComponent(app, \`Item\`, true, false, false, ["id"]);
+  
+  let block1 = createBlock(\`<ul><block-child-0/></ul>\`);
+  
+  return function template(ctx, node, key = "") {
+    const ctx1 = ctx;
+    const [k_block2, v_block2, l_block2, c_block2] = prepareList(ctx['this'].ids());
+    for (let i1 = 0; i1 < l_block2; i1++) {
+      let ctx = Object.create(ctx1);
+      ctx["id"] = k_block2[i1];
+      const key1 = ctx['id'];
+      const skey1 = keyOf(key1);
+      c_block2[i1] = withKey(comp1({id: ctx['id']}, key + \`__1__\${skey1}\`, node, this, null), key1);
+    }
+    const b2 = list(c_block2);
+    return block1([], [b2]);
+  }
+}"
+`;
+
+exports[`list of components > emptied, keeps a node one of its components put among the items as it unmounts 2`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { safeOutput } = helpers;
+  
+  let block1 = createBlock(\`<li><block-child-0/></li>\`);
+  
+  return function template(ctx, node, key = "") {
+    const b2 = safeOutput(ctx['this'].props.id, key, "__1");
+    return block1([], [b2]);
+  }
+}"
+`;
+
 exports[`list of components > list of sub components inside other nodes 1`] = `
 "function anonymous(app, bdom, helpers
 ) {

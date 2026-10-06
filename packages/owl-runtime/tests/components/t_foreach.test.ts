@@ -1,4 +1,14 @@
-import { Component, markup, mount, onMounted, props, proxy, signal, xml } from "../../src";
+import {
+  Component,
+  markup,
+  mount,
+  onMounted,
+  onWillUnmount,
+  props,
+  proxy,
+  signal,
+  xml,
+} from "../../src";
 import {
   makeTestFixture,
   nextTick,
@@ -18,6 +28,35 @@ beforeEach(() => {
 });
 
 describe("list of components", () => {
+  test("emptied, keeps a node one of its components put among the items as it unmounts", async () => {
+    const seen: string[] = [];
+    class Item extends Component {
+      static template = xml`<li><t t-out="this.props.id"/></li>`;
+      props = props();
+      setup() {
+        onWillUnmount(() => {
+          const ul = fixture.querySelector("ul")!;
+          seen.push(`${this.props.id}:${ul.children.length}`);
+          if (this.props.id === 2) {
+            ul.insertBefore(document.createElement("b"), ul.firstChild);
+          }
+        });
+      }
+    }
+    class List extends Component {
+      static template = xml`<ul><t t-foreach="this.ids()" t-as="id" t-key="id"><Item id="id"/></t></ul>`;
+      static components = { Item };
+      ids = signal([1, 2, 3]);
+    }
+    const parent = await mount(List, fixture);
+    expect(fixture.innerHTML).toBe("<ul><li>1</li><li>2</li><li>3</li></ul>");
+    parent.ids.set([]);
+    await nextTick();
+    expect(fixture.innerHTML).toBe("<ul><b></b></ul>");
+    // every item unmounts while the list is still in place
+    expect(seen).toEqual(["1:3", "2:3", "3:4"]);
+  });
+
   test("a keyed item switching between text and markup, or between tags", async () => {
     class Parent extends Component {
       static template = xml`

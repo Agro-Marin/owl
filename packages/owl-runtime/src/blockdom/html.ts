@@ -1,5 +1,5 @@
 import type { VNode } from "./index";
-import { nodeInsertBefore, nodeRemoveChild } from "./dom";
+import { nodeInsertBefore } from "./dom";
 
 class VHtml {
   html: string;
@@ -69,9 +69,8 @@ class VHtml {
   beforeRemove() {}
 
   remove() {
-    const parent = this.parentEl;
     for (let elem of this.content) {
-      nodeRemoveChild.call(parent, elem);
+      elem.remove();
     }
   }
 

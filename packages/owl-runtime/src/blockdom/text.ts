@@ -1,5 +1,5 @@
 import type { VNode } from "./index";
-import { characterDataSetData, nodeInsertBefore, nodeRemoveChild } from "./dom";
+import { characterDataRemove, characterDataSetData, nodeInsertBefore } from "./dom";
 
 class VText {
   text: string | String;
@@ -28,7 +28,7 @@ class VText {
   beforeRemove() {}
 
   remove() {
-    nodeRemoveChild.call(this.parentEl, this.el!);
+    characterDataRemove.call(this.el!);
   }
 
   firstNode(): Node {

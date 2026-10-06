@@ -4,6 +4,8 @@ export let nodeCloneNode: typeof Node.prototype.cloneNode;
 export let nodeInsertBefore: typeof Node.prototype.insertBefore;
 export let nodeAppendChild: typeof Node.prototype.appendChild;
 export let nodeRemoveChild: typeof Node.prototype.removeChild;
+// a text node removes itself, and does nothing once detached
+export let characterDataRemove: () => void;
 export let nodeSetTextContent: (v: string) => void;
 export let characterDataSetData: (v: string) => void;
 export let nodeGetFirstChild: () => ChildNode | null;
@@ -15,6 +17,7 @@ if (typeof Node !== "undefined") {
   nodeInsertBefore = nodeProto.insertBefore;
   nodeAppendChild = nodeProto.appendChild;
   nodeRemoveChild = nodeProto.removeChild;
+  characterDataRemove = CharacterData.prototype.remove;
   nodeSetTextContent = getDescriptor(nodeProto, "textContent").set!;
   characterDataSetData = getDescriptor(CharacterData.prototype, "data").set!;
   nodeGetFirstChild = getDescriptor(nodeProto, "firstChild").get!;

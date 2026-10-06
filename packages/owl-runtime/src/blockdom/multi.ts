@@ -1,5 +1,5 @@
 import type { VNode } from "./index";
-import { nodeInsertBefore, nodeRemoveChild } from "./dom";
+import { characterDataRemove, nodeInsertBefore, nodeRemoveChild } from "./dom";
 
 // -----------------------------------------------------------------------------
 // Multi NODE
@@ -110,7 +110,6 @@ export class VMulti {
   }
 
   remove() {
-    const parentEl = this.parentEl;
     const children = this.children;
     const anchors = this.anchors;
     for (let i = 0, l = children.length; i < l; i++) {
@@ -118,7 +117,7 @@ export class VMulti {
       if (child) {
         child.remove();
       } else {
-        nodeRemoveChild.call(parentEl, anchors![i]);
+        characterDataRemove.call(anchors![i]);
       }
     }
   }

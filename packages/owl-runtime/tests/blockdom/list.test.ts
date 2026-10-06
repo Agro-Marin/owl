@@ -1,4 +1,5 @@
-import { list, mount, multi, patch, text, createBlock, VNode } from "../../src/blockdom";
+import { setDebug, setDebugSink } from "@odoo/owl-core";
+import { html, list, mount, multi, patch, text, createBlock, VNode } from "../../src/blockdom";
 import { makeTestFixture } from "./helpers";
 
 //------------------------------------------------------------------------------
@@ -548,6 +549,80 @@ describe("miscellaneous operations", () => {
     expect(fixture.innerHTML).toBe("<span>a</span><span>b</span>");
     patch(tree, list([kSpan("c", 2), kSpan("a", NaN), kSpan("b", 1)]));
     expect(fixture.innerHTML).toBe("<span>c</span><span>a</span><span>b</span>");
+  });
+});
+
+describe("a list emptied or removed", () => {
+  const div = createBlock("<div><block-child-0/></div>");
+
+  function removals(fn: () => void): string[] {
+    const lines: string[] = [];
+    setDebugSink((_channel, message) => {
+      if (message.startsWith("list items removed")) {
+        lines.push(message.slice("list items removed ".length).split(":")[0]);
+      }
+    });
+    setDebug(["template"]);
+    try {
+      fn();
+    } finally {
+      setDebug(false);
+      setDebugSink(null);
+    }
+    return lines;
+  }
+
+  const kinds: [string, (key: number) => VNode][] = [
+    ["text", n],
+    ["block", (key) => kSpan(String(key), key)],
+    ["html", (key) => withKey(html(`<b>${key}</b>`), key)],
+    ["multi of one child", (key) => withKey(multi([kSpan(String(key), key)]), key)],
+    ["multi of one empty slot", (key) => withKey(multi([undefined as any]), key)],
+    ["empty list", (key) => withKey(list([]), key)],
+  ];
+
+  test.each(kinds)(
+    "of %s items, one node each, alone in its parent, empties it at once",
+    (_kind, item) => {
+      const tree = div([], [list([1, 2, 3].map(item))]);
+      mount(tree, fixture);
+      const el = fixture.firstChild as HTMLElement;
+      expect(removals(() => patch(tree, div([], [list([])])))).toEqual(["at once"]);
+      expect(el.childNodes.length).toBe(1);
+      patch(tree, div([], [list([4, 5].map(item))]));
+      expect(el.childNodes.length).toBe(3);
+      expect(removals(() => patch(tree, div([], [])))).toEqual(["at once"]);
+      expect(el.childNodes.length).toBe(0);
+    }
+  );
+
+  test("of items of several nodes, or among other nodes, removes them one by one", () => {
+    const tree = div([], [list([1, 2].map(kPair))]);
+    mount(tree, fixture);
+    const el = fixture.firstChild as HTMLElement;
+    expect(removals(() => patch(tree, div([], [list([])])))).toEqual(["one by one"]);
+    expect(el.innerHTML).toBe("");
+    patch(tree, div([], [list([1, 2].map(n))]));
+    el.append(document.createElement("i"));
+    expect(removals(() => patch(tree, div([], [])))).toEqual(["one by one"]);
+    expect(el.innerHTML).toBe("<i></i>");
+  });
+
+  test("removed at once, an item's ref is unbound once its element is detached", () => {
+    const item = createBlock('<span block-ref="0"><block-text-1/></span>');
+    const seen: [string, boolean][] = [];
+    const ref = (el: HTMLElement | null, previous?: HTMLElement) => {
+      seen.push(el ? ["bound", el.isConnected] : ["unbound", previous!.isConnected]);
+    };
+    const tree = div([], [list([1, 2].map((key) => withKey(item([ref, String(key)]), key)))]);
+    mount(tree, fixture);
+    expect(removals(() => patch(tree, div([], [list([])])))).toEqual(["at once"]);
+    expect(seen).toEqual([
+      ["bound", false],
+      ["bound", false],
+      ["unbound", false],
+      ["unbound", false],
+    ]);
   });
 });
 

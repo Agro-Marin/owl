@@ -1,5 +1,13 @@
+import { debug, debugLog } from "@odoo/owl-core";
 import type { VNode } from "./index";
-import { nodeInsertBefore, nodeRemoveChild } from "./dom";
+import {
+  characterDataRemove,
+  nodeAppendChild,
+  nodeGetFirstChild,
+  nodeGetNextSibling,
+  nodeInsertBefore,
+  nodeSetTextContent,
+} from "./dom";
 
 // -----------------------------------------------------------------------------
 // List Node
@@ -171,6 +179,8 @@ class VList {
         for (let i = startIdx2; i <= endIdx2; i++) {
           cMount.call(ch2[i], parent, anchor);
         }
+      } else if (ch2.length === 0) {
+        removeItems(ch1, _anchor, false, withBeforeRemove);
       } else {
         for (let i = startIdx1; i <= endIdx1; i++) {
           let ch = ch1[i];
@@ -197,19 +207,12 @@ class VList {
   }
 
   remove() {
-    // child by child, even as its parent's only child: the parent may hold
-    // nodes put there by someone else (a Portal's content, a widget's DOM),
-    // anywhere among the list's own
-    const { parentEl, anchor } = this;
     const children = this.children;
-    const l = children.length;
-    if (l) {
-      const remove = children[0].remove;
-      for (let i = 0; i < l; i++) {
-        remove.call(children[i]);
-      }
+    if (children.length) {
+      removeItems(children, this.anchor!, true, false);
+    } else {
+      characterDataRemove.call(this.anchor!);
     }
-    nodeRemoveChild.call(parentEl, anchor!);
   }
 
   firstNode(): Node | undefined {
@@ -229,6 +232,76 @@ class VList {
 
 export function list(children: VNode[]): VNode<VList> {
   return new VList(children);
+}
+
+/**
+ * Removes every item of a list (and its anchor, `withAnchor`), running each
+ * item's beforeRemove first when asked. When the items, one node each, and
+ * the anchor are all their parent holds, the parent is emptied at once
+ * (textContent), and each item's remove() then finds its node detached: it
+ * still unbinds its refs. Otherwise (an item of several nodes, or a node
+ * someone else put before, after or among them: a Portal's content, a
+ * widget's DOM) the items are removed one by one, which leaves what they do
+ * not own in place. Ownership is checked again after the beforeRemove hooks,
+ * which may change the DOM. (Deleting the items' range alone, with a Range,
+ * costs Chromium as much as removing them one by one.)
+ */
+function removeItems(
+  items: VNode[],
+  anchor: Node,
+  withAnchor: boolean,
+  withBeforeRemove: boolean
+): void {
+  const l = items.length;
+  const { beforeRemove, remove } = items[0];
+  const parent = anchor.parentNode!;
+  let owned = l > 1 && ownsParent(items, parent, anchor);
+  if (owned && withBeforeRemove) {
+    for (let i = 0; i < l; i++) {
+      beforeRemove.call(items[i]);
+    }
+    withBeforeRemove = false;
+    owned = ownsParent(items, parent, anchor);
+  }
+  if (owned) {
+    if (debug.template) {
+      debugLog("template", "list items removed at once: their parent holds nothing else");
+    }
+    nodeSetTextContent.call(parent, "");
+    if (!withAnchor) {
+      nodeAppendChild.call(parent, anchor);
+    }
+  } else if (l > 1 && debug.template) {
+    debugLog(
+      "template",
+      "list items removed one by one: not one node each, or their parent holds other nodes"
+    );
+  }
+  for (let i = 0; i < l; i++) {
+    const item = items[i];
+    if (withBeforeRemove) {
+      beforeRemove.call(item);
+    }
+    remove.call(item);
+  }
+  if (withAnchor && !owned) {
+    characterDataRemove.call(anchor);
+  }
+}
+
+// Whether the items, in order and one node each, then the anchor, are every
+// child of `parent`. An item of several nodes breaks the sequence at its
+// second node, a node someone else put there at itself.
+function ownsParent(items: VNode[], parent: Node, anchor: Node): boolean {
+  const firstNode = items[0].firstNode;
+  let node: Node | null = nodeGetFirstChild.call(parent);
+  for (let i = 0, l = items.length; i < l; i++) {
+    if (node !== firstNode.call(items[i]) || node === null) {
+      return false;
+    }
+    node = nodeGetNextSibling.call(node);
+  }
+  return node === anchor && nodeGetNextSibling.call(anchor) === null;
 }
 
 function createMapping(ch1: VNode[], startIdx1: number, endIdx1: number): Map<any, number> {
