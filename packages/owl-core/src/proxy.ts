@@ -1,6 +1,7 @@
 import { OwlError } from "./owl_error";
 import {
   batch,
+  getCurrentComputation,
   isObserving,
   onReadAtom,
   onWriteAtom,
@@ -200,6 +201,9 @@ function onReadTargetKey(target: Target, key: PropertyKey): void {
   // a read nobody observes subscribes nothing, and creates no atom for its
   // key: a model building its records outside any render reads thousands
   if (isObserving()) {
+    if (debug.reactivity) {
+      debugRead(describeKey(key), target);
+    }
     onReadAtom(getTargetKeyAtom(target, key));
   }
 }
@@ -226,8 +230,22 @@ function describeKey(key: PropertyKey): string {
   return key === KEYCHANGES ? "(keys)" : String(key);
 }
 
+// which atom a tracked proxy read subscribes to, and who reads it: what a
+// "why does this not re-render" question needs
+function debugRead(what: string, target: Target): void {
+  const reader = getCurrentComputation();
+  debugLog(
+    "reactivity",
+    `proxy read ${what} by ${reader ? reader.name || "a computation" : "an observe() view"}`,
+    target
+  );
+}
+
 function onReadKeyPresence(target: Target, key: PropertyKey): void {
   if (isObserving()) {
+    if (debug.reactivity) {
+      debugRead(`presence of ${String(key)}`, target);
+    }
     onReadAtom(getTargetKeyAtom(target, key, presenceAtoms));
   }
 }
@@ -543,6 +561,9 @@ class BasicHandler implements ProxyHandler<any> {
         atom = createAtom(undefined, "key");
         table.set(key, atom);
       }
+      if (debug.reactivity) {
+        debugRead(describeKey(key), target);
+      }
       onReadAtom(atom);
     }
     let value;
@@ -763,6 +784,9 @@ function isPlainArray(raw: object): boolean {
 
 function onReadItems(raw: Target): void {
   if (isObserving()) {
+    if (debug.reactivity) {
+      debugRead("items", raw);
+    }
     let atom = itemsAtoms.get(raw);
     if (atom === undefined) {
       atom = createAtom(undefined, "key");

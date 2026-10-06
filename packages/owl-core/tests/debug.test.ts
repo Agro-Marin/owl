@@ -3,6 +3,7 @@ import {
   effect,
   Plugin,
   PluginManager,
+  proxy,
   setDebug,
   setDebugSink,
   signal,
@@ -45,6 +46,28 @@ test("effect and reactivity channels trace a write through to the effect it re-r
     "effect: flush 1 effect(s)",
     "effect: run reader",
     "effect: dispose reader",
+  ]);
+});
+
+test("the reactivity channel names each tracked proxy read and its reader", () => {
+  setDebug(["reactivity"]);
+  const state = proxy({ a: 1, list: [1, 2] } as any);
+  state.a;
+  const dispose = effect(
+    () => {
+      state.a;
+      "b" in state;
+      state.list.includes(3);
+    },
+    { name: "reader" }
+  );
+  dispose();
+  expect(lines).toEqual([
+    "reactivity: proxy read a by reader",
+    "reactivity: proxy read presence of b by reader",
+    "reactivity: proxy read list by reader",
+    "reactivity: proxy read includes by reader",
+    "reactivity: proxy read items by reader",
   ]);
 });
 
