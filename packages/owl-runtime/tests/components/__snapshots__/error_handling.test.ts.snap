@@ -762,7 +762,7 @@ exports[`can catch errors > can catch an error in a component render function 2`
     if (ctx['this'].state.error) {
       b2 = text(\`Error handled\`);
     } else {
-      b3 = callSlot(ctx, node, key, "default", false, null);
+      b3 = callSlot(ctx, node, key + \`__1\`, "default", false, null);
     }
     return block1([], [b2, b3]);
   }
@@ -863,7 +863,7 @@ exports[`can catch errors > can catch an error in the constructor call of a comp
     if (ctx['this'].state.error) {
       b2 = text(\`Error handled\`);
     } else {
-      b3 = callSlot(ctx, node, key, "default", false, null);
+      b3 = callSlot(ctx, node, key + \`__1\`, "default", false, null);
     }
     return block1([], [b2, b3]);
   }
@@ -907,7 +907,7 @@ exports[`can catch errors > can catch an error in the constructor call of a comp
     if (ctx['this'].state.error) {
       b2 = text(\`Error handled\`);
     } else {
-      b3 = callSlot(ctx, node, key, "default", false, null);
+      b3 = callSlot(ctx, node, key + \`__1\`, "default", false, null);
     }
     return block1([], [b2, b3]);
   }
@@ -987,7 +987,7 @@ exports[`can catch errors > can catch an error in the initial call of a componen
     if (ctx['this'].state.error) {
       b2 = text(\`Error handled\`);
     } else {
-      b3 = callSlot(ctx, node, key, "default", false, null);
+      b3 = callSlot(ctx, node, key + \`__1\`, "default", false, null);
     }
     return block1([], [b2, b3]);
   }
@@ -1046,7 +1046,7 @@ exports[`can catch errors > can catch an error in the initial call of a componen
     if (ctx['this'].state.error) {
       b2 = text(\`Error handled\`);
     } else {
-      b3 = callSlot(ctx, node, key, "default", false, null);
+      b3 = callSlot(ctx, node, key + \`__1\`, "default", false, null);
     }
     return block1([], [b2, b3]);
   }
@@ -1199,7 +1199,7 @@ exports[`can catch errors > can catch an error in the mounted call 2`] = `
     if (ctx['this'].state.error) {
       b2 = text(\`Error handled\`);
     } else {
-      b3 = callSlot(ctx, node, key, "default", false, null);
+      b3 = callSlot(ctx, node, key + \`__1\`, "default", false, null);
     }
     return block1([], [b2, b3]);
   }
@@ -1254,7 +1254,7 @@ exports[`can catch errors > can catch an error in the willPatch call 2`] = `
     if (ctx['this'].state.error) {
       b2 = text(\`Error handled\`);
     } else {
-      b3 = callSlot(ctx, node, key, "default", false, null);
+      b3 = callSlot(ctx, node, key + \`__1\`, "default", false, null);
     }
     return block1([], [b2, b3]);
   }
@@ -1310,7 +1310,7 @@ exports[`can catch errors > can catch an error in the willStart call 2`] = `
     if (ctx['this'].state.error) {
       b2 = text(\`Error handled\`);
     } else {
-      b3 = callSlot(ctx, node, key, "default", false, null);
+      b3 = callSlot(ctx, node, key + \`__1\`, "default", false, null);
     }
     return block1([], [b2, b3]);
   }
@@ -1367,7 +1367,7 @@ exports[`can catch errors > can catch an error origination from a child's willSt
     if (ctx['this'].state.error) {
       b2 = text(\`Error handled\`);
     } else {
-      b3 = callSlot(ctx, node, key, "default", false, null);
+      b3 = callSlot(ctx, node, key + \`__1\`, "default", false, null);
     }
     return block1([], [b2, b3]);
   }
@@ -1487,7 +1487,7 @@ exports[`can catch errors > catching error, rethrow, render parent  -- a main co
   let { callSlot } = helpers;
   
   return function template(ctx, node, key = "") {
-    return callSlot(ctx, node, key, "default", false, null);
+    return callSlot(ctx, node, key + \`__1\`, "default", false, null);
   }
 }"
 `;
@@ -1566,7 +1566,7 @@ exports[`can catch errors > catching in child makes parent render 2`] = `
   let { callSlot } = helpers;
   
   return function template(ctx, node, key = "") {
-    return callSlot(ctx, node, key, "default", false, null);
+    return callSlot(ctx, node, key + \`__1\`, "default", false, null);
   }
 }"
 `;
@@ -1646,7 +1646,7 @@ exports[`can catch errors > error in mounted on a component with a sibling (prop
     if (ctx['this'].state.error) {
       b2 = text(\`Error handled\`);
     } else {
-      b3 = callSlot(ctx, node, key, "default", false, null);
+      b3 = callSlot(ctx, node, key + \`__1\`, "default", false, null);
     }
     return block1([], [b2, b3]);
   }

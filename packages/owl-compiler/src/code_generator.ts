@@ -31,7 +31,6 @@ import {
   EventHandlers,
 } from "./parser";
 
-const zero = Symbol("zero");
 // loop levels whose keys a t-out passes to safeOutput as is (see compileTOut)
 const MAX_LAZY_LOOP_KEYS = 3;
 
@@ -297,7 +296,6 @@ export class CodeGenerator {
   ast: AST;
   staticDefs: { id: string; expr: string }[] = [];
   hoistedHandlers: Map<string, string> = new Map();
-  slotNames: Set<String | Symbol> = new Set();
   helpers: Set<string> = new Set();
   // per generator, so that generating a template (a translateFn may compile
   // another) never shifts the names of the one in progress
@@ -797,9 +795,7 @@ export class CodeGenerator {
   compileZero(ast: ASTTOut, ctx: Context) {
     this.helpers.add("zero");
     this.helpers.add("zeroCtx");
-    const isMultiple = this.slotNames.has(zero);
-    this.slotNames.add(zero);
-    const key = this.scopeKey(ctx, isMultiple);
+    const key = this.scopeKey(ctx);
     let defaultContent = `text("")`;
     if (ast.body) {
       const bodyAst: AST = { type: ASTType.Multi, content: ast.body };
@@ -837,14 +833,14 @@ export class CodeGenerator {
         const loopKeys = Array.from({ length: level }, (_, i) => `, key${i + 1}`).join("");
         keyArgs = `${keyExpr}, "${site}"${level ? `, ${level}${loopKeys}` : ""}`;
       } else {
-        keyArgs = `${this.scopeKey(ctx, false, site)}, ""`;
+        keyArgs = `${this.scopeKey(ctx, site)}, ""`;
       }
       const expr = compileExpr(ast.expr);
       this.helpers.add("safeOutput");
       if (ast.body) {
         const bodyAst: AST = { type: ASTType.Multi, content: ast.body };
         const name = this.compileInNewTarget("defaultContent", bodyAst, ctx);
-        const key = this.scopeKey(ctx, false, site);
+        const key = this.scopeKey(ctx, site);
         const value = this.generateId("out");
         this.define(value, expr);
         blockStr =
@@ -906,7 +902,7 @@ export class CodeGenerator {
       this.helpers.add("memoPrevious");
       this.helpers.add("memoKeep");
       this.helpers.add("memoHit");
-      this.define(`${memo}_site`, this.scopeKey(ctx, true));
+      this.define(`${memo}_site`, this.scopeKey(ctx));
       this.define(`${memo}_previous`, `memoPrevious(node, ${memo}_site)`);
       this.define(`${memo}_next`, `new Map()`);
     }
@@ -1132,7 +1128,7 @@ export class CodeGenerator {
         this.addLine(`${ctxExpr}${key} = ${value};`);
       }
     }
-    const key = this.scopeKey(ctx, true);
+    const key = this.scopeKey(ctx);
     this.helpers.add("callTemplate");
     this.insertBlock(
       block,
@@ -1188,12 +1184,16 @@ export class CodeGenerator {
     return null;
   }
 
-  scopeKey(ctx: Context, unique: boolean = false, site: string = ""): string {
-    let suffix = unique ? this.generateId("__") : site;
+  // the key of a site's content: the site's id, then the key of each open
+  // loop. Every site has an id: without one, a site's loop keys could spell
+  // another site's id (`__2` for the item keyed 2 and for the site __2), and
+  // the two would share a key in their component's children.
+  scopeKey(ctx: Context, site: string = this.generateId("__")): string {
+    let suffix = site;
     for (let i = 1; i <= this.target.loopLevel; i++) {
       suffix += `__\${${this.target.stringKey(i)}}`;
     }
-    const key = suffix ? `key + \`${suffix}\`` : "key";
+    const key = `key + \`${suffix}\``;
     return ctx.tKeyExpr ? `${ctx.tKeyExpr} + ${key}` : key;
   }
 
@@ -1370,7 +1370,7 @@ export class CodeGenerator {
       expr = `\`${ast.name}\``;
     }
 
-    const keyArg = this.scopeKey(ctx, true);
+    const keyArg = this.scopeKey(ctx);
     let id = this.generateId("comp");
     this.helpers.add("createComponent");
     this.staticDefs.push({
@@ -1421,17 +1421,13 @@ export class CodeGenerator {
     let blockString: string;
     let slotName;
     let dynamic = false;
-    let isMultiple = false;
     if (isInterpolated(ast.name)) {
       dynamic = true;
-      isMultiple = true;
       slotName = interpolate(ast.name);
     } else {
       slotName = JSON.stringify(ast.name);
-      isMultiple = this.slotNames.has(ast.name);
-      this.slotNames.add(ast.name);
     }
-    const key = this.scopeKey(ctx, isMultiple);
+    const key = this.scopeKey(ctx);
 
     const props = ast.attrs ? this.formatPropObject(ast.attrs, ast.attrsTranslationCtx, ctx) : [];
     // a slot scope without attributes is an object callSlot makes when the

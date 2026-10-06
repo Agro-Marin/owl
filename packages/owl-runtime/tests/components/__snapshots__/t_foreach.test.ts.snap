@@ -189,7 +189,7 @@ exports[`list of components > dev mode: keys a t-set body output in the loop sha
   
   return function template(ctx, node, key = "") {
     ctx = Object.create(ctx);
-    ctx["v"] = new LazyValue(value1, ctx, this, node, key);
+    ctx["v"] = new LazyValue(value1, ctx, this, node, key + \`__2\`);
     const ctx1 = ctx;
     const [k_block2, v_block2, l_block2, c_block2] = prepareList(ctx['this'].items);
     const keys2 = new Set();
@@ -200,7 +200,7 @@ exports[`list of components > dev mode: keys a t-set body output in the loop sha
       const skey1 = keyOf(key1);
       if (keys2.has(skey1)) { throw new OwlError(\`Got duplicate key in t-foreach: \${key1}\`)}
       keys2.add(skey1);
-      c_block2[i1] = withKey(safeOutput(ctx['v'], key, "__2", 1, key1), key1);
+      c_block2[i1] = withKey(safeOutput(ctx['v'], key, "__3", 1, key1), key1);
     }
     return list(c_block2);
   }

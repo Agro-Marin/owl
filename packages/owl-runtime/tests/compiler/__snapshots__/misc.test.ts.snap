@@ -163,7 +163,7 @@ exports[`misc > global 2`] = `
   
   return function template(ctx, node, key = "") {
     let attr1 = 'agüero';
-    const b2 = ctx[zero] ? ctx[zero].call(this, ctx[zeroCtx], node, key) : text("");
+    const b2 = ctx[zero] ? ctx[zero].call(this, ctx[zeroCtx], node, key + \`__1\`) : text("");
     return block1([attr1], [b2]);
   }
 }"
@@ -354,8 +354,8 @@ exports[`names taken from the template are data in the generated code > slot nam
   }
   
   return function template(ctx, node, key = "") {
-    const b2 = callSlot(ctx, node, key, "it's", false, {v: 1});
-    const b4 = comp1({slots: markRaw({"it's": {__render: slot1, __ctx: ctx, __owner: this, __scope: "s\\""}})}, key + \`__1\`, node, this, null);
+    const b2 = callSlot(ctx, node, key + \`__1\`, "it's", false, {v: 1});
+    const b4 = comp1({slots: markRaw({"it's": {__render: slot1, __ctx: ctx, __owner: this, __scope: "s\\""}})}, key + \`__2\`, node, this, null);
     return multi([b2, b4]);
   }
 }"
@@ -396,7 +396,7 @@ exports[`names taken from the template are data in the generated code > t-set na
   return function template(ctx, node, key = "") {
     ctx = Object.create(ctx);
     ctx["a\\"b"] = 1;
-    ctx["c\`d"] = new LazyValue(value1, ctx, this, node, key);
+    ctx["c\`d"] = new LazyValue(value1, ctx, this, node, key + \`__1\`);
     return text(\`ok\`);
   }
 }"

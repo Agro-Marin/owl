@@ -248,8 +248,8 @@ exports[`event handling > unnamed slot should call the event only once 2`] = `
   let { callSlot } = helpers;
   
   return function template(ctx, node, key = "") {
-    const b2 = callSlot(ctx, node, key, "named", false, null);
-    const b3 = callSlot(ctx, node, key, "default", false, null);
+    const b2 = callSlot(ctx, node, key + \`__1\`, "named", false, null);
+    const b3 = callSlot(ctx, node, key + \`__2\`, "default", false, null);
     return multi([b2, b3]);
   }
 }"

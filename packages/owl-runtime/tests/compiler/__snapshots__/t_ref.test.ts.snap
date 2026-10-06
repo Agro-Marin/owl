@@ -16,7 +16,7 @@ exports[`t-ref > a lazy t-set body used as a string does not bind its refs 1`] =
   
   return function template(ctx, node, key = "") {
     ctx = Object.create(ctx);
-    ctx["v"] = new LazyValue(value1, ctx, this, node, key);
+    ctx["v"] = new LazyValue(value1, ctx, this, node, key + \`__1\`);
     let attr1 = ctx['v'];
     return block2([attr1]);
   }

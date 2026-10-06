@@ -147,7 +147,7 @@ exports[`t-on > t-on on a t-set-slot whose content ends with a t-set 2`] = `
   let { callSlot } = helpers;
   
   return function template(ctx, node, key = "") {
-    return callSlot(ctx, node, key, "myslot", false, null);
+    return callSlot(ctx, node, key + \`__1\`, "myslot", false, null);
   }
 }"
 `;
@@ -412,7 +412,7 @@ exports[`t-on > t-on on slot, with 'prevent' modifier 2`] = `
   const catcher1 = createCatcher({"click.prevent":0}, [hdlr_fn1]);
   
   return function template(ctx, node, key = "") {
-    return catcher1(callSlot(ctx, node, key, "default", false, null), ctx);
+    return catcher1(callSlot(ctx, node, key + \`__1\`, "default", false, null), ctx);
   }
 }"
 `;
@@ -448,7 +448,7 @@ exports[`t-on > t-on on t-call-slots 2`] = `
     const b2 = text(\` [\`);
     const b3 = safeOutput(ctx['this'].state.count, key, "__1");
     const b4 = text(\`] \`);
-    const b5 = catcher1(callSlot(ctx, node, key, "default", false, null), ctx);
+    const b5 = catcher1(callSlot(ctx, node, key + \`__2\`, "default", false, null), ctx);
     return multi([b2, b3, b4, b5]);
   }
 }"
@@ -489,7 +489,7 @@ exports[`t-on > t-on on t-set-slots 2`] = `
   let { callSlot } = helpers;
   
   return function template(ctx, node, key = "") {
-    return callSlot(ctx, node, key, "myslot", false, null);
+    return callSlot(ctx, node, key + \`__1\`, "myslot", false, null);
   }
 }"
 `;

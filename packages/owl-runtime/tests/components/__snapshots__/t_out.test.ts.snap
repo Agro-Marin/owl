@@ -19,8 +19,8 @@ exports[`components in t-out > simple list 1`] = `
       ctx["n"] = k_block1[i1];
       const key1 = ctx['n'];
       const skey1 = keyOf(key1);
-      ctx["blabla"] = new LazyValue(value1, ctx, this, node, key + \`__\${skey1}\`);
-      c_block1[i1] = withKey(safeOutput(ctx['blabla'], key, "__2", 1, key1), key1);
+      ctx["blabla"] = new LazyValue(value1, ctx, this, node, key + \`__2__\${skey1}\`);
+      c_block1[i1] = withKey(safeOutput(ctx['blabla'], key, "__3", 1, key1), key1);
     }
     return list(c_block1);
   }

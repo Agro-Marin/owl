@@ -1,4 +1,14 @@
-import { App, Component, mount, onMounted, props, proxy, signal, xml } from "../../src";
+import {
+  App,
+  Component,
+  mount,
+  onMounted,
+  onWillDestroy,
+  props,
+  proxy,
+  signal,
+  xml,
+} from "../../src";
 import {
   children,
   makeTestFixture,
@@ -2063,6 +2073,55 @@ describe("slots", () => {
     }
     await mount(Parent, fixture);
     expect(fixture.innerHTML).toBe("<div><p><b>1</b></p><p><b>2</b></p></div>");
+  });
+
+  test("a slot called in a loop and again after it gives each call its own components", async () => {
+    const destroyed: number[] = [];
+    let n = 0;
+    class Item extends Component {
+      static template = xml`<b t-out="this.id"/>`;
+      id = ++n;
+      setup() {
+        onWillDestroy(() => destroyed.push(this.id));
+      }
+    }
+    // the t-out takes the site id __1 and the second call __2: the key of
+    // the call for the item keyed 2, without a site id of its own
+    class List extends Component {
+      static template = xml`<t t-foreach="[1, 2]" t-as="i" t-key="i"><t t-call-slot="default"/></t><i t-out="'|'"/><t t-call-slot="default"/>`;
+    }
+    class Parent extends Component {
+      static template = xml`<div><List><Item/></List></div>`;
+      static components = { List, Item };
+    }
+    const parent = await mount(Parent, fixture);
+    expect(fixture.innerHTML).toBe("<div><b>1</b><b>2</b><i>|</i><b>3</b></div>");
+    const list = Object.values(parent.__owl__.children)[0];
+    expect(Object.keys(list.children)).toHaveLength(3);
+    parent.__owl__.app.destroy();
+    expect(destroyed.sort()).toEqual([1, 2, 3]);
+  });
+
+  test("t-out='0' in a loop and again after it gives each output its own components", async () => {
+    const destroyed: number[] = [];
+    let n = 0;
+    class Item extends Component {
+      static template = xml`<b t-out="this.id"/>`;
+      id = ++n;
+      setup() {
+        onWillDestroy(() => destroyed.push(this.id));
+      }
+    }
+    const sub = xml`<t t-foreach="[1, 2]" t-as="i" t-key="i"><t t-out="0"/></t><i t-out="'|'"/><t t-out="0"/>`;
+    class Parent extends Component {
+      static template = xml`<div><t t-call="${sub}"><Item/></t></div>`;
+      static components = { Item };
+    }
+    const parent = await mount(Parent, fixture);
+    expect(fixture.innerHTML).toBe("<div><b>1</b><b>2</b><i>|</i><b>3</b></div>");
+    expect(Object.keys(parent.__owl__.children)).toHaveLength(3);
+    parent.__owl__.app.destroy();
+    expect(destroyed.sort()).toEqual([1, 2, 3]);
   });
 
   test("t-out='0' inside nested loops gets one component per outer iteration", async () => {

@@ -517,7 +517,7 @@ exports[`t-call > t-call and t-out 2`] = `
   let { zero, zeroCtx } = helpers;
   
   return function template(ctx, node, key = "") {
-    return ctx[zero] ? ctx[zero].call(this, ctx[zeroCtx], node, key) : text("");
+    return ctx[zero] ? ctx[zero].call(this, ctx[zeroCtx], node, key + \`__1\`) : text("");
   }
 }"
 `;
@@ -771,7 +771,7 @@ exports[`t-call > t-call-context: ComponentNode is not looked up in the context 
   let { callSlot } = helpers;
   
   return function template(ctx, node, key = "") {
-    return callSlot(ctx, node, key, "default", false, null);
+    return callSlot(ctx, node, key + \`__1\`, "default", false, null);
   }
 }"
 `;
@@ -816,7 +816,7 @@ exports[`t-call > t-call-context: slots don't make component available again whe
   let { callSlot } = helpers;
   
   return function template(ctx, node, key = "") {
-    return callSlot(ctx, node, key, "default", false, null);
+    return callSlot(ctx, node, key + \`__1\`, "default", false, null);
   }
 }"
 `;
@@ -877,7 +877,7 @@ exports[`t-call > t-set inside t-call are not evaluated before being rendered 2`
   let { zero, zeroCtx } = helpers;
   
   return function template(ctx, node, key = "") {
-    return ctx[zero] ? ctx[zero].call(this, ctx[zeroCtx], node, key) : text("");
+    return ctx[zero] ? ctx[zero].call(this, ctx[zeroCtx], node, key + \`__1\`) : text("");
   }
 }"
 `;
