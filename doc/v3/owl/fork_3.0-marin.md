@@ -50,6 +50,10 @@ differently from upstream.
   view itself, and its values unwrapped, instead of a proxy of it. Upstream's
   getters close over their signals and read through such a proxy; the fork's
   shared accessors find their view in a private field, which a proxy hides.
+- **A `t-foreach` over a `proxy()` of a plain array reads its items in one
+  step**, one subscription for the whole array. A subclass of `Array` (Odoo's
+  mail `RecordList`, which answers its index reads through its own proxy) is
+  iterated through its proxy, as upstream iterates every array.
 
 ## Odoo integration contract
 

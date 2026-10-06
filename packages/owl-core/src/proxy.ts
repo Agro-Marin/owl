@@ -552,16 +552,24 @@ function onWriteItems(target: Target): void {
   }
 }
 
+// whether a read of `raw` itself sees what a read through its proxy would: true
+// of a plain array, not of a subclass, which may answer from elsewhere
+function isPlainArray(raw: object): boolean {
+  return Object.getPrototypeOf(raw) === Array.prototype;
+}
+
 /**
- * The items of `array`, a proxy() of an array, read at once: one subscription
- * for the whole array instead of one per index, and each object item handed
- * out as its proxy, as an index read through the proxy would. For any other
- * array (a raw one, a collection signal's shallow value, an observe() view)
- * the array itself, to be read as usual.
+ * The items of `array`, a proxy() of a plain array, read at once: one
+ * subscription for the whole array instead of one per index, and each object
+ * item handed out as its proxy, as an index read through the proxy would. For
+ * any other array (a raw one, a collection signal's shallow value, an observe()
+ * view, a subclass of Array) the array itself, to be read as usual. A subclass
+ * may answer its index reads from elsewhere (its own proxy, getters), which a
+ * read of the raw target would neither see nor subscribe to.
  */
 export function readArrayItems<T>(array: T[]): T[] {
   const raw = targets.get(array) as T[] | undefined;
-  if (raw === undefined || deepProxies.get(raw) !== array) {
+  if (raw === undefined || deepProxies.get(raw) !== array || !isPlainArray(raw)) {
     return array;
   }
   if (isObserving()) {
