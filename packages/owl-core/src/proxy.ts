@@ -744,24 +744,28 @@ function writeKey(
       return true;
     }
   }
-  // an accessor runs with the proxy as `this`, and a write through another
-  // receiver defines the key on it
-  const originalValue = Reflect.get(target, key, receiver);
-  const previousTarget = writingTarget;
-  const previousKey = writingKey;
-  writingTarget = target;
-  writingKey = key;
-  let ret: boolean;
-  try {
-    ret = Reflect.set(target, key, stored, receiver);
-  } finally {
-    writingTarget = previousTarget;
-    writingKey = previousKey;
-  }
-  const changed =
-    !(isArray && key === "length") && !Object.is(originalValue, Reflect.get(target, key, receiver));
-  onWriteKey(target, key, own !== undefined, changed, isArray, originalLength, atoms);
-  return ret;
+  // An accessor runs with the proxy as `this`, and a write through another
+  // receiver defines the key on it. One batch: a setter writing other keys
+  // runs an immediate reader of them and of this key once, after the write.
+  return batch(() => {
+    const originalValue = Reflect.get(target, key, receiver);
+    const previousTarget = writingTarget;
+    const previousKey = writingKey;
+    writingTarget = target;
+    writingKey = key;
+    let ret: boolean;
+    try {
+      ret = Reflect.set(target, key, stored, receiver);
+    } finally {
+      writingTarget = previousTarget;
+      writingKey = previousKey;
+    }
+    const changed =
+      !(isArray && key === "length") &&
+      !Object.is(originalValue, Reflect.get(target, key, receiver));
+    onWriteKey(target, key, own !== undefined, changed, isArray, originalLength, atoms);
+    return ret;
+  });
 }
 
 function hasOrdinaryPrototype(target: Target): boolean {

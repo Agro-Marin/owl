@@ -296,6 +296,47 @@ function notifiedKeys(fn: () => void): string[] {
 }
 
 describe("writes", () => {
+  test("a setter writing its backing field runs an immediate reader once per write", () => {
+    class Box {
+      _value = 0;
+      get value() {
+        return this._value;
+      }
+      set value(value: number) {
+        this._value = value;
+      }
+    }
+    const box = proxy({ box: new Box() }).box;
+    let runs = 0;
+    immediateEffect(() => {
+      box.value;
+      runs++;
+    });
+    box.value = 1;
+    expect(runs).toBe(2);
+    expect(box.value).toBe(1);
+  });
+
+  test("an inherited setter defining its backing field runs an immediate reader once per write", () => {
+    const proto = {
+      get value() {
+        return (this as any)._value;
+      },
+      set value(value: number) {
+        Object.defineProperty(this, "_value", { value, writable: true, configurable: true });
+      },
+    };
+    const state: any = proxy({ item: Object.create(proto) }).item;
+    let runs = 0;
+    immediateEffect(() => {
+      state.value;
+      runs++;
+    });
+    state.value = 5;
+    expect(runs).toBe(2);
+    expect(state.value).toBe(5);
+  });
+
   test("a write that fails, or creates a key with the value it inherited, notifies no reader of the value", () => {
     Object.defineProperty(Object.prototype, "lockedEverywhere", {
       value: 1,
