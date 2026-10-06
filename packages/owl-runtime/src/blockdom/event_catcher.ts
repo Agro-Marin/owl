@@ -10,12 +10,14 @@ type Catcher = (child: VNode, handlers: any[]) => VNode;
 type EventHandler = ReturnType<typeof createEventHandler>;
 
 // A catcher listens on its parent element, which outlives it, with one
-// listener per event key (name and modifiers) per parent, however many catchers
-// of however many sites (createCatcher calls) that parent holds: a t-foreach of
-// components with t-on costs one listener, and the catchers of every site are
-// dispatched by one walk, innermost first, as the event would bubble through
-// their elements. At dispatch, the catcher owning the target is found from the
-// end anchors of the parent's children.
+// listener per kind of listener (event name, capture, passive, synthetic) per
+// parent, however many catchers of however many sites (createCatcher calls) and
+// event keys that parent holds: a t-foreach of components with t-on costs one
+// listener, and the catchers of every site are dispatched by one walk,
+// innermost first, as the event would bubble through their elements, whatever
+// .stop, .prevent or .self their keys add (those apply per handler). At
+// dispatch, the catcher owning the target is found from the end anchors of the
+// parent's children.
 interface ParentListener {
   handler: EventHandler;
   count: number;
@@ -31,9 +33,22 @@ const byEnd = new WeakMap<Node, VCatcherBase>();
 // several roots holding another one)
 const updating: { parent: Node; catcher: VCatcherBase }[] = [];
 
+// the listener an event key needs: the modifiers a native or synthetic
+// listener is created with, in a fixed order
+function listenerKey(key: string): string {
+  const mods = key.split(".");
+  let id = mods[0];
+  for (const m of ["capture", "passive", "synthetic"]) {
+    if (mods.includes(m)) {
+      id += "." + m;
+    }
+  }
+  return id;
+}
+
 interface VCatcherBase {
-  // event key -> index of its handler data
-  spec: EventsSpec;
+  // listener key -> indices of the handler data it dispatches to
+  groups: Map<string, number[]>;
   handlerData: any[];
   // the catcher enclosing this one in the same parent element, of any site
   outer: VCatcherBase | null;
@@ -67,9 +82,11 @@ function dispatch(key: string, parent: Node, ev: Event) {
     return;
   }
   for (let catcher = ownerOf(node, node); catcher; catcher = catcher.outer) {
-    const index = catcher.spec[key];
-    if (index !== undefined) {
-      config.mainEventHandler(catcher.handlerData[index], ev, node);
+    const indices = catcher.groups.get(key);
+    if (indices) {
+      for (const index of indices) {
+        config.mainEventHandler(catcher.handlerData[index], ev, node);
+      }
     }
   }
 }
@@ -124,11 +141,20 @@ function unlisten(keys: string[], parent: HTMLElement) {
 }
 
 export function createCatcher(eventsSpec: EventsSpec): Catcher {
-  const keys = Object.keys(eventsSpec);
+  const groups = new Map<string, number[]>();
+  for (const key in eventsSpec) {
+    const id = listenerKey(key);
+    let indices = groups.get(id);
+    if (!indices) {
+      groups.set(id, (indices = []));
+    }
+    indices.push(eventsSpec[key]);
+  }
+  const keys = [...groups.keys()];
 
   class VCatcher implements VCatcherBase {
     child: VNode;
-    spec = eventsSpec;
+    groups = groups;
     handlerData: any[];
     outer: VCatcherBase | null = null;
 
