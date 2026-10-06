@@ -5,6 +5,7 @@ import {
   onError,
   onMounted,
   onWillStart,
+  props,
   proxy,
   signal,
   Suspense,
@@ -464,4 +465,48 @@ test("content re-rendering when Suspense mounts is mounted once that render is d
   await nextTick();
   expect(fixture.innerHTML).toBe("<div><span>content<b>late</b></span><i>slow</i></div>");
   app.destroy();
+});
+
+describe("Suspense content in the DOM", () => {
+  class Item extends Component {
+    static template = xml`<i t-out="this.props.id"/>`;
+    props = props();
+  }
+  class List extends Component {
+    static template = xml`<div><t t-foreach="this.state.ids" t-as="id" t-key="id"><Suspense><Item id="id"/></Suspense></t></div>`;
+    static components = { Suspense, Item };
+    state = proxy({ ids: [1, 2, 3] });
+  }
+
+  test("moves with its Suspense when a list is reordered", async () => {
+    const list = await mount(List, fixture);
+    await nextTick();
+    expect(fixture.innerHTML).toBe("<div><i>1</i><i>2</i><i>3</i></div>");
+    list.state.ids = [3, 2, 1];
+    await nextTick();
+    expect(fixture.innerHTML).toBe("<div><i>3</i><i>2</i><i>1</i></div>");
+  });
+
+  test("an item inserted before a Suspense goes before its content", async () => {
+    const list = await mount(List, fixture);
+    list.state.ids = [2, 3];
+    await nextTick();
+    list.state.ids = [1, 2, 3];
+    await nextTick();
+    await nextTick();
+    expect(fixture.innerHTML).toBe("<div><i>1</i><i>2</i><i>3</i></div>");
+  });
+
+  test("is shown at the top level of a component mounted in a shadow root", async () => {
+    const host = document.createElement("div");
+    fixture.appendChild(host);
+    const shadow = host.attachShadow({ mode: "open" });
+    class Root extends Component {
+      static template = xml`<Suspense><Item id="1"/></Suspense>`;
+      static components = { Suspense, Item };
+    }
+    await mount(Root, shadow);
+    await nextTick();
+    expect(shadow.innerHTML).toBe("<i>1</i>");
+  });
 });
