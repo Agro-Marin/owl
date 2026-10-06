@@ -850,25 +850,31 @@ for (const name of ["pop", "push", "shift", "splice", "unshift"] as const) {
 // traps: an observe() view runs them on its proxy, observed.
 const viewReaders = new Set<Function>();
 
-// The searches read the items as one atom, as readArrayItems does, and search
-// the raw array: a search reading each index through the proxy would make an
-// atom per index, and a proxy per object item, for an answer that depends on
-// every item anyway. An object is looked for as given, then as its raw object
-// (which a deep array holds).
+// The searches of a plain array read its items as one atom, as readArrayItems
+// does, and search the raw array: a search reading each index through the
+// proxy would make an atom per index, and a proxy per object item, for an
+// answer that depends on every item anyway. Any other array (a subclass, which
+// may keep its items elsewhere and map its indices through its own traps) is
+// searched through the proxy, each index read tracked. An object is looked for
+// as given, then as its raw object (which a deep array holds).
 for (const name of ["includes", "indexOf", "lastIndexOf"] as const) {
   const method = Array.prototype[name] as Function;
   const search = function (this: unknown[], ...args: unknown[]) {
     const raw = toRaw(this);
-    onReadItems(raw);
-    const result = method.apply(raw, args);
+    const plain = isPlainArray(raw);
+    if (plain) {
+      onReadItems(raw);
+    }
+    const result = method.apply(plain ? raw : this, args);
     const item = args[0];
     if (result !== -1 && result !== false) {
       return result;
     }
-    if (typeof item !== "object" || item === null || toRaw(item) === item) {
+    // a plain array holds no proxy: only a proxy argument can still match
+    if (plain && (typeof item !== "object" || item === null || toRaw(item) === item)) {
       return result;
     }
-    args[0] = toRaw(item);
+    args[0] = toRaw(item as object);
     return method.apply(raw, args);
   };
   replacedMethods.set(method, search);
