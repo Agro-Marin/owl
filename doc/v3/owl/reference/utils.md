@@ -59,8 +59,8 @@ await Promise.resolve(); // Yield to the microtask queue
 // "hello" is logged exactly once
 ```
 
-If the batched callback throws, the error surfaces as a normal unhandled
-promise rejection (it is not swallowed).
+The callback receives the arguments of the latest call. If it throws, the
+error surfaces as a normal unhandled promise rejection (it is not swallowed).
 
 ## `htmlEscape`
 

@@ -1,4 +1,5 @@
-import { shallowEqual } from "../src";
+import { batched, shallowEqual } from "../src";
+import { waitScheduler } from "./helpers";
 
 describe("shallowEqual", () => {
   test("primitives and identity", () => {
@@ -55,5 +56,20 @@ describe("shallowEqual", () => {
     const p = new Point(1);
     expect(shallowEqual(p, p)).toBe(true);
     expect(shallowEqual(new Date(0), new Date(0))).toBe(false);
+  });
+});
+
+describe("batched", () => {
+  test("calls the callback once per microtask, with the arguments of the latest call", async () => {
+    const calls: number[][] = [];
+    const update = batched((...args: number[]) => calls.push(args));
+    update(1);
+    update(2, 3);
+    expect(calls).toEqual([]);
+    await waitScheduler();
+    expect(calls).toEqual([[2, 3]]);
+    update(4);
+    await waitScheduler();
+    expect(calls).toEqual([[2, 3], [4]]);
   });
 });
