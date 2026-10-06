@@ -491,6 +491,84 @@ exports[`a props view is read-only, declared keys and new ones alike 2`] = `
 }"
 `;
 
+exports[`a props view read through a proxy > a getter of a proxied component reads its props and follows their updates 1`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { createComponent } = helpers;
+  const comp1 = createComponent(app, \`Child\`, true, false, false, ["value"]);
+  
+  return function template(ctx, node, key = "") {
+    return comp1({value: ctx['this'].v()}, key + \`__1\`, node, this, null);
+  }
+}"
+`;
+
+exports[`a props view read through a proxy > a getter of a proxied component reads its props and follows their updates 2`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  
+  let block1 = createBlock(\`<span/>\`);
+  
+  return function template(ctx, node, key = "") {
+    return block1();
+  }
+}"
+`;
+
+exports[`a props view read through a proxy > a schema view read through a proxy of its component is the view itself 1`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { createComponent } = helpers;
+  const comp1 = createComponent(app, \`Child\`, true, false, false, ["record","count"]);
+  
+  return function template(ctx, node, key = "") {
+    return comp1({record: ctx['this'].record,count: 3}, key + \`__1\`, node, this, null);
+  }
+}"
+`;
+
+exports[`a props view read through a proxy > a schema view read through a proxy of its component is the view itself 2`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  
+  let block1 = createBlock(\`<span/>\`);
+  
+  return function template(ctx, node, key = "") {
+    return block1();
+  }
+}"
+`;
+
+exports[`a props view read through a proxy > a schema-less view read through a proxy of its component is the view itself 1`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { createComponent } = helpers;
+  const comp1 = createComponent(app, \`Child\`, true, false, false, ["record"]);
+  
+  return function template(ctx, node, key = "") {
+    return comp1({record: ctx['this'].record}, key + \`__1\`, node, this, null);
+  }
+}"
+`;
+
+exports[`a props view read through a proxy > a schema-less view read through a proxy of its component is the view itself 2`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  
+  let block1 = createBlock(\`<span/>\`);
+  
+  return function template(ctx, node, key = "") {
+    return block1();
+  }
+}"
+`;
+
 exports[`a schema-less view resolves the defaults the component declared 1`] = `
 "function anonymous(app, bdom, helpers
 ) {

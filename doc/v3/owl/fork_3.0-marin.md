@@ -45,6 +45,11 @@ differently from upstream.
   prototype is `null`, instead of having a `null` prototype itself: the views
   of a component class then share one hidden class, where upstream's are each
   a dictionary. It still inherits no key.
+- **A props view is raw to `proxy()`**, both kinds: it is observable already, so
+  a proxy of its component (a component held in proxied state) hands out the
+  view itself, and its values unwrapped, instead of a proxy of it. Upstream's
+  getters close over their signals and read through such a proxy; the fork's
+  shared accessors find their view in a private field, which a proxy hides.
 
 ## Odoo integration contract
 

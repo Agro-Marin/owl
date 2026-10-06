@@ -1384,3 +1384,78 @@ describe("schema view", () => {
     expect(() => getter.call({})).toThrow('Cannot read prop "a" through an object');
   });
 });
+
+describe("a props view read through a proxy", () => {
+  test("a schema view read through a proxy of its component is the view itself", async () => {
+    const record = { name: "a" };
+    let child: any;
+    class Child extends Component {
+      static template = xml`<span/>`;
+      props = props({ record: t.object(), count: t.number() });
+      setup() {
+        child = this;
+      }
+    }
+    class Parent extends Component {
+      static template = xml`<Child record="this.record" count="3"/>`;
+      static components = { Child };
+      record = record;
+    }
+    await mount(Parent, fixture);
+    const viaProxy = proxy(child);
+    expect(viaProxy.props).toBe(child.props);
+    expect(viaProxy.props.count).toBe(3);
+    expect(viaProxy.props.record).toBe(record);
+    expect(proxy(child.props)).toBe(child.props);
+  });
+
+  test("a schema-less view read through a proxy of its component is the view itself", async () => {
+    const record = { name: "a" };
+    let child: any;
+    class Child extends Component {
+      static template = xml`<span/>`;
+      props = props();
+      setup() {
+        child = this;
+      }
+    }
+    class Parent extends Component {
+      static template = xml`<Child record="this.record"/>`;
+      static components = { Child };
+      record = record;
+    }
+    await mount(Parent, fixture);
+    const viaProxy = proxy(child);
+    expect(viaProxy.props).toBe(child.props);
+    expect(viaProxy.props.record).toBe(record);
+  });
+
+  test("a getter of a proxied component reads its props and follows their updates", async () => {
+    const seen: number[] = [];
+    let child: any;
+    class Child extends Component {
+      static template = xml`<span/>`;
+      props = props({ value: t.number() });
+      get doubled() {
+        return this.props.value * 2;
+      }
+      setup() {
+        child = this;
+      }
+    }
+    class Parent extends Component {
+      static template = xml`<Child value="this.v()"/>`;
+      static components = { Child };
+      v = signal(1);
+    }
+    const parent = await mount(Parent, fixture);
+    const viaProxy = proxy({ owner: child }).owner;
+    effect(() => {
+      seen.push(viaProxy.doubled);
+    });
+    parent.v.set(2);
+    await nextTick();
+    await nextTick();
+    expect(seen).toEqual([2, 4]);
+  });
+});

@@ -6,6 +6,7 @@ import {
   GetDefaultedKeys,
   ResolveObjectType,
   isObserving,
+  markRaw,
   onReadAtom,
   onWriteAtom,
   OwlError,
@@ -59,7 +60,7 @@ function makeProps(type?: any): Props<{}> {
   if (!type) {
     const view = new PropsView(node);
     node.addHook("propsUpdated", view);
-    return new Proxy(view, viewHandler) as any;
+    return markRaw(new Proxy(view, viewHandler)) as any;
   }
   const { app, componentName } = node;
 
@@ -115,7 +116,7 @@ function makeProps(type?: any): Props<{}> {
     });
   }
   // read-only like the schema-less view: a new key throws, not only a declared one
-  return Object.preventExtensions(result);
+  return markRaw(Object.preventExtensions(result));
 }
 
 // A schema's key list, computed once per schema object: a component class
@@ -135,7 +136,9 @@ function schemaKeys(type: object): string[] {
 // accessors are shared by every view (one per key name), so the views of a
 // component class share their hidden class instead of each being a dictionary;
 // an accessor finds its view's state in a private field, which no reflection
-// reaches. A key gets its atom on its first tracked read: a key read only in
+// reaches, and no proxy either: a view is already observable, so like the
+// schema-less one it is marked raw, and a proxy of its component hands it out
+// as it is rather than wrapping it. A key gets its atom on its first tracked read: a key read only in
 // setup, untracked, never gets one.
 class TypedProps {
   node: ComponentNode;
