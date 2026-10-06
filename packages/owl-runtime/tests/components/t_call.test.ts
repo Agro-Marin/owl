@@ -10,6 +10,32 @@ beforeEach(() => {
 });
 
 describe("t-call", () => {
+  test("a dynamic t-call in a loop keeps the components of two items apart", async () => {
+    class Child extends Component {
+      static template = xml`<i t-out="this.props.v"/>`;
+      props = props();
+    }
+    class Root extends Component {
+      static components = { Child };
+      static template = xml`
+          <t t-foreach="this.items" t-as="item" t-key="item.id">
+            <t t-call="{{item.t}}" v="item.id"/>
+          </t>`;
+      items = [
+        { id: "1", t: "2b" },
+        { id: "12", t: "b" },
+      ];
+    }
+    await mount(Root, fixture, {
+      templates: `
+        <templates>
+          <t t-name="2b"><Child v="v"/></t>
+          <t t-name="b"><Child v="v"/></t>
+        </templates>`,
+    });
+    expect(fixture.innerHTML).toBe("<i>1</i><i>12</i>");
+  });
+
   test("dynamic t-call", async () => {
     class Root extends Component {
       static template = xml`

@@ -62,11 +62,12 @@ function callSlot(
 }
 
 // string keys (component, slot, t-call keys) are built by concatenation: a key
-// takes the string form it has there. An object or a function is told apart by
-// identity, with an id of its own instead of "[object Object]"; an array keeps
-// its string form, so that a new array of the same items is the same key.
-// An id is \u0002 and a number, and a \u0002 in a string key is doubled: no
-// string key can read as an id.
+// takes the string form it has there. An object, a function or a symbol is
+// told apart by identity, with an id of its own instead of "[object Object]";
+// an array keeps its string form, so that a new array of the same items is the
+// same key. An id is \u0002 and a number (or "for:" and the registry name of a
+// registered symbol), and a \u0002 in a string key is doubled: no string key
+// can read as an id.
 const objectKeys = new WeakMap<object, string>();
 let nextObjectKey = 0;
 const ID_MARK = "\u0002";
@@ -83,6 +84,19 @@ function keyOf(key: any): string {
     if (id === undefined) {
       id = ID_MARK + ++nextObjectKey;
       objectKeys.set(key, id);
+    }
+    return id;
+  }
+  if (typeof key === "symbol") {
+    // a registered symbol cannot be a WeakMap key; it is its registry name
+    const name = Symbol.keyFor(key);
+    if (name !== undefined) {
+      return ID_MARK + "for:" + name;
+    }
+    let id = objectKeys.get(key as any);
+    if (id === undefined) {
+      id = ID_MARK + ++nextObjectKey;
+      objectKeys.set(key as any, id);
     }
     return id;
   }
@@ -560,7 +574,9 @@ function callTemplate(
   key: any
 ): any {
   const template = app.getTemplate(subTemplate);
-  return toggler(subTemplate, template.call(owner, ctx, parent, key + subTemplate));
+  // a template name holds no \u0002: the last one splits the key from it, so
+  // key "1" calling "2b" and key "12" calling "b" stay apart
+  return toggler(subTemplate, template.call(owner, ctx, parent, key + ID_MARK + subTemplate));
 }
 
 // A t-tag value is spliced into block markup: anything that could close the

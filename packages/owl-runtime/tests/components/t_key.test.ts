@@ -50,6 +50,24 @@ describe("t-key", () => {
     expect(fixture.innerHTML).toBe("<i>object</i><i>string</i>");
   });
 
+  test("symbol keys are told apart by identity", async () => {
+    class Child extends Component {
+      static template = xml`<i t-out="this.props.v"/>`;
+      props = props();
+    }
+    class Parent extends Component {
+      static template = xml`<t t-foreach="this.items" t-as="item" t-key="item.k"><Child v="item.v"/></t>`;
+      static components = { Child };
+      items = [
+        { k: Symbol("a"), v: 1 },
+        { k: Symbol("a"), v: 2 },
+        { k: Symbol.for("a"), v: 3 },
+      ];
+    }
+    await mount(Parent, fixture, { test: true });
+    expect(fixture.innerHTML).toBe("<i>1</i><i>2</i><i>3</i>");
+  });
+
   test("t-key on Component", async () => {
     let childInstance = null;
     class Child extends Component {
