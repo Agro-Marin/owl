@@ -36,19 +36,9 @@ export type DebugChannel = (typeof DEBUG_CHANNELS)[number];
 
 export type DebugSink = (channel: DebugChannel, message: string, details: unknown[]) => void;
 
-export const debug: Record<DebugChannel, boolean> = Object.seal({
-  reactivity: false,
-  effect: false,
-  computed: false,
-  scope: false,
-  plugin: false,
-  scheduler: false,
-  fiber: false,
-  lifecycle: false,
-  error: false,
-  template: false,
-  event: false,
-});
+export const debug = Object.seal(
+  Object.fromEntries(DEBUG_CHANNELS.map((channel) => [channel, false]))
+) as Record<DebugChannel, boolean>;
 
 const consoleSink: DebugSink = (channel, message, details) => {
   console.debug(`[owl:${channel}] ${message}`, ...details);

@@ -1,5 +1,7 @@
 import {
   computed,
+  debug,
+  DEBUG_CHANNELS,
   effect,
   Plugin,
   PluginManager,
@@ -22,6 +24,14 @@ beforeEach(() => {
 afterEach(() => {
   setDebug(false);
   setDebugSink(null);
+});
+
+test("the debug flags are one per channel, all off until setDebug, and take no other key", () => {
+  expect(Object.keys(debug)).toEqual([...DEBUG_CHANNELS]);
+  expect(Object.values(debug).every((on) => on === false)).toBe(true);
+  expect(Object.isSealed(debug)).toBe(true);
+  setDebug(["fiber"]);
+  expect(Object.keys(debug).filter((channel) => (debug as any)[channel])).toEqual(["fiber"]);
 });
 
 test("a disabled channel logs nothing", async () => {

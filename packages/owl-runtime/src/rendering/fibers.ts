@@ -50,7 +50,7 @@ export function makeRootFiber(node: ComponentNode): Fiber {
     if (debug.fiber) {
       debugLog(
         "fiber",
-        `render ${node.componentName} on its own: ${root.node.componentName}'s pass failed`
+        `render ${node.componentName} alone: ${root.node.componentName}'s pass failed`
       );
     }
     root.counter -= cancelFibers(current.children);
@@ -79,10 +79,7 @@ function recycleFiber(node: ComponentNode, current: Fiber, root: RootFiber): Fib
   // shared counter would add those up and flag a loop where there is none.
   current.renderState += 2; // bump the recycle count held in bits 1+
   if (debug.fiber) {
-    debugLog(
-      "fiber",
-      `re-render ${node.componentName} before its commit (recycle ${current.renderState >> 1})`
-    );
+    debugLog("fiber", `recycle ${node.componentName} (${current.renderState >> 1})`);
   }
   // lock root fiber because canceling children fibers may destroy components,
   // which means any arbitrary code can be run in onWillDestroy, which may
@@ -364,10 +361,7 @@ export class RootFiber extends Fiber {
       current = undefined;
       if (node.status === STATUS.DESTROYED) {
         if (debug.fiber) {
-          debugLog(
-            "fiber",
-            `drop ${node.componentName}'s commit: an onWillPatch hook destroyed it`
-          );
+          debugLog("fiber", `drop ${node.componentName}'s commit: destroyed by onWillPatch`);
         }
         this.locked = false;
         return;

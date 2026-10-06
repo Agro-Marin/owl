@@ -265,17 +265,14 @@ function removeItems(
   }
   if (owned) {
     if (debug.template) {
-      debugLog("template", "list items removed at once: their parent holds nothing else");
+      debugLog("template", "list items removed at once: sole children");
     }
     nodeSetTextContent.call(parent, "");
     if (!withAnchor) {
       nodeAppendChild.call(parent, anchor);
     }
   } else if (l > 1 && debug.template) {
-    debugLog(
-      "template",
-      "list items removed one by one: not one node each, or their parent holds other nodes"
-    );
+    debugLog("template", "list items removed one by one: not sole children");
   }
   for (let i = 0; i < l; i++) {
     const item = items[i];

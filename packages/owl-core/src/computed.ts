@@ -78,7 +78,7 @@ export function computed<TRead, TWrite = TRead>(
       }
     } catch (error) {
       if (debug.computed) {
-        debugLog("computed", `${computation.name} failed, the error is its value`, error);
+        debugLog("computed", `${computation.name} failed`, error);
       }
       newFailure = { error };
       newValue = undefined;

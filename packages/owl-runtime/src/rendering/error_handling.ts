@@ -131,7 +131,7 @@ export function handleHookRejection(node: ComponentNode, fiber: Fiber, error: an
     if (debug.error) {
       debugLog(
         "error",
-        `${node.componentName}: ${isAbortError(error) ? "abort" : "rejection"} ${node.status === STATUS.DESTROYED ? "after destroy" : "of a superseded render"}, dropped`,
+        `${node.componentName}: ${isAbortError(error) ? "abort" : "rejection"} dropped, ${node.status === STATUS.DESTROYED ? "destroyed" : "superseded"}`,
         error
       );
     }

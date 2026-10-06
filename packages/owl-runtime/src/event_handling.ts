@@ -24,7 +24,7 @@ export const mainEventHandler = (
     }
     if (modifiers & EventModifier.SELF && ev.target !== currentTarget) {
       if (debug.event) {
-        debugLog("event", `${ev.type}: skipped by .self, not from its own element`);
+        debugLog("event", `${ev.type}: skipped by .self`);
       }
       return;
     }
