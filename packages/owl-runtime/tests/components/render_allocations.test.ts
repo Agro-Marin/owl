@@ -78,6 +78,18 @@ describe("what a render allocates", () => {
     expect(lines.filter((line) => line.includes("Object.create(ctx)"))).toEqual([]);
   });
 
+  test("a bound property makes no wrapper object", () => {
+    const lines = renderFunctionLines(`
+      <div>
+        <input t-att-value="this.v" t-att-disabled="this.d" t-att-readonly="this.r"/>
+        <input type="checkbox" t-att-checked="this.c" t-att-indeterminate="this.i"/>
+        <select t-att-value="this.v"><option value="a" t-att-selected="this.s">a</option></select>
+        <textarea t-attf-value="{{this.v}}!"/>
+        <input type="radio" t-att-value="this.v" t-model="this.choice"/>
+      </div>`);
+    expect(lines.filter((line) => /new (String|Boolean)\(/.test(line))).toEqual([]);
+  });
+
   test("a slot's render function is the same on every render", async () => {
     const renders: any[] = [];
     class Child extends Component {

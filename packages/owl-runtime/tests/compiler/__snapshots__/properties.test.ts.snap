@@ -19,11 +19,10 @@ exports[`dynamic input value: falsy values 1`] = `
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
   
-  let block1 = createBlock(\`<input block-property-0="value"/>\`);
+  let block1 = createBlock(\`<input block-sync-property-0="value"/>\`);
   
   return function template(ctx, node, key = "") {
-    const v1 = 0;
-    let prop1 = new String(v1 === 0 ? 0 : v1 || "");
+    let prop1 = 0;
     return block1([prop1]);
   }
 }"
@@ -34,11 +33,10 @@ exports[`dynamic input value: falsy values 2`] = `
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
   
-  let block1 = createBlock(\`<input block-property-0="value"/>\`);
+  let block1 = createBlock(\`<input block-sync-property-0="value"/>\`);
   
   return function template(ctx, node, key = "") {
-    const v1 = false;
-    let prop1 = new String(v1 === 0 ? 0 : v1 || "");
+    let prop1 = false;
     return block1([prop1]);
   }
 }"
@@ -49,11 +47,10 @@ exports[`dynamic input value: falsy values 3`] = `
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
   
-  let block1 = createBlock(\`<input block-property-0="value"/>\`);
+  let block1 = createBlock(\`<input block-sync-property-0="value"/>\`);
   
   return function template(ctx, node, key = "") {
-    const v1 = undefined;
-    let prop1 = new String(v1 === 0 ? 0 : v1 || "");
+    let prop1 = undefined;
     return block1([prop1]);
   }
 }"
@@ -64,11 +61,10 @@ exports[`dynamic input value: falsy values 4`] = `
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
   
-  let block1 = createBlock(\`<input block-property-0="value"/>\`);
+  let block1 = createBlock(\`<input block-sync-property-0="value"/>\`);
   
   return function template(ctx, node, key = "") {
-    const v1 = '';
-    let prop1 = new String(v1 === 0 ? 0 : v1 || "");
+    let prop1 = '';
     return block1([prop1]);
   }
 }"
@@ -79,10 +75,10 @@ exports[`input of type checkbox with t-att-indeterminate 1`] = `
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
   
-  let block1 = createBlock(\`<input type="checkbox" block-property-0="indeterminate"/>\`);
+  let block1 = createBlock(\`<input type="checkbox" block-sync-property-0="indeterminate"/>\`);
   
   return function template(ctx, node, key = "") {
-    let prop1 = new Boolean(ctx['v']);
+    let prop1 = ctx['v'];
     return block1([prop1]);
   }
 }"
@@ -93,10 +89,10 @@ exports[`input type= checkbox, with t-att-checked 1`] = `
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
   
-  let block1 = createBlock(\`<input type="checkbox" block-property-0="checked"/>\`);
+  let block1 = createBlock(\`<input type="checkbox" block-sync-property-0="checked"/>\`);
   
   return function template(ctx, node, key = "") {
-    let prop1 = new Boolean(ctx['flag']);
+    let prop1 = ctx['flag'];
     return block1([prop1]);
   }
 }"
@@ -107,11 +103,10 @@ exports[`input with t-att-value (patching with same value 1`] = `
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
   
-  let block1 = createBlock(\`<input block-property-0="value"/>\`);
+  let block1 = createBlock(\`<input block-sync-property-0="value"/>\`);
   
   return function template(ctx, node, key = "") {
-    const v1 = ctx['v'];
-    let prop1 = new String(v1 === 0 ? 0 : v1 || "");
+    let prop1 = ctx['v'];
     return block1([prop1]);
   }
 }"
@@ -122,11 +117,10 @@ exports[`input with t-att-value 1`] = `
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
   
-  let block1 = createBlock(\`<input block-property-0="value"/>\`);
+  let block1 = createBlock(\`<input block-sync-property-0="value"/>\`);
   
   return function template(ctx, node, key = "") {
-    const v1 = ctx['v'];
-    let prop1 = new String(v1 === 0 ? 0 : v1 || "");
+    let prop1 = ctx['v'];
     return block1([prop1]);
   }
 }"
@@ -137,10 +131,10 @@ exports[`input, type checkbox, with t-att-checked (patching with same value 1`] 
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
   
-  let block1 = createBlock(\`<input type="checkbox" block-property-0="checked"/>\`);
+  let block1 = createBlock(\`<input type="checkbox" block-sync-property-0="checked"/>\`);
   
   return function template(ctx, node, key = "") {
-    let prop1 = new Boolean(ctx['v']);
+    let prop1 = ctx['v'];
     return block1([prop1]);
   }
 }"
@@ -177,10 +171,10 @@ exports[`readonly and readOnly are both interpreted as the readOnly property 3`]
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
   
-  let block1 = createBlock(\`<input block-property-0="readOnly"/>\`);
+  let block1 = createBlock(\`<input block-sync-property-0="readOnly"/>\`);
   
   return function template(ctx, node, key = "") {
-    let prop1 = new Boolean(ctx['val']);
+    let prop1 = ctx['val'];
     return block1([prop1]);
   }
 }"
@@ -191,10 +185,10 @@ exports[`readonly and readOnly are both interpreted as the readOnly property 4`]
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
   
-  let block1 = createBlock(\`<input block-property-0="readOnly"/>\`);
+  let block1 = createBlock(\`<input block-sync-property-0="readOnly"/>\`);
   
   return function template(ctx, node, key = "") {
-    let prop1 = new Boolean(ctx['val']);
+    let prop1 = ctx['val'];
     return block1([prop1]);
   }
 }"
@@ -205,11 +199,10 @@ exports[`select with t-att-value 1`] = `
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
   
-  let block1 = createBlock(\`<select block-property-0="value"><option value="potato">Potato</option><option value="tomato">Tomato</option><option value="onion">Onion</option></select>\`);
+  let block1 = createBlock(\`<select block-sync-property-0="value"><option value="potato">Potato</option><option value="tomato">Tomato</option><option value="onion">Onion</option></select>\`);
   
   return function template(ctx, node, key = "") {
-    const v1 = ctx['value'];
-    let prop1 = new String(v1 === 0 ? 0 : v1 || "");
+    let prop1 = ctx['value'];
     return block1([prop1]);
   }
 }"
@@ -220,11 +213,10 @@ exports[`t-att-value on input evaluates its expression once 1`] = `
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
   
-  let block1 = createBlock(\`<input block-property-0="value"/>\`);
+  let block1 = createBlock(\`<input block-sync-property-0="value"/>\`);
   
   return function template(ctx, node, key = "") {
-    const v1 = ctx['f']();
-    let prop1 = new String(v1 === 0 ? 0 : v1 || "");
+    let prop1 = ctx['f']();
     return block1([prop1]);
   }
 }"
@@ -235,11 +227,10 @@ exports[`t-attf-value on input and textarea is set as a property 1`] = `
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
   
-  let block1 = createBlock(\`<input block-property-0="value"/>\`);
+  let block1 = createBlock(\`<input block-sync-property-0="value"/>\`);
   
   return function template(ctx, node, key = "") {
-    const v1 = (ctx['v']);
-    let prop1 = new String(v1 === 0 ? 0 : v1 || "");
+    let prop1 = (ctx['v']);
     return block1([prop1]);
   }
 }"
@@ -250,11 +241,10 @@ exports[`t-attf-value on input and textarea is set as a property 2`] = `
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
   
-  let block1 = createBlock(\`<textarea block-property-0="value"/>\`);
+  let block1 = createBlock(\`<textarea block-sync-property-0="value"/>\`);
   
   return function template(ctx, node, key = "") {
-    const v1 = (ctx['v']);
-    let prop1 = new String(v1 === 0 ? 0 : v1 || "");
+    let prop1 = (ctx['v']);
     return block1([prop1]);
   }
 }"
@@ -265,11 +255,10 @@ exports[`textarea with t-att-value 1`] = `
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
   
-  let block1 = createBlock(\`<textarea block-property-0="value"/>\`);
+  let block1 = createBlock(\`<textarea block-sync-property-0="value"/>\`);
   
   return function template(ctx, node, key = "") {
-    const v1 = ctx['v'];
-    let prop1 = new String(v1 === 0 ? 0 : v1 || "");
+    let prop1 = ctx['v'];
     return block1([prop1]);
   }
 }"
@@ -280,11 +269,10 @@ exports[`updating property with falsy value 1`] = `
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
   
-  let block1 = createBlock(\`<input block-property-0="value"/>\`);
+  let block1 = createBlock(\`<input block-sync-property-0="value"/>\`);
   
   return function template(ctx, node, key = "") {
-    const v1 = ctx['v'];
-    let prop1 = new String(v1 === 0 ? 0 : v1 || "");
+    let prop1 = ctx['v'];
     return block1([prop1]);
   }
 }"

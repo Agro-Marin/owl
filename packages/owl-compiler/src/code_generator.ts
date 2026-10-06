@@ -624,18 +624,13 @@ export class CodeGenerator {
             // the property has a different name than the attribute
             attrName = "readOnly";
           }
-          // we force a new string or new boolean to bypass the equality check in blockdom when patching same value
-          if (attrName === "value") {
-            const valueId = this.generateId("v");
-            this.define(valueId, expr);
-            valueVar = valueId;
-            // When the expression is falsy (except 0), fall back to an empty string
-            expr = `new String(${valueId} === 0 ? 0 : ${valueId} || "")`;
-          } else {
-            expr = `new Boolean(${expr})`;
-          }
+          // a synced property is set on every patch, changed or not: a
+          // value the user changed is set back
           const idx = block!.insertData(expr, "prop");
-          attrs[`block-property-${idx}`] = attrName!;
+          attrs[`block-sync-property-${idx}`] = attrName!;
+          if (attrName === "value") {
+            valueVar = block!.data[idx];
+          }
         } else {
           const idx = block!.insertData(expr, "attr");
           if (key === "t-att") {

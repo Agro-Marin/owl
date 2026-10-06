@@ -1,4 +1,4 @@
-import { OwlError } from "@odoo/owl-core";
+import { debug, debugLog, OwlError } from "@odoo/owl-core";
 import {
   attrsSetter,
   attrsUpdater,
@@ -31,18 +31,37 @@ const XMLNS_URI = "http://www.w3.org/2000/xmlns/";
 // builds may reach a ref
 let stringifying = 0;
 
+// A property location (t-model's) is set when its value changes, as an
+// attribute is.
 function makePropSetter(name: string): Setter<HTMLElement> {
   return function setProp(this: HTMLElement, value: any) {
     // support 0, fallback to empty string for other falsy values
     const prop = value === 0 ? 0 : value ? value.valueOf() : "";
-    // the compiler wraps each value in a new object so that a value the user
-    // changed is set back on every patch. A flag is read first and written only
-    // when it differs (a reflected one such as disabled writes its attribute
-    // even when unchanged); a value is always written: its getter can read the
-    // same while the element shows something else (a number input holding a
-    // partial "1e" reads "")
     if (name === "value" || (this as any)[name] !== prop) {
       (this as any)[name] = prop;
+    }
+  };
+}
+
+// A synced property location (t-att-value, t-att-checked, ...) is set on every
+// patch, its value changed or not, so that a value the user changed is set
+// back. A flag is read first and written only when it differs (a reflected one
+// such as disabled writes its attribute even when unchanged); a value is always
+// written: its getter can read the same while the element shows something else
+// (a number input holding a partial "1e" reads "")
+function makeSyncedPropSetter(name: string): Setter<HTMLElement> {
+  if (name === "value") {
+    return function setValue(this: HTMLElement, value: any) {
+      // support 0, fallback to empty string for other falsy values
+      (this as HTMLInputElement).value = value === 0 ? 0 : value || "";
+    };
+  }
+  return function setFlag(this: HTMLElement, value: any) {
+    const flag = !!value;
+    if ((this as any)[name] !== flag) {
+      (this as any)[name] = flag;
+    } else if (debug.template) {
+      debugLog("template", `${name} of <${this.localName}>: not written, it is already ${flag}`);
     }
   };
 }
@@ -104,6 +123,8 @@ interface DynamicInfo {
   idx: number;
   refIdx?: number;
   type: "text" | "child" | "handler" | "attribute" | "attributes" | "property" | "ref";
+  // a property set on every patch
+  sync?: boolean;
   // the parent holds nothing else: the child needs no anchor
   withoutAnchor?: boolean;
   name?: string;
@@ -189,6 +210,14 @@ function buildTree(
               type: "property",
               idx,
               name: attrValue,
+            });
+          } else if (attrName.startsWith("block-sync-property-")) {
+            const idx = parseInt(attrName.slice(20), 10);
+            info.push({
+              type: "property",
+              idx,
+              name: attrValue,
+              sync: true,
             });
           } else if (attrName === "block-attributes") {
             info.push({
@@ -321,6 +350,8 @@ interface Location {
   // applied after the other locations and the children: a value property
   // needs the attributes bounding it (min, max) and the options of a select
   late?: boolean;
+  // applied on every patch, its value changed or not
+  sync?: boolean;
 }
 
 interface IndexedLocation extends Location {
@@ -403,13 +434,14 @@ function updateCtx(ctx: BlockCtx, tree: IntermediateTree) {
         break;
       case "property": {
         const refIdx = info.refIdx!;
-        const setProp = makePropSetter(info.name!);
+        const setProp = info.sync ? makeSyncedPropSetter(info.name!) : makePropSetter(info.name!);
         ctx.locations.push({
           idx: info.idx,
           refIdx,
           setData: setProp,
           updateData: setProp,
           late: info.name === "value",
+          sync: info.sync,
         });
         break;
       }
@@ -511,11 +543,14 @@ function createBlockClass(template: HTMLElement, ctx: BlockCtx): BlockClass {
   const locRefIdxs: number[] = locations.map((l) => l.refIdx);
   const locSetters: Setter[] = locations.map((l) => l.setData);
   const locUpdaters: Updater[] = locations.map((l) => l.updateData);
-  // a block with late locations applies the others first, by index
+  // synced locations run on every patch
+  const locSync: boolean[] = locations.map((l) => !!l.sync);
+  // a block with late or synced locations applies the others first, by index
   const lateLocs: number[] = [];
   const earlyLocs: number[] = [];
   locations.forEach((l, i) => (l.late ? lateLocs : earlyLocs).push(i));
   const lateN = lateLocs.length;
+  const indexed = lateN > 0 || locSync.includes(true);
 
   // Bitpack collectors into uint32 array
   // Layout: bits 0-14: idx, bits 15-29: prevIdx, bit 30: isFirstChild
@@ -648,11 +683,11 @@ function createBlockClass(template: HTMLElement, ctx: BlockCtx): BlockClass {
       // update texts/attributes/
       const data1 = this.data!;
       const data2 = other.data!;
-      if (lateN) {
+      if (indexed) {
         for (const i of earlyLocs) {
           const val1 = data1[i];
           const val2 = data2[i];
-          if (val1 !== val2) {
+          if (val1 !== val2 || locSync[i]) {
             locUpdaters[i].call(refs[locRefIdxs[i]], val2, val1);
           }
         }
@@ -696,7 +731,7 @@ function createBlockClass(template: HTMLElement, ctx: BlockCtx): BlockClass {
       for (const i of lateLocs) {
         const val1 = data1[i];
         const val2 = data2[i];
-        if (val1 !== val2) {
+        if (val1 !== val2 || locSync[i]) {
           locUpdaters[i].call(refs[locRefIdxs[i]], val2, val1);
         }
       }

@@ -22,11 +22,16 @@ test("changing an attribute with t-att-", () => {
 });
 
 test("dynamic input value: falsy values", () => {
+  const valueOf = (expr: string) => {
+    const fixture = makeTestFixture();
+    mount(renderToBdom(`<input t-att-value="${expr}"/>`), fixture);
+    return fixture.querySelector("input")!.value;
+  };
   // 0 doesn't fall back to empty string
-  expect(renderToBdom(`<input t-att-value="0"/>`)).toEqual({ data: [new String("0")] });
-  expect(renderToBdom(`<input t-att-value="false"/>`)).toEqual({ data: [new String("")] });
-  expect(renderToBdom(`<input t-att-value="undefined"/>`)).toEqual({ data: [new String("")] });
-  expect(renderToBdom(`<input t-att-value="''"/>`)).toEqual({ data: [new String("")] });
+  expect(valueOf("0")).toBe("0");
+  expect(valueOf("false")).toBe("");
+  expect(valueOf("undefined")).toBe("");
+  expect(valueOf("''")).toBe("");
 });
 
 test("updating property with falsy value", async () => {
