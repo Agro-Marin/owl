@@ -60,6 +60,15 @@ describe("what a render allocates", () => {
     expect(lines.filter((line) => line.includes("Object.assign("))).toEqual([]);
   });
 
+  test("a t-call with neither attributes nor body makes no context", () => {
+    const lines = renderFunctionLines(
+      `<ul><li t-foreach="this.items" t-as="item" t-key="item"><t t-call="sub"/></li></ul>`
+    );
+    expect(lines.filter((line) => line.includes("callTemplate(")).length).toBe(1);
+    // the loop item's own context is `Object.create(ctx1)`
+    expect(lines.filter((line) => line.includes("Object.create(ctx)"))).toEqual([]);
+  });
+
   test("a slot's render function is the same on every render", async () => {
     const renders: any[] = [];
     class Child extends Component {
@@ -116,6 +125,58 @@ describe("the owner of slots, slot defaults and t-call bodies", () => {
         "<p><i>call body</i></p>" +
         "<div><i>body in a slot</i><u>child default</u></div>" +
         "<p><i>a</i></p><p><i>b</i></p>"
+    );
+  });
+
+  test("a slot without a slot scope renders in the context it was written in", async () => {
+    // a write into its context (t-model.proxy on a bare name) is seen by the
+    // template that wrote the slot, as if the slot's content were inline there
+    let child: any;
+    class Child extends Component {
+      static template = xml`<div><t t-call-slot="default"/></div>`;
+      setup() {
+        child = this;
+      }
+    }
+    class Parent extends Component {
+      static template = xml`<Child><input t-model.proxy="v"/><b t-out="v"/></Child><i t-out="v"/>`;
+      static components = { Child };
+    }
+    const parent = await mount(Parent, fixture);
+    const input = fixture.querySelector("input")!;
+    input.value = "typed";
+    input.dispatchEvent(new Event("input"));
+    child.__owl__.render(false);
+    await nextTick();
+    expect(fixture.querySelector("b")!.textContent).toBe("typed");
+    parent.__owl__.render(false);
+    await nextTick();
+    expect(fixture.querySelector("i")!.textContent).toBe("typed");
+  });
+
+  test("a t-call with neither attributes nor body renders in the caller's context", async () => {
+    const sub = xml`<input t-model.proxy="v"/>`;
+    class Parent extends Component {
+      static template = xml`<t t-call="${sub}"/><b t-out="v"/>`;
+    }
+    const parent = await mount(Parent, fixture);
+    const input = fixture.querySelector("input")!;
+    input.value = "typed";
+    input.dispatchEvent(new Event("input"));
+    parent.__owl__.render(false);
+    await nextTick();
+    expect(fixture.querySelector("b")!.textContent).toBe("typed");
+  });
+
+  test("a t-call in a t-call body hides the body from the template it calls", async () => {
+    const inner = xml`<p><t t-out="0">inner default</t></p>`;
+    const outer = xml`<div><t t-out="0"/><t t-call="${inner}"/></div>`;
+    class Parent extends Component {
+      static template = xml`<t t-foreach="[1, 2]" t-as="i" t-key="i"><t t-call="${outer}"><b t-out="i"/></t></t>`;
+    }
+    await mount(Parent, fixture);
+    expect(fixture.innerHTML).toBe(
+      "<div><b>1</b><p>inner default</p></div><div><b>2</b><p>inner default</p></div>"
     );
   });
 

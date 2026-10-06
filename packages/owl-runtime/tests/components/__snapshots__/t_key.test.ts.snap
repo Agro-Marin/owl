@@ -4,13 +4,11 @@ exports[`t-key > a t-key on the t-call node itself recreates it when the key cha
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { keyOf, zero, callTemplate } = helpers;
+  let { keyOf, zero, withoutZero, callTemplate } = helpers;
   
   return function template(ctx, node, key = "") {
     const tKey_1 = keyOf(ctx['this'].state.k);
-    const ctx1 = Object.create(ctx);
-    ctx1[zero] = null;
-    return toggler(tKey_1, callTemplate(\`sub\`, this, app, ctx1, node, tKey_1 + key + \`__1\`));
+    return toggler(tKey_1, callTemplate(\`sub\`, this, app, ctx[zero] ? withoutZero(ctx) : ctx, node, tKey_1 + key + \`__1\`));
   }
 }"
 `;
@@ -185,13 +183,11 @@ exports[`t-key > t-call under a t-key is recreated when the key changes 1`] = `
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { keyOf, zero, callTemplate } = helpers;
+  let { keyOf, zero, withoutZero, callTemplate } = helpers;
   
   return function template(ctx, node, key = "") {
     const tKey_1 = keyOf(ctx['this'].state.k);
-    const ctx1 = Object.create(ctx);
-    ctx1[zero] = null;
-    return toggler(tKey_1, callTemplate(\`sub\`, this, app, ctx1, node, tKey_1 + key + \`__1\`));
+    return toggler(tKey_1, callTemplate(\`sub\`, this, app, ctx[zero] ? withoutZero(ctx) : ctx, node, tKey_1 + key + \`__1\`));
   }
 }"
 `;

@@ -4,14 +4,12 @@ exports[`t-call (template calling) > a static name is a string, whatever it cont
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { zero, callTemplate } = helpers;
+  let { zero, withoutZero, callTemplate } = helpers;
   
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const ctx1 = Object.create(ctx);
-    ctx1[zero] = null;
-    const b2 = callTemplate(\`a\\\`b\\\\c\`, this, app, ctx1, node, key + \`__1\`);
+    const b2 = callTemplate(\`a\\\`b\\\\c\`, this, app, ctx[zero] ? withoutZero(ctx) : ctx, node, key + \`__1\`);
     return block1([], [b2]);
   }
 }"
@@ -53,18 +51,16 @@ exports[`t-call (template calling) > a t-call without a body gives the called te
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { zero, callTemplate } = helpers;
+  let { zero, withoutZero, callTemplate } = helpers;
   
   let block1 = createBlock(\`<div><block-child-0/><block-child-1/></div>\`);
   
   return function template(ctx, node, key = "") {
+    const b2 = callTemplate(\`inner\`, this, app, ctx[zero] ? withoutZero(ctx) : ctx, node, key + \`__1\`);
     const ctx1 = Object.create(ctx);
+    ctx1["a"] = 1;
     ctx1[zero] = null;
-    const b2 = callTemplate(\`inner\`, this, app, ctx1, node, key + \`__1\`);
-    const ctx2 = Object.create(ctx);
-    ctx2["a"] = 1;
-    ctx2[zero] = null;
-    const b3 = callTemplate(\`inner\`, this, app, ctx2, node, key + \`__2\`);
+    const b3 = callTemplate(\`inner\`, this, app, ctx1, node, key + \`__2\`);
     return block1([], [b2, b3]);
   }
 }"
@@ -89,14 +85,12 @@ exports[`t-call (template calling) > an interpolated name keeps the text around 
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { zero, callTemplate } = helpers;
+  let { zero, withoutZero, callTemplate } = helpers;
   
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const ctx1 = Object.create(ctx);
-    ctx1[zero] = null;
-    const b2 = callTemplate(\`a\\\`b\\\\c.\${ctx['n']}\`, this, app, ctx1, node, key + \`__1\`);
+    const b2 = callTemplate(\`a\\\`b\\\\c.\${ctx['n']}\`, this, app, ctx[zero] ? withoutZero(ctx) : ctx, node, key + \`__1\`);
     return block1([], [b2]);
   }
 }"
@@ -119,14 +113,12 @@ exports[`t-call (template calling) > basic caller 1`] = `
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { zero, callTemplate } = helpers;
+  let { zero, withoutZero, callTemplate } = helpers;
   
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const ctx1 = Object.create(ctx);
-    ctx1[zero] = null;
-    const b2 = callTemplate(\`_basic-callee\`, this, app, ctx1, node, key + \`__1\`);
+    const b2 = callTemplate(\`_basic-callee\`, this, app, ctx[zero] ? withoutZero(ctx) : ctx, node, key + \`__1\`);
     return block1([], [b2]);
   }
 }"
@@ -149,12 +141,10 @@ exports[`t-call (template calling) > basic caller, no parent node 1`] = `
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { zero, callTemplate } = helpers;
+  let { zero, withoutZero, callTemplate } = helpers;
   
   return function template(ctx, node, key = "") {
-    const ctx1 = Object.create(ctx);
-    ctx1[zero] = null;
-    return callTemplate(\`_basic-callee\`, this, app, ctx1, node, key + \`__1\`);
+    return callTemplate(\`_basic-callee\`, this, app, ctx[zero] ? withoutZero(ctx) : ctx, node, key + \`__1\`);
   }
 }"
 `;
@@ -534,16 +524,14 @@ exports[`t-call (template calling) > recursive template, part 1 1`] = `
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { zero, callTemplate } = helpers;
+  let { zero, withoutZero, callTemplate } = helpers;
   
   let block1 = createBlock(\`<div><span>hey</span><block-child-0/></div>\`);
   
   return function template(ctx, node, key = "") {
     let b2;
     if (false) {
-      const ctx1 = Object.create(ctx);
-      ctx1[zero] = null;
-      b2 = callTemplate(\`recursive\`, this, app, ctx1, node, key + \`__1\`);
+      b2 = callTemplate(\`recursive\`, this, app, ctx[zero] ? withoutZero(ctx) : ctx, node, key + \`__1\`);
     }
     return block1([], [b2]);
   }
@@ -1135,16 +1123,14 @@ exports[`t-call (template calling) > t-call with t-if 1`] = `
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { zero, callTemplate } = helpers;
+  let { zero, withoutZero, callTemplate } = helpers;
   
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
   return function template(ctx, node, key = "") {
     let b2;
     if (ctx['flag']) {
-      const ctx1 = Object.create(ctx);
-      ctx1[zero] = null;
-      b2 = callTemplate(\`sub\`, this, app, ctx1, node, key + \`__1\`);
+      b2 = callTemplate(\`sub\`, this, app, ctx[zero] ? withoutZero(ctx) : ctx, node, key + \`__1\`);
     }
     return block1([], [b2]);
   }
@@ -1321,7 +1307,7 @@ exports[`t-call (template calling) > t-call, conditional and t-set in t-call bod
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { zero, callTemplate, zeroCtx } = helpers;
+  let { zero, withoutZero, callTemplate, zeroCtx } = helpers;
   
   let block1 = createBlock(\`<div><block-child-0/><block-child-1/></div>\`);
   
@@ -1336,14 +1322,12 @@ exports[`t-call (template calling) > t-call, conditional and t-set in t-call bod
     let b2, b3;
     ctx["v1"] = 'elif';
     if (ctx['v1']==='if') {
-      const ctx1 = Object.create(ctx);
-      ctx1[zero] = null;
-      b2 = callTemplate(\`callee1\`, this, app, ctx1, node, key + \`__1\`);
+      b2 = callTemplate(\`callee1\`, this, app, ctx[zero] ? withoutZero(ctx) : ctx, node, key + \`__1\`);
     } else if (ctx['v1']==='elif') {
-      const ctx2 = Object.create(ctx);
-      ctx2[zero] = callBody1;
-      ctx2[zeroCtx] = ctx;
-      b3 = callTemplate(\`callee2\`, this, app, ctx2, node, key + \`__2\`);
+      const ctx1 = Object.create(ctx);
+      ctx1[zero] = callBody1;
+      ctx1[zeroCtx] = ctx;
+      b3 = callTemplate(\`callee2\`, this, app, ctx1, node, key + \`__2\`);
     }
     return block1([], [b2, b3]);
   }
@@ -1432,16 +1416,14 @@ exports[`t-call (template calling) > t-out inside t-call, with t-set outside 1`]
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { zero, callTemplate } = helpers;
+  let { zero, withoutZero, callTemplate } = helpers;
   
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
   return function template(ctx, node, key = "") {
     ctx = Object.create(ctx);
     ctx["v"] = \`Hi\`;
-    const ctx1 = Object.create(ctx);
-    ctx1[zero] = null;
-    const b2 = callTemplate(\`sub\`, this, app, ctx1, node, key + \`__1\`);
+    const b2 = callTemplate(\`sub\`, this, app, ctx[zero] ? withoutZero(ctx) : ctx, node, key + \`__1\`);
     return block1([], [b2]);
   }
 }"
@@ -1466,7 +1448,7 @@ exports[`t-call (template calling) > t-out=0 renders its default body when the t
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { zero, callTemplate, zeroCtx } = helpers;
+  let { zero, withoutZero, callTemplate, zeroCtx } = helpers;
   
   let block1 = createBlock(\`<span><block-child-0/><block-child-1/></span>\`);
   
@@ -1475,13 +1457,11 @@ exports[`t-call (template calling) > t-out=0 renders its default body when the t
   }
   
   return function template(ctx, node, key = "") {
+    const b2 = callTemplate(\`sub\`, this, app, ctx[zero] ? withoutZero(ctx) : ctx, node, key + \`__1\`);
     const ctx1 = Object.create(ctx);
-    ctx1[zero] = null;
-    const b2 = callTemplate(\`sub\`, this, app, ctx1, node, key + \`__1\`);
-    const ctx2 = Object.create(ctx);
-    ctx2[zero] = callBody1;
-    ctx2[zeroCtx] = ctx;
-    const b3 = callTemplate(\`sub\`, this, app, ctx2, node, key + \`__2\`);
+    ctx1[zero] = callBody1;
+    ctx1[zeroCtx] = ctx;
+    const b3 = callTemplate(\`sub\`, this, app, ctx1, node, key + \`__2\`);
     return block1([], [b2, b3]);
   }
 }"
@@ -1510,17 +1490,13 @@ exports[`t-call (template calling) > two dynamic t-calls in a row are both dynam
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { zero, callTemplate } = helpers;
+  let { zero, withoutZero, callTemplate } = helpers;
   
   let block1 = createBlock(\`<div><block-child-0/><block-child-1/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const ctx1 = Object.create(ctx);
-    ctx1[zero] = null;
-    const b2 = callTemplate((ctx['a']), this, app, ctx1, node, key + \`__1\`);
-    const ctx2 = Object.create(ctx);
-    ctx2[zero] = null;
-    const b3 = callTemplate((ctx['b']), this, app, ctx2, node, key + \`__2\`);
+    const b2 = callTemplate((ctx['a']), this, app, ctx[zero] ? withoutZero(ctx) : ctx, node, key + \`__1\`);
+    const b3 = callTemplate((ctx['b']), this, app, ctx[zero] ? withoutZero(ctx) : ctx, node, key + \`__2\`);
     return block1([], [b2, b3]);
   }
 }"

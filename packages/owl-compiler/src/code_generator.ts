@@ -1117,6 +1117,13 @@ export class CodeGenerator {
         ...zero.map(([key, value]) => `${key}: ${value}`),
       ];
       ctxExpr = `Object.assign({}, ${dynCtxVar}, {${entries.join(", ")}})`;
+    } else if (!attrs.length && !ast.body) {
+      // nothing to add: the called template runs in the caller's context, as
+      // a slot does (its code writes no variable into the context it is
+      // given), unless there is a 0 to hide. A new context would make the
+      // caller's a prototype, a cost when it is new, as a loop item's is
+      this.helpers.add("withoutZero");
+      ctxExpr = `ctx[zero] ? withoutZero(ctx) : ctx`;
     } else {
       // assigned one by one, as Object.assign would, without a literal to copy
       ctxExpr = this.generateId("ctx");

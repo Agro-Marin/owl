@@ -438,7 +438,7 @@ exports[`t-foreach > t-call without body in t-foreach in t-foreach 1`] = `
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { prepareList, zero, callTemplate, withKey, keyOf, safeOutput } = helpers;
+  let { prepareList, zero, withoutZero, callTemplate, withKey, keyOf, safeOutput } = helpers;
   
   let block1 = createBlock(\`<div><block-child-0/><span>[<block-child-1/>][<block-child-2/>][<block-child-3/>]</span></div>\`);
   let block6 = createBlock(\`<span><block-child-0/></span>\`);
@@ -466,9 +466,7 @@ exports[`t-foreach > t-call without body in t-foreach in t-foreach 1`] = `
         ctx["b_value"] = v_block4[i2];
         const key2 = ctx['b'];
         const skey2 = keyOf(key2);
-        const ctx3 = Object.create(ctx);
-        ctx3[zero] = null;
-        c_block4[i2] = withKey(callTemplate(\`sub\`, this, app, ctx3, node, key + \`__1__\${skey1}__\${skey2}\`), key2);
+        c_block4[i2] = withKey(callTemplate(\`sub\`, this, app, ctx[zero] ? withoutZero(ctx) : ctx, node, key + \`__1__\${skey1}__\${skey2}\`), key2);
       }
       const b4 = list(c_block4);
       const b7 = safeOutput(ctx['c'], key, "__2", 1, key1);

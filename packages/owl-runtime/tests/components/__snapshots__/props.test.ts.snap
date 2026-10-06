@@ -238,16 +238,14 @@ exports[`.signal suffix: one signal per child > a .signal in a template and one 
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { createComponent, zero, callTemplate } = helpers;
+  let { createComponent, zero, withoutZero, callTemplate } = helpers;
   const comp1 = createComponent(app, \`Leaf\`, true, false, false, [], ["v"]);
   
   let block1 = createBlock(\`<div><block-child-0/><block-child-1/></div>\`);
   
   return function template(ctx, node, key = "") {
     const b2 = comp1({v: 'main'}, key + \`__1\`, node, this, null);
-    const ctx1 = Object.create(ctx);
-    ctx1[zero] = null;
-    const b3 = callTemplate(\`sub\`, this, app, ctx1, node, key + \`__2\`);
+    const b3 = callTemplate(\`sub\`, this, app, ctx[zero] ? withoutZero(ctx) : ctx, node, key + \`__2\`);
     return block1([], [b2, b3]);
   }
 }"

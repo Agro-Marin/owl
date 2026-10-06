@@ -109,7 +109,7 @@ exports[`misc > global 1`] = `
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { prepareList, safeOutput, zero, callTemplate, zeroCtx, withKey, keyOf } = helpers;
+  let { prepareList, safeOutput, zero, callTemplate, withoutZero, zeroCtx, withKey, keyOf } = helpers;
   
   let block1 = createBlock(\`<div><block-child-0/><block-child-1/></div>\`);
   let block4 = createBlock(\`<span><block-child-0/></span>\`);
@@ -120,13 +120,9 @@ exports[`misc > global 1`] = `
     ctx2["foo"] = 'aaa';
     ctx2[zero] = null;
     const b8 = callTemplate(\`_callee-uses-foo\`, this, app, ctx2, node, key + \`__2\`);
-    const ctx3 = Object.create(ctx);
-    ctx3[zero] = null;
-    const b9 = callTemplate(\`_callee-uses-foo\`, this, app, ctx3, node, key + \`__3\`);
+    const b9 = callTemplate(\`_callee-uses-foo\`, this, app, ctx[zero] ? withoutZero(ctx) : ctx, node, key + \`__3\`);
     ctx["foo"] = 'bbb';
-    const ctx4 = Object.create(ctx);
-    ctx4[zero] = null;
-    const b10 = callTemplate(\`_callee-uses-foo\`, this, app, ctx4, node, key + \`__4\`);
+    const b10 = callTemplate(\`_callee-uses-foo\`, this, app, ctx[zero] ? withoutZero(ctx) : ctx, node, key + \`__4\`);
     return multi([b8, b9, b10]);
   }
   
@@ -144,16 +140,14 @@ exports[`misc > global 1`] = `
       const skey1 = keyOf(key1);
       const b5 = safeOutput(ctx['value'], key, "__1", 1, key1);
       const b4 = block4([], [b5]);
-      const ctx5 = Object.create(ctx);
-      ctx5[zero] = callBody1;
-      ctx5[zeroCtx] = ctx;
-      const b6 = callTemplate(\`_callee-asc\`, this, app, ctx5, node, key + \`__5__\${skey1}\`);
+      const ctx3 = Object.create(ctx);
+      ctx3[zero] = callBody1;
+      ctx3[zeroCtx] = ctx;
+      const b6 = callTemplate(\`_callee-asc\`, this, app, ctx3, node, key + \`__5__\${skey1}\`);
       c_block2[i1] = withKey(multi([b4, b6]), key1);
     }
     const b2 = list(c_block2);
-    const ctx6 = Object.create(ctx);
-    ctx6[zero] = null;
-    const b11 = callTemplate(\`_callee-asc-toto\`, this, app, ctx6, node, key + \`__6\`);
+    const b11 = callTemplate(\`_callee-asc-toto\`, this, app, ctx[zero] ? withoutZero(ctx) : ctx, node, key + \`__6\`);
     return block1([], [b2, b11]);
   }
 }"
@@ -219,7 +213,7 @@ exports[`misc > other complex template 1`] = `
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { safeOutput, prepareList, callHandler, withKey, createRef, zero, callTemplate, createComponent } = helpers;
+  let { safeOutput, prepareList, callHandler, withKey, createRef, zero, withoutZero, callTemplate, createComponent } = helpers;
   const hdlr_fn1 = (ctx, ev) => callHandler(ctx['selectProject'](ctx['project']), ctx, ev);
   const hdlr_fn2 = (ctx, ev) => callHandler(ctx['toggleSettingsMenu'], ctx, ev);
   const hdlr_fn3 = (ctx, ev) => callHandler(ctx['toggleMore'], ctx, ev);
@@ -342,9 +336,7 @@ exports[`misc > other complex template 1`] = `
       b22 = multi([b23, b27]);
     }
     if (ctx['load_infos']) {
-      const ctx4 = Object.create(ctx);
-      ctx4[zero] = null;
-      b28 = callTemplate(\`LOAD_INFOS_TEMPLATE\`, this, app, ctx4, node, key + \`__7\`);
+      b28 = callTemplate(\`LOAD_INFOS_TEMPLATE\`, this, app, ctx[zero] ? withoutZero(ctx) : ctx, node, key + \`__7\`);
     }
     if (ctx['message']) {
       const b30 = safeOutput(ctx['message'], key, "__8");

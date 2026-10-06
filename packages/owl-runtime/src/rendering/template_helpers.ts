@@ -54,8 +54,14 @@ function callSlot(
   const slot = slots && slots[name];
   let slotBDom: BDom | null = null;
   if (slot && slot.__render) {
-    const slotCtx = ObjectCreate(slot.__ctx || {});
+    // a slot renders in the context it was written in: a scope of its own
+    // only for its slot scope variable. Its code writes no variable into the
+    // context it is given (a t-set makes a scope first), and a context put
+    // under a new one becomes a prototype, which V8 makes at a cost of about
+    // 1 KB and 1.5 µs when the context is new, as a loop item's is
+    let slotCtx = slot.__ctx || {};
     if (slot.__scope) {
+      slotCtx = ObjectCreate(slotCtx);
       slotCtx[slot.__scope] = extra || {};
     }
     slotBDom = slot.__render.call(slot.__owner, slotCtx, parent, key);
@@ -567,6 +573,16 @@ function createComponent<P extends Record<string, any>>(
 const zero = Symbol("zero");
 const zeroCtx = Symbol("zeroCtx");
 
+/**
+ * The context of a call that gives no 0, for a caller that has one: the
+ * called template must not see it.
+ */
+function withoutZero(ctx: any): any {
+  const callCtx = ObjectCreate(ctx);
+  callCtx[zero] = null;
+  return callCtx;
+}
+
 function callTemplate(
   subTemplate: string,
   owner: any,
@@ -599,6 +615,7 @@ export const helpers = {
   checkTagName,
   zero,
   zeroCtx,
+  withoutZero,
   callSlot,
   withKey,
   keyOf,

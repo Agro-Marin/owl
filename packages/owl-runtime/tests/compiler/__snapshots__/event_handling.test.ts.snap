@@ -195,12 +195,10 @@ exports[`t-on > handler is bound to proper owner, part 3 1`] = `
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { zero, callTemplate } = helpers;
+  let { zero, withoutZero, callTemplate } = helpers;
   
   return function template(ctx, node, key = "") {
-    const ctx1 = Object.create(ctx);
-    ctx1[zero] = null;
-    return callTemplate(\`sub\`, this, app, ctx1, node, key + \`__1\`);
+    return callTemplate(\`sub\`, this, app, ctx[zero] ? withoutZero(ctx) : ctx, node, key + \`__1\`);
   }
 }"
 `;
@@ -225,7 +223,7 @@ exports[`t-on > handler is bound to proper owner, part 4 1`] = `
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { prepareList, zero, callTemplate, withKey, keyOf } = helpers;
+  let { prepareList, zero, withoutZero, callTemplate, withKey, keyOf } = helpers;
   
   return function template(ctx, node, key = "") {
     const ctx1 = ctx;
@@ -239,9 +237,7 @@ exports[`t-on > handler is bound to proper owner, part 4 1`] = `
       ctx["value_value"] = v_block1[i1];
       const key1 = ctx['value'];
       const skey1 = keyOf(key1);
-      const ctx2 = Object.create(ctx);
-      ctx2[zero] = null;
-      c_block1[i1] = withKey(callTemplate(\`sub\`, this, app, ctx2, node, key + \`__1__\${skey1}\`), key1);
+      c_block1[i1] = withKey(callTemplate(\`sub\`, this, app, ctx[zero] ? withoutZero(ctx) : ctx, node, key + \`__1__\${skey1}\`), key1);
     }
     return list(c_block1);
   }
@@ -558,14 +554,12 @@ exports[`t-on > t-on with t-call 1`] = `
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { zero, callTemplate } = helpers;
+  let { zero, withoutZero, callTemplate } = helpers;
   
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const ctx1 = Object.create(ctx);
-    ctx1[zero] = null;
-    const b2 = callTemplate(\`sub\`, this, app, ctx1, node, key + \`__1\`);
+    const b2 = callTemplate(\`sub\`, this, app, ctx[zero] ? withoutZero(ctx) : ctx, node, key + \`__1\`);
     return block1([], [b2]);
   }
 }"
@@ -591,14 +585,12 @@ exports[`t-on > t-on, with arguments and t-call 1`] = `
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { zero, callTemplate } = helpers;
+  let { zero, withoutZero, callTemplate } = helpers;
   
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const ctx1 = Object.create(ctx);
-    ctx1[zero] = null;
-    const b2 = callTemplate(\`sub\`, this, app, ctx1, node, key + \`__1\`);
+    const b2 = callTemplate(\`sub\`, this, app, ctx[zero] ? withoutZero(ctx) : ctx, node, key + \`__1\`);
     return block1([], [b2]);
   }
 }"
