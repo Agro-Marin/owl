@@ -202,6 +202,35 @@ describe("basic features", () => {
     manager.destroy();
   });
 
+  test("a plugin whose constructor throws after starting a dependency leaves neither registered", () => {
+    const destroyed: string[] = [];
+    let fail = true;
+    class B extends Plugin {
+      setup() {
+        onWillDestroy(() => destroyed.push("B"));
+      }
+    }
+    class A extends Plugin {
+      b = plugin(B);
+      constructor(manager: PluginManager) {
+        super(manager);
+        if (fail) {
+          throw new Error("constructor failed");
+        }
+      }
+    }
+
+    const manager = new PluginManager(new App());
+    expect(() => manager.startPlugins([A])).toThrow("constructor failed");
+    expect([manager.getPlugin(A), manager.getPlugin(B)]).toEqual([null, null]);
+    expect(destroyed).toEqual(["B"]);
+
+    fail = false;
+    manager.startPlugins([A]);
+    expect(manager.getPlugin(A)!.b).toBe(manager.getPlugin(B));
+    manager.destroy();
+  });
+
   test("destroy order is reverse of setup order", () => {
     const steps: string[] = [];
 

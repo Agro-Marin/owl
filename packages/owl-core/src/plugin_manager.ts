@@ -138,19 +138,8 @@ export class PluginManager extends Scope {
     }
     this.assertNotStarting(pluginConstructor);
 
-    // undo everything this start registered, including the plugins it
-    // started as dependencies, so a failed setup leaves nothing behind
     const mark = this.mark();
     const startedMark = this.startedIds.length;
-    const undo = () => {
-      if (debug.plugin) {
-        debugLog("plugin", `start of ${id} failed, undo`, this.startedIds.slice(startedMark));
-      }
-      for (const startedId of this.startedIds.splice(startedMark)) {
-        delete this.plugins[startedId];
-      }
-      this.rollback(mark, (e) => console.error(e));
-    };
     if (debug.plugin) {
       debugLog(
         "plugin",
@@ -161,20 +150,21 @@ export class PluginManager extends Scope {
     let plugin: Plugin;
     this.startingPath.push(pluginConstructor);
     try {
-      try {
-        plugin = new pluginConstructor(this);
-      } catch (e) {
-        undo();
-        throw e;
-      }
+      plugin = new pluginConstructor(this);
       this.plugins[id] = plugin;
       this.startedIds.push(id);
-      try {
-        plugin.setup();
-      } catch (e) {
-        undo();
-        throw e;
+      plugin.setup();
+    } catch (e) {
+      // undo everything this start registered, including the plugins it
+      // started as dependencies, so a failed start leaves nothing behind
+      if (debug.plugin) {
+        debugLog("plugin", `start of ${id} failed, undo`, this.startedIds.slice(startedMark));
       }
+      for (const startedId of this.startedIds.splice(startedMark)) {
+        delete this.plugins[startedId];
+      }
+      this.rollback(mark, (e) => console.error(e));
+      throw e;
     } finally {
       this.startingPath.pop();
     }
