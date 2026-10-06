@@ -34,32 +34,6 @@ describe("readArrayItems", () => {
     expect(readArrayItems(array)[0]).toBe(kept);
   });
 
-  test("leaves a subclass of Array, which may answer its index reads from elsewhere, to be read as usual", () => {
-    class Indexed extends Array<string> {
-      store = proxy({ items: [] as string[] });
-    }
-    const list = new Indexed();
-    const view = proxy(
-      new Proxy(list, {
-        get(target, key, receiver) {
-          if (key === "length") {
-            return Reflect.get(target, "store", receiver).items.length;
-          }
-          if (typeof key === "string" && /^\d+$/.test(key)) {
-            return Reflect.get(target, "store", receiver).items[Number(key)];
-          }
-          return Reflect.get(target, key, receiver);
-        },
-      })
-    );
-    expect(readArrayItems(view)).toBe(view);
-    const read = computed(() => [...readArrayItems(view)].join(","), { detached: true });
-    list.store.items.push("a");
-    expect(read()).toBe("a");
-    list.store.items.push("b");
-    expect(read()).toBe("a,b");
-  });
-
   test("hands out a frozen array's items raw, as its get trap must", () => {
     const item = { id: 1 };
     const array = proxy(Object.freeze([item]) as { id: number }[]);

@@ -602,13 +602,17 @@ class BasicHandler implements ProxyHandler<any> {
     const hadKey = objectHasOwnProperty.call(target, key);
     const ret = Reflect.deleteProperty(target, key);
     if (hadKey && ret) {
-      const atoms = this.host(target);
-      onWriteKeyPresence(atoms, key);
-      onWriteTargetKey(atoms, key);
-      releaseKey(atoms, key);
-      if (Array.isArray(target)) {
-        onWriteItems(target);
-      }
+      // one batch: an immediate reader of the key, its presence and the keys
+      // runs once
+      batch(() => {
+        const atoms = this.host(target);
+        onWriteKeyPresence(atoms, key);
+        onWriteTargetKey(atoms, key);
+        releaseKey(atoms, key);
+        if (Array.isArray(target)) {
+          onWriteItems(target);
+        }
+      });
     }
     return ret;
   }
@@ -635,10 +639,11 @@ function writeKey(
   // a shallow proxy hands its values back as stored: it keeps a proxy
   const stored = shallow ? value : toRaw(value);
   const own = Reflect.getOwnPropertyDescriptor(target, key);
-  // An own data property runs no code. Any other write may reach a setter: one
-  // batch, so a setter writing other keys runs an immediate reader of them and
-  // of this key once, after the write.
-  return own !== undefined && "value" in own
+  // An own data property of an object runs no code and notifies its key only.
+  // Any other write may reach a setter, and an array's notifies its items (and
+  // length) too: one batch, so an immediate reader of several of the keys it
+  // notifies runs once, after the write.
+  return own !== undefined && "value" in own && !Array.isArray(target)
     ? write(target, key, stored, receiver, own, atoms)
     : batch(() => write(target, key, stored, receiver, own, atoms));
 }
@@ -648,7 +653,9 @@ function writeKey(
 // A write that failed changed nothing. It notifies the key's creation and
 // value, and for an array its length and items. An array's length is compared
 // with the length before the write, not with the value the trap is given: an
-// index written past the end has already grown it.
+// index written past the end has already grown it, whether the target made it
+// an own property or keeps its items elsewhere (an Array subclass behind its
+// own Proxy).
 function write(
   target: any,
   key: PropertyKey,
@@ -679,9 +686,9 @@ function write(
   const changed = !Object.is(before, Reflect.get(target, key, receiver));
   if (created) {
     onWriteKeyPresence(atoms, key);
-    if (isArray && target.length !== length) {
-      onWriteTargetKey(target, "length");
-    }
+  }
+  if (isArray && target.length !== length) {
+    onWriteTargetKey(target, "length");
   }
   if (changed) {
     onWriteTargetKey(atoms, key);

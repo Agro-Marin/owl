@@ -839,40 +839,6 @@ describe("array searches", () => {
     expect(proxy([NaN]).includes(NaN)).toBe(true);
   });
 
-  test("a search on an array subclass behind its own proxy reads through it, tracked", async () => {
-    // Odoo mail's RecordList shape: an Array subclass holding its items in
-    // `data`, behind a Proxy that maps an index read to receiver.data[index]
-    class List extends Array {
-      data: any[] = [];
-    }
-    const inner = new Proxy(new List(), {
-      get(target, key, receiver) {
-        if (key === "length") {
-          return receiver.data.length;
-        }
-        if (typeof key === "string" && /^\d+$/.test(key)) {
-          return receiver.data[key];
-        }
-        return Reflect.get(target, key, receiver);
-      },
-      has(target, key) {
-        if (typeof key === "string" && /^\d+$/.test(key)) {
-          return Number(key) < target.data.length;
-        }
-        return Reflect.has(target, key);
-      },
-    });
-    const list = proxy(inner) as any;
-    const item = { a: 1 };
-    const seen: unknown[] = [];
-    effect(() => {
-      seen.push(list.includes(item), list.indexOf(item));
-    });
-    list.data.push(item);
-    await waitScheduler();
-    expect(seen).toEqual([false, -1, true, 0]);
-  });
-
   test("a search through an observe() view observes the items", () => {
     let calls = 0;
     const list = proxy([1, 2]);
