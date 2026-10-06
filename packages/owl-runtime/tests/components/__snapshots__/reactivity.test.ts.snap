@@ -215,12 +215,12 @@ exports[`reactive cleanup on component destruction > benchmark-like scenario: si
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { safeOutput } = helpers;
+  let { attrValue, safeOutput } = helpers;
   
   let block1 = createBlock(\`<tr block-attribute-0="class"><td><block-child-0/></td><td><a><block-child-1/></a></td></tr>\`);
   
   return function template(ctx, node, key = "") {
-    let attr1 = ctx['this'].isSelected()?'danger':'';
+    let attr1 = attrValue(ctx['this'].isSelected()?'danger':'');
     const b2 = safeOutput(ctx['this'].p.row.id, node, key, "\\u00021");
     const b3 = safeOutput(ctx['this'].p.row.label(), node, key, "\\u00022");
     return block1([attr1], [b2, b3]);

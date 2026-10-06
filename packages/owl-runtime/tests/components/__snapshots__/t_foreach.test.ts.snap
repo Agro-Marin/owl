@@ -153,7 +153,7 @@ exports[`list of components > dev mode: a body without components keeps the list
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { prepareList, withKey, OwlError } = helpers;
+  let { prepareList, attrValue, withKey, OwlError } = helpers;
   
   let block2 = createBlock(\`<i block-attribute-0="class"/>\`);
   
@@ -167,7 +167,7 @@ exports[`list of components > dev mode: a body without components keeps the list
       const key1 = ctx['item'];
       if (keys1.has(key1)) { throw new OwlError(\`Got duplicate key in t-foreach: \${key1}\`)}
       keys1.add(key1);
-      let attr1 = typeof ctx['item'];
+      let attr1 = attrValue(typeof ctx['item']);
       c_block1[i1] = withKey(block2([attr1]), key1);
     }
     return list(c_block1);

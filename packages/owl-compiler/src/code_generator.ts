@@ -58,6 +58,12 @@ if (typeof document !== "undefined") {
   xmlDoc = document.implementation.createDocument(null, null, null);
 }
 
+// a compiled attribute expression that cannot hold a t-set body: a string,
+// number or keyword literal, a template literal (a string already) or an
+// object literal (a class or style object)
+const LITERAL_RE =
+  /^(?:'[^'\\]*'|"[^"\\]*"|`(?:[^`\\]|\\.)*`|-?\d[\d.e+-]*|true|false|null|undefined|\{.*\})$/s;
+
 function isProp(tag: string, key: string): boolean {
   switch (tag) {
     case "input":
@@ -623,6 +629,15 @@ export class CodeGenerator {
         const isFormat = key.startsWith("t-attf");
         attrName = isFormat ? key.slice(7) : key === "t-att" ? null : key.slice(6);
         expr = isFormat ? interpolate(ast.attrs[key]) : compileExpr(ast.attrs[key]);
+        if (!attrName) {
+          // an object or a pair: its t-set bodies become their strings
+          this.helpers.add("attrsValue");
+          expr = `attrsValue(${expr})`;
+        } else if (!LITERAL_RE.test(expr)) {
+          // a t-set body becomes its string in the render, not in the patch
+          this.helpers.add("attrValue");
+          expr = `attrValue(${expr})`;
+        }
         if (attrName && isProp(ast.tag, attrName)) {
           if (attrName === "readonly") {
             // the property has a different name than the attribute

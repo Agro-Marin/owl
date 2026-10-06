@@ -255,6 +255,39 @@ class LazyValue {
   }
 }
 
+// the value a render gives an attribute or a property: a t-set body's string,
+// taken while the render runs, so that the render tracks what the body reads
+// and the block compares strings (the patch would stringify the same body
+// object again only if it were another one, and read it untracked)
+function attrValue(value: any): any {
+  if (value instanceof LazyValue) {
+    if (debug.template) {
+      debugLog("template", "t-set body given to an attribute: stringified in the render");
+    }
+    return value.toString();
+  }
+  return value;
+}
+
+// the same for t-att's object or [name, value] pair: a copy holding the
+// strings of its t-set bodies, the value itself when it holds none
+function attrsValue(attrs: any): any {
+  if (Array.isArray(attrs)) {
+    return attrs[1] instanceof LazyValue ? [attrs[0], attrValue(attrs[1])] : attrs;
+  }
+  if (attrs && typeof attrs === "object") {
+    let copy: any = null;
+    for (const name in attrs) {
+      if (attrs[name] instanceof LazyValue) {
+        copy ||= { ...attrs };
+        copy[name] = attrValue(attrs[name]);
+      }
+    }
+    return copy || attrs;
+  }
+  return attrs;
+}
+
 function holdsComponent(bdom: any): boolean {
   if (bdom instanceof ComponentNode) {
     return true;
@@ -732,6 +765,8 @@ export const helpers = {
   toNumber,
   LazyValue,
   safeOutput,
+  attrValue,
+  attrsValue,
   createCatcher,
   markRaw,
   OwlError,

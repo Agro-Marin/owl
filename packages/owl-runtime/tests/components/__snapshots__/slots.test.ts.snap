@@ -2887,12 +2887,12 @@ exports[`slots > slots are rendered with proper context, part 2 2`] = `
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { callSlot } = helpers;
+  let { attrValue, callSlot } = helpers;
   
   let block1 = createBlock(\`<a block-attribute-0="href"><block-child-0/></a>\`);
   
   return function template(ctx, node, key = "") {
-    let attr1 = ctx['this'].props.to;
+    let attr1 = attrValue(ctx['this'].props.to);
     const b2 = callSlot(ctx, node, key + \`\\u00021\`, "default", false, null);
     return block1([attr1], [b2]);
   }
@@ -2935,12 +2935,12 @@ exports[`slots > slots are rendered with proper context, part 3 2`] = `
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { callSlot } = helpers;
+  let { attrValue, callSlot } = helpers;
   
   let block1 = createBlock(\`<a block-attribute-0="href"><block-child-0/></a>\`);
   
   return function template(ctx, node, key = "") {
-    let attr1 = ctx['this'].props.to;
+    let attr1 = attrValue(ctx['this'].props.to);
     const b2 = callSlot(ctx, node, key + \`\\u00021\`, "default", false, null);
     return block1([attr1], [b2]);
   }
@@ -2973,12 +2973,12 @@ exports[`slots > slots are rendered with proper context, part 4 2`] = `
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { callSlot } = helpers;
+  let { attrValue, callSlot } = helpers;
   
   let block1 = createBlock(\`<a block-attribute-0="href"><block-child-0/></a>\`);
   
   return function template(ctx, node, key = "") {
-    let attr1 = ctx['this'].props.to;
+    let attr1 = attrValue(ctx['this'].props.to);
     const b2 = callSlot(ctx, node, key + \`\\u00021\`, "default", false, null);
     return block1([attr1], [b2]);
   }

@@ -1,5 +1,136 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`a t-set body in an attribute is its string at render > a single interpolation, a property and a prop read by a child 1`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { LazyValue, safeOutput, attrValue, createComponent } = helpers;
+  const comp1 = createComponent(app, \`Label\`, true, false, false, ["label"]);
+  
+  let block1 = createBlock(\`<div><p block-attribute-0="data-v"/><input block-sync-property-1="value"/><block-child-0/></div>\`);
+  
+  function value1(ctx, node, key = "") {
+    const b3 = text(\`v\`);
+    const b4 = safeOutput(ctx['this'].state.a, node, key, "\\u00021");
+    return multi([b3, b4]);
+  }
+  
+  return function template(ctx, node, key = "") {
+    ctx = Object.create(ctx);
+    ctx["b"] = new LazyValue(value1, ctx, this, node, key + \`\\u00022\`);
+    let attr1 = attrValue((ctx['b']));
+    let prop1 = attrValue(ctx['b']);
+    const b5 = comp1({label: ctx['b']}, key + \`\\u00023\`, node, this, null);
+    return block1([attr1, prop1], [b5]);
+  }
+}"
+`;
+
+exports[`a t-set body in an attribute is its string at render > a single interpolation, a property and a prop read by a child 2`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { attrValue } = helpers;
+  
+  let block1 = createBlock(\`<p block-attribute-0="title"/>\`);
+  
+  return function template(ctx, node, key = "") {
+    let attr1 = attrValue(ctx['this'].props.label);
+    return block1([attr1]);
+  }
+}"
+`;
+
+exports[`a t-set body in an attribute is its string at render > in a slot, whose owner alone renders again 1`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { LazyValue, safeOutput, attrValue, markRaw, createComponent } = helpers;
+  const comp1 = createComponent(app, \`Box\`, true, true, false, []);
+  
+  let block1 = createBlock(\`<div><block-child-0/></div>\`);
+  let block2 = createBlock(\`<i><block-child-0/></i>\`);
+  let block4 = createBlock(\`<p block-attribute-0="data-v"><block-child-0/></p>\`);
+  
+  function value1(ctx, node, key = "") {
+    const b3 = safeOutput(ctx['this'].state.a, node, key, "\\u00021");
+    return block2([], [b3]);
+  }
+  
+  function slot1(ctx, node, key = "") {
+    let attr1 = attrValue(ctx['b']);
+    const b5 = safeOutput(ctx['b'], node, key, "\\u00023");
+    return block4([attr1], [b5]);
+  }
+  
+  return function template(ctx, node, key = "") {
+    ctx = Object.create(ctx);
+    ctx["b"] = new LazyValue(value1, ctx, this, node, key + \`\\u00022\`);
+    const b6 = comp1({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`\\u00024\`, node, this, null);
+    return block1([], [b6]);
+  }
+}"
+`;
+
+exports[`a t-set body in an attribute is its string at render > in a slot, whose owner alone renders again 2`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { callSlot } = helpers;
+  
+  return function template(ctx, node, key = "") {
+    return callSlot(ctx, node, key + \`\\u00021\`, "default", false, null);
+  }
+}"
+`;
+
+exports[`a t-set body in an attribute is its string at render > in t-att, as an object's value or a pair's 1`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { LazyValue, safeOutput, attrsValue } = helpers;
+  
+  let block1 = createBlock(\`<div><p block-attributes="0"/><p block-attributes="1"/></div>\`);
+  
+  function value1(ctx, node, key = "") {
+    const b3 = text(\`v\`);
+    const b4 = safeOutput(ctx['this'].state.a, node, key, "\\u00021");
+    return multi([b3, b4]);
+  }
+  
+  return function template(ctx, node, key = "") {
+    ctx = Object.create(ctx);
+    ctx["b"] = new LazyValue(value1, ctx, this, node, key + \`\\u00022\`);
+    let attr1 = attrsValue({'data-v':ctx['b']});
+    let attr2 = attrsValue(['data-w',ctx['b']]);
+    return block1([attr1, attr2]);
+  }
+}"
+`;
+
+exports[`a t-set body in an attribute is its string at render > read only in an attribute: the render follows what the body reads 1`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { LazyValue, safeOutput, attrValue } = helpers;
+  
+  let block1 = createBlock(\`<div><p block-attribute-0="data-v"/></div>\`);
+  
+  function value1(ctx, node, key = "") {
+    const b3 = text(\`v\`);
+    const b4 = safeOutput(ctx['this'].state.a, node, key, "\\u00021");
+    return multi([b3, b4]);
+  }
+  
+  return function template(ctx, node, key = "") {
+    ctx = Object.create(ctx);
+    ctx["b"] = new LazyValue(value1, ctx, this, node, key + \`\\u00022\`);
+    let attr1 = attrValue(ctx['b']);
+    return block1([attr1]);
+  }
+}"
+`;
+
 exports[`t-set > slot setted value (with t-set) not accessible with t-out 1`] = `
 "function anonymous(app, bdom, helpers
 ) {

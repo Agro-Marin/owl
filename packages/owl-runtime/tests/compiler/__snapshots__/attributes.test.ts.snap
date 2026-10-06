@@ -4,11 +4,12 @@ exports[`attributes > changing a class with t-att-class (preexisting class 1`] =
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { attrValue } = helpers;
   
   let block1 = createBlock(\`<div class="hoy" block-attribute-0="class"/>\`);
   
   return function template(ctx, node, key = "") {
-    let attr1 = ctx['v'];
+    let attr1 = attrValue(ctx['v']);
     return block1([attr1]);
   }
 }"
@@ -18,11 +19,12 @@ exports[`attributes > changing a class with t-att-class 1`] = `
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { attrValue } = helpers;
   
   let block1 = createBlock(\`<div block-attribute-0="class"/>\`);
   
   return function template(ctx, node, key = "") {
-    let attr1 = ctx['v'];
+    let attr1 = attrValue(ctx['v']);
     return block1([attr1]);
   }
 }"
@@ -32,11 +34,12 @@ exports[`attributes > class and t-att-class should combine together 1`] = `
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { attrValue } = helpers;
   
   let block1 = createBlock(\`<div block-attribute-0="class" class="hello"/>\`);
   
   return function template(ctx, node, key = "") {
-    let attr1 = ctx['value'];
+    let attr1 = attrValue(ctx['value']);
     return block1([attr1]);
   }
 }"
@@ -46,11 +49,12 @@ exports[`attributes > class and t-attf-class with ternary operation 1`] = `
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { attrValue } = helpers;
   
   let block1 = createBlock(\`<div class="hello" block-attribute-0="class"/>\`);
   
   return function template(ctx, node, key = "") {
-    let attr1 = (ctx['value']?'world':'');
+    let attr1 = attrValue((ctx['value']?'world':''));
     return block1([attr1]);
   }
 }"
@@ -60,11 +64,12 @@ exports[`attributes > dynamic attribute evaluating to 0 1`] = `
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { attrValue } = helpers;
   
   let block1 = createBlock(\`<div block-attribute-0="foo"/>\`);
   
   return function template(ctx, node, key = "") {
-    let attr1 = ctx['value'];
+    let attr1 = attrValue(ctx['value']);
     return block1([attr1]);
   }
 }"
@@ -74,11 +79,12 @@ exports[`attributes > dynamic attribute falsy variable  1`] = `
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { attrValue } = helpers;
   
   let block1 = createBlock(\`<div block-attribute-0="foo"/>\`);
   
   return function template(ctx, node, key = "") {
-    let attr1 = ctx['value'];
+    let attr1 = attrValue(ctx['value']);
     return block1([attr1]);
   }
 }"
@@ -88,11 +94,12 @@ exports[`attributes > dynamic attribute with a dash 1`] = `
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { attrValue } = helpers;
   
   let block1 = createBlock(\`<div block-attribute-0="data-action-id"/>\`);
   
   return function template(ctx, node, key = "") {
-    let attr1 = ctx['id'];
+    let attr1 = attrValue(ctx['id']);
     return block1([attr1]);
   }
 }"
@@ -130,11 +137,12 @@ exports[`attributes > dynamic class attribute 1`] = `
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { attrValue } = helpers;
   
   let block1 = createBlock(\`<div block-attribute-0="class"/>\`);
   
   return function template(ctx, node, key = "") {
-    let attr1 = ctx['c'];
+    let attr1 = attrValue(ctx['c']);
     return block1([attr1]);
   }
 }"
@@ -144,11 +152,12 @@ exports[`attributes > dynamic class attribute evaluating to 0 1`] = `
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { attrValue } = helpers;
   
   let block1 = createBlock(\`<div block-attribute-0="class"/>\`);
   
   return function template(ctx, node, key = "") {
-    let attr1 = ctx['value'];
+    let attr1 = attrValue(ctx['value']);
     return block1([attr1]);
   }
 }"
@@ -158,11 +167,12 @@ exports[`attributes > dynamic class attribute that starts and ends with a space 
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { attrValue } = helpers;
   
   let block1 = createBlock(\`<div block-attribute-0="class"/>\`);
   
   return function template(ctx, node, key = "") {
-    let attr1 = ctx['c'];
+    let attr1 = attrValue(ctx['c']);
     return block1([attr1]);
   }
 }"
@@ -172,11 +182,12 @@ exports[`attributes > dynamic class attribute which is only a space 1`] = `
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { attrValue } = helpers;
   
   let block1 = createBlock(\`<div block-attribute-0="class"/>\`);
   
   return function template(ctx, node, key = "") {
-    let attr1 = ctx['c'];
+    let attr1 = attrValue(ctx['c']);
     return block1([attr1]);
   }
 }"
@@ -186,11 +197,12 @@ exports[`attributes > dynamic class attribute with multiple consecutive spaces 1
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { attrValue } = helpers;
   
   let block1 = createBlock(\`<div block-attribute-0="class"/>\`);
   
   return function template(ctx, node, key = "") {
-    let attr1 = ctx['c'];
+    let attr1 = attrValue(ctx['c']);
     return block1([attr1]);
   }
 }"
@@ -200,11 +212,12 @@ exports[`attributes > dynamic empty class attribute 1`] = `
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { attrValue } = helpers;
   
   let block1 = createBlock(\`<div block-attribute-0="class"/>\`);
   
   return function template(ctx, node, key = "") {
-    let attr1 = ctx['c'];
+    let attr1 = attrValue(ctx['c']);
     return block1([attr1]);
   }
 }"
@@ -228,11 +241,12 @@ exports[`attributes > dynamic null class attribute 1`] = `
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { attrValue } = helpers;
   
   let block1 = createBlock(\`<div block-attribute-0="class"/>\`);
   
   return function template(ctx, node, key = "") {
-    let attr1 = ctx['c'];
+    let attr1 = attrValue(ctx['c']);
     return block1([attr1]);
   }
 }"
@@ -242,11 +256,12 @@ exports[`attributes > dynamic null generic attribute 1`] = `
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { attrValue } = helpers;
   
   let block1 = createBlock(\`<div block-attribute-0="thing"/>\`);
   
   return function template(ctx, node, key = "") {
-    let attr1 = ctx['c'];
+    let attr1 = attrValue(ctx['c']);
     return block1([attr1]);
   }
 }"
@@ -256,11 +271,12 @@ exports[`attributes > dynamic undefined class attribute 1`] = `
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { attrValue } = helpers;
   
   let block1 = createBlock(\`<div block-attribute-0="class"/>\`);
   
   return function template(ctx, node, key = "") {
-    let attr1 = ctx['c'];
+    let attr1 = attrValue(ctx['c']);
     return block1([attr1]);
   }
 }"
@@ -270,11 +286,12 @@ exports[`attributes > dynamic undefined generic attribute 1`] = `
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { attrValue } = helpers;
   
   let block1 = createBlock(\`<div block-attribute-0="thing"/>\`);
   
   return function template(ctx, node, key = "") {
-    let attr1 = ctx['c'];
+    let attr1 = attrValue(ctx['c']);
     return block1([attr1]);
   }
 }"
@@ -284,11 +301,12 @@ exports[`attributes > fixed variable 1`] = `
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { attrValue } = helpers;
   
   let block1 = createBlock(\`<div block-attribute-0="foo"/>\`);
   
   return function template(ctx, node, key = "") {
-    let attr1 = ctx['value'];
+    let attr1 = attrValue(ctx['value']);
     return block1([attr1]);
   }
 }"
@@ -298,11 +316,12 @@ exports[`attributes > format expression 1`] = `
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { attrValue } = helpers;
   
   let block1 = createBlock(\`<div block-attribute-0="foo"/>\`);
   
   return function template(ctx, node, key = "") {
-    let attr1 = (ctx['value']+37);
+    let attr1 = attrValue((ctx['value']+37));
     return block1([attr1]);
   }
 }"
@@ -368,13 +387,14 @@ exports[`attributes > from object variables set previously 1`] = `
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { attrValue } = helpers;
   
   let block1 = createBlock(\`<div><span block-attribute-0="class"/></div>\`);
   
   return function template(ctx, node, key = "") {
     ctx = Object.create(ctx);
     ctx["o"] = {a:'b'};
-    let attr1 = ctx['o'].a;
+    let attr1 = attrValue(ctx['o'].a);
     return block1([attr1]);
   }
 }"
@@ -384,13 +404,14 @@ exports[`attributes > from variables set previously (no external node) 1`] = `
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { attrValue } = helpers;
   
   let block1 = createBlock(\`<span block-attribute-0="class"/>\`);
   
   return function template(ctx, node, key = "") {
     ctx = Object.create(ctx);
     ctx["abc"] = 'def';
-    let attr1 = ctx['abc'];
+    let attr1 = attrValue(ctx['abc']);
     return block1([attr1]);
   }
 }"
@@ -400,13 +421,14 @@ exports[`attributes > from variables set previously 1`] = `
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { attrValue } = helpers;
   
   let block1 = createBlock(\`<div><span block-attribute-0="class"/></div>\`);
   
   return function template(ctx, node, key = "") {
     ctx = Object.create(ctx);
     ctx["abc"] = 'def';
-    let attr1 = ctx['abc'];
+    let attr1 = attrValue(ctx['abc']);
     return block1([attr1]);
   }
 }"
@@ -416,11 +438,12 @@ exports[`attributes > object 1`] = `
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { attrsValue } = helpers;
   
   let block1 = createBlock(\`<div block-attributes="0"/>\`);
   
   return function template(ctx, node, key = "") {
-    let attr1 = ctx['value'];
+    let attr1 = attrsValue(ctx['value']);
     return block1([attr1]);
   }
 }"
@@ -509,11 +532,12 @@ exports[`attributes > t-att-class and class should combine together 1`] = `
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { attrValue } = helpers;
   
   let block1 = createBlock(\`<div class="hello" block-attribute-0="class"/>\`);
   
   return function template(ctx, node, key = "") {
-    let attr1 = ctx['value'];
+    let attr1 = attrValue(ctx['value']);
     return block1([attr1]);
   }
 }"
@@ -691,11 +715,12 @@ exports[`attributes > tuple literal 1`] = `
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { attrsValue } = helpers;
   
   let block1 = createBlock(\`<div block-attributes="0"/>\`);
   
   return function template(ctx, node, key = "") {
-    let attr1 = ['foo','bar'];
+    let attr1 = attrsValue(['foo','bar']);
     return block1([attr1]);
   }
 }"
@@ -705,11 +730,12 @@ exports[`attributes > tuple variable 1`] = `
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { attrsValue } = helpers;
   
   let block1 = createBlock(\`<div block-attributes="0"/>\`);
   
   return function template(ctx, node, key = "") {
-    let attr1 = ctx['value'];
+    let attr1 = attrsValue(ctx['value']);
     return block1([attr1]);
   }
 }"
@@ -761,11 +787,12 @@ exports[`attributes > various combinations of class, t-att-class, and t-att 1`] 
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { attrsValue } = helpers;
   
   let block1 = createBlock(\`<div block-attributes="0" class="c">content</div>\`);
   
   return function template(ctx, node, key = "") {
-    let attr1 = {class:'a'};
+    let attr1 = attrsValue({class:'a'});
     return block1([attr1]);
   }
 }"
@@ -775,11 +802,12 @@ exports[`attributes > various combinations of class, t-att-class, and t-att 2`] 
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { attrsValue } = helpers;
   
   let block1 = createBlock(\`<div block-attributes="0" block-attribute-1="class" class="c">content</div>\`);
   
   return function template(ctx, node, key = "") {
-    let attr1 = {class:'a'};
+    let attr1 = attrsValue({class:'a'});
     let attr2 = {'b':true};
     return block1([attr1, attr2]);
   }
@@ -790,11 +818,12 @@ exports[`attributes > various combinations of class, t-att-class, and t-att 3`] 
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { attrsValue } = helpers;
   
   let block1 = createBlock(\`<div block-attributes="0" class="c" block-attribute-1="class">content</div>\`);
   
   return function template(ctx, node, key = "") {
-    let attr1 = {class:'a'};
+    let attr1 = attrsValue({class:'a'});
     let attr2 = {'b':true};
     return block1([attr1, attr2]);
   }
@@ -805,11 +834,12 @@ exports[`attributes > various combinations of class, t-att-class, and t-att 4`] 
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { attrsValue } = helpers;
   
   let block1 = createBlock(\`<div class="c" block-attributes="0" block-attribute-1="class">content</div>\`);
   
   return function template(ctx, node, key = "") {
-    let attr1 = {class:'a'};
+    let attr1 = attrsValue({class:'a'});
     let attr2 = {'b':true};
     return block1([attr1, attr2]);
   }
@@ -820,12 +850,13 @@ exports[`attributes > various combinations of class, t-att-class, and t-att 5`] 
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { attrsValue } = helpers;
   
   let block1 = createBlock(\`<div class="c" block-attribute-0="class" block-attributes="1">content</div>\`);
   
   return function template(ctx, node, key = "") {
     let attr1 = {'b':true};
-    let attr2 = {class:'a'};
+    let attr2 = attrsValue({class:'a'});
     return block1([attr1, attr2]);
   }
 }"
@@ -849,11 +880,12 @@ exports[`attributes > various combinations of class, t-att-class, and t-att 7`] 
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { attrValue } = helpers;
   
   let block1 = createBlock(\`<div class="c" block-attribute-0="class">content</div>\`);
   
   return function template(ctx, node, key = "") {
-    let attr1 = ('b');
+    let attr1 = attrValue(('b'));
     return block1([attr1]);
   }
 }"
@@ -863,11 +895,12 @@ exports[`attributes > various combinations of class, t-att-class, and t-att 8`] 
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { attrsValue } = helpers;
   
   let block1 = createBlock(\`<div block-attributes="0" block-attribute-1="class">content</div>\`);
   
   return function template(ctx, node, key = "") {
-    let attr1 = {class:'a'};
+    let attr1 = attrsValue({class:'a'});
     let attr2 = {'b':true};
     return block1([attr1, attr2]);
   }
@@ -878,13 +911,14 @@ exports[`attributes > various escapes 1`] = `
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { attrValue, attrsValue } = helpers;
   
   let block1 = createBlock(\`<div foo="&lt;foo" block-attribute-0="bar" block-attribute-1="baz" block-attributes="2"/>\`);
   
   return function template(ctx, node, key = "") {
-    let attr1 = ctx['bar'];
+    let attr1 = attrValue(ctx['bar']);
     let attr2 = \`<\${ctx['baz']}>\`;
-    let attr3 = ctx['qux'];
+    let attr3 = attrsValue(ctx['qux']);
     return block1([attr1, attr2, attr3]);
   }
 }"

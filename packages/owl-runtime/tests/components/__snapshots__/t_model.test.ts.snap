@@ -40,7 +40,7 @@ exports[`t-model directive > .number on a select: a static option is selected by
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { toNumber, modelExpr, prepareList, safeOutput, withKey } = helpers;
+  let { toNumber, modelExpr, prepareList, attrValue, safeOutput, withKey } = helpers;
   const hdlr_fn1 = (ctx, ev, model) => model.set(toNumber(ev.target.value));
   
   let block1 = createBlock(\`<select block-handler-0="change" block-handler-arg-1="0"><option value="1" block-attribute-2="selected">one</option><option value="2" block-attribute-3="selected">two</option><block-child-0/></select>\`, [hdlr_fn1]);
@@ -57,7 +57,7 @@ exports[`t-model directive > .number on a select: a static option is selected by
       let ctx = Object.create(ctx1);
       ctx["o"] = k_block2[i1];
       const key1 = ctx['o'];
-      let attr3 = ctx['o'];
+      let attr3 = attrValue(ctx['o']);
       let attr4 = bValue1 === toNumber(attr3);
       const b4 = safeOutput(ctx['o'], node, key, "\\u00021", 1, key1);
       c_block2[i1] = withKey(block3([attr3, attr4], [b4]), key1);
@@ -159,7 +159,7 @@ exports[`t-model directive > a dynamic option value is evaluated once per render
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { modelExpr } = helpers;
+  let { modelExpr, attrValue } = helpers;
   const hdlr_fn1 = (ctx, ev, model) => model.set(ev.target.value);
   
   let block1 = createBlock(\`<select block-handler-0="change" block-handler-arg-1="0"><option block-attribute-2="value" block-attribute-3="selected">A</option></select>\`, [hdlr_fn1]);
@@ -167,7 +167,7 @@ exports[`t-model directive > a dynamic option value is evaluated once per render
   return function template(ctx, node, key = "") {
     const expr1 = modelExpr(ctx['this'].model);
     const bValue1 = expr1();
-    let attr1 = ctx['this'].value();
+    let attr1 = attrValue(ctx['this'].value());
     let attr2 = bValue1 === attr1;
     return block1([ctx, expr1, attr1, attr2]);
   }
@@ -643,7 +643,7 @@ exports[`t-model directive > t-model with dynamic number values on select option
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { toNumber, modelExpr, prepareList, safeOutput, withKey } = helpers;
+  let { toNumber, modelExpr, prepareList, attrValue, safeOutput, withKey } = helpers;
   const hdlr_fn1 = (ctx, ev, model) => model.set(toNumber(ev.target.value));
   
   let block1 = createBlock(\`<select block-handler-0="change" block-handler-arg-1="0"><block-child-0/></select>\`, [hdlr_fn1]);
@@ -658,7 +658,7 @@ exports[`t-model directive > t-model with dynamic number values on select option
       let ctx = Object.create(ctx1);
       ctx["o"] = k_block2[i1];
       const key1 = ctx['o'].value;
-      let attr1 = ctx['o'].value;
+      let attr1 = attrValue(ctx['o'].value);
       let attr2 = bValue1 === toNumber(attr1);
       const b4 = safeOutput(ctx['o'].value, node, key, "\\u00021", 1, key1);
       c_block2[i1] = withKey(block3([attr1, attr2], [b4]), key1);
@@ -673,7 +673,7 @@ exports[`t-model directive > t-model with dynamic values on select options -- 2 
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { modelExpr, safeOutput } = helpers;
+  let { modelExpr, attrValue, safeOutput } = helpers;
   const hdlr_fn1 = (ctx, ev, model) => model.set(ev.target.value);
   
   let block1 = createBlock(\`<div><select block-handler-0="change" block-handler-arg-1="0"><option block-attribute-2="value" block-attribute-3="selected"><block-child-0/></option><option block-attribute-4="value" block-attribute-5="selected"><block-child-1/></option></select></div>\`, [hdlr_fn1]);
@@ -681,10 +681,10 @@ exports[`t-model directive > t-model with dynamic values on select options -- 2 
   return function template(ctx, node, key = "") {
     const expr1 = modelExpr(ctx['this'].model);
     const bValue1 = expr1();
-    let attr1 = ctx['this'].options[0];
+    let attr1 = attrValue(ctx['this'].options[0]);
     let attr2 = bValue1 === attr1;
     const b2 = safeOutput(ctx['this'].options[0], node, key, "\\u00021");
-    let attr3 = (ctx['this'].options[1]);
+    let attr3 = attrValue((ctx['this'].options[1]));
     let attr4 = bValue1 === attr3;
     const b3 = safeOutput(ctx['this'].options[1], node, key, "\\u00022");
     return block1([ctx, expr1, attr1, attr2, attr3, attr4], [b2, b3]);
@@ -696,7 +696,7 @@ exports[`t-model directive > t-model with dynamic values on select options -- 3 
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { modelExpr, safeOutput } = helpers;
+  let { modelExpr, attrValue, safeOutput } = helpers;
   const hdlr_fn1 = (ctx, ev, model) => model.set(ev.target.value);
   
   let block1 = createBlock(\`<div><select block-handler-0="change" block-handler-arg-1="0"><option block-attribute-2="value" block-attribute-3="selected"><block-child-0/></option><option value="b" block-attribute-4="selected"><block-child-1/></option></select></div>\`, [hdlr_fn1]);
@@ -704,7 +704,7 @@ exports[`t-model directive > t-model with dynamic values on select options -- 3 
   return function template(ctx, node, key = "") {
     const expr1 = modelExpr(ctx['this'].model);
     const bValue1 = expr1();
-    let attr1 = ctx['this'].options[0];
+    let attr1 = attrValue(ctx['this'].options[0]);
     let attr2 = bValue1 === attr1;
     const b2 = safeOutput(ctx['this'].options[0], node, key, "\\u00021");
     let attr3 = bValue1 === "b";
@@ -718,7 +718,7 @@ exports[`t-model directive > t-model with dynamic values on select options 1`] =
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { modelExpr, safeOutput } = helpers;
+  let { modelExpr, attrValue, safeOutput } = helpers;
   const hdlr_fn1 = (ctx, ev, model) => model.set(ev.target.value);
   
   let block1 = createBlock(\`<div><select block-handler-0="change" block-handler-arg-1="0"><option block-attribute-2="value" block-attribute-3="selected"><block-child-0/></option><option block-attribute-4="value" block-attribute-5="selected"><block-child-1/></option></select></div>\`, [hdlr_fn1]);
@@ -726,10 +726,10 @@ exports[`t-model directive > t-model with dynamic values on select options 1`] =
   return function template(ctx, node, key = "") {
     const expr1 = modelExpr(ctx['this'].model);
     const bValue1 = expr1();
-    let attr1 = ctx['this'].options[0];
+    let attr1 = attrValue(ctx['this'].options[0]);
     let attr2 = bValue1 === attr1;
     const b2 = safeOutput(ctx['this'].options[0], node, key, "\\u00021");
-    let attr3 = ctx['this'].options[1];
+    let attr3 = attrValue(ctx['this'].options[1]);
     let attr4 = bValue1 === attr3;
     const b3 = safeOutput(ctx['this'].options[1], node, key, "\\u00022");
     return block1([ctx, expr1, attr1, attr2, attr3, attr4], [b2, b3]);
@@ -741,7 +741,7 @@ exports[`t-model directive > t-model with dynamic values on select options in fo
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { modelExpr, prepareList, safeOutput, withKey } = helpers;
+  let { modelExpr, prepareList, attrValue, safeOutput, withKey } = helpers;
   const hdlr_fn1 = (ctx, ev, model) => model.set(ev.target.value);
   
   let block1 = createBlock(\`<div><select block-handler-0="change" block-handler-arg-1="0"><block-child-0/></select></div>\`, [hdlr_fn1]);
@@ -756,7 +756,7 @@ exports[`t-model directive > t-model with dynamic values on select options in fo
       let ctx = Object.create(ctx1);
       ctx["v"] = k_block2[i1];
       const key1 = ctx['v'];
-      let attr1 = ctx['v'];
+      let attr1 = attrValue(ctx['v']);
       let attr2 = bValue1 === attr1;
       const b4 = safeOutput(ctx['v'], node, key, "\\u00021", 1, key1);
       c_block2[i1] = withKey(block3([attr1, attr2], [b4]), key1);
@@ -792,7 +792,7 @@ exports[`t-model directive > t-model with radio button group in t-foreach 1`] = 
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { callHandler, prepareList, modelExpr, withKey } = helpers;
+  let { callHandler, prepareList, attrValue, modelExpr, withKey } = helpers;
   const hdlr_fn1 = (ctx, ev) => callHandler(ctx['this'].getData, ctx, ev);
   const hdlr_fn2 = (ctx, ev, model) => model.set(ev.target.value);
   
@@ -806,8 +806,8 @@ exports[`t-model directive > t-model with radio button group in t-foreach 1`] = 
       let ctx = Object.create(ctx1);
       ctx["opt"] = k_block2[i1];
       const key1 = ctx['opt'];
-      let prop1 = ctx['opt'];
-      let attr1 = ctx['opt'];
+      let prop1 = attrValue(ctx['opt']);
+      let attr1 = attrValue(ctx['opt']);
       const expr1 = modelExpr(ctx['this'].group);
       let prop2 = expr1() === prop1;
       c_block2[i1] = withKey(block3([prop1, attr1, prop2, ctx, expr1]), key1);

@@ -201,7 +201,10 @@ This is done via the `t-set` directive, which takes the name of the variable to 
    <t t-out="foo"/>
    ```
 
-   will generate `&lt;li&gt;ok&lt;/li&gt;` (the content is escaped by default)
+   will render the `<li>`. Read where a string is needed (an attribute, an
+   interpolation, a property), the body is its HTML, a text as it is: taken
+   when the render that reads it runs, so that the attribute follows what
+   the body reads.
 
 The `t-set` directive acts like a regular variable in most programming language.
 It is lexically scoped (inner nodes are sub scopes), can be shadowed, ...

@@ -4,7 +4,7 @@ exports[`t-ref > a lazy t-set body used as a string does not bind its refs 1`] =
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { LazyValue, createRef } = helpers;
+  let { LazyValue, createRef, attrValue } = helpers;
   
   let block1 = createBlock(\`<b block-ref="0">x</b>\`);
   let block2 = createBlock(\`<span block-attribute-0="title"/>\`);
@@ -17,7 +17,7 @@ exports[`t-ref > a lazy t-set body used as a string does not bind its refs 1`] =
   return function template(ctx, node, key = "") {
     ctx = Object.create(ctx);
     ctx["v"] = new LazyValue(value1, ctx, this, node, key + \`\\u00021\`);
-    let attr1 = ctx['v'];
+    let attr1 = attrValue(ctx['v']);
     return block2([attr1]);
   }
 }"

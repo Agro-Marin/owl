@@ -48,12 +48,12 @@ exports[`refs > an unchanged ref is not rebound on each render 1`] = `
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { createRef } = helpers;
+  let { attrValue, createRef } = helpers;
   
   let block1 = createBlock(\`<div block-attribute-0="title" block-ref="1"/>\`);
   
   return function template(ctx, node, key = "") {
-    let attr1 = ctx['this'].title();
+    let attr1 = attrValue(ctx['this'].title());
     let ref1 = createRef(ctx['this'].refs, node);
     return block1([attr1, ref1]);
   }
@@ -445,14 +445,14 @@ exports[`refs > ref is unset when t-if goes to false after unrelated render 1`] 
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { createRef } = helpers;
+  let { attrValue, createRef } = helpers;
   
   let block2 = createBlock(\`<div block-attribute-0="class" block-ref="1"/>\`);
   
   return function template(ctx, node, key = "") {
     let b2;
     if (ctx['this'].state.show) {
-      let attr1 = ctx['this'].state.class;
+      let attr1 = attrValue(ctx['this'].state.class);
       let ref1 = createRef(ctx['this'].ref, node);
       b2 = block2([attr1, ref1]);
     }

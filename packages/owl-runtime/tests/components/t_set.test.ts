@@ -1,4 +1,4 @@
-import { Component, mount, props, xml } from "../../src";
+import { Component, mount, props, proxy, xml } from "../../src";
 import { makeTestFixture, nextTick, render, snapshotEverything } from "../helpers";
 
 snapshotEverything();
@@ -298,5 +298,71 @@ describe("t-set", () => {
     }
     await mount(Comp, fixture);
     expect(fixture.innerHTML).toBe("<div><p><b>1</b></p><p><b>2</b></p></div>");
+  });
+});
+
+describe("a t-set body in an attribute is its string at render", () => {
+  class Box extends Component {
+    static template = xml`<t t-call-slot="default"/>`;
+  }
+  class Label extends Component {
+    static template = xml`<p t-att-title="this.props.label"/>`;
+    props = props();
+  }
+  const state = proxy({ a: 3 });
+  class Root extends Component {
+    static components = { Box, Label };
+    state = state;
+  }
+
+  async function update(template: string): Promise<string[]> {
+    state.a = 3;
+    class Comp extends Root {
+      static template = template;
+    }
+    await mount(Comp, fixture);
+    const before = fixture.innerHTML;
+    state.a = 1;
+    await nextTick();
+    return [before, fixture.innerHTML];
+  }
+
+  test("read only in an attribute: the render follows what the body reads", async () => {
+    expect(
+      await update(xml`<div><t t-set="b">v<t t-out="this.state.a"/></t><p t-att-data-v="b"/></div>`)
+    ).toEqual(['<div><p data-v="v3"></p></div>', '<div><p data-v="v1"></p></div>']);
+  });
+
+  test("in a slot, whose owner alone renders again", async () => {
+    expect(
+      await update(
+        xml`<div><t t-set="b"><i t-out="this.state.a"/></t><Box><p t-att-data-v="b"><t t-out="b"/></p></Box></div>`
+      )
+    ).toEqual([
+      '<div><p data-v="<i>3</i>"><i>3</i></p></div>',
+      '<div><p data-v="<i>1</i>"><i>1</i></p></div>',
+    ]);
+  });
+
+  test("a single interpolation, a property and a prop read by a child", async () => {
+    const [before, after] = await update(
+      xml`<div><t t-set="b">v<t t-out="this.state.a"/></t><p t-attf-data-v="{{b}}"/><input t-att-value="b"/><Label label="b"/></div>`
+    );
+    expect([before, fixture.querySelector("input")!.value]).toEqual([
+      '<div><p data-v="v3"></p><input><p title="v3"></p></div>',
+      "v1",
+    ]);
+    expect(after).toBe('<div><p data-v="v1"></p><input><p title="v1"></p></div>');
+  });
+
+  test("in t-att, as an object's value or a pair's", async () => {
+    expect(
+      await update(
+        xml`<div><t t-set="b">v<t t-out="this.state.a"/></t><p t-att="{'data-v': b}"/><p t-att="['data-w', b]"/></div>`
+      )
+    ).toEqual([
+      '<div><p data-v="v3"></p><p data-w="v3"></p></div>',
+      '<div><p data-v="v1"></p><p data-w="v1"></p></div>',
+    ]);
   });
 });

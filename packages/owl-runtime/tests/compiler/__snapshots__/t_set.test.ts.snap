@@ -83,7 +83,7 @@ exports[`t-set > a t-set body holding a component cannot be stringified 1`] = `
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { LazyValue, createComponent } = helpers;
+  let { LazyValue, createComponent, attrValue } = helpers;
   const comp1 = createComponent(app, \`Child\`, true, false, false, []);
   
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
@@ -97,7 +97,7 @@ exports[`t-set > a t-set body holding a component cannot be stringified 1`] = `
   return function template(ctx, node, key = "") {
     ctx = Object.create(ctx);
     ctx["v"] = new LazyValue(value1, ctx, this, node, key + \`\\u00022\`);
-    let attr1 = ctx['v'];
+    let attr1 = attrValue(ctx['v']);
     return block3([attr1]);
   }
 }"
@@ -302,7 +302,7 @@ exports[`t-set > an attribute of a t-set body holding only text is that text 1`]
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { LazyValue, safeOutput } = helpers;
+  let { LazyValue, safeOutput, attrValue } = helpers;
   
   let block2 = createBlock(\`<p block-attribute-0="title" block-attribute-1="aria-label"/>\`);
   
@@ -313,7 +313,7 @@ exports[`t-set > an attribute of a t-set body holding only text is that text 1`]
   return function template(ctx, node, key = "") {
     ctx = Object.create(ctx);
     ctx["x"] = new LazyValue(value1, ctx, this, node, key + \`\\u00022\`);
-    let attr1 = ctx['x'];
+    let attr1 = attrValue(ctx['x']);
     let attr2 = \`L: \${ctx['x']}\`;
     return block2([attr1, attr2]);
   }
@@ -324,7 +324,7 @@ exports[`t-set > an attribute of a t-set body holding only text is that text 2`]
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { LazyValue, safeOutput } = helpers;
+  let { LazyValue, safeOutput, attrValue } = helpers;
   
   let block4 = createBlock(\`<p block-attribute-0="title" block-attribute-1="aria-label"/>\`);
   
@@ -337,7 +337,7 @@ exports[`t-set > an attribute of a t-set body holding only text is that text 2`]
   return function template(ctx, node, key = "") {
     ctx = Object.create(ctx);
     ctx["x"] = new LazyValue(value1, ctx, this, node, key + \`\\u00022\`);
-    let attr1 = ctx['x'];
+    let attr1 = attrValue(ctx['x']);
     let attr2 = \`L: \${ctx['x']}\`;
     return block4([attr1, attr2]);
   }
@@ -348,7 +348,7 @@ exports[`t-set > an attribute of a t-set body holding only text is that text 3`]
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { LazyValue } = helpers;
+  let { LazyValue, attrValue } = helpers;
   
   let block4 = createBlock(\`<p block-attribute-0="title" block-attribute-1="aria-label"/>\`);
   
@@ -365,7 +365,7 @@ exports[`t-set > an attribute of a t-set body holding only text is that text 3`]
   return function template(ctx, node, key = "") {
     ctx = Object.create(ctx);
     ctx["x"] = new LazyValue(value1, ctx, this, node, key + \`\\u00021\`);
-    let attr1 = ctx['x'];
+    let attr1 = attrValue(ctx['x']);
     let attr2 = \`L: \${ctx['x']}\`;
     return block4([attr1, attr2]);
   }
@@ -376,7 +376,7 @@ exports[`t-set > an attribute of a t-set body holding only text is that text 4`]
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { LazyValue, safeOutput } = helpers;
+  let { LazyValue, safeOutput, attrValue } = helpers;
   
   let block1 = createBlock(\`<b><block-child-0/></b>\`);
   let block3 = createBlock(\`<p block-attribute-0="title" block-attribute-1="aria-label"/>\`);
@@ -389,7 +389,7 @@ exports[`t-set > an attribute of a t-set body holding only text is that text 4`]
   return function template(ctx, node, key = "") {
     ctx = Object.create(ctx);
     ctx["x"] = new LazyValue(value1, ctx, this, node, key + \`\\u00022\`);
-    let attr1 = ctx['x'];
+    let attr1 = attrValue(ctx['x']);
     let attr2 = \`L: \${ctx['x']}\`;
     return block3([attr1, attr2]);
   }

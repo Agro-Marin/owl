@@ -28,7 +28,7 @@ exports[`misc > complex template 1`] = `
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { safeOutput, prepareList, createComponent, withKey, keyOf } = helpers;
+  let { safeOutput, prepareList, createComponent, withKey, keyOf, attrValue } = helpers;
   const comp1 = createComponent(app, \`SlotButton\`, true, false, false, ["class","slot"]);
   
   let block1 = createBlock(\`<div block-attribute-0="class"><div block-attribute-1="class"><div class="batch_header"><a block-attribute-2="href" block-attribute-3="class" title="View Batch"><block-child-0/><block-child-1/><i class="arrow fa fa-window-maximize"/></a></div><block-child-2/><div class="batch_slots"><block-child-3/><block-child-4/></div><div class="batch_commits"><block-child-5/></div></div></div>\`);
@@ -95,7 +95,7 @@ exports[`misc > complex template 1`] = `
         b14 = block14();
       }
       b15 = safeOutput(ctx['commit_link'].commit_dname, node, key, "\\u00023", 1, key1);
-      let attr7 = 'https://%s/commit/%s'%(ctx['commit_link'].commit_remote_url,ctx['commit_link'].commit_name);
+      let attr7 = attrValue('https://%s/commit/%s'%(ctx['commit_link'].commit_remote_url,ctx['commit_link'].commit_name));
       b16 = safeOutput(ctx['commit_link'].commit_subject, node, key, "\\u00024", 1, key1);
       c_block9[i1] = withKey(block10([attr5, attr6, attr7], [b11, b12, b13, b14, b15, b16]), key1);
     }
@@ -213,7 +213,7 @@ exports[`misc > other complex template 1`] = `
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { safeOutput, prepareList, callHandler, withKey, createRef, zero, withoutZero, callTemplate, createComponent } = helpers;
+  let { safeOutput, prepareList, callHandler, withKey, attrValue, createRef, zero, withoutZero, callTemplate, createComponent } = helpers;
   const hdlr_fn1 = (ctx, ev) => callHandler(ctx['selectProject'](ctx['project']), ctx, ev);
   const hdlr_fn2 = (ctx, ev) => callHandler(ctx['toggleSettingsMenu'], ctx, ev);
   const hdlr_fn3 = (ctx, ev) => callHandler(ctx['toggleMore'], ctx, ev);
@@ -289,15 +289,15 @@ exports[`misc > other complex template 1`] = `
         let ctx = Object.create(ctx2);
         ctx["category"] = k_block19[i1];
         const key1 = ctx['category'].id;
-        let attr6 = ctx['category'].id;
-        let prop1 = ctx['category'].id==ctx['options'].active_category_id;
+        let attr6 = attrValue(ctx['category'].id);
+        let prop1 = attrValue(ctx['category'].id==ctx['options'].active_category_id);
         const b21 = safeOutput(ctx['category'].name, node, key, "\\u00025", 1, key1);
         c_block19[i1] = withKey(block20([attr6, prop1], [b21]), key1);
       }
       const b19 = list(c_block19);
       b18 = block18([], [b19]);
     }
-    let prop2 = ctx['search'].value;
+    let prop2 = attrValue(ctx['search'].value);
     let ref1 = createRef(ctx['search_input'], node);
     let ref2 = createRef(ctx['settings_menu'], node);
     if (ctx['triggers']) {
@@ -311,8 +311,8 @@ exports[`misc > other complex template 1`] = `
         if (!ctx['trigger'].manual&&ctx['trigger'].project_id===ctx['project'].id&&ctx['trigger'].category_id===ctx['options'].active_category_id) {
           let attr7 = \`trigger_\${ctx['trigger'].id}\`;
           let attr8 = \`trigger_\${ctx['trigger'].id}\`;
-          let prop3 = ctx['options'].trigger_display[ctx['trigger'].id];
-          let attr9 = ctx['trigger'].id;
+          let prop3 = attrValue(ctx['options'].trigger_display[ctx['trigger'].id]);
+          let attr9 = attrValue(ctx['trigger'].id);
           let attr10 = \`trigger_\${ctx['trigger'].id}\`;
           const b26 = safeOutput(ctx['trigger'].name, node, key, "\\u00026", 1, key1);
           b25 = block25([attr7, attr8, prop3, attr9, ctx, attr10], [b26]);
