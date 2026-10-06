@@ -1,6 +1,11 @@
 import { debug, debugLog } from "./debug";
 import { OwlError } from "./owl_error";
-import { ComputationAtom, disposeComputation, hasObservers } from "./computations";
+import {
+  ComputationAtom,
+  disposeComputation,
+  hasObservers,
+  scopeStack as setupStack,
+} from "./computations";
 import { STATUS, StatusValue } from "./status";
 import type { PluginManager } from "./plugin_manager";
 
@@ -26,7 +31,10 @@ import type { PluginManager } from "./plugin_manager";
 // that scopes which never use them pay nothing beyond a null pointer.
 // -----------------------------------------------------------------------------
 
-export const scopeStack: Scope[] = [];
+// The scopes being set up, innermost last. A scope is an ownership root: an
+// effect created while it is set up belongs to no computation, even one whose
+// run is setting it up (see getOwner).
+export const scopeStack = setupStack as Scope[];
 
 export type ScopeMark = [willStart: number, destroyCbs: number, computations: number];
 
@@ -194,8 +202,11 @@ export abstract class Scope {
       }
     } finally {
       // a reportError that rethrows still leaves the scope destroyed
-      disposeUnobserved(this.computations.splice(0));
-      this.status = STATUS.DESTROYED;
+      try {
+        disposeUnobserved(this.computations.splice(0), reportError);
+      } finally {
+        this.status = STATUS.DESTROYED;
+      }
     }
   }
 
@@ -222,7 +233,7 @@ export abstract class Scope {
     if (this._destroyCbs) {
       runReversed(this._destroyCbs.splice(mark[1]), reportError);
     }
-    disposeUnobserved(this.computations.splice(mark[2]));
+    disposeUnobserved(this.computations.splice(mark[2]), reportError);
   }
 
   /**
@@ -242,10 +253,18 @@ export abstract class Scope {
 // it would stop following its sources and leave that observer on a value that
 // never changes again. It is disposed once its last observer leaves it (a
 // disposed component takes its unobserved computeds along).
-function disposeUnobserved(computations: ComputationAtom[]): void {
+function disposeUnobserved(
+  computations: ComputationAtom[],
+  reportError: (e: unknown) => void
+): void {
   for (const computation of computations) {
     if (!hasObservers(computation)) {
-      disposeComputation(computation);
+      try {
+        disposeComputation(computation);
+      } catch (error) {
+        // an effect it created failed to clean up: the others are disposed
+        reportError(error);
+      }
     }
   }
 }

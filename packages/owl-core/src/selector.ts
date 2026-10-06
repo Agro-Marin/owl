@@ -9,6 +9,7 @@ import {
   isObserving,
   onReadAtom,
   onWriteAtom,
+  releaseOwned,
   removeSources,
   untrack,
   updateComputation,
@@ -137,7 +138,13 @@ export function selector<K>(source: () => K, options: SelectorOptions = {}): (ke
     }
     started = false;
     failure = null;
+    // the effects the source created go with the run that created them
+    const releaseFailure =
+      computation.owned !== null ? releaseOwned(computation, "stops following its source") : null;
     removeSources(computation);
+    if (releaseFailure) {
+      throw releaseFailure.error;
+    }
   }
 
   function update() {

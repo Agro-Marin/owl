@@ -934,17 +934,13 @@ describe("disposed reader", () => {
       withEffect();
       s();
     });
-    dispose();
+    // the getter's effect belongs to the computed, disposed with it
+    expect(dispose).toThrow("cleanup failed");
     expect(observersOf((s as any)[atomSymbol])).toEqual([]);
     expect(observersOf((a as any)[atomSymbol])).toEqual([]);
-    // the getter's effect belongs to the scope, not to the computed: its
-    // cleanup runs, and its error is reported, when the scope is destroyed
-    expect(cleanups).toBe(0);
+    expect(cleanups).toBe(1);
     manager.destroy();
     expect(cleanups).toBe(1);
-    expect((globalThis as any).__owl_console_output.splice(0)).toEqual([
-      "error:Error: cleanup failed",
-    ]);
   });
 
   test("a cascaded dispose that throws still releases every source and disposes its owner's effects", () => {

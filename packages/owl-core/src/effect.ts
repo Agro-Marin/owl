@@ -1,11 +1,10 @@
 import {
   ComputationState,
   ComputationAtom,
-  computationScopes,
   disposeOwned,
-  getCurrentComputation,
+  getOwner,
   removeSources,
-  untrack,
+  runUnowned,
   updateComputation,
   createComputation,
 } from "./computations";
@@ -17,6 +16,11 @@ export interface EffectOptions {
    * channel is on when it is created, else "effect").
    */
   name?: string;
+  /**
+   * Owned by nothing: it outlives the effect, computed or render whose run
+   * creates it, and must be disposed by whoever created it.
+   */
+  detached?: boolean;
 }
 
 export function effect<T>(fn: () => T, options?: EffectOptions) {
@@ -80,25 +84,19 @@ function createEffect<T>(fn: () => T, immediate: boolean, options?: EffectOption
     // while debugging
     options?.name || (debug.effect && fn.name) || (immediate ? "immediateEffect" : "effect")
   );
-  // Created by an effect, it is disposed when that effect runs again or is
-  // disposed. Created by a render, it is disposed with the component: a value
-  // the component memoizes across renders keeps its effect. Created in a
-  // computed's getter, it is disposed with the scope the computed was created
-  // in (a component, a plugin), or owned by nothing for a detached one.
-  const parent = getCurrentComputation();
-  if (parent && !parent.isDerived) {
-    (parent.owned ??= new Set()).add(cleanupEffect);
-    if (parent.isEffect) {
-      computation.owner = parent;
-    }
-  } else if (parent) {
-    computationScopes.get(parent)?.onDestroy(cleanupEffect);
+  // Created during the run of an effect or a computed's getter (untracked
+  // included), it is disposed when that computation runs again or is disposed.
+  // Created by a render, it is disposed with the component: a value the
+  // component memoizes across renders keeps its effect.
+  const owner = options?.detached ? undefined : adopt(cleanupEffect);
+  if (owner !== undefined && !owner.tracksElsewhere) {
+    computation.owner = owner;
   }
   computation.isEffect = true;
   if (debug.effect) {
     debugLog(
       "effect",
-      `create ${computation.name}, owned by ${parent && !parent.isDerived ? parent.name : "nothing"}`
+      `create ${computation.name}, owned by ${owner ? owner.name || "a computation" : "nothing"}`
     );
   }
 
@@ -108,8 +106,9 @@ function createEffect<T>(fn: () => T, immediate: boolean, options?: EffectOption
       debugLog("effect", `dispose ${computation.name}`);
     }
     disposed = true;
-    if (parent !== undefined && parent.owned !== null) {
-      parent.owned.delete(cleanupEffect);
+    if (owner !== undefined) {
+      owner.owned?.delete(cleanupEffect);
+      computation.owner = null;
     }
     // Mark as executed so a queued re-run (scheduled by an earlier signal
     // write in the same microtick) is skipped by updateComputation.
@@ -134,10 +133,23 @@ function createEffect<T>(fn: () => T, immediate: boolean, options?: EffectOption
   return cleanupEffect;
 }
 
+/**
+ * Registers `dispose` with the computation an effect created now belongs to
+ * (see getOwner), which calls it when it runs again or is disposed. Returns
+ * that computation, if any.
+ */
+export function adopt(dispose: () => void): ComputationAtom | undefined {
+  const owner = getOwner();
+  if (owner !== undefined) {
+    (owner.owned ??= new Set()).add(dispose);
+  }
+  return owner;
+}
+
 // Runs the cleanup function and disposes the child effects of `effect`, with
-// nothing tracking their reads.
+// nothing tracking their reads or owning what they create.
 function releaseUntracked(effect: ComputationAtom) {
-  untrack(() => release(effect));
+  runUnowned(() => release(effect));
 }
 
 // Releases everything even when a cleanup throws, then rethrows the first

@@ -140,6 +140,52 @@ exports[`effects created during a render > last as long as the component, so a m
 }"
 `;
 
+exports[`ownership of the effects a component creates > an effect a child's setup creates while its parent renders is not the parent render's 1`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { safeOutput, createComponent } = helpers;
+  const comp1 = createComponent(app, \`Child\`, true, false, false, []);
+  
+  let block2 = createBlock(\`<div><block-child-0/></div>\`);
+  
+  return function template(ctx, node, key = "") {
+    const b3 = safeOutput(ctx['this'].n(), key, "__1");
+    const b2 = block2([], [b3]);
+    const b4 = comp1({}, key + \`__2\`, node, this, null);
+    return multi([b2, b4]);
+  }
+}"
+`;
+
+exports[`ownership of the effects a component creates > an effect a child's setup creates while its parent renders is not the parent render's 2`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  
+  let block1 = createBlock(\`<span/>\`);
+  
+  return function template(ctx, node, key = "") {
+    return block1();
+  }
+}"
+`;
+
+exports[`ownership of the effects a component creates > an effect its render creates inside untrack is the component's: disposed with it 1`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { safeOutput } = helpers;
+  
+  let block1 = createBlock(\`<div><block-child-0/></div>\`);
+  
+  return function template(ctx, node, key = "") {
+    const b2 = safeOutput(ctx['this'].label(), key, "__1");
+    return block1([], [b2]);
+  }
+}"
+`;
+
 exports[`reactive cleanup on component destruction > benchmark-like scenario: signal.Array rows with computed isSelected 1`] = `
 "function anonymous(app, bdom, helpers
 ) {

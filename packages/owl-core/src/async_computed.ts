@@ -7,7 +7,7 @@ import {
 } from "./computations";
 import { debug, debugLog } from "./debug";
 import { getScope, isAbortError } from "./scope";
-import { effect } from "./effect";
+import { adopt, effect } from "./effect";
 import { signal } from "./signal";
 
 export interface AsyncComputedContext {
@@ -128,19 +128,26 @@ export function asyncComputed<T>(
         }
       }
     );
-    // superseded by the next run, or disposed: with this asyncComputed, or
-    // with the effect, computed or render that created it
+    // superseded by the next run, or disposed
     return () => controller.abort();
   });
 
   function dispose() {
+    if (debug.effect) {
+      debugLog("effect", "asyncComputed: dispose");
+    }
     runId++;
     stopEffect();
+    owner?.owned?.delete(dispose);
     // the abandoned run is no longer in flight, nor loading; any awaiter is
     // released
     endRun();
   }
 
+  // The effect, computed or render whose run creates it owns its effect (and
+  // runs first when both are due), and disposes it whole: not loading any
+  // more, and deaf to the abandoned run's result.
+  const owner = adopt(dispose);
   scope?.onDestroy(dispose);
 
   const read = (() => value()) as AsyncComputed<T>;

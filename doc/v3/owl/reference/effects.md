@@ -66,17 +66,28 @@ Each time the parent re-runs, the previous child is disposed and a fresh one
 is created (logging `"child cleanup"` before every re-run). When the parent
 itself is disposed, the child is disposed too.
 
+An effect created while a [computed](computed_values.md)'s getter runs belongs
+to that computed in the same way: it is disposed before the getter runs again,
+and when the computed is disposed (with its scope, or once its last observer
+leaves it), so a getter that creates an effect on every run keeps one alive,
+not one per recompute. If both are due after the same change, the computed
+recomputes first: the effect of its previous run is disposed, not run again.
+This holds for a `detached` computed too, and for a
+[selector](computed_values.md#selectors)'s source and an
+[`asyncComputed`](computed_values.md)'s fetcher (its synchronous part: what
+runs after an `await` has no owner).
+
 An effect created while a component renders (from a template helper, or a
 getter that lazily creates an `asyncComputed`) belongs to the component: it
 lasts across renders and is disposed with the component, so a value the
 component memoizes keeps its effect. Memoize it: an effect created on every
 render is a new one each time, and they pile up until the component is
-destroyed. An effect created inside a [computed](computed_values.md)'s getter
-belongs to the scope the computed was created in — the component or plugin
-whose `setup()` created it — and is disposed with it, not when the computed
-recomputes; the same advice applies. A `detached` computed, or one created
-outside any scope, gives its effects no owner: like a top-level `effect()`, they
-must be disposed by whoever created them.
+destroyed.
+
+A scope is an ownership root: an effect created while a component or a plugin
+is set up belongs to no computation, even when that setup happens during a
+render (a child component) or an effect (plugins started from a resource).
+Use [`useEffect`](#useeffect) to bind it to the scope.
 
 This ownership is **implicit** — any `effect()` call made while another effect
 is on the call stack is attached to that effect, even if it happens inside a
@@ -103,8 +114,9 @@ re-runs (e.g. because `someSignal` changed), B's previous children are
 disposed — A is silently shut down. Since the `created` flag prevents A from
 being recreated, A is now dead and no longer reacts to `otherSignal` changes.
 
-If you need an inner effect with an independent lifetime, create it inside
-[`untrack`](#untrack) so it is not attached to the currently running effect.
+If you need an inner effect with an independent lifetime, create it with
+`{ detached: true }`: it belongs to nothing, and whoever created it must dispose
+it.
 
 ## Errors
 
@@ -167,22 +179,22 @@ const c = computed(() => {
 // c depends on s only once (the tracked read)
 ```
 
-`untrack` also breaks effect [ownership](#nested-effects): an `effect()`
-created inside `untrack` is not attached to the surrounding effect, so it
-survives when the outer effect re-runs or is disposed. In that case the caller
-becomes responsible for disposing it:
+`untrack` stops the tracking, not the [ownership](#nested-effects): an
+`effect()` created inside `untrack` still belongs to the effect, computed or
+render whose run it happens in, and is disposed with that run (an effect's or
+a computed's next run, a render's component). An effect meant to outlive it is
+created `detached`:
 
 ```js
 let disposeInner;
 effect(() => {
   outerSignal();
-  if (!disposeInner) {
-    disposeInner = untrack(() =>
-      effect(() => {
-        innerSignal();
-      })
-    );
-  }
+  disposeInner ??= effect(
+    () => {
+      innerSignal();
+    },
+    { detached: true }
+  );
 });
 // disposeInner() must be called explicitly when the inner effect is no longer needed
 ```

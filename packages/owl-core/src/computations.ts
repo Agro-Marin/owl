@@ -133,10 +133,11 @@ export interface ComputationAtom<T = any> extends Atom<T> {
   // inside a write reads records that write has not finished
   notifiesWithoutRecompute: boolean;
   // the disposers of the effects created while this computation ran: they
-  // last until it runs again or is disposed
+  // last until it runs again or is disposed (a render's, until it is disposed)
   owned: Set<() => void> | null;
-  // the effect that created this one, if any: due in the same flush, it runs
-  // first, and its run disposes the child it recreates
+  // the computation whose run created this effect, if it disposes its effects
+  // when it runs again (not a render): due first, it runs first, and its run
+  // disposes the child it recreates
   owner: ComputationAtom | null;
   isEffect: boolean;
   // true while its compute runs: a write it makes can reach a computation that
@@ -194,12 +195,17 @@ export function sourcesOf(computation: ComputationAtom): Atom[] {
 
 export const atomSymbol = Symbol("Atom");
 
-// The scope a computed was created in (unless detached): the effects its
-// getter creates are disposed with that scope.
-export const computationScopes = new WeakMap<
-  ComputationAtom,
-  { onDestroy(cb: () => void): void }
->();
+// The scopes being set up, innermost last (re-exported by scope.ts, which
+// documents them). Kept here because a scope is an ownership root: an effect
+// created while one is set up is not owned by the computation whose run set it
+// up (a render constructing a child component, an effect starting plugins).
+export const scopeStack: object[] = [];
+
+// The computation whose run is in progress, tracked or not: `untrack` stops
+// the tracking, not the ownership. An effect created during the run belongs
+// to it, unless a scope was pushed since the run began (ownerDepth).
+let currentOwner: ComputationAtom | undefined;
+let ownerDepth = 0;
 
 let observers: ComputationAtom[] = [];
 let immediateObservers: ComputationAtom[] = [];
@@ -527,14 +533,19 @@ function updateEach(computations: ComputationAtom[]): unknown[] | null {
 // recreates. One that is running already (the child runs inside a write of
 // its) or that waits in the other queue is left to its own turn.
 function updateOwnerFirst(computation: ComputationAtom) {
-  // the topmost ancestor due in the same queue, idle and stale: its run
+  if (computation.state === ComputationState.EXECUTED) {
+    // disposed, or brought up to date earlier in the queue
+    return;
+  }
+  // the topmost ancestor due in the same queue (a derived one is due whenever
+  // it is out of date: it is pulled, never queued), idle and stale: its run
   // disposes every effect below it, this one included
   let first: ComputationAtom | null = null;
   for (let owner = computation.owner; owner !== null; owner = owner.owner) {
     if (
       owner.state !== ComputationState.EXECUTED &&
       !owner.running &&
-      owner.immediate === computation.immediate
+      (owner.isDerived || owner.immediate === computation.immediate)
     ) {
       first = owner;
     }
@@ -578,7 +589,7 @@ function processEffects() {
       pending.map((c) => c.name)
     );
   }
-  const errors = updateEach(pending);
+  let errors = updateEach(pending);
   if (pendingDisposals.size !== 0) {
     const candidates = pendingDisposals;
     pendingDisposals = new Set();
@@ -591,7 +602,12 @@ function processEffects() {
         if (debug.computed) {
           debugLog("computed", `dispose unobserved ${computation.name}`);
         }
-        disposeComputation(computation);
+        try {
+          disposeComputation(computation);
+        } catch (error) {
+          // (an effect it created failed to clean up) the others are disposed
+          (errors ||= []).push(error);
+        }
       }
     }
   }
@@ -664,13 +680,23 @@ export function updateComputation(computation: ComputationAtom) {
   if (computation.isEffect ? debug.effect : computation.isDerived && debug.computed) {
     debugLog(computation.isEffect ? "effect" : "computed", `run ${computation.name}`);
   }
+  // the effects its previous run created go before it runs again (an effect
+  // releases them itself, with its cleanup; a render keeps them)
+  let releaseFailure: { error: unknown } | null = null;
   try {
+    if (computation.owned !== null && !computation.isEffect && !computation.tracksElsewhere) {
+      releaseFailure = releaseOwned(computation, "runs again");
+    }
     computation.value = computation.tracksElsewhere
       ? detachAndRun(computation)
       : runTracked(computation, computation.compute);
   } catch (error) {
     if (debug.error) {
       debugLog("error", `${computation.name} threw`, error);
+    }
+    if (releaseFailure) {
+      // the run's error is the one that propagates
+      Promise.reject(releaseFailure.error);
     }
     throw error;
   } finally {
@@ -685,13 +711,42 @@ export function updateComputation(computation: ComputationAtom) {
       computation.state = ComputationState.EXECUTED;
     }
   }
+  if (releaseFailure) {
+    if (computation.isDerived) {
+      // Reported, not thrown: the reader is not to blame, and one that pulls
+      // it to check its sources must not miss the value it recomputed.
+      Promise.reject(releaseFailure.error);
+    } else {
+      // after the run: the computation is up to date and subscribed
+      throw releaseFailure.error;
+    }
+  }
+}
+
+/**
+ * Disposes the effects the last run of `computation` created, with nothing
+ * tracking or owning what their cleanups do; returns the first error.
+ */
+export function releaseOwned(computation: ComputationAtom, why: string): { error: unknown } | null {
+  if (debug.effect) {
+    debugLog(
+      "effect",
+      `${computation.name} ${why}: dispose ${computation.owned!.size} effect(s) it created`
+    );
+  }
+  try {
+    runUnowned(() => disposeOwned(computation));
+    return null;
+  } catch (error) {
+    return { error };
+  }
 }
 
 // Runs the compute of a computation that tracks elsewhere, untracked: its
 // links go stale (a new version), and wait for the run that tracks.
 function detachAndRun(computation: ComputationAtom) {
   computation.version++;
-  return untrack(computation.compute);
+  return runUnowned(computation.compute);
 }
 
 // A derived source the run read and then invalidated, by a write of its own,
@@ -720,19 +775,33 @@ function settleDerivedSources(computation: ComputationAtom) {
 export function runTracked<T>(computation: ComputationAtom, fn: () => T): T {
   const previousComputation = currentComputation;
   const previousObserver = currentObserver;
+  const previousOwner = currentOwner;
+  const previousOwnerDepth = ownerDepth;
   computation.version++;
   computation.depsTail = undefined;
   computation.prepared = false;
   currentComputation = computation;
   currentObserver = undefined;
+  currentOwner = computation;
+  ownerDepth = scopeStack.length;
   try {
     return fn();
   } finally {
     // restored even if fn threw, so a later read does not attach to it
     currentComputation = previousComputation;
     currentObserver = previousObserver;
+    currentOwner = previousOwner;
+    ownerDepth = previousOwnerDepth;
     endTracking(computation);
   }
+}
+
+/**
+ * The computation an effect created now belongs to: the one whose run is in
+ * progress, tracked or not, unless a scope is being set up inside that run.
+ */
+export function getOwner(): ComputationAtom | undefined {
+  return ownerDepth === scopeStack.length ? currentOwner : undefined;
 }
 
 function endTracking(computation: ComputationAtom) {
@@ -813,10 +882,9 @@ export function disposeComputation(computation: ComputationAtom) {
   // A derived computation recomputes when it is read again (a shared
   // computed); any other is done, and a run already queued for it is skipped.
   computation.state = computation.isDerived ? ComputationState.STALE : ComputationState.EXECUTED;
-  try {
-    disposeOwned(computation);
-  } catch (error) {
-    failure ||= { error };
+  if (computation.owned !== null) {
+    const releaseFailure = releaseOwned(computation, "is disposed");
+    failure ||= releaseFailure;
   }
   if (failure) {
     throw failure.error;
@@ -881,7 +949,8 @@ function markDownstream(computation: ComputationAtom) {
 
 /**
  * Runs `fn` with nothing tracking its reads: neither the current computation
- * nor the observe() view the read goes through subscribes to them.
+ * nor the observe() view the read goes through subscribes to them. The
+ * computation still owns the effects `fn` creates.
  */
 export function untrack<T>(fn: (...args: any[]) => T): T {
   const previousComputation = currentComputation;
@@ -893,6 +962,19 @@ export function untrack<T>(fn: (...args: any[]) => T): T {
   } finally {
     currentComputation = previousComputation;
     currentObserver = previousObserver;
+  }
+}
+
+/**
+ * Runs `fn` untracked, and with no owner for the effects it creates.
+ */
+export function runUnowned<T>(fn: () => T): T {
+  const previousOwner = currentOwner;
+  currentOwner = undefined;
+  try {
+    return untrack(fn);
+  } finally {
+    currentOwner = previousOwner;
   }
 }
 

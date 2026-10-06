@@ -354,14 +354,14 @@ describe("effect", () => {
   });
 
   describe("effects created by a computed", () => {
-    test("are owned by nothing: not its observers, and kept across its recomputes", async () => {
+    test("a detached one is owned by nothing: not its observers, and kept across its recomputes", async () => {
       const n = signal(0);
       const other = signal(0);
       const spy = vi.fn();
       let memo: (() => void) | null = null;
       const c = computed(() => {
         const value = n();
-        memo ??= effect(() => spy(other()));
+        memo ??= effect(() => spy(other()), { detached: true });
         return value;
       });
       const reader = vi.fn();
@@ -381,7 +381,7 @@ describe("effect", () => {
       memo!();
     });
 
-    test("are the creator's to dispose: one made on every recompute accumulates", async () => {
+    test("are the computed's: one made on every recompute replaces the previous one", async () => {
       const n = signal(0);
       const other = signal(0);
       const spy = vi.fn();
@@ -398,11 +398,11 @@ describe("effect", () => {
       spy.mockClear();
       other.set(1);
       await waitScheduler();
-      // three recomputes, three live effects: nothing owns them
-      expect(spy).toHaveBeenCalledTimes(3);
+      // three recomputes, one live effect: the last one's
+      expect(spy).toHaveBeenCalledTimes(1);
     });
 
-    test("do not keep the computed observed, nor die with it", async () => {
+    test("do not keep the computed observed, and die with it", async () => {
       const other = signal(0);
       const spy = vi.fn();
       const c = computed(() => {
@@ -414,7 +414,7 @@ describe("effect", () => {
       expect(observersOf((c as any)[atomSymbol]).length).toBe(0);
       other.set(1);
       await waitScheduler();
-      expectSpy(spy, 2, { args: [1] });
+      expectSpy(spy, 1, { args: [0] });
     });
   });
 
@@ -475,10 +475,10 @@ describe("effect", () => {
       expectSpy(spyC, 3, { args: [20] });
     });
 
-    test("wrapping A creation in untrack escapes B's ownership", async () => {
-      // Same shape as the previous test, but A is created inside untrack(...)
-      // so currentComputation is undefined when A attaches — A is NOT added to
-      // B.observers, so B re-running does not dispose A.
+    test("creating A with { detached: true } escapes B's ownership", async () => {
+      // Same shape as the previous test, but A is created detached: B does not
+      // own it, so B re-running does not dispose A. (untrack does not do it:
+      // it stops the tracking, not the ownership.)
       const source = signal(1);
       const sortKey = signal("asc");
       const result = signal(0);
@@ -495,13 +495,14 @@ describe("effect", () => {
         sortKey();
         if (!aCreated) {
           aCreated = true;
-          untrack(() => {
-            effect(() => {
+          effect(
+            () => {
               const v = source();
               spyA(v);
               result.set(v * 10);
-            });
-          });
+            },
+            { detached: true }
+          );
         }
       });
 
@@ -818,7 +819,7 @@ describe("effect", () => {
 });
 
 describe("effects created by a scoped computed", () => {
-  test("are disposed with the scope the computed was created in", async () => {
+  test("live with the computed's last run, and die with it, not with its scope while it is observed", async () => {
     const dep = signal(0);
     const n = signal(0);
     let runs = 0;
@@ -833,15 +834,21 @@ describe("effects created by a scoped computed", () => {
         return 1;
       })
     );
-    effect(() => c());
+    const disposeReader = effect(() => c());
     n.set(1);
     await waitScheduler();
     runs = 0;
     dep.set(1);
     await waitScheduler();
-    expect(runs).toBe(2);
+    expect(runs).toBe(1);
+    // still observed: the computed outlives its scope, and its effect with it
     scope.finalize(() => {});
     dep.set(2);
+    await waitScheduler();
+    expect(runs).toBe(2);
+    // its last observer gone, it is disposed, its effect with it
+    disposeReader();
+    dep.set(3);
     await waitScheduler();
     expect(runs).toBe(2);
   });

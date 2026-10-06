@@ -778,3 +778,58 @@ describe("render subscriptions", () => {
     expect(renders).toBe(2);
   });
 });
+
+describe("ownership of the effects a component creates", () => {
+  test("an effect its render creates inside untrack is the component's: disposed with it", async () => {
+    let live = 0;
+    class Comp extends Component {
+      static template = xml`<div t-out="this.label()"/>`;
+      created = false;
+      label() {
+        if (!this.created) {
+          this.created = true;
+          untrack(() =>
+            effect(() => {
+              live++;
+              return () => live--;
+            })
+          );
+        }
+        return "x";
+      }
+    }
+    const comp = await mount(Comp, fixture);
+    expect(live).toBe(1);
+    comp.__owl__.app.destroy();
+    expect(live).toBe(0);
+  });
+
+  test("an effect a child's setup creates while its parent renders is not the parent render's", async () => {
+    const n = signal(0);
+    let live = 0;
+    let disposeChildEffect: (() => void) | undefined;
+    class Child extends Component {
+      static template = xml`<span/>`;
+      setup() {
+        disposeChildEffect = effect(() => {
+          live++;
+          return () => live--;
+        });
+      }
+    }
+    class Parent extends Component {
+      static template = xml`<div t-out="this.n()"/><Child/>`;
+      static components = { Child };
+      n = n;
+    }
+    const parent = await mount(Parent, fixture);
+    n.set(1);
+    await nextTick();
+    expect(fixture.innerHTML).toBe("<div>1</div><span></span>");
+    parent.__owl__.app.destroy();
+    // a plain effect() in setup belongs to nothing (useEffect binds it)
+    expect(live).toBe(1);
+    disposeChildEffect!();
+    expect(live).toBe(0);
+  });
+});
