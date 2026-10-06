@@ -52,6 +52,26 @@ describe("slots", () => {
     expect(clicks).toEqual(["click"]);
   });
 
+  test("a component with t-props and slots of its own gets both, the slots it is passed winning", async () => {
+    class Child extends Component {
+      static template = xml`<div><t t-out="this.props.a"/>|<t t-call-slot="default"/>|<t t-call-slot="b"/></div>`;
+      props = props();
+    }
+    class Wrapper extends Component {
+      static template = xml`<Child t-props="this.props"><t t-set-slot="b">own b</t>own default</Child>`;
+      static components = { Child };
+      props = props();
+    }
+    class Parent extends Component {
+      static template = xml`<Wrapper a="'A'"/><Wrapper a="'A'"><t t-set-slot="b">passed b</t></Wrapper>`;
+      static components = { Wrapper };
+    }
+    await mount(Parent, fixture);
+    expect(fixture.innerHTML).toBe(
+      "<div>A|own default|own b</div><div>A|own default|passed b</div>"
+    );
+  });
+
   test("simple default slot", async () => {
     class Child extends Component {
       static template = xml`<span><t t-call-slot="default"/></span>`;

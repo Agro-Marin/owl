@@ -148,6 +148,7 @@ export interface ASTComponent extends BaseAST {
 export interface ASTTCallSlot extends BaseAST {
   type: (typeof ASTType)["TCallSlot"];
   name: string;
+  dynamicProps: string | null;
   attrs: Attrs | null;
   attrsTranslationCtx: Attrs | null;
   on: EventHandlers | null;
@@ -513,8 +514,7 @@ function parseDOMNode(node: Element, ctx: ParsingContext): AST | null {
         isProxy: hasProxyMod,
       };
       if (isSelect) {
-        // don't pollute the original ctx
-        ctx = Object.assign({}, ctx);
+        // ctx is this node's copy: its options see the model
         ctx.tModelInfo = model;
       }
     } else if (attr.startsWith("block-")) {
@@ -646,7 +646,7 @@ function parseTForEach(node: Element, ctx: ParsingContext): AST | null {
     // child components it rendered are carried over by key, but a slot or a
     // called template may render components another node owns, or that only
     // the called template knows of
-    const directive = findDirective(body, UNVISITABLE);
+    const directive = findNode(body, unvisitable);
     if (body.hasNoRepresentation || directive) {
       throw new OwlError(
         `t-memo needs an item made of elements, text, t-out and components only (expression: t-foreach="${collection}" t-memo="${memo}"${directive ? `, found ${directive}` : ""})`
@@ -672,7 +672,7 @@ function parseTForEach(node: Element, ctx: ParsingContext): AST | null {
   };
   if (memo !== null) {
     ast.memo = memo;
-    if (findDirective(body, COMPONENT) || hasMemoizedLoop(body)) {
+    if (findNode(body, memoizedContent)) {
       ast.memoContent = true;
     }
   }
@@ -684,53 +684,38 @@ const UNVISITABLE: Partial<Record<ASTType, string>> = {
   [ASTType.TCallSlot]: "t-slot",
   [ASTType.TCallBlock]: "t-call-block",
 };
-const COMPONENT: Partial<Record<ASTType, string>> = { [ASTType.TComponent]: "a component" };
 
-// walks every nested object, so that a branch kept outside `content` (t-elif,
-// a t-out or t-set body) is searched too
-function findDirective(value: any, directives: Partial<Record<ASTType, string>>): string | null {
-  if (Array.isArray(value)) {
-    for (const item of value) {
-      const found = findDirective(item, directives);
-      if (found) {
-        return found;
-      }
-    }
-    return null;
-  }
+/**
+ * The first AST node in `value` for which `test` returns a name, and that
+ * name. It walks every nested object, so that a branch kept outside
+ * `content` (t-elif, a t-out or t-set body) is searched too.
+ */
+function findNode(value: any, test: (ast: AST) => string | null): string | null {
   if (!value || typeof value !== "object") {
     return null;
   }
-  const found = typeof value.type === "number" && directives[value.type as ASTType];
-  if (found) {
-    return found;
+  if (!Array.isArray(value)) {
+    const found = typeof value.type === "number" ? test(value) : null;
+    if (found) {
+      return found;
+    }
   }
   for (const key in value) {
-    const inner = findDirective(value[key], directives);
-    if (inner) {
-      return inner;
+    const found = findNode(value[key], test);
+    if (found) {
+      return found;
     }
   }
   return null;
 }
 
-function hasMemoizedLoop(value: any): boolean {
-  if (Array.isArray(value)) {
-    return value.some(hasMemoizedLoop);
-  }
-  if (!value || typeof value !== "object") {
-    return false;
-  }
-  if (value.type === ASTType.TForEach && value.memo !== undefined) {
-    return true;
-  }
-  for (const key in value) {
-    if (hasMemoizedLoop(value[key])) {
-      return true;
-    }
-  }
-  return false;
-}
+const unvisitable = (ast: AST) => UNVISITABLE[ast.type] || null;
+const memoizedContent = (ast: AST) =>
+  ast.type === ASTType.TComponent
+    ? "a component"
+    : ast.type === ASTType.TForEach && ast.memo !== undefined
+      ? "a memoized list"
+      : null;
 
 function parseTKey(node: Element, ctx: ParsingContext): AST | null {
   if (!node.hasAttribute("t-key")) {
@@ -947,10 +932,9 @@ function parseComponent(node: Element, ctx: ParsingContext): AST | null {
       const slotHandlers: NodeHandlers = { on: null, translationCtx: null };
       let attrs: Attrs | null = null;
       let scope: string | null = null;
-      // on a <t>, the directives of the slot definition go before its content
-      // is parsed: a t-out or a t-call on the same node would reject them (an
-      // element keeps them, as its own t-on and translation contexts)
-      const isT = slotNode.tagName === "t";
+      // a t-set-slot is a <t> (isOwnSlot): the directives of the slot
+      // definition go before its content is parsed, as a t-out or a t-call on
+      // the same node would reject them
       for (let attributeName of slotNode.getAttributeNames()) {
         const value = slotNode.getAttribute(attributeName)!;
         if (attributeName === "t-slot-scope") {
@@ -958,20 +942,11 @@ function parseComponent(node: Element, ctx: ParsingContext): AST | null {
         } else if (!collectHandler(slotHandlers, attributeName, value)) {
           continue;
         }
-        if (isT) {
-          slotNode.removeAttribute(attributeName);
-        }
+        slotNode.removeAttribute(attributeName);
       }
       const slotAst = parseNode(slotNode, ctx);
       // what the content left are the slot's params
       for (let attributeName of slotNode.getAttributeNames()) {
-        if (
-          attributeName === "t-slot-scope" ||
-          attributeName.startsWith(TRANSLATION_CONTEXT_PREFIX) ||
-          attributeName.startsWith("t-on-")
-        ) {
-          continue;
-        }
         attrs = attrs || {};
         attrs[attributeName] = slotNode.getAttribute(attributeName)!;
       }
@@ -1059,7 +1034,8 @@ function parseTCallSlot(node: Element, ctx: ParsingContext): AST | null {
   const name = (node.getAttribute("t-call-slot") || node.getAttribute("t-slot"))!;
   node.removeAttribute("t-call-slot");
   node.removeAttribute("t-slot");
-  exprAttr(node, "t-props");
+  const dynamicProps = exprAttr(node, "t-props");
+  node.removeAttribute("t-props");
   let attrs: Attrs | null = null;
   const handlers: NodeHandlers = { on: null, translationCtx: null };
   for (let attributeName of node.getAttributeNames()) {
@@ -1067,7 +1043,7 @@ function parseTCallSlot(node: Element, ctx: ParsingContext): AST | null {
     if (collectHandler(handlers, attributeName, value)) {
       continue;
     }
-    if (attributeName.startsWith("t-") && attributeName !== "t-props") {
+    if (attributeName.startsWith("t-")) {
       throw unsupportedDirectiveError(attributeName, "a t-call-slot node");
     }
     attrs = attrs || {};
@@ -1076,6 +1052,7 @@ function parseTCallSlot(node: Element, ctx: ParsingContext): AST | null {
   return {
     type: ASTType.TCallSlot,
     name,
+    dynamicProps,
     attrs,
     attrsTranslationCtx: handlers.translationCtx,
     on: handlers.on,
@@ -1087,46 +1064,48 @@ function parseTCallSlot(node: Element, ctx: ParsingContext): AST | null {
 // Translation
 // -----------------------------------------------------------------------------
 
-function wrapInTTranslationAST(r: AST | null) {
-  return wrapping<ASTTranslation>({ type: ASTType.TTranslation, content: r }, r);
+/**
+ * Parses `node` without its directive `attr` and wraps what it renders, each
+ * part of a multi apart.
+ */
+function parseWrapped(
+  node: Element,
+  ctx: ParsingContext,
+  attr: string,
+  wrap: (content: AST | null) => AST
+): AST {
+  node.removeAttribute(attr);
+  const result = parseNode(node, ctx);
+  if (result?.type === ASTType.Multi) {
+    return makeASTMulti(result.content.map(wrap));
+  }
+  return wrap(result);
 }
 
 function parseTTranslation(node: Element, ctx: ParsingContext): AST | null {
   if (node.getAttribute("t-translation") !== "off") {
     return null;
   }
-  node.removeAttribute("t-translation");
-  const result = parseNode(node, ctx);
-  if (result?.type === ASTType.Multi) {
-    const children = result.content.map(wrapInTTranslationAST);
-    return makeASTMulti(children);
-  }
-  return wrapInTTranslationAST(result);
+  return parseWrapped(node, ctx, "t-translation", (content) =>
+    wrapping<ASTTranslation>({ type: ASTType.TTranslation, content }, content)
+  );
 }
 
 // -----------------------------------------------------------------------------
 // Translation Context
 // -----------------------------------------------------------------------------
 
-function wrapInTTranslationContextAST(r: AST | null, translationCtx: string) {
-  return wrapping<ASTTranslationContext>(
-    { type: ASTType.TTranslationContext, content: r, translationCtx },
-    r
-  );
-}
-
 function parseTTranslationContext(node: Element, ctx: ParsingContext): AST | null {
   const translationCtx = node.getAttribute("t-translation-context");
   if (!translationCtx) {
     return null;
   }
-  node.removeAttribute("t-translation-context");
-  const result = parseNode(node, ctx);
-  if (result?.type === ASTType.Multi) {
-    const children = result.content.map((c) => wrapInTTranslationContextAST(c, translationCtx));
-    return makeASTMulti(children);
-  }
-  return wrapInTTranslationContextAST(result, translationCtx);
+  return parseWrapped(node, ctx, "t-translation-context", (content) =>
+    wrapping<ASTTranslationContext>(
+      { type: ASTType.TTranslationContext, content, translationCtx },
+      content
+    )
+  );
 }
 
 // -----------------------------------------------------------------------------
@@ -1187,11 +1166,9 @@ function normalizeTIf(el: Element) {
   let tbranch = el.querySelectorAll("[t-elif], [t-else]");
   for (let i = 0, ilen = tbranch.length; i < ilen; i++) {
     let node = tbranch[i];
-    let prevElem = node.previousElementSibling!;
-    let pattr = (name: string) => prevElem.hasAttribute(name);
-    let nattr = (name: string) => +node.hasAttribute(name);
-    if (prevElem && (pattr("t-if") || pattr("t-elif"))) {
-      if (pattr("t-foreach")) {
+    let prevElem = node.previousElementSibling;
+    if (prevElem && (prevElem.hasAttribute("t-if") || prevElem.hasAttribute("t-elif"))) {
+      if (prevElem.hasAttribute("t-foreach")) {
         throw new OwlError(
           "t-if cannot stay at the same level as t-foreach when using t-elif or t-else"
         );
@@ -1200,12 +1177,8 @@ function normalizeTIf(el: Element) {
       // t-elif, and is what an inheriting template gets when it adds a t-if to
       // an else node, which owl always rendered that way
       const elseIf = node.hasAttribute("t-else") && node.hasAttribute("t-if");
-      if (
-        !(elseIf && !node.hasAttribute("t-elif")) &&
-        ["t-if", "t-elif", "t-else"].map(nattr).reduce(function (a, b) {
-          return a + b;
-        }) > 1
-      ) {
+      const branches = ["t-if", "t-elif", "t-else"].filter((a) => node.hasAttribute(a)).length;
+      if (!(elseIf && !node.hasAttribute("t-elif")) && branches > 1) {
         throw new OwlError("Only one conditional branching directive is allowed per node");
       }
       // All text (with only spaces) and comment nodes (nodeType 8) between

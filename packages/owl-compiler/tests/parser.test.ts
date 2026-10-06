@@ -1802,6 +1802,7 @@ describe("qweb parser", () => {
     expect(parse(`<t t-call-slot="default"/>`)).toEqual({
       type: ASTType.TCallSlot,
       name: "default",
+      dynamicProps: null,
       attrs: null,
       attrsTranslationCtx: null,
       on: null,
@@ -1813,6 +1814,7 @@ describe("qweb parser", () => {
     expect(parse(`<t t-call-slot="header">default content</t>`)).toEqual({
       type: ASTType.TCallSlot,
       name: "header",
+      dynamicProps: null,
       attrs: null,
       attrsTranslationCtx: null,
       on: null,
@@ -1824,9 +1826,22 @@ describe("qweb parser", () => {
     expect(parse(`<t t-call-slot="default" t-on-click.prevent="doSomething"/>`)).toEqual({
       type: ASTType.TCallSlot,
       name: "default",
+      dynamicProps: null,
       attrs: null,
       attrsTranslationCtx: null,
       on: { "click.prevent": "doSomething" },
+      defaultContent: null,
+    });
+  });
+
+  test("a t-call-slot's t-props is its dynamicProps, not an attribute", async () => {
+    expect(parse(`<t t-call-slot="default" t-props="this.p" a="1"/>`)).toEqual({
+      type: ASTType.TCallSlot,
+      name: "default",
+      dynamicProps: "this.p",
+      attrs: { a: "1" },
+      attrsTranslationCtx: null,
+      on: null,
       defaultContent: null,
     });
   });
@@ -2383,5 +2398,98 @@ describe("nested t-set-slot", () => {
     expect(() =>
       parse(`<C><t t-set-slot="a"><D><t t-set-slot="b">x</t></D></t></C>`)
     ).not.toThrow();
+  });
+
+  // ---------------------------------------------------------------------------
+  // pins of the helpers' simplification: same ASTs and errors as before
+  // ---------------------------------------------------------------------------
+
+  test("a t-set-slot's scope, handlers and translation contexts are not its attributes", async () => {
+    const ast: any = parse(
+      `<C><t t-set-slot="s" t-slot-scope="sc" t-on-click="f" t-translation-context-title="ctx" title="T" n="1">x</t></C>`
+    );
+    expect(ast.slots.s).toEqual({
+      content: { type: ASTType.Text, value: "x" },
+      on: { click: "f" },
+      attrs: { title: "T", n: "1" },
+      attrsTranslationCtx: { title: "ctx" },
+      scope: "sc",
+    });
+  });
+
+  test("a t-set-slot carrying t-out keeps its own attributes as slot attributes", async () => {
+    const ast: any = parse(`<C><t t-set-slot="s" t-slot-scope="sc" t-out="sc.v" a="1"/></C>`);
+    expect(ast.slots.s.attrs).toEqual({ a: "1" });
+    expect(ast.slots.s.scope).toBe("sc");
+    expect(ast.slots.s.content.type).toBe(ASTType.TOut);
+  });
+
+  test("t-memo: what its item holds decides memoContent, or makes it an error", async () => {
+    const memoOf = (item: string) =>
+      (parse(`<div t-foreach="l" t-as="i" t-key="i" t-memo="[i]">${item}</div>`) as any)
+        .memoContent;
+    expect(memoOf(`<span t-out="i"/>`)).toBe(undefined);
+    expect(memoOf(`<C/>`)).toBe(true);
+    expect(memoOf(`<p t-if="i"><C/></p>`)).toBe(true);
+    expect(memoOf(`<p t-foreach="i" t-as="j" t-key="j" t-memo="[j]"><b/></p>`)).toBe(true);
+    expect(memoOf(`<p t-foreach="i" t-as="j" t-key="j"><b/></p>`)).toBe(undefined);
+    expect(() => memoOf(`<p t-if="i"/><p t-elif="i"><t t-call="x"/></p>`)).toThrow("found t-call)");
+    expect(() => memoOf(`<t t-out="i"><t t-call-slot="x"/></t>`)).toThrow("found t-slot)");
+  });
+
+  test("t-translation and t-translation-context wrap each part of a multi", async () => {
+    const parts = (ast: any) => ast.content.map((c: any) => [c.type, c.content.type]);
+    const off: any = parse(`<t t-translation="off">a<p/>b</t>`);
+    expect(off.type).toBe(ASTType.Multi);
+    expect(parts(off)).toEqual([
+      [ASTType.TTranslation, ASTType.Text],
+      [ASTType.TTranslation, ASTType.DomNode],
+      [ASTType.TTranslation, ASTType.Text],
+    ]);
+    const context: any = parse(`<t t-translation-context="fr">a<p/></t>`);
+    expect(parts(context)).toEqual([
+      [ASTType.TTranslationContext, ASTType.Text],
+      [ASTType.TTranslationContext, ASTType.DomNode],
+    ]);
+    expect(context.content[0].translationCtx).toBe("fr");
+    expect(parse(`<p t-translation="off">a</p>`)).toEqual({
+      type: ASTType.TTranslation,
+      content: parse(`<p>a</p>`),
+    });
+    expect(parse(`<t t-translation="off"/>`)).toEqual({
+      type: ASTType.TTranslation,
+      content: null,
+      hasNoRepresentation: true,
+    });
+  });
+
+  test("the errors of malformed conditional branches", async () => {
+    expect(() =>
+      parse(`<div><p t-if="a" t-foreach="l" t-as="i" t-key="i"/><p t-else=""/></div>`)
+    ).toThrow("t-if cannot stay at the same level as t-foreach when using t-elif or t-else");
+    expect(() => parse(`<div><p/><p t-else=""/></div>`)).toThrow(
+      "t-elif and t-else directives must be preceded by a t-if or t-elif directive"
+    );
+    expect(() => parse(`<div><t t-else=""/></div>`)).toThrow(
+      "t-elif and t-else directives must be preceded by a t-if or t-elif directive"
+    );
+    expect(() => parse(`<div><p t-if="a"/>text<p t-else=""/></div>`)).toThrow(
+      "text is not allowed between branching directives"
+    );
+    expect(() => parse(`<div><p t-if="a"/><p t-elif="b" t-else=""/></div>`)).toThrow(
+      "Only one conditional branching directive is allowed per node"
+    );
+    expect(() => parse(`<div><p t-if="a"/><p t-else="" t-if="b" t-elif="c"/></div>`)).toThrow(
+      "Only one conditional branching directive is allowed per node"
+    );
+    expect(() => parse(`<div><p t-if="a"/><!-- c --> <p t-else="" t-if="b"/></div>`)).not.toThrow();
+  });
+
+  test("a select's t-model reaches its options, not its siblings", async () => {
+    const ast: any = parse(
+      `<div><select t-model="v"><option t-att-value="x"/></select><option t-att-value="y"/></div>`
+    );
+    expect(ast.content[0].model.hasDynamicChildren).toBe(true);
+    expect(ast.content[1].model).toBe(null);
   });
 });

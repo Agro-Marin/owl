@@ -252,10 +252,9 @@ class CodeTarget {
     return result.join("\n  ");
   }
 
+  // the key of a list's child: of the item of the innermost loop, which a
+  // list's child is always in
   currentKey(ctx: Context) {
-    if (!this.loopLevel) {
-      return ctx.tKeyExpr ? `${ctx.tKeyExpr} + key` : "key";
-    }
     if (ctx.tKeyExpr) {
       return `${ctx.tKeyExpr} + ${this.stringKey(this.loopLevel)}`;
     }
@@ -513,20 +512,20 @@ export class CodeGenerator {
     }
   }
 
+  // a t-debug, t-log, t-translation or t-translation-context renders what it
+  // wraps, if anything
+  compileContent(content: AST | null, ctx: Context): string | null {
+    return content ? this.compileAST(content, ctx) : null;
+  }
+
   compileDebug(ast: ASTDebug, ctx: Context): string | null {
     this.addLine(`debugger;`);
-    if (ast.content) {
-      return this.compileAST(ast.content, ctx);
-    }
-    return null;
+    return this.compileContent(ast.content, ctx);
   }
 
   compileLog(ast: ASTLog, ctx: Context): string | null {
     this.addLine(`console.log(${compileExpr(ast.expr)});`);
-    if (ast.content) {
-      return this.compileAST(ast.content, ctx);
-    }
-    return null;
+    return this.compileContent(ast.content, ctx);
   }
   compileText(ast: ASTText, ctx: Context): string {
     let { block, forceNewBlock } = ctx;
@@ -1259,7 +1258,7 @@ export class CodeGenerator {
     attrsTranslationCtx: { [name: string]: string } | null,
     ctx: Context
   ): string[] {
-    return Object.entries(obj).map(([k, v]) => this.formatProp(k, v, attrsTranslationCtx, ctx));
+    return this.propEntries(obj, attrsTranslationCtx, ctx).map(([k, v]) => `${propKey(k)}: ${v}`);
   }
 
   propEntries(
@@ -1361,7 +1360,7 @@ export class CodeGenerator {
 
     if (slotDef && (ast.dynamicProps || hasSlotsProp)) {
       this.helpers.add("markRaw");
-      this.addLine(`${propVar!}.slots = markRaw(Object.assign(${slotDef}, ${propVar!}.slots))`);
+      this.addLine(`${propVar!}.slots = markRaw(Object.assign(${slotDef}, ${propVar!}.slots));`);
     }
 
     // cmap key
@@ -1430,18 +1429,16 @@ export class CodeGenerator {
       slotName = interpolate(ast.name);
     } else {
       slotName = JSON.stringify(ast.name);
-      isMultiple = isMultiple || this.slotNames.has(ast.name);
+      isMultiple = this.slotNames.has(ast.name);
       this.slotNames.add(ast.name);
     }
-    const attrs = { ...ast.attrs };
-    const dynProps = attrs["t-props"];
-    delete attrs["t-props"];
     const key = this.scopeKey(ctx, isMultiple);
 
-    const props = ast.attrs ? this.formatPropObject(attrs, ast.attrsTranslationCtx, ctx) : [];
+    const props = ast.attrs ? this.formatPropObject(ast.attrs, ast.attrsTranslationCtx, ctx) : [];
     // a slot scope without attributes is an object callSlot makes when the
     // slot declares a scope
-    const scope = props.length || dynProps ? this.getPropString(props, dynProps) : "null";
+    const scope =
+      props.length || ast.dynamicProps ? this.getPropString(props, ast.dynamicProps) : "null";
     if (ast.defaultContent) {
       const name = this.compileInNewTarget("defaultContent", ast.defaultContent, ctx);
       blockString = `callSlot(ctx, node, ${key}, ${slotName}, ${dynamic}, ${scope}, ${name}, this)`;
@@ -1465,18 +1462,10 @@ export class CodeGenerator {
   }
 
   compileTTranslation(ast: ASTTranslation, ctx: Context): string | null {
-    if (ast.content) {
-      return this.compileAST(ast.content, Object.assign({}, ctx, { translate: false }));
-    }
-    return null;
+    return this.compileContent(ast.content, { ...ctx, translate: false });
   }
+
   compileTTranslationContext(ast: ASTTranslationContext, ctx: Context): string | null {
-    if (ast.content) {
-      return this.compileAST(
-        ast.content,
-        Object.assign({}, ctx, { translationCtx: ast.translationCtx })
-      );
-    }
-    return null;
+    return this.compileContent(ast.content, { ...ctx, translationCtx: ast.translationCtx });
   }
 }
