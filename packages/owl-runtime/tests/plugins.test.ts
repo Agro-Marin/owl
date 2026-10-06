@@ -19,7 +19,15 @@ import {
   useListener,
   xml,
 } from "../src";
-import { atomSymbol, Atom, observersOf, PluginManager, types } from "@odoo/owl-core";
+import {
+  atomSymbol,
+  Atom,
+  observersOf,
+  PluginManager,
+  setDebug,
+  setDebugSink,
+  types,
+} from "@odoo/owl-core";
 import { STATUS } from "../src/status";
 import { makeDeferred, makeTestFixture, nextMicroTick, nextTick, waitScheduler } from "./helpers";
 
@@ -1578,5 +1586,94 @@ describe("plugin start failures and lookups", () => {
     await mounted;
     expect(childLevel).toBe("local");
     app.destroy();
+  });
+});
+
+describe("plugin start: cycles, failures, ids", () => {
+  test("a cycle through two setups throws instead of handing out a plugin mid-setup", () => {
+    class A extends Plugin {
+      ready = false;
+      setup() {
+        plugin(B);
+        this.ready = true;
+      }
+    }
+    class B extends Plugin {
+      setup() {
+        plugin(A);
+      }
+    }
+    const manager = new PluginManager(new App());
+    expect(() => manager.startPlugins([A])).toThrow("Circular plugin dependency: A -> B -> A");
+    expect(manager.getPlugin(A)).toBe(null);
+    expect(manager.getPlugin(B)).toBe(null);
+  });
+
+  test("a setup asking for its own plugin is a cycle", () => {
+    class A extends Plugin {
+      setup() {
+        plugin(A);
+      }
+    }
+    expect(() => new PluginManager(new App()).startPlugins([A])).toThrow(
+      "Circular plugin dependency: A -> A"
+    );
+  });
+
+  test("a cycle is logged on the plugin channel", () => {
+    class A extends Plugin {
+      setup() {
+        plugin(A);
+      }
+    }
+    const lines: string[] = [];
+    setDebugSink((channel, message) => lines.push(`${channel}: ${message}`));
+    setDebug(["plugin"]);
+    try {
+      expect(() => new PluginManager(new App()).startPlugins([A])).toThrow("Circular");
+    } finally {
+      setDebug(false);
+      setDebugSink(null);
+    }
+    expect(lines).toContain("plugin: circular dependency A -> A");
+  });
+
+  test("a later batch is no longer pending once the first batch failed synchronously", () => {
+    class A extends Plugin {
+      static sequence = 10;
+      setup() {
+        throw new Error("boom");
+      }
+    }
+    class B extends Plugin {
+      static sequence = 20;
+    }
+    const manager = new PluginManager(new App());
+    const lines: unknown[][] = [];
+    setDebugSink((_channel, message, details) => lines.push([message, ...details]));
+    setDebug(["plugin"]);
+    try {
+      expect(() => manager.startPlugins([A, B])).toThrow("boom");
+    } finally {
+      setDebug(false);
+      setDebugSink(null);
+    }
+    expect(manager.isPending("B")).toBe(false);
+    expect(lines).toContainEqual(["start failed, later batches dropped", ["B"]]);
+  });
+
+  test("a plugin's id is its class name unless it declares one; a subclass inherits a declared one", () => {
+    class Named extends Plugin {}
+    class Declared extends Plugin {
+      static id = "declared";
+    }
+    class SubNamed extends Named {}
+    class SubDeclared extends Declared {}
+    expect([Named.id, Declared.id, SubNamed.id, SubDeclared.id]).toEqual([
+      "Named",
+      "declared",
+      "SubNamed",
+      "declared",
+    ]);
   });
 });

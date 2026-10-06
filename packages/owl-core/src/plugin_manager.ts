@@ -38,12 +38,10 @@ export interface PluginConstructor {
 }
 
 export class Plugin {
-  private static _shadowId: string;
+  // A plugin is known by its class name, unless it declares `static id =
+  // "..."` (an own property, which a subclass inherits as any static).
   static get id(): string {
-    return this._shadowId ?? this.name;
-  }
-  static set id(shadowId: string) {
-    this._shadowId = shadowId;
+    return this.name;
   }
 
   // Plugins passed to `startPlugins` are started in batches of equal sequence,
@@ -83,11 +81,8 @@ export class PluginManager extends Scope {
   // constructors of the batches still waiting for an earlier batch's
   // willStart, by id, to tell a consumer why the plugin is not there yet
   private pending = new Map<string, PluginConstructor>();
-  // plugins whose constructor is running: a plugin is registered only once it
-  // is built, so asking for one of them again is a dependency cycle
-  private constructing = new Set<PluginConstructor>();
-  // plugins being started (constructor or setup), in dependency order: the
-  // path a cycle error reports
+  // plugins being started (constructor or setup), in dependency order: asking
+  // for one of them again is a dependency cycle, this the path it reports
   private startingPath: PluginConstructor[] = [];
   // own plugin ids in start order, so a failed setup can unregister what it started
   private startedIds: string[] = [];
@@ -141,11 +136,7 @@ export class PluginManager extends Scope {
       }
       return null;
     }
-    if (this.constructing.has(pluginConstructor)) {
-      const path = this.startingPath.slice(this.startingPath.indexOf(pluginConstructor));
-      const ids = [...path, pluginConstructor].map((ctor) => ctor.id);
-      throw new OwlError(`Circular plugin dependency: ${ids.join(" -> ")}`);
-    }
+    this.assertNotStarting(pluginConstructor);
 
     // undo everything this start registered, including the plugins it
     // started as dependencies, so a failed setup leaves nothing behind
@@ -168,7 +159,6 @@ export class PluginManager extends Scope {
       );
     }
     let plugin: Plugin;
-    this.constructing.add(pluginConstructor);
     this.startingPath.push(pluginConstructor);
     try {
       try {
@@ -176,8 +166,6 @@ export class PluginManager extends Scope {
       } catch (e) {
         undo();
         throw e;
-      } finally {
-        this.constructing.delete(pluginConstructor);
       }
       this.plugins[id] = plugin;
       this.startedIds.push(id);
@@ -192,6 +180,23 @@ export class PluginManager extends Scope {
     }
     this.pending.delete(id);
     return plugin as InstanceType<T>;
+  }
+
+  /**
+   * Throws when the plugin of `pluginConstructor` is being started (its
+   * constructor or its setup is running): it asked, through other plugins,
+   * for itself, and would get itself half started.
+   */
+  assertNotStarting(pluginConstructor: Function): void {
+    const index = this.startingPath.indexOf(pluginConstructor as PluginConstructor);
+    if (index !== -1) {
+      const path = [...this.startingPath.slice(index), pluginConstructor as PluginConstructor];
+      const ids = path.map((ctor) => ctor.id).join(" -> ");
+      if (debug.plugin) {
+        debugLog("plugin", `circular dependency ${ids}`);
+      }
+      throw new OwlError(`Circular plugin dependency: ${ids}`);
+    }
   }
 
   /**
@@ -289,15 +294,31 @@ export class PluginManager extends Scope {
     // to a Resource while startup is in flight) so new plugins wait for the
     // previous batches.
     let chain: Promise<unknown> | null = this.hasPendingReady ? this.ready : null;
-    for (const batch of batches) {
-      if (chain) {
-        // Later batches are instantiated inside the previous batch's `then` so
-        // that a rejection skips them entirely.
-        chain = chain.then(() => startBatch(batch));
-      } else {
-        // No async work pending so far: start the batch synchronously.
-        chain = startBatch(batch);
+    try {
+      for (const batch of batches) {
+        if (chain) {
+          // Later batches are instantiated inside the previous batch's `then` so
+          // that a rejection skips them entirely.
+          chain = chain.then(() => startBatch(batch));
+        } else {
+          // No async work pending so far: start the batch synchronously.
+          chain = startBatch(batch);
+        }
       }
+    } catch (e) {
+      // a batch started synchronously failed: the later ones never start
+      const dropped = fresh.filter((ctor) => this.pending.get(ctor.id) === ctor);
+      for (const ctor of dropped) {
+        this.pending.delete(ctor.id);
+      }
+      if (debug.plugin && dropped.length) {
+        debugLog(
+          "plugin",
+          "start failed, later batches dropped",
+          dropped.map((ctor) => ctor.id)
+        );
+      }
+      throw e;
     }
     if (!chain) {
       if (this.status < STATUS.MOUNTED) {

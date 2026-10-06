@@ -25,6 +25,9 @@ export function usePlugin<T extends PluginConstructor>(pluginType: T): PluginIns
   if (!plugin) {
     throw new OwlError(`Unknown plugin "${pluginType.id}"`);
   }
+  if (isPlugin) {
+    manager.assertNotStarting(plugin.constructor);
+  }
 
   // A plugin can define a specialized, per-consumer view of itself (see
   // PluginConstructor.scoped); the view is bound to the calling scope. It is
