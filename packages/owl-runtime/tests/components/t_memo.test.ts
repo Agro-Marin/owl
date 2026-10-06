@@ -349,3 +349,28 @@ describe("t-memo", () => {
     `);
   });
 });
+
+test("a deep render renders the children of a memoized item again", async () => {
+  let global = "a";
+  class Item extends Component {
+    static template = xml`<i t-out="this.read()"/>`;
+    props = props();
+    read() {
+      return global;
+    }
+  }
+  class List extends Component {
+    static template = xml`<div><t t-foreach="this.items" t-as="it" t-key="it" t-memo="[it]"><Item id="it"/></t></div>`;
+    static components = { Item };
+    items = [1, 2];
+  }
+  const list = await mount(List, fixture);
+  expect(fixture.innerHTML).toBe("<div><i>a</i><i>a</i></div>");
+  global = "b";
+  list.__owl__.render(false);
+  await nextTick();
+  expect(fixture.innerHTML).toBe("<div><i>a</i><i>a</i></div>");
+  list.__owl__.render(true);
+  await nextTick();
+  expect(fixture.innerHTML).toBe("<div><i>b</i><i>b</i></div>");
+});

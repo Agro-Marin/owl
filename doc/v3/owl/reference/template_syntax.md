@@ -531,7 +531,8 @@ component re-render.
 A skipped item keeps its child components as they are: they are not updated
 with new props (list what they receive in the array), and they still render
 on their own when their own state changes. A memoized list inside a memoized
-item is kept along with it.
+item is kept along with it. A deep render (`render(true)`) skips no item: every
+item, and every child component in it, renders again.
 
 Owl rejects a `t-memo` item containing a slot or a `t-call` (what they render
 is only known when they run), or a `t-set` writing a variable of the enclosing

@@ -36,9 +36,10 @@ export function memoKeep(node: ComponentNode, site: string, entries: MemoSite) {
 }
 
 /**
- * The previous entry of `key`, when its dependencies are `deps` and the child
- * components it rendered are still the mounted children of `node`, with
- * nothing pending: those are carried into the render in progress, unrendered.
+ * The previous entry of `key`, when its dependencies are `deps`, the render is
+ * not deep, and the child components it rendered are still the mounted
+ * children of `node`, with nothing pending: those are carried into the render
+ * in progress, unrendered.
  */
 export function memoHit(
   previous: MemoSite | undefined,
@@ -50,7 +51,8 @@ export function memoHit(
     throw new OwlError(`t-memo expects an array of dependencies, got ${typeof deps}`);
   }
   const entry = previous?.get(key);
-  if (entry === undefined) {
+  // a deep render renders every child again, a memoized item's included
+  if (entry === undefined || node.fiber!.deep) {
     return undefined;
   }
   const previousDeps = entry.deps;
