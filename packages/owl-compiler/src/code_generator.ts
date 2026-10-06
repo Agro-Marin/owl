@@ -1,4 +1,4 @@
-import { EventModifier, OwlError } from "@odoo/owl-core";
+import { eventModifierMask, OwlError } from "@odoo/owl-core";
 import type { CustomDirectives } from ".";
 import {
   compileExpr,
@@ -55,8 +55,6 @@ if (typeof document !== "undefined") {
   xmlDoc = document.implementation.createDocument(null, null, null);
 }
 
-const MODS = new Set(["stop", "capture", "prevent", "self", "synthetic", "passive"]);
-
 function isProp(tag: string, key: string): boolean {
   switch (tag) {
     case "input":
@@ -108,6 +106,8 @@ class BlockDescription {
   hasDynamicChildren: boolean = false;
   children: BlockDescription[] = [];
   data: string[] = [];
+  // the code of the block's handlers, in the order of their data index
+  handlers: string[] = [];
   dom?: Node;
   currentDom?: Element;
   target: CodeTarget;
@@ -134,6 +134,12 @@ class BlockDescription {
     const id = this.generateId(prefix);
     this.target.addLine(`let ${id} = ${str};`);
     return this.data.push(id) - 1;
+  }
+
+  // a handler's data is the context; its code is static, given with the block
+  insertHandler(fn: string): number {
+    this.handlers.push(fn);
+    return this.data.push("ctx") - 1;
   }
 
   insert(dom: Node) {
@@ -365,9 +371,20 @@ export class CodeGenerator {
           if (xmlString.endsWith(close)) {
             xmlString = xmlString.slice(0, -close.length) + `</${tag}>\``;
           }
-          mainCode.push(`let ${block.blockName} = tag => createBlock(${xmlString});`);
+          if (block.handlers.length) {
+            // a block type with handlers is made per createBlock call: once
+            // per tag here
+            const types = `${block.blockName}_types`;
+            mainCode.push(`const ${types} = Object.create(null);`);
+            mainCode.push(
+              `let ${block.blockName} = tag => ${types}[tag] || (${types}[tag] = createBlock(${xmlString}, [${block.handlers.join(", ")}]));`
+            );
+          } else {
+            mainCode.push(`let ${block.blockName} = tag => createBlock(${xmlString});`);
+          }
         } else {
-          mainCode.push(`let ${block.blockName} = createBlock(${xmlString});`);
+          const handlers = block.handlers.length ? `, [${block.handlers.join(", ")}]` : "";
+          mainCode.push(`let ${block.blockName} = createBlock(${xmlString}${handlers});`);
         }
       }
     }
@@ -547,28 +564,13 @@ export class CodeGenerator {
     return block.varName;
   }
 
+  // the static code of a handler, a function of (context, event); its
+  // modifiers are read from its key at run time, checked here
   generateHandlerCode(rawEvent: string, handler: string): string {
-    const modifiers = rawEvent.split(".").slice(1);
-    const selfIndex = modifiers.indexOf("self");
-    let mask = 0;
-    modifiers.forEach((m, i) => {
-      if (!MODS.has(m)) {
-        throw new OwlError(`Unknown event modifier: '${m}'`);
-      }
-      const beforeSelf = i < selfIndex;
-      if (m === "self") {
-        mask |= EventModifier.SELF;
-      } else if (m === "prevent") {
-        mask |= beforeSelf ? EventModifier.PREVENT_ANY : EventModifier.PREVENT;
-      } else if (m === "stop") {
-        mask |= beforeSelf ? EventModifier.STOP_ANY : EventModifier.STOP;
-      }
-    });
-    const modifiersCode = mask ? `, ${mask}` : "";
-
+    eventModifierMask(rawEvent);
     const { expr: compiled, arrow } = processExpr(handler);
     if (!compiled.trim()) {
-      return `[null, ctx${modifiersCode}]`;
+      return "null";
     }
 
     let hoistedExpr: string;
@@ -580,7 +582,7 @@ export class CodeGenerator {
       hoistedExpr = `(ctx, ev) => callHandler(${compiled}, ctx, ev)`;
     }
 
-    return `[${this.hoistHandler(hoistedExpr)}, ctx${modifiersCode}]`;
+    return this.hoistHandler(hoistedExpr);
   }
 
   // handlers are static functions of (context, event): one per distinct code
@@ -675,7 +677,7 @@ export class CodeGenerator {
       } = ast.model;
 
       let readExpr: string;
-      let handlerData: string;
+      let modelId: string | null = null;
       let valueCode = `ev.target.${targetAttr}`;
       valueCode = shouldTrim ? `${valueCode}.trim()` : valueCode;
       if (shouldNumberize) {
@@ -686,16 +688,14 @@ export class CodeGenerator {
       if (isProxy) {
         readExpr = compileExpr(expr);
         handlerId = this.hoistHandler(`(ctx, ev) => { ${readExpr} = ${valueCode}; }`);
-        handlerData = `[${handlerId}, ctx]`;
       } else {
-        const exprId = this.generateId("expr");
+        modelId = this.generateId("expr");
         this.helpers.add("modelExpr");
-        this.define(exprId, `modelExpr(${compileExpr(expr)})`);
-        readExpr = `${exprId}()`;
+        this.define(modelId, `modelExpr(${compileExpr(expr)})`);
+        readExpr = `${modelId}()`;
         // the model is the handler's extra argument: its context stays ctx,
         // whose component must be mounted for the handler to run
         handlerId = this.hoistHandler(`(ctx, ev, model) => model.set(${valueCode})`);
-        handlerData = `[${handlerId}, ctx, 0, ${exprId}]`;
       }
 
       let idx: number;
@@ -716,14 +716,17 @@ export class CodeGenerator {
         idx = block!.insertData(readExpr, "prop");
         attrs[`block-property-${idx}`] = targetAttr;
       }
-      idx = block!.insertData(handlerData, "hdlr");
+      idx = block!.insertHandler(handlerId);
       attrs[`block-handler-${idx}`] = eventType;
+      if (modelId) {
+        const argIdx = block!.data.push(modelId) - 1;
+        attrs[`block-handler-arg-${argIdx}`] = String(idx);
+      }
     }
 
     // event handlers
     for (let ev in ast.on) {
-      const name = this.generateHandlerCode(ev, ast.on[ev]);
-      const idx = block!.insertData(name, "hdlr");
+      const idx = block!.insertHandler(this.generateHandlerCode(ev, ast.on[ev]));
       attrs[`block-handler-${idx}`] = ev;
     }
 
@@ -1395,20 +1398,21 @@ export class CodeGenerator {
     return block.varName;
   }
 
+  // a catcher's handlers are static, given with its spec; a render gives it
+  // their context
   wrapWithEventCatcher(expr: string, on: EventHandlers): string {
     this.helpers.add("createCatcher");
     let name = this.generateId("catcher");
     let spec: any = {};
-    let handlers: any[] = [];
+    let handlers: string[] = [];
     for (let ev in on) {
-      let handlerId = this.generateId("hdlr");
-      let idx = handlers.push(handlerId) - 1;
-      spec[ev] = idx;
-      const handler = this.generateHandlerCode(ev, on[ev]);
-      this.define(handlerId, handler);
+      spec[ev] = handlers.push(this.generateHandlerCode(ev, on[ev])) - 1;
     }
-    this.staticDefs.push({ id: name, expr: `createCatcher(${JSON.stringify(spec)})` });
-    return `${name}(${expr}, [${handlers.join(",")}])`;
+    this.staticDefs.push({
+      id: name,
+      expr: `createCatcher(${JSON.stringify(spec)}, [${handlers.join(", ")}])`,
+    });
+    return `${name}(${expr}, ctx)`;
   }
 
   compileTCallSlot(ast: ASTTCallSlot, ctx: Context): string {

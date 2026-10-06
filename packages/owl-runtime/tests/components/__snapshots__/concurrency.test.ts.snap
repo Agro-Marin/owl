@@ -262,12 +262,11 @@ exports[`another scenario with delayed rendering 3`] = `
   let { callHandler, safeOutput } = helpers;
   const hdlr_fn1 = (ctx, ev) => callHandler(ctx['this'].increment, ctx, ev);
   
-  let block1 = createBlock(\`<button block-handler-0="click"><block-child-0/></button>\`);
+  let block1 = createBlock(\`<button block-handler-0="click"><block-child-0/></button>\`, [hdlr_fn1]);
   
   return function template(ctx, node, key = "") {
-    let hdlr1 = [hdlr_fn1, ctx];
     const b2 = safeOutput(ctx['this'].state.val, key, "__1");
-    return block1([hdlr1], [b2]);
+    return block1([ctx], [b2]);
   }
 }"
 `;
@@ -1618,12 +1617,11 @@ exports[`delayed rendering, but then initial rendering is cancelled by yet anoth
   let { callHandler, safeOutput } = helpers;
   const hdlr_fn1 = (ctx, ev) => callHandler(ctx['this'].increment, ctx, ev);
   
-  let block1 = createBlock(\`<button block-handler-0="click"><block-child-0/></button>\`);
+  let block1 = createBlock(\`<button block-handler-0="click"><block-child-0/></button>\`, [hdlr_fn1]);
   
   return function template(ctx, node, key = "") {
-    let hdlr1 = [hdlr_fn1, ctx];
     const b2 = safeOutput(ctx['this'].state.val, key, "__1");
-    return block1([hdlr1], [b2]);
+    return block1([ctx], [b2]);
   }
 }"
 `;
@@ -1687,13 +1685,12 @@ exports[`delayed rendering, destruction, stuff happens 4`] = `
   let { callHandler, safeOutput } = helpers;
   const hdlr_fn1 = (ctx, ev) => callHandler(ctx['this'].increment, ctx, ev);
   
-  let block3 = createBlock(\`<button block-handler-0="click"><block-child-0/></button>\`);
+  let block3 = createBlock(\`<button block-handler-0="click"><block-child-0/></button>\`, [hdlr_fn1]);
   
   return function template(ctx, node, key = "") {
     const b2 = text(\`D\`);
-    let hdlr1 = [hdlr_fn1, ctx];
     const b4 = safeOutput(ctx['this'].state.val, key, "__1");
-    const b3 = block3([hdlr1], [b4]);
+    const b3 = block3([ctx], [b4]);
     return multi([b2, b3]);
   }
 }"
@@ -1736,12 +1733,11 @@ exports[`delayed rendering, reusing fiber and stuff 3`] = `
   let { callHandler, safeOutput } = helpers;
   const hdlr_fn1 = (ctx, ev) => callHandler(ctx['this'].increment, ctx, ev);
   
-  let block1 = createBlock(\`<button block-handler-0="click"><block-child-0/></button>\`);
+  let block1 = createBlock(\`<button block-handler-0="click"><block-child-0/></button>\`, [hdlr_fn1]);
   
   return function template(ctx, node, key = "") {
-    let hdlr1 = [hdlr_fn1, ctx];
     const b2 = safeOutput(ctx['this'].state.val, key, "__1");
-    return block1([hdlr1], [b2]);
+    return block1([ctx], [b2]);
   }
 }"
 `;
@@ -1786,12 +1782,11 @@ exports[`delayed rendering, reusing fiber then component is destroyed and  stuff
   let { callHandler, safeOutput } = helpers;
   const hdlr_fn1 = (ctx, ev) => callHandler(ctx['this'].increment, ctx, ev);
   
-  let block1 = createBlock(\`<button block-handler-0="click"><block-child-0/></button>\`);
+  let block1 = createBlock(\`<button block-handler-0="click"><block-child-0/></button>\`, [hdlr_fn1]);
   
   return function template(ctx, node, key = "") {
-    let hdlr1 = [hdlr_fn1, ctx];
     const b2 = safeOutput(ctx['this'].state.val, key, "__1");
-    return block1([hdlr1], [b2]);
+    return block1([ctx], [b2]);
   }
 }"
 `;
@@ -1834,12 +1829,11 @@ exports[`delayed rendering, then component is destroyed and  stuff 3`] = `
   let { callHandler, safeOutput } = helpers;
   const hdlr_fn1 = (ctx, ev) => callHandler(ctx['this'].increment, ctx, ev);
   
-  let block1 = createBlock(\`<button block-handler-0="click"><block-child-0/></button>\`);
+  let block1 = createBlock(\`<button block-handler-0="click"><block-child-0/></button>\`, [hdlr_fn1]);
   
   return function template(ctx, node, key = "") {
-    let hdlr1 = [hdlr_fn1, ctx];
     const b2 = safeOutput(ctx['this'].state.val, key, "__1");
-    return block1([hdlr1], [b2]);
+    return block1([ctx], [b2]);
   }
 }"
 `;
@@ -2035,15 +2029,14 @@ exports[`rendering component again in next microtick 1`] = `
   const hdlr_fn1 = (ctx, ev) => callHandler(ctx['this'].onClick, ctx, ev);
   const comp1 = createComponent(app, \`Child\`, true, false, false, []);
   
-  let block1 = createBlock(\`<div><button block-handler-0="click">Click</button><block-child-0/></div>\`);
+  let block1 = createBlock(\`<div><button block-handler-0="click">Click</button><block-child-0/></div>\`, [hdlr_fn1]);
   
   return function template(ctx, node, key = "") {
     let b2;
-    let hdlr1 = [hdlr_fn1, ctx];
     if (ctx['this'].state.config.flag) {
       b2 = comp1({}, key + \`__1\`, node, this, null);
     }
-    return block1([hdlr1], [b2]);
+    return block1([ctx], [b2]);
   }
 }"
 `;
@@ -2128,13 +2121,12 @@ exports[`renderings, destruction, patch, stuff, ... yet another variation 3`] = 
   let { callHandler, safeOutput } = helpers;
   const hdlr_fn1 = (ctx, ev) => callHandler(ctx['this'].increment, ctx, ev);
   
-  let block3 = createBlock(\`<p block-handler-0="click"><block-child-0/></p>\`);
+  let block3 = createBlock(\`<p block-handler-0="click"><block-child-0/></p>\`, [hdlr_fn1]);
   
   return function template(ctx, node, key = "") {
     const b2 = text(\`D\`);
-    let hdlr1 = [hdlr_fn1, ctx];
     const b4 = safeOutput(ctx['this'].state.val, key, "__1");
-    const b3 = block3([hdlr1], [b4]);
+    const b3 = block3([ctx], [b4]);
     return multi([b2, b3]);
   }
 }"
@@ -2147,13 +2139,12 @@ exports[`renderings, destruction, patch, stuff, ... yet another variation 4`] = 
   let { callHandler, safeOutput } = helpers;
   const hdlr_fn1 = (ctx, ev) => callHandler(ctx['this'].increment, ctx, ev);
   
-  let block3 = createBlock(\`<span block-handler-0="click"><block-child-0/></span>\`);
+  let block3 = createBlock(\`<span block-handler-0="click"><block-child-0/></span>\`, [hdlr_fn1]);
   
   return function template(ctx, node, key = "") {
     const b2 = text(\`C\`);
-    let hdlr1 = [hdlr_fn1, ctx];
     const b4 = safeOutput(ctx['this'].state.val, key, "__1");
-    const b3 = block3([hdlr1], [b4]);
+    const b3 = block3([ctx], [b4]);
     return multi([b2, b3]);
   }
 }"

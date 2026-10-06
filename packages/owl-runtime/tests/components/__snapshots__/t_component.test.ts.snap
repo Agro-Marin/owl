@@ -149,12 +149,11 @@ exports[`t-component > modifying a sub widget 2`] = `
   let { safeOutput } = helpers;
   const hdlr_fn1 = (ctx)=>ctx['this'].state.counter++;
   
-  let block1 = createBlock(\`<div><block-child-0/><button block-handler-0="click">Inc</button></div>\`);
+  let block1 = createBlock(\`<div><block-child-0/><button block-handler-0="click">Inc</button></div>\`, [hdlr_fn1]);
   
   return function template(ctx, node, key = "") {
     const b2 = safeOutput(ctx['this'].state.counter, key, "__1");
-    let hdlr1 = [hdlr_fn1, ctx];
-    return block1([hdlr1], [b2]);
+    return block1([ctx], [b2]);
   }
 }"
 `;

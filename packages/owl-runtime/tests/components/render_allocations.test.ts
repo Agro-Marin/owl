@@ -90,6 +90,45 @@ describe("what a render allocates", () => {
     expect(lines.filter((line) => /new (String|Boolean)\(/.test(line))).toEqual([]);
   });
 
+  test("an event handler makes no array: its code is static, its data the context", () => {
+    const lines = renderFunctionLines(`
+      <div>
+        <button t-on-click="this.f"/>
+        <button t-on-click.stop.prevent="() => this.g()"/>
+        <button t-on-click.stop=""/>
+        <input t-model="this.text"/>
+        <Child t-on-click="this.f" t-on-keydown.stop="this.g"/>
+        <t t-tag="this.tag" t-on-click="this.f"/>
+        <ul><li t-foreach="this.items" t-as="item" t-key="item" t-on-click="() => this.f(item)"/></ul>
+      </div>`);
+    expect(lines.length).toBeGreaterThan(0);
+    expect(lines.filter((line) => /\[\s*(hdlr_fn\d+|hdlr\d+|null)\b/.test(line))).toEqual([]);
+  });
+
+  test("a block with a dynamic tag and a handler makes its block type once per tag", async () => {
+    const template = `<t t-tag="this.tag()" t-on-click="() => this.clicks++">x</t>`;
+    expect(compile(template).toString()).toContain(
+      "block1_types[tag] || (block1_types[tag] = createBlock("
+    );
+    let parent: any;
+    class Parent extends Component {
+      static template = xml`${template}`;
+      tag = signal("b");
+      clicks = 0;
+      setup() {
+        parent = this;
+      }
+    }
+    await mount(Parent, fixture);
+    for (const tag of ["i", "b", "i"]) {
+      parent.tag.set(tag);
+      await nextTick();
+      fixture.firstElementChild!.dispatchEvent(new Event("click", { bubbles: true }));
+    }
+    expect(parent.clicks).toBe(3);
+    expect(fixture.innerHTML).toBe("<i>x</i>");
+  });
+
   test("a slot's render function is the same on every render", async () => {
     const renders: any[] = [];
     class Child extends Component {

@@ -114,7 +114,7 @@ export {
 export { Registry } from "./registry";
 export { Resource, type ResourceAddOptions } from "./resource";
 
-export { EventModifier } from "./event_modifiers";
+export { EventModifier, eventModifierMask } from "./event_modifiers";
 
 // Plugin system
 export { Plugin, PluginManager, startPlugins, type PluginConstructor } from "./plugin_manager";

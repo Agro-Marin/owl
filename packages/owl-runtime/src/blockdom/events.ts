@@ -1,21 +1,55 @@
-import { config } from "./config";
+import { eventModifierMask } from "@odoo/owl-core";
+import { config, type HandlerFn } from "./config";
 
-type EventHandlerSetter = (this: HTMLElement, data: any) => void;
+// What an element holds for each of its handlers is their owner, read at
+// dispatch: a block owns its handlers, its data holding their contexts (and
+// arguments) and its handlers their code, both replaced as a whole by a patch.
+// A handler's slot says where in its owner it finds them; its modifiers come
+// from its key.
+export interface HandlerOwner {
+  data?: any[];
+  handlers: readonly (HandlerFn | null)[];
+}
+
+export interface HandlerSlot {
+  // index of the code in the owner's handlers
+  fn: number;
+  // index of the context in the owner's data
+  ctx: number;
+  // index of the extra argument (t-model's model) in the owner's data, -1 if none
+  arg: number;
+}
 
 interface EventHandlerCreator {
-  setup: EventHandlerSetter;
-  update: EventHandlerSetter;
+  setup: (this: HTMLElement, owner: HandlerOwner) => void;
   remove: (this: HTMLElement) => void;
 }
 
-export function createEventHandler(rawEvent: string): EventHandlerCreator {
+export function createEventHandler(rawEvent: string, slot: HandlerSlot): EventHandlerCreator {
   const eventName = rawEvent.split(".")[0];
   const capture = rawEvent.includes(".capture");
   const passive = rawEvent.includes(".passive");
+  const mods = eventModifierMask(rawEvent);
   if (rawEvent.includes(".synthetic")) {
-    return createSyntheticHandler(eventName, capture, passive);
+    return createSyntheticHandler(eventName, capture, passive, slot, mods);
   } else {
-    return createElementHandler(eventName, capture, passive);
+    return createElementHandler(eventName, capture, passive, slot, mods);
+  }
+}
+
+function dispatchTo(
+  owner: HandlerOwner,
+  slot: HandlerSlot,
+  mods: number,
+  ev: Event,
+  currentTarget: EventTarget
+) {
+  const data = owner.data!;
+  const fn = owner.handlers[slot.fn];
+  if (slot.arg < 0) {
+    config.mainEventHandler(fn, mods, data[slot.ctx], ev, currentTarget);
+  } else {
+    config.mainEventHandler(fn, mods, data[slot.ctx], ev, currentTarget, data[slot.arg]);
   }
 }
 
@@ -23,8 +57,10 @@ export function createEventHandler(rawEvent: string): EventHandlerCreator {
 let nextNativeEventId = 1;
 function createElementHandler(
   evName: string,
-  capture: boolean = false,
-  passive: boolean = false
+  capture: boolean,
+  passive: boolean,
+  slot: HandlerSlot,
+  mods: number
 ): EventHandlerCreator {
   let eventKey = `__event__${evName}_${nextNativeEventId++}`;
   if (capture) {
@@ -32,12 +68,10 @@ function createElementHandler(
   }
 
   function listener(ev: Event) {
-    const currentTarget = ev.currentTarget as HTMLElement;
+    const currentTarget = ev.currentTarget as any;
     // isConnected crosses any number of shadow roots
     if (!currentTarget || !currentTarget.isConnected) return;
-    const data = (currentTarget as any)[eventKey];
-    if (!data) return;
-    config.mainEventHandler(data, ev, currentTarget);
+    dispatchTo(currentTarget[eventKey], slot, mods, ev, currentTarget);
   }
 
   // a dictionary costs the browser twice a boolean to read, on every element:
@@ -45,8 +79,8 @@ function createElementHandler(
   // body, the targets where an unspecified passive defaults to true)
   const options: AddEventListenerOptions | boolean = passive ? { capture, passive } : capture;
 
-  function setup(this: HTMLElement, data: any) {
-    (this as any)[eventKey] = data;
+  function setup(this: HTMLElement, owner: HandlerOwner) {
+    (this as any)[eventKey] = owner;
     this.addEventListener(evName, listener, options);
   }
 
@@ -54,20 +88,26 @@ function createElementHandler(
     delete (this as any)[eventKey];
     this.removeEventListener(evName, listener, options);
   }
-  function update(this: HTMLElement, data: any) {
-    (this as any)[eventKey] = data;
-  }
 
-  return { setup, update, remove };
+  return { setup, remove };
 }
 
 // Synthetic handler: a form of event delegation that allows placing only one
-// listener per event type.
+// listener per event type. An element holds the handlers of each key under the
+// event key, by id, each saying where the element holds its owner.
+interface SyntheticHandler {
+  slot: HandlerSlot;
+  mods: number;
+  ownerKey: string;
+}
+
 let nextSyntheticEventId = 1;
 function createSyntheticHandler(
   evName: string,
-  capture: boolean = false,
-  passive: boolean = false
+  capture: boolean,
+  passive: boolean,
+  slot: HandlerSlot,
+  mods: number
 ): EventHandlerCreator {
   // one document listener per key: a passive one cannot serve preventDefault
   let eventKey = `__event__synthetic_${evName}`;
@@ -79,18 +119,22 @@ function createSyntheticHandler(
   }
   setupSyntheticEvent(evName, eventKey, capture, passive);
   const currentId = nextSyntheticEventId++;
-  function setup(this: HTMLElement, data: any) {
-    const _data = (this as any)[eventKey] || {};
-    _data[currentId] = data;
-    (this as any)[eventKey] = _data;
+  const ownerKey = `__event__synthetic_owner_${currentId}`;
+  const handler: SyntheticHandler = { slot, mods, ownerKey };
+  function setup(this: HTMLElement, owner: HandlerOwner) {
+    const handlers = (this as any)[eventKey] || {};
+    handlers[currentId] = handler;
+    (this as any)[eventKey] = handlers;
+    (this as any)[ownerKey] = owner;
   }
 
   function remove(this: HTMLElement) {
     // other handlers (a sibling component's catcher) may share this element
     delete (this as any)[eventKey]?.[currentId];
+    delete (this as any)[ownerKey];
   }
 
-  return { setup, update: setup, remove };
+  return { setup, remove };
 }
 
 // Replays the propagation over the path fixed at dispatch time, as the browser
@@ -130,7 +174,8 @@ function nativeToSyntheticEvent(
         continue;
       }
       for (const id in handlers) {
-        config.mainEventHandler(handlers[id], event, node);
+        const { slot, mods, ownerKey } = handlers[id] as SyntheticHandler;
+        dispatchTo(node[ownerKey], slot, mods, event, node);
         if (stoppedImmediately) {
           return;
         }

@@ -259,11 +259,10 @@ exports[`t-call > handlers are properly bound through a dynamic t-call 2`] = `
   let { text, createBlock, list, multi, html, toggler } = bdom;
   const hdlr_fn1 = (ctx)=>ctx['this'].update();
   
-  let block1 = createBlock(\`<p block-handler-0="click">lucas</p>\`);
+  let block1 = createBlock(\`<p block-handler-0="click">lucas</p>\`, [hdlr_fn1]);
   
   return function template(ctx, node, key = "") {
-    let hdlr1 = [hdlr_fn1, ctx];
-    return block1([hdlr1]);
+    return block1([ctx]);
   }
 }"
 `;
@@ -291,11 +290,10 @@ exports[`t-call > handlers are properly bound through a t-call 2`] = `
   let { callHandler } = helpers;
   const hdlr_fn1 = (ctx, ev) => callHandler(ctx['this'].update, ctx, ev);
   
-  let block1 = createBlock(\`<p block-handler-0="click">lucas</p>\`);
+  let block1 = createBlock(\`<p block-handler-0="click">lucas</p>\`, [hdlr_fn1]);
   
   return function template(ctx, node, key = "") {
-    let hdlr1 = [hdlr_fn1, ctx];
-    return block1([hdlr1]);
+    return block1([ctx]);
   }
 }"
 `;
@@ -321,11 +319,10 @@ exports[`t-call > handlers with arguments are properly bound through a t-call 2`
   let { text, createBlock, list, multi, html, toggler } = bdom;
   const hdlr_fn1 = (ctx)=>ctx['this'].update(ctx['this'].a);
   
-  let block1 = createBlock(\`<p block-handler-0="click">lucas</p>\`);
+  let block1 = createBlock(\`<p block-handler-0="click">lucas</p>\`, [hdlr_fn1]);
   
   return function template(ctx, node, key = "") {
-    let hdlr1 = [hdlr_fn1, ctx];
-    return block1([hdlr1]);
+    return block1([ctx]);
   }
 }"
 `;
@@ -434,14 +431,13 @@ exports[`t-call > recursive t-call binding this -- static t-call 2`] = `
   let { callHandler, safeOutput, zero, callTemplate } = helpers;
   const hdlr_fn1 = (ctx, ev) => callHandler(ctx['this'].onClicked.bind(ctx['this']), ctx, ev);
   
-  let block3 = createBlock(\`<div block-handler-0="click.stop"><block-child-0/></div>\`);
+  let block3 = createBlock(\`<div block-handler-0="click.stop"><block-child-0/></div>\`, [hdlr_fn1]);
   
   return function template(ctx, node, key = "") {
     let b2;
     if (ctx['level']<2) {
-      let hdlr1 = [hdlr_fn1, ctx, 16];
       const b4 = safeOutput(ctx['level'], key, "__1");
-      const b3 = block3([hdlr1], [b4]);
+      const b3 = block3([ctx], [b4]);
       const ctx1 = Object.create(ctx);
       ctx1["level"] = ctx['level']+1;
       ctx1[zero] = null;

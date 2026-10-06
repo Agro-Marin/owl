@@ -1,11 +1,14 @@
-import { config } from "./config";
+import { eventModifierMask } from "@odoo/owl-core";
+import { config, type HandlerFn } from "./config";
 import { nodeInsertBefore } from "./dom";
 import { createEventHandler } from "./events";
 import type { VNode } from "./index";
 
 type EventsSpec = { [name: string]: number };
 
-type Catcher = (child: VNode, handlers: any[]) => VNode;
+// a catcher's handlers are static, given with the spec; what a render gives
+// it is its child and the context of its handlers
+type Catcher = (child: VNode, ctx: any) => VNode;
 
 type EventHandler = ReturnType<typeof createEventHandler>;
 
@@ -46,10 +49,15 @@ function listenerKey(key: string): string {
   return id;
 }
 
+interface CatcherHandler {
+  fn: HandlerFn | null;
+  mods: number;
+}
+
 interface VCatcherBase {
-  // listener key -> indices of the handler data it dispatches to
-  groups: Map<string, number[]>;
-  handlerData: any[];
+  // listener key -> the handlers it dispatches to
+  groups: Map<string, CatcherHandler[]>;
+  ctx: any;
   // the catcher enclosing this one in the same parent element, of any site
   outer: VCatcherBase | null;
   holds(node: Node): boolean;
@@ -69,10 +77,10 @@ function dispatch(key: string, parent: Node, ev: Event) {
     return;
   }
   for (let catcher = ownerOf(node, node); catcher; catcher = catcher.outer) {
-    const indices = catcher.groups.get(key);
-    if (indices) {
-      for (const index of indices) {
-        config.mainEventHandler(catcher.handlerData[index], ev, node);
+    const handlers = catcher.groups.get(key);
+    if (handlers) {
+      for (const { fn, mods } of handlers) {
+        config.mainEventHandler(fn, mods, catcher.ctx, ev, node);
       }
     }
   }
@@ -105,9 +113,12 @@ function listen(keys: string[], parent: HTMLElement) {
       listener.count++;
       continue;
     }
-    const handler = createEventHandler(key);
+    const handler = createEventHandler(key, { fn: 0, ctx: 0, arg: -1 });
     // the parent is the context: the runtime handler passes it on
-    handler.setup.call(parent, [(p: Node, ev: Event) => dispatch(key, p, ev), parent]);
+    handler.setup.call(parent, {
+      data: [parent],
+      handlers: [(p: Node, ev: Event) => dispatch(key, p, ev)],
+    });
     listeners.set(key, { handler, count: 1 });
   }
 }
@@ -123,30 +134,30 @@ function unlisten(keys: string[], parent: HTMLElement) {
   }
 }
 
-export function createCatcher(eventsSpec: EventsSpec): Catcher {
-  const groups = new Map<string, number[]>();
+export function createCatcher(eventsSpec: EventsSpec, fns: (HandlerFn | null)[]): Catcher {
+  const groups = new Map<string, CatcherHandler[]>();
   for (const key in eventsSpec) {
     const id = listenerKey(key);
-    let indices = groups.get(id);
-    if (!indices) {
-      groups.set(id, (indices = []));
+    let handlers = groups.get(id);
+    if (!handlers) {
+      groups.set(id, (handlers = []));
     }
-    indices.push(eventsSpec[key]);
+    handlers.push({ fn: fns[eventsSpec[key]], mods: eventModifierMask(key) });
   }
   const keys = [...groups.keys()];
 
   class VCatcher implements VCatcherBase {
     child: VNode;
     groups = groups;
-    handlerData: any[];
+    ctx: any;
     outer: VCatcherBase | null = null;
 
     parentEl?: HTMLElement | undefined;
     afterNode: Text | null = null;
 
-    constructor(child: VNode, handlers: any[]) {
+    constructor(child: VNode, ctx: any) {
       this.child = child;
-      this.handlerData = handlers;
+      this.ctx = ctx;
     }
 
     mount(parent: HTMLElement, afterNode: Node | null) {
@@ -201,7 +212,7 @@ export function createCatcher(eventsSpec: EventsSpec): Catcher {
       if (this === other) {
         return;
       }
-      this.handlerData = other.handlerData;
+      this.ctx = other.ctx;
       updating.push({ parent: this.parentEl!, catcher: this });
       try {
         this.child.patch(other.child, withBeforeRemove);
@@ -229,7 +240,7 @@ export function createCatcher(eventsSpec: EventsSpec): Catcher {
     }
   }
 
-  return function (child: VNode, handlers: any[]): VNode<VCatcher> {
-    return new VCatcher(child, handlers);
+  return function (child: VNode, ctx: any): VNode<VCatcher> {
+    return new VCatcher(child, ctx);
   };
 }

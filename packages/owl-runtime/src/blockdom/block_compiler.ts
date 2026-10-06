@@ -11,7 +11,8 @@ import {
   updateClass,
   updateStyle,
 } from "./attributes";
-import { createEventHandler } from "./events";
+import type { HandlerFn } from "./config";
+import { createEventHandler, type HandlerOwner } from "./events";
 import type { VNode } from "./index";
 import { VMulti } from "./multi";
 import { toText } from "./text";
@@ -72,7 +73,18 @@ function makeSyncedPropSetter(name: string): Setter<HTMLElement> {
 
 type BlockType = (data?: any[], children?: (VNode | undefined)[]) => VNode;
 
-const cache: { [key: string]: BlockType } = {};
+type Handlers = readonly (HandlerFn | null)[];
+
+interface ParsedBlock {
+  Block: BlockClass;
+  hasChildren: boolean;
+  handlerN: number;
+  // the block type of a block without handlers
+  block: BlockType | null;
+}
+
+const cache: { [key: string]: ParsedBlock } = Object.create(null);
+const NO_HANDLERS: Handlers = [];
 
 /**
  * Compiling blocks is a multi-step process:
@@ -86,14 +98,41 @@ const cache: { [key: string]: BlockType } = {};
  * 4. make a dynamic block class, which will efficiently collect references and
  *    create/update dynamic locations/children
  *
+ * The block class is made once per block string. The code of its handlers
+ * (block-handler-N, in the order of N) is static, given here, and each block
+ * carries it: its data holds their contexts. Each call with handlers makes a
+ * block type (a function): compiled code makes one per block site.
+ *
  * @param str
+ * @param handlers the code of each handler, null for an empty one
  * @returns a new block type, that can build concrete blocks
  */
-export function createBlock(str: string): BlockType {
-  if (str in cache) {
-    return cache[str];
+export function createBlock(str: string, handlers: Handlers = NO_HANDLERS): BlockType {
+  const parsed = cache[str] || (cache[str] = parseBlock(str));
+  if (handlers.length !== parsed.handlerN) {
+    throw new OwlError(
+      `Invalid block "${str}": ${parsed.handlerN} handlers, ${handlers.length} given`
+    );
   }
+  if (!handlers.length) {
+    return parsed.block || (parsed.block = makeBlockType(parsed, NO_HANDLERS));
+  }
+  for (const fn of handlers) {
+    // an empty handler (`t-on-click.stop=""`) is null
+    if (fn !== null && typeof fn !== "function") {
+      throw new OwlError(`Invalid handler (expected a function, received: '${fn}')`);
+    }
+  }
+  return makeBlockType(parsed, handlers);
+}
 
+function makeBlockType({ Block, hasChildren }: ParsedBlock, handlers: Handlers): BlockType {
+  return hasChildren
+    ? (data?: any[], children: (VNode | undefined)[] = []) => new Block(data, handlers, children)
+    : (data?: any[]) => new Block(data, handlers);
+}
+
+function parseBlock(str: string): ParsedBlock {
   // step 0: prepare html base element
   const doc = new DOMParser().parseFromString(`<t>${str}</t>`, "text/xml");
   const error = doc.getElementsByTagName("parsererror")[0];
@@ -108,11 +147,13 @@ export function createBlock(str: string): BlockType {
   // step 2: prepare block context
   const context = buildContext(tree);
 
-  // step 3: build the final block class
-  const template = tree.el as HTMLElement;
-  const Block = buildBlock(template, context);
-  cache[str] = Block;
-  return Block;
+  // step 3: build the block class
+  return {
+    Block: buildBlock(tree.el as HTMLElement, context),
+    hasChildren: context.children.length > 0,
+    handlerN: context.handlers.length,
+    block: null,
+  };
 }
 
 // -----------------------------------------------------------------------------
@@ -122,9 +163,19 @@ export function createBlock(str: string): BlockType {
 interface DynamicInfo {
   idx: number;
   refIdx?: number;
-  type: "text" | "child" | "handler" | "attribute" | "attributes" | "property" | "ref";
+  type:
+    | "text"
+    | "child"
+    | "handler"
+    | "handlerArg"
+    | "attribute"
+    | "attributes"
+    | "property"
+    | "ref";
   // a property set on every patch
   sync?: boolean;
+  // a handler argument: the index of its handler
+  handler?: number;
   // the parent holds nothing else: the child needs no anchor
   withoutAnchor?: boolean;
   name?: string;
@@ -190,7 +241,13 @@ function buildTree(
         for (let i = 0; i < attrs.length; i++) {
           const attrName = attrs[i].name;
           const attrValue = attrs[i].value;
-          if (attrName.startsWith("block-handler-")) {
+          if (attrName.startsWith("block-handler-arg-")) {
+            info.push({
+              type: "handlerArg",
+              idx: parseInt(attrName.slice(18), 10),
+              handler: parseInt(attrValue, 10),
+            });
+          } else if (attrName.startsWith("block-handler-")) {
             const idx = parseInt(attrName.slice(14), 10);
             info.push({
               type: "handler",
@@ -363,18 +420,41 @@ interface Child {
   afterRefIdx?: number;
 }
 
+// a handler is set up on mount with its block as its owner; it reads its
+// context (and argument) in its block's data, which a patch replaces
+interface Handler {
+  refIdx: number;
+  event: string;
+  // data index of its context
+  idx: number;
+}
+
 interface BlockCtx {
   refN: number;
   collectors: RefCollector[];
+  // sorted by data index once built
   locations: IndexedLocation[];
   children: Child[];
   cbRefs: number[];
+  handlers: Handler[];
+  // handler data index -> data index of its argument
+  handlerArgs: { [idx: number]: number };
 }
 
 function buildContext(tree: IntermediateTree, ctx?: BlockCtx, fromIdx?: number): BlockCtx {
   if (!ctx) {
-    ctx = { collectors: [], locations: [], children: [], cbRefs: [], refN: tree.refN };
-    fromIdx = 0;
+    ctx = {
+      collectors: [],
+      locations: [],
+      children: [],
+      cbRefs: [],
+      refN: tree.refN,
+      handlers: [],
+      handlerArgs: {},
+    };
+    buildContext(tree, ctx, 0);
+    ctx.locations.sort((a, b) => a.idx - b.idx);
+    return ctx;
   }
   if (tree.refN) {
     const initialIdx = fromIdx!;
@@ -484,13 +564,25 @@ function updateCtx(ctx: BlockCtx, tree: IntermediateTree) {
         });
         break;
       }
+      // a handler and its argument read their data at dispatch: their
+      // locations do nothing
       case "handler": {
-        const { setup, update } = createEventHandler(info.event!);
+        ctx.handlers.push({ idx: info.idx, refIdx: info.refIdx!, event: info.event! });
         ctx.locations.push({
           idx: info.idx,
           refIdx: info.refIdx!,
-          setData: setup,
-          updateData: update,
+          setData: NO_OP,
+          updateData: NO_OP,
+        });
+        break;
+      }
+      case "handlerArg": {
+        ctx.handlerArgs[info.handler!] = info.idx;
+        ctx.locations.push({
+          idx: info.idx,
+          refIdx: info.refIdx!,
+          setData: NO_OP,
+          updateData: NO_OP,
         });
         break;
       }
@@ -511,22 +603,20 @@ function updateCtx(ctx: BlockCtx, tree: IntermediateTree) {
 // building the concrete block class
 // -----------------------------------------------------------------------------
 
-function buildBlock(template: HTMLElement, ctx: BlockCtx): BlockType {
+function buildBlock(template: HTMLElement, ctx: BlockCtx): BlockClass {
   let B = createBlockClass(template, ctx);
 
   if (ctx.children.length) {
     B = class extends B {
       children: (VNode | undefined)[] | undefined;
-      constructor(data?: any[], children?: VNode[]) {
-        super(data);
+      constructor(data: any[] | undefined, handlers: Handlers, children: VNode[]) {
+        super(data, handlers);
         this.children = children;
       }
     };
     B.prototype.beforeRemove = VMulti.prototype.beforeRemove;
-    return (data?: any[], children: (VNode | undefined)[] = []) => new B(data, children);
   }
-
-  return (data?: any[]) => new B(data);
+  return B;
 }
 
 type Constructor<T> = new (...args: any[]) => T;
@@ -534,7 +624,6 @@ type BlockClass = Constructor<VNode<any>>;
 
 function createBlockClass(template: HTMLElement, ctx: BlockCtx): BlockClass {
   const { refN, collectors, children, locations, cbRefs } = ctx;
-  locations.sort((a, b) => a.idx - b.idx);
   const locN = locations.length;
   const childN = children.length;
   const isDynamic = refN > 0;
@@ -543,6 +632,14 @@ function createBlockClass(template: HTMLElement, ctx: BlockCtx): BlockClass {
   const locRefIdxs: number[] = locations.map((l) => l.refIdx);
   const locSetters: Setter[] = locations.map((l) => l.setData);
   const locUpdaters: Updater[] = locations.map((l) => l.updateData);
+  // the handlers, in the order of their data index: the code of the n-th is
+  // the n-th of its block's handlers
+  const handlerN = ctx.handlers.length;
+  const handlerRefIdxs: number[] = ctx.handlers.map((h) => h.refIdx);
+  const handlerSetups = ctx.handlers.map(
+    (h, n) =>
+      createEventHandler(h.event, { fn: n, ctx: h.idx, arg: ctx.handlerArgs[h.idx] ?? -1 }).setup
+  );
   // synced locations run on every patch
   const locSync: boolean[] = locations.map((l) => !!l.sync);
   // a block with late or synced locations applies the others first, by index
@@ -571,15 +668,20 @@ function createBlockClass(template: HTMLElement, ctx: BlockCtx): BlockClass {
   // events a browser dispatches from inside a removal (refs.test.ts)
   const elementRemove = Element.prototype.remove;
 
-  class Block {
+  class Block implements HandlerOwner {
     el: HTMLElement | undefined;
     parentEl?: HTMLElement | undefined;
     data: any[] | undefined;
+    // only a block with handlers holds them
+    declare handlers: Handlers;
     children?: (VNode | undefined)[];
     refs: Node[] | undefined;
 
-    constructor(data?: any[]) {
+    constructor(data: any[] | undefined, handlers: Handlers) {
       this.data = data;
+      if (handlerN) {
+        this.handlers = handlers;
+      }
     }
 
     beforeRemove() {}
@@ -643,6 +745,9 @@ function createBlockClass(template: HTMLElement, ctx: BlockCtx): BlockClass {
           locSetters[i].call(refs[locRefIdxs[i]], data[i]);
         }
       }
+      for (let i = 0; i < handlerN; i++) {
+        handlerSetups[i].call(refs[handlerRefIdxs[i]] as HTMLElement, this);
+      }
 
       // preparing all children (off-DOM, before inserting el into the live document)
       if (childN) {
@@ -701,6 +806,9 @@ function createBlockClass(template: HTMLElement, ctx: BlockCtx): BlockClass {
         }
       }
       this.data = data2;
+      if (handlerN) {
+        this.handlers = other.handlers;
+      }
 
       // update children
       if (childN) {

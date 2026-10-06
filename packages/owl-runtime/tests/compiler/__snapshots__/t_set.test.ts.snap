@@ -602,13 +602,12 @@ exports[`t-set > t-set after a dom element is executed before event handlers 1`]
   let { text, createBlock, list, multi, html, toggler } = bdom;
   const hdlr_fn1 = (ctx)=>ctx['this'].logValue(ctx['val']);
   
-  let block1 = createBlock(\`<button block-handler-0="click">log</button>\`);
+  let block1 = createBlock(\`<button block-handler-0="click">log</button>\`, [hdlr_fn1]);
   
   return function template(ctx, node, key = "") {
     ctx = Object.create(ctx);
     ctx["val"] = 1;
-    let hdlr1 = [hdlr_fn1, ctx];
-    const b1 = block1([hdlr1]);
+    const b1 = block1([ctx]);
     ctx["val"] = 2;
     return b1;
   }
