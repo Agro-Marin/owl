@@ -2116,16 +2116,22 @@
 
     injectBreakpoint(hook, path, instanceOnly, condition) {
       const componentNode = this.getObjectProperty(path);
+      // a node's hook list may be a shared frozen empty array until its first
+      // hook (OWL 3): a new list is assigned instead of pushed into
       const injectFunctionInHook = (comp, hook, fn) => {
-        comp[hook].push(fn);
+        comp[hook] = [...comp[hook], fn];
       };
-      const originalHook = [...componentNode.component.__owl__[hook]];
-      injectFunctionInHook(componentNode.component.__owl__, hook, () => {
+      const node = componentNode.component.__owl__;
+      let hooks = this.breakpointsHookMap.get(node);
+      if (!hooks) {
+        this.breakpointsHookMap.set(node, (hooks = new Map()));
+      }
+      if (!hooks.has(hook)) {
+        hooks.set(hook, node[hook]);
+      }
+      injectFunctionInHook(node, hook, () => {
         debugger;
       });
-      if (!this.breakpointsHookMap.get([componentNode.component.__owl__, hook])) {
-        this.breakpointsHookMap.set([componentNode.component.__owl__, hook], originalHook);
-      }
       if (!instanceOnly) {
         const componentClass = componentNode.component.constructor;
         const originalSetup = componentClass.prototype.setup;
@@ -2150,8 +2156,10 @@
         component.prototype.setup = setup;
       }
       this.breakpointsClassMap.clear();
-      for (const [ref, originalHook] of this.breakpointsHookMap) {
-        ref[0][ref[1]] = originalHook;
+      for (const [node, hooks] of this.breakpointsHookMap) {
+        for (const [hook, originalHook] of hooks) {
+          node[hook] = originalHook;
+        }
       }
       this.breakpointsHookMap.clear();
     }
