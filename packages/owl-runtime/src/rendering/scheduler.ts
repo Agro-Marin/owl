@@ -89,67 +89,62 @@ export class Scheduler {
     }
     this.processing = true;
     try {
-      this.runTasks();
+      this.frame = 0;
+      let failed = false;
+      if (debug.scheduler) {
+        debugLog("scheduler", `frame, ${this.tasks.size} task(s)`);
+      }
+      for (let fiber of this.tasks) {
+        if (fiber.root !== fiber) {
+          this.tasks.delete(fiber);
+          continue;
+        }
+        // superseded: another render (a slot of this app rendered by a
+        // component of another one) patched the node and cleared its fiber
+        if (fiber.node.fiber !== fiber) {
+          if (debug.scheduler) {
+            debugLog("scheduler", `drop ${fiber.node.componentName}: superseded`);
+          }
+          this.tasks.delete(fiber);
+          continue;
+        }
+        // a failed pass never completes; its node keeps the fiber, so the next
+        // render reuses it and schedules it again
+        if (fibersInError.has(fiber)) {
+          if (debug.scheduler) {
+            debugLog("scheduler", `drop ${fiber.node.componentName}: failed`);
+          }
+          this.tasks.delete(fiber);
+          failed = true;
+          continue;
+        }
+        if (fiber.counter === 0) {
+          fiber.complete();
+          // at this point, the fiber should have been applied to the DOM, so we can
+          // remove it from the task list. If it is not the case, it means that there
+          // was an error and an error handler triggered a new rendering that recycled
+          // the fiber, so in that case, we actually want to keep the fiber around,
+          // otherwise it will just be ignored.
+          if (fiber.renderState & APPLIED_TO_DOM) {
+            this.tasks.delete(fiber);
+          }
+        } else if (debug.scheduler) {
+          debugLog(
+            "scheduler",
+            `wait ${fiber.node.componentName}: ${fiber.counter} render(s) pending`
+          );
+        }
+      }
+      if (failed) {
+        // a frame after the failure, the handlers had their chance to re-render
+        // around it: the renders the failed pass delayed go on
+        this.flush();
+      }
+      if (!this.tasks.size) {
+        Scheduler.active.delete(this);
+      }
     } finally {
       this.processing = false;
-    }
-  }
-
-  private runTasks() {
-    this.frame = 0;
-    let failed = false;
-    if (debug.scheduler) {
-      debugLog("scheduler", `frame, ${this.tasks.size} task(s)`);
-    }
-    for (let fiber of this.tasks) {
-      if (fiber.root !== fiber) {
-        this.tasks.delete(fiber);
-        continue;
-      }
-      // superseded: another render (a slot of this app rendered by a
-      // component of another one) patched the node and cleared its fiber
-      if (fiber.node.fiber !== fiber) {
-        if (debug.scheduler) {
-          debugLog("scheduler", `drop ${fiber.node.componentName}: superseded`);
-        }
-        this.tasks.delete(fiber);
-        continue;
-      }
-      // a failed pass never completes; its node keeps the fiber, so the next
-      // render reuses it and schedules it again
-      if (fibersInError.has(fiber)) {
-        if (debug.scheduler) {
-          debugLog("scheduler", `drop ${fiber.node.componentName}: failed`);
-        }
-        this.tasks.delete(fiber);
-        failed = true;
-        continue;
-      }
-      if (debug.scheduler && fiber.counter !== 0) {
-        debugLog(
-          "scheduler",
-          `wait ${fiber.node.componentName}: ${fiber.counter} render(s) pending`
-        );
-      }
-      if (fiber.counter === 0) {
-        fiber.complete();
-        // at this point, the fiber should have been applied to the DOM, so we can
-        // remove it from the task list. If it is not the case, it means that there
-        // was an error and an error handler triggered a new rendering that recycled
-        // the fiber, so in that case, we actually want to keep the fiber around,
-        // otherwise it will just be ignored.
-        if (fiber.renderState & APPLIED_TO_DOM) {
-          this.tasks.delete(fiber);
-        }
-      }
-    }
-    if (failed) {
-      // a frame after the failure, the handlers had their chance to re-render
-      // around it: the renders the failed pass delayed go on
-      this.flush();
-    }
-    if (!this.tasks.size) {
-      Scheduler.active.delete(this);
     }
   }
 }

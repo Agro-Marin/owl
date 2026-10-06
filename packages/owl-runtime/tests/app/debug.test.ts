@@ -1,8 +1,10 @@
 import {
+  App,
   Component,
   mount,
   onError,
   onMounted,
+  onWillStart,
   props,
   setDebug,
   setDebugSink,
@@ -68,6 +70,30 @@ test("lifecycle, fiber and scheduler channels trace a mount and an update", asyn
     "fiber: commit Parent: 0 willPatch, 0 mounted, 0 patched",
   ]);
   expect(fixture.innerHTML).toBe("<div><b>2</b><i>1</i></div>");
+});
+
+test("the scheduler channel says a frame waits for a pass whose renders are pending", async () => {
+  let release!: () => void;
+  class Slow extends Component {
+    static template = xml`<b>slow</b>`;
+    setup() {
+      onWillStart(() => new Promise<void>((resolve) => (release = resolve)));
+    }
+  }
+  class Fast extends Component {
+    static template = xml`<i>fast</i>`;
+  }
+  const app = new App();
+  setDebug(["scheduler"]);
+  // one scheduler: the frame the fast root's pass asks for finds the slow
+  // root's pass still waiting for its onWillStart
+  const slow = app.createRoot(Slow).mount(fixture);
+  await app.createRoot(Fast).mount(fixture);
+  expect(lines).toContain("scheduler: wait Slow: 1 render(s) pending");
+  release();
+  await slow;
+  expect(fixture.innerHTML).toBe("<i>fast</i><b>slow</b>");
+  app.destroy();
 });
 
 test("the error channel says who handled an error", async () => {
