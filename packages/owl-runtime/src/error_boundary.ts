@@ -1,4 +1,4 @@
-import { signal } from "@odoo/owl-core";
+import { signal, untrack } from "@odoo/owl-core";
 import { Component } from "./component";
 import { onError } from "./lifecycle_hooks";
 import { props } from "./props";
@@ -18,6 +18,15 @@ export class ErrorBoundary extends Component {
   props = props({ error: t.signal().optional(() => signal<any>(null)) });
 
   setup() {
-    onError((e) => this.props.error.set(e));
+    onError((e) =>
+      untrack(() => {
+        // an error while the fallback shows is the fallback's: caught here, it
+        // would show that fallback again, failing again
+        if (this.props.error()) {
+          throw e;
+        }
+        this.props.error.set(e);
+      })
+    );
   }
 }

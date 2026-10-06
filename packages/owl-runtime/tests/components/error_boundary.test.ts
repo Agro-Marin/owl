@@ -229,3 +229,38 @@ async function mount<T extends typeof Component>(C: T) {
   const app = new App({ test: true });
   return app.createRoot(C).mount(fixture);
 }
+
+test("an error of the fallback goes to the boundary's parent, rendered once", async () => {
+  let fallbackRenders = 0;
+  const caught: string[] = [];
+  class Bad extends Component {
+    static template = xml`<b t-out="this.boom()"/>`;
+    boom() {
+      throw new Error("content");
+    }
+  }
+  class BadFallback extends Component {
+    static template = xml`<f t-out="this.boom()"/>`;
+    boom() {
+      fallbackRenders++;
+      throw new Error("fallback");
+    }
+  }
+  class Parent extends Component {
+    static template = xml`<div><t t-if="!this.failed()"><ErrorBoundary><Bad/><t t-set-slot="fallback"><BadFallback/></t></ErrorBoundary></t></div>`;
+    static components = { ErrorBoundary, Bad, BadFallback };
+    failed = signal(false);
+    setup() {
+      onError((e) => {
+        caught.push(e.message);
+        this.failed.set(true);
+      });
+    }
+  }
+  const app = new App({ test: true });
+  await app.createRoot(Parent).mount(fixture);
+  await nextTick();
+  expect(fallbackRenders).toBe(1);
+  expect(caught).toEqual(["fallback"]);
+  expect(fixture.innerHTML).toBe("<div></div>");
+});

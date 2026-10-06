@@ -74,9 +74,11 @@ the `error` signal; a `t-if` in the template switches between the
 
 Nested `ErrorBoundary` instances form a chain. The nearest ancestor
 catches — an `onError` hook higher up the tree only fires if every
-intervening `ErrorBoundary` handler throws or is absent. Errors thrown
-during the fallback's own render are outside the handling boundary and
-propagate past; a second outer boundary can catch them.
+intervening `ErrorBoundary` handler throws or is absent. An error caught
+while the fallback shows (the fallback's own render, its components'
+hooks) is outside the handling boundary: the boundary rethrows it, so it
+propagates past, to an outer `onError` or a second outer boundary,
+instead of rendering the failing fallback again.
 
 ## Class
 
