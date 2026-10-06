@@ -81,6 +81,15 @@ true })` creates an effect owned by nothing. When a computed and an effect
   it owns are both due, the computed runs first. An `asyncComputed` is
   disposed whole by its owner (no longer loading, the abandoned run's result
   ignored).
+- **A computed whose getter writes a source it read ends out of date**: its
+  next read checks its sources and recomputes if one changed since the getter
+  read it (upstream kept the value computed from the old source). An effect
+  that writes the source of a computed it read keeps the computed's value it
+  read, as it keeps a signal's: it runs when a later write changes the
+  computed from that value, not when the value comes back; the computed
+  forwards that write to its readers instead of being recomputed when the run
+  ends. Owl passes the cross-framework conformance suite with no expected
+  failure.
 - **A cleanup that throws while computeds are disposed** does not stop the
   others: on a recompute it is reported as an unhandled rejection, on a
   cascade the dispose throws after releasing everything, and in bulk the
@@ -156,6 +165,19 @@ true })` creates an effect owned by nothing. When a computed and an effect
 
 ### Blockdom and events
 
+- **A bound property** (`t-att-value`, `t-attf-value`, `t-att-checked`,
+  `disabled`, `readOnly`, `selected`, `indeterminate`) is given to its block as
+  its value and its setter runs on every patch (a value is always written, a
+  flag only when the element differs); upstream wraps each in a new
+  `String`/`Boolean` per render. `t-model`'s property is set only when the
+  model changes.
+- **A handler's code is static**: `createBlock(str, [fns])`,
+  `createCatcher(spec, [fns])`; a render gives a handler only its context (a
+  `t-model`'s model in a slot linked by `block-handler-arg-N`), the element
+  reads code, context and model from its block when the event fires, and
+  modifiers come from the key. `config.mainEventHandler` is
+  `(fn, mods, ctx, ev, currentTarget, arg?)`. A render allocates no handler
+  array.
 - **A list empties its parent at once only when its items, one node each,
   and its anchor are all the parent holds** (checked node by node, again
   after the unmount hooks); otherwise it removes them one by one. What a
@@ -208,7 +230,8 @@ true })` creates an effect owned by nothing. When a computed and an effect
 ## Odoo integration contract
 
 Odoo reaches into these internals; a refactor must keep their shape:
-A slot descriptor is `{__render, __ctx, __owner, __scope?, ...attrs}`
+Block strings, handler data and `mainEventHandler` are internal; Odoo reads
+none of them. A slot descriptor is `{__render, __ctx, __owner, __scope?, ...attrs}`
 (`__render` static, run with `__owner`), and a t-call body sits in the call
 context under the `zero` / `zeroCtx` helper symbols; Odoo reads none of them.
 `node.renderFn` is an own function, wrapped and called unbound
@@ -239,8 +262,8 @@ snapshot of the committed children; `App.version` + `__info__.hash` scope the te
   owl-runtime `foreign_proxy.test.ts` files run the reactive contract and
   `t-foreach` against each.
 - `owl-core/tests/conformance.test.ts`: the cross-framework reactive
-  conformance suite (`reactive-framework-test-suite`); 176 of 178 core cases,
-  the two deliberate divergences marked as expected failures.
+  conformance suite (`reactive-framework-test-suite`): every case passes, with
+  no expected failure.
 - `owl-compiler/tests/expression_fuzz.test.ts`: random expressions, compiled,
   against native evaluation.
 - `owl-runtime/tests/compiler/template_fuzz.test.ts`: random templates,
