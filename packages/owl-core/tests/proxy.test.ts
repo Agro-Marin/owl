@@ -641,6 +641,13 @@ describe("collections", () => {
     expect([...set.union(setLike)]).toEqual([1, 2, 3]);
   });
 
+  test("a map proxy, or a view of one, has no add method, as a map has none", () => {
+    const map: any = proxy(new Map());
+    expect(map.add).toBeUndefined();
+    expect((observe(new Map(), () => {}) as any).add).toBeUndefined();
+    expect(typeof (proxy(new Set()) as any).add).toBe("function");
+  });
+
   test("forEach hands out the proxy it was called through", () => {
     const shallow = signal.Map(new Map([["a", 1]]));
     const deep = proxy(new Map([["a", 1]]));

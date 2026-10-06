@@ -1116,7 +1116,7 @@ const weakMapMethods: [PropertyKey, MethodFactory][] = [
  */
 const methodFactories: Record<CollectionRawType, Map<PropertyKey, MethodFactory>> = {
   Set: new Map([...setMethods, ...setOperations]),
-  Map: new Map([...setMethods, ...weakMapMethods]),
+  Map: new Map([...setMethods.filter(([key]) => key !== "add"), ...weakMapMethods]),
   WeakMap: new Map(weakMapMethods),
 };
 
