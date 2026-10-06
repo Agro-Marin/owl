@@ -17,7 +17,8 @@ import { makeTestFixture, nextMicroTick, nextTick } from "../helpers";
 // tracked by its parent, no onWillUpdateProps hook may run again for props
 // whose hooks already settled, and a click on any element must run the
 // handlers of that element and its ancestors, with their latest context (the
-// t-on of a component in a loop, of an element in a slot, a memoized item's).
+// t-on of a component in a loop, of an element in a slot, a memoized item's),
+// the synthetic ones (replayed from the document) after the native ones.
 
 function prng(seed: number) {
   let s = seed;
@@ -81,7 +82,7 @@ function makeApp(world: World) {
     }
   }
   class Item extends Component {
-    static template = xml`<li t-on-click="() => this.click('li:' + this.props.list + this.props.id)"><t t-out="this.props.list"/><t t-out="this.props.id"/>:<t t-out="this.props.label"/>:<t t-out="this.state.n"/><t t-if="this.props.isSelected(this.props.id)">*</t></li>`;
+    static template = xml`<li t-on-click="() => this.click('li:' + this.props.list + this.props.id)" t-on-click.synthetic="() => this.click('sli:' + this.props.list + this.props.id)"><t t-out="this.props.list"/><t t-out="this.props.id"/>:<t t-out="this.props.label"/>:<t t-out="this.state.n"/><t t-if="this.props.isSelected(this.props.id)">*</t></li>`;
     props = props();
     click = click;
     state = proxy({ n: 0 });
@@ -93,7 +94,7 @@ function makeApp(world: World) {
     }
   }
   class Box extends Component {
-    static template = xml`<section t-on-click="() => this.click('box')"><t t-call-slot="default"/></section>`;
+    static template = xml`<section t-on-click="() => this.click('box')" t-on-click.synthetic="() => this.click('sbox')"><t t-call-slot="default"/></section>`;
     props = props();
     click = click;
     setup() {
@@ -138,12 +139,12 @@ function makeApp(world: World) {
     static template = xml`
       <div t-on-click="() => this.click('div')">
         <Slow value="this.state.value"/>
-        <ul><t t-foreach="this.state.items" t-as="id" t-key="id"><Item list="'u'" id="id" label="this.state.label" isSelected="this.isSelected" t-on-click="() => this.click('u:' + id + '@' + id_index)"/></t></ul>
+        <ul><t t-foreach="this.state.items" t-as="id" t-key="id"><Item list="'u'" id="id" label="this.state.label" isSelected="this.isSelected" t-on-click="() => this.click('u:' + id + '@' + id_index)" t-on-click.synthetic="() => this.click('su:' + id + '@' + id_index)"/></t></ul>
         <ol><t t-foreach="this.state.items" t-as="id" t-key="id" t-memo="[this.state.label]"><Item list="'o'" id="id" label="this.state.label" isSelected="this.isSelected" t-on-click="() => this.click('o:' + id)"/></t></ol>
         <Box><i t-on-click="() => this.click('slot:' + this.state.value)" t-out="this.state.value"/></Box>
         <Guard armed="this.state.armed"/>
         <Slow t-if="this.state.flag" value="this.state.value * 10"/>
-        <p><u t-on-click="() => this.click('pu')"/></p>
+        <p t-on-click.synthetic="() => this.click('sp')"><u t-on-click="() => this.click('pu')"/></p>
         <a t-on-click="() => this.click('pa')"/>
         <dl><t t-foreach="this.state.rows" t-as="r" t-key="r"><t t-foreach="this.columns(r)" t-as="c" t-key="c"><Cell row="r" col="c"/></t></t></dl>
       </div>`;
@@ -190,9 +191,10 @@ function expectedHtml(state: any, itemStates: Map<string, number>, threw: boolea
 // the handlers a click on the element runs, by its place in expectedHtml: its
 // own, then for an Item's li, its parent's t-on on the Item (with the loop id
 // and index: a stale context gets the index wrong after a reorder), then the
-// ancestors'
+// ancestors'; then the synthetic ones in the same order
 function expectedClicks(target: Element): string[] {
   const ran: string[] = [];
+  const synthetic: string[] = [];
   for (let el: Element | null = target; el && el.tagName !== "DIV"; el = el.parentElement) {
     const text = el.textContent!;
     switch (el.tagName) {
@@ -202,6 +204,7 @@ function expectedClicks(target: Element): string[] {
         // a memoized item keeps the context it was rendered with: its index
         // may be an old one
         ran.push(`li:${list}${id}`, list === "u" ? `u:${id}@${index}` : `o:${id}`);
+        synthetic.push(`sli:${list}${id}`, ...(list === "u" ? [`su:${id}@${index}`] : []));
         break;
       }
       case "B":
@@ -209,6 +212,7 @@ function expectedClicks(target: Element): string[] {
         break;
       case "SECTION":
         ran.push("box");
+        synthetic.push("sbox");
         break;
       case "I":
         ran.push(`slot:${text}`);
@@ -219,13 +223,16 @@ function expectedClicks(target: Element): string[] {
       case "U":
         ran.push("pu");
         break;
+      case "P":
+        synthetic.push("sp");
+        break;
       case "A":
         ran.push("pa");
         break;
     }
   }
   ran.push("div");
-  return ran;
+  return [...ran, ...synthetic];
 }
 
 async function runScenario(seed: number, steps: number) {
