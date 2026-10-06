@@ -1,5 +1,14 @@
 import { compile } from "@odoo/owl-compiler";
-import { Component, mount, onWillUpdateProps, props, signal, xml } from "../../src";
+import {
+  Component,
+  mount,
+  onWillUpdateProps,
+  props,
+  setDebug,
+  setDebugSink,
+  signal,
+  xml,
+} from "../../src";
 import { makeTestFixture, nextTick } from "../helpers";
 
 let fixture: HTMLElement;
@@ -91,6 +100,93 @@ describe("what a render allocates", () => {
     expect(fixture.innerHTML).toBe("<div>1</div>");
     expect(renders.length).toBe(2);
     expect(renders[0]).toBe(renders[1]);
+  });
+});
+
+describe("what updating a child allocates", () => {
+  test("comparing a t-props child's props makes no key array", async () => {
+    class Child extends Component {
+      static template = xml`<i t-out="this.props.a"/>`;
+      props = props();
+    }
+    class Parent extends Component {
+      static template = xml`<Child t-props="this.p()" b="1"/>`;
+      static components = { Child };
+      p = signal({ a: 1 } as any);
+    }
+    const parent = await mount(Parent, fixture);
+    const keys = vi.spyOn(Object, "keys");
+    try {
+      parent.p.set({ a: 1 });
+      await nextTick();
+      expect(keys).not.toHaveBeenCalled();
+    } finally {
+      keys.mockRestore();
+    }
+  });
+
+  test("the fiber channel names the t-props key that came, went or changed", async () => {
+    class Child extends Component {
+      static template = xml`<i/>`;
+    }
+    class Parent extends Component {
+      static template = xml`<Child t-props="this.p()"/>`;
+      static components = { Child };
+      p = signal({ a: 1 } as any);
+    }
+    const parent = await mount(Parent, fixture);
+    const lines: string[] = [];
+    setDebugSink((channel, message) => lines.push(`${channel}: ${message}`));
+    setDebug(["fiber"]);
+    try {
+      for (const p of [{ a: 2 }, { a: 2, b: 1 }, { b: 1 }]) {
+        parent.p.set(p);
+        await nextTick();
+      }
+    } finally {
+      setDebug(false);
+      setDebugSink(null);
+    }
+    expect(lines.filter((line) => line.includes("t-props"))).toEqual([
+      'fiber: t-props: prop "a" changed or went',
+      'fiber: t-props: prop "b" came',
+      'fiber: t-props: prop "a" changed or went',
+    ]);
+  });
+
+  test("a t-props child renders again when a key comes, goes or changes, not otherwise", async () => {
+    let renders = 0;
+    class Child extends Component {
+      static template = xml`<i t-out="Object.keys(this.props).join()"/>`;
+      props = props();
+      setup() {
+        onWillUpdateProps(() => {
+          renders++;
+        });
+      }
+    }
+    class Parent extends Component {
+      static template = xml`<Child t-props="this.p()" b="1"/>`;
+      static components = { Child };
+      p = signal({ a: 1 } as any);
+    }
+    const parent = await mount(Parent, fixture);
+    const steps: [any, number][] = [
+      [{ a: 1 }, 0],
+      [{ a: 2 }, 1],
+      [{ a: 2, c: 3 }, 1],
+      [{ a: 2, c: 3 }, 0],
+      [{ a: 2 }, 1],
+      [{ a: 2, c: undefined }, 1],
+      [{}, 1],
+    ];
+    for (const [p, expected] of steps) {
+      renders = 0;
+      parent.p.set(p);
+      await nextTick();
+      expect(renders).toBe(expected);
+    }
+    expect(fixture.innerHTML).toBe("<i>b</i>");
   });
 });
 

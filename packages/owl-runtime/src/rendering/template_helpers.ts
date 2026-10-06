@@ -388,9 +388,11 @@ function rerenderChild(node: ComponentNode, props: Record<string, any>, parentFi
 
 /**
  * Re-renders an existing child with new props, once its onWillUpdateProps
- * hooks have run (and settled, when one returns a promise). Kept out of the
- * createComponent closure: its own closures would make every call of that
- * closure, a new child included, allocate a context.
+ * hooks have run (and settled, when one returns a promise). It holds no
+ * closure, nor do the createComponent closure's own: a variable a closure
+ * captures makes every call of its function allocate a context, a child
+ * without hooks included. The hooks and the wait are in functions of their
+ * own.
  */
 function updateChild(node: ComponentNode, props: Record<string, any>, parentFiber: Fiber) {
   if (debug.fiber) {
@@ -400,62 +402,83 @@ function updateChild(node: ComponentNode, props: Record<string, any>, parentFibe
     );
   }
   node.forceNextRender = false;
-  const hooks = node.willUpdateProps;
   const fiber = makeChildFiber(node, parentFiber);
   node.fiber = fiber;
   const parentRoot = parentFiber.root!;
   if (node.willPatch.length) parentRoot.willPatch.push(fiber);
   if (node.patched.length) parentRoot.patched.push(fiber);
-  let promises: Promise<any>[] | undefined;
-  if (hooks.length) {
-    // Defaults must reach the hooks but must NOT be stored on node.props:
-    // otherwise the next arePropsDifferent call sees ghost diffs on default
-    // keys and re-renders on every parent render. Consumers (`props.static`/`props`)
-    // already resolve defaults lazily from raw node.props.
-    let nextProps = props;
-    const defaultProps = node.defaultProps;
-    if (defaultProps) {
-      nextProps = Object.assign({}, props);
-      for (const k in defaultProps) {
-        if (nextProps[k] === undefined) {
-          nextProps[k] = defaultProps[k];
-        }
+  const promises = node.willUpdateProps.length ? callWillUpdateProps(node, props) : undefined;
+  if (promises) {
+    renderAfter(promises, node, fiber, props);
+  } else {
+    renderWithProps(node, fiber, props);
+  }
+}
+
+function renderWithProps(node: ComponentNode, fiber: Fiber, props: Record<string, any>) {
+  node.props = props;
+  for (const view of node.propsUpdated) view.update();
+  fiber.render();
+}
+
+/**
+ * Runs a child's onWillUpdateProps hooks, untracked, and returns the
+ * promises they return, if any.
+ */
+function callWillUpdateProps(
+  node: ComponentNode,
+  props: Record<string, any>
+): Promise<any>[] | undefined {
+  // Defaults must reach the hooks but must NOT be stored on node.props:
+  // otherwise the next arePropsDifferent call sees ghost diffs on default
+  // keys and re-renders on every parent render. Consumers (`props.static`/`props`)
+  // already resolve defaults lazily from raw node.props.
+  let nextProps = props;
+  const defaultProps = node.defaultProps;
+  if (defaultProps) {
+    nextProps = Object.assign({}, props);
+    for (const k in defaultProps) {
+      if (nextProps[k] === undefined) {
+        nextProps[k] = defaultProps[k];
       }
     }
-    const component = node.component;
-    untrack(() => {
-      for (const f of hooks) {
-        const r = f.call(component, nextProps);
-        if (r && typeof r.then === "function") {
-          (promises ||= []).push(r);
-        }
+  }
+  const hooks = node.willUpdateProps;
+  const component = node.component;
+  let promises: Promise<any>[] | undefined;
+  untrack(() => {
+    for (const f of hooks) {
+      const r = f.call(component, nextProps);
+      if (r && typeof r.then === "function") {
+        (promises ||= []).push(r);
       }
-    });
-  }
-  if (promises) {
-    const p = promises.length === 1 ? promises[0] : Promise.all(promises);
-    p.then(
-      () => {
-        if (fiber !== node.fiber) {
-          if (debug.fiber) {
-            debugLog(
-              "fiber",
-              `drop ${node.componentName}'s update: superseded, or the component destroyed`
-            );
-          }
-          return;
+    }
+  });
+  return promises;
+}
+
+function renderAfter(
+  promises: Promise<any>[],
+  node: ComponentNode,
+  fiber: Fiber,
+  props: Record<string, any>
+) {
+  const p = promises.length === 1 ? promises[0] : Promise.all(promises);
+  p.then(
+    () => {
+      if (fiber !== node.fiber) {
+        if (debug.fiber) {
+          debugLog(
+            "fiber",
+            `drop ${node.componentName}'s update: superseded, or the component destroyed`
+          );
         }
-        node.props = props;
-        for (const view of node.propsUpdated) view.update();
-        fiber.render();
-      },
-      (error) => handleHookRejection(node, fiber, error)
-    );
-  } else {
-    node.props = props;
-    for (const view of node.propsUpdated) view.update();
-    fiber.render();
-  }
+        return;
+      }
+      renderWithProps(node, fiber, props);
+    },
+    (error) => handleHookRejection(node, fiber, error)
+  );
 }
 
 // A dynamic component's key starts with its class's: a node is reused only by
@@ -488,13 +511,29 @@ function createComponent<P extends Record<string, any>>(
   if (hasSlotsProp) {
     arePropsDifferent = (_1, _2) => true;
   } else if (hasDynamicPropList) {
+    // both are object literals of the template: the same prototype, so the
+    // keys a for-in counts differ as their own keys do, with no key array
     arePropsDifferent = function (props1: P, props2: P) {
+      let n = 0;
       for (let k in props1) {
         if (props1[k] !== props2[k] || !(k in props2)) {
+          if (debug.fiber) {
+            debugLog("fiber", `t-props: prop "${k}" changed or went`);
+          }
+          return true;
+        }
+        n++;
+      }
+      // the others are the same: props2 has a key more once the count runs out
+      for (let k in props2) {
+        if (n-- === 0) {
+          if (debug.fiber) {
+            debugLog("fiber", `t-props: prop "${k}" came`);
+          }
           return true;
         }
       }
-      return Object.keys(props1).length !== Object.keys(props2).length;
+      return n !== 0;
     };
   } else if (hasNoProp) {
     arePropsDifferent = (_1: any, _2: any) => false;
