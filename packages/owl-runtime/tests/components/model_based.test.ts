@@ -36,6 +36,19 @@ interface World {
   threw: boolean;
 }
 
+// a grid keyed by row then column, whose keys join into one string across
+// the two loops (a__b then c, a then b__c) or share a string form (1, "1"):
+// a component key that is not exact gives two cells one key
+const ROWS: unknown[] = ["a__b", "a", "a\u0002:b", "b", "1", 1];
+const COLUMNS = new Map<unknown, unknown[]>([
+  ["a__b", ["c", "x"]],
+  ["a", ["b__c", "b\u0002:c", "x"]],
+  ["a\u0002:b", ["c"]],
+  ["b", []],
+  ["1", ["2"]],
+  [1, ["2", 2]],
+]);
+
 function makeApp(world: World) {
   // a hook call for the props the component already holds is a violation:
   // node.props only ever receives props whose hooks have settled
@@ -87,6 +100,13 @@ function makeApp(world: World) {
       tracked(this);
     }
   }
+  class Cell extends Component {
+    static template = xml`<dd t-out="this.props.row + '|' + this.props.col"/>`;
+    props = props();
+    setup() {
+      tracked(this);
+    }
+  }
   class Bomb extends Component {
     static template = xml`<s t-on-click="() => this.click('bomb')" t-out="this.check()"/>`;
     props = props();
@@ -125,8 +145,9 @@ function makeApp(world: World) {
         <Slow t-if="this.state.flag" value="this.state.value * 10"/>
         <p><u t-on-click="() => this.click('pu')"/></p>
         <a t-on-click="() => this.click('pa')"/>
+        <dl><t t-foreach="this.state.rows" t-as="r" t-key="r"><t t-foreach="this.columns(r)" t-as="c" t-key="c"><Cell row="r" col="c"/></t></t></dl>
       </div>`;
-    static components = { Slow, Item, Box, Guard };
+    static components = { Slow, Item, Box, Guard, Cell };
     state = proxy({
       value: 0,
       label: "a",
@@ -134,7 +155,9 @@ function makeApp(world: World) {
       selected: 0,
       armed: false,
       items: [1, 2, 3] as number[],
+      rows: ["a__b", "a"] as unknown[],
     });
+    columns = (row: unknown) => COLUMNS.get(row)!;
     isSelected = selector(() => this.state.selected);
     click = click;
     setup() {
@@ -154,7 +177,14 @@ function expectedHtml(state: any, itemStates: Map<string, number>, threw: boolea
       .join("");
   const extra = state.flag ? `<b>${state.value * 10}</b>` : "";
   const guard = threw ? "<em>failed</em>" : "<s>ok</s>";
-  return `<div><b>${state.value}</b><ul>${items("u")}</ul><ol>${items("o")}</ol><section><i>${state.value}</i></section>${guard}${extra}<p><u></u></p><a></a></div>`;
+  const cells = state.rows
+    .map((row: unknown) =>
+      COLUMNS.get(row)!
+        .map((col) => `<dd>${row}|${col}</dd>`)
+        .join("")
+    )
+    .join("");
+  return `<div><b>${state.value}</b><ul>${items("u")}</ul><ol>${items("o")}</ol><section><i>${state.value}</i></section>${guard}${extra}<p><u></u></p><a></a><dl>${cells}</dl></div>`;
 }
 
 // the handlers a click on the element runs, by its place in expectedHtml: its
@@ -210,6 +240,9 @@ async function runScenario(seed: number, steps: number) {
   const Parent = makeApp(world);
   const parent: any = await mount(Parent, fixture);
   const random = prng(seed);
+  // the grid's changes draw from a stream of their own: the other changes
+  // are those the seed drew before the grid
+  const gridRandom = prng(seed * 7919);
   let nextId = 4;
   const itemComponents = () =>
     [...world.live].filter((c: any) => c.constructor.name === "Item") as any[];
@@ -217,6 +250,20 @@ async function runScenario(seed: number, steps: number) {
   for (let step = 0; step < steps; step++) {
     const r = random();
     const state = parent.state;
+    const g = gridRandom();
+    if (g < 0.25) {
+      const row = ROWS[Math.floor(gridRandom() * ROWS.length)];
+      const at = state.rows.indexOf(row);
+      if (at === -1) {
+        state.rows.splice(Math.floor(gridRandom() * (state.rows.length + 1)), 0, row);
+      } else {
+        state.rows.splice(at, 1);
+      }
+      trace.push(`row ${JSON.stringify(row)}`);
+    } else if (g < 0.3) {
+      state.rows.reverse();
+      trace.push(`reverse rows`);
+    }
     if (r < 0.15) {
       state.value++;
       trace.push(`value=${state.value}`);
@@ -302,6 +349,14 @@ async function runScenario(seed: number, steps: number) {
   const items = itemComponents();
   if (items.length !== 2 * parent.state.items.length) {
     problems.push(`${items.length} live Items for ${parent.state.items.length} ids in two lists`);
+  }
+  const cells = [...world.live].filter((c: any) => c.constructor.name === "Cell").length;
+  const expectedCells = parent.state.rows.reduce(
+    (n: number, row: unknown) => n + COLUMNS.get(row)!.length,
+    0
+  );
+  if (cells !== expectedCells) {
+    problems.push(`${cells} live Cells for ${expectedCells} cells in the grid`);
   }
   parent.__owl__.app.destroy();
   if (world.live.size) {

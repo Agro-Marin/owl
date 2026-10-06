@@ -1,4 +1,4 @@
-import { App, Component, proxy } from "../../src";
+import { App, Component, onWillDestroy, proxy } from "../../src";
 import { mount, patch } from "../../src/blockdom";
 import { makeTestFixture, renderToBdom, renderToString } from "../helpers";
 
@@ -76,6 +76,10 @@ const CONTEXT: Scope = {
   words: ["alpha", "b&d"],
   nothing: undefined,
   flag: true,
+  // loop keys that join into one string in nested loops (a__b then c, a then
+  // b__c), or share a string form (1, "1"): what a component key that is not
+  // exact gives two components (the interactive templates loop over them)
+  keys: ["a__b", "a", "b__c", "c", "a\u0002:b", "b\u0002:c", 1, "1"],
 };
 
 // events no t-model listens to: a dispatch runs t-on handlers only
@@ -276,7 +280,11 @@ function generator(random: () => number, interactive = false) {
     const as = pick(["v", "w"]).repeat(depth + 1);
     return {
       kind: "foreach",
-      list: g(pick(["items", "empty", "words"])),
+      list: g(
+        pick(
+          interactive ? ["items", "empty", "words", "keys", "keys"] : ["items", "empty", "words"]
+        )
+      ),
       as,
       children: nodes([...locals, as], depth + 1, inComp),
     };
@@ -556,6 +564,7 @@ const UPDATED: Scope = {
   words: ["b&d"],
   nothing: "now",
   flag: false,
+  keys: ["c", "b__c", "a", 1, "a\u0002:b", "x"],
 };
 
 // attribute order carries no meaning: an attribute set by a patch comes last
@@ -650,12 +659,25 @@ interface World {
   // per key of the model, a function reading it with a set method writing it
   accessors: Record<string, any>;
   log: LogEntry[];
+  // the components alive, and how many times each rendered
+  alive: Set<any>;
+  renders: Map<any, number>;
 }
 
 const MODEL: Scope = { t: "init", c: true, r: "y", s: "z" };
 
 function makeRoot(world: World, comps: Def[]) {
   class Base extends Component {
+    setup() {
+      world.alive.add(this);
+      onWillDestroy(() => world.alive.delete(this));
+      const node = this.__owl__;
+      const render = node.renderFn;
+      node.renderFn = () => {
+        world.renders.set(this, (world.renders.get(this) || 0) + 1);
+        return render();
+      };
+    }
     get m() {
       return world.model;
     }
@@ -837,6 +859,21 @@ function pair(actual: Element, expected: VEl): [Element, VEl][] | string {
   return pairs;
 }
 
+// every component alive is mounted and in its parent's children: two that
+// share a key leave one out, and nothing renders or destroys it from there
+function componentProblems(world: World): string[] {
+  const problems: string[] = [];
+  for (const component of world.alive) {
+    const node = component.__owl__;
+    if (node.status !== 1) {
+      problems.push(`${component.constructor.name} alive but status ${node.status}`);
+    } else if (node.parent && ![...(node.parent.childMap?.values() || [])].includes(node)) {
+      problems.push(`${component.constructor.name} not in its parent's children`);
+    }
+  }
+  return problems;
+}
+
 function stateProblems(pairs: [Element, VEl][], model: Scope): string[] {
   const problems: string[] = [];
   for (const [el, v] of pairs) {
@@ -960,6 +997,8 @@ async function runInteractive({ tree, comps, calls }: Generated): Promise<string
     model: proxy({ ...MODEL }),
     accessors: {},
     log: [],
+    alive: new Set(),
+    renders: new Map(),
   };
   for (const key in MODEL) {
     world.accessors[key] = Object.assign(() => world.model[key], {
@@ -988,7 +1027,7 @@ async function runInteractive({ tree, comps, calls }: Generated): Promise<string
       problems.push(`${stage}: ${pairs}`);
       return null;
     }
-    const found = stateProblems(pairs, refModel);
+    const found = [...componentProblems(world), ...stateProblems(pairs, refModel)];
     if (JSON.stringify({ ...world.model }) !== JSON.stringify(refModel)) {
       found.push(`model: owl ${JSON.stringify(world.model)} ref ${JSON.stringify(refModel)}`);
     }
@@ -1033,14 +1072,23 @@ async function runInteractive({ tree, comps, calls }: Generated): Promise<string
           }
         }
       }
+      const before = new Map(world.renders);
       root.__owl__.render(true);
       await settle(app);
       check("rerender", CONTEXT, false);
+      for (const component of world.alive) {
+        if (world.renders.get(component) === before.get(component)) {
+          problems.push(`rerender: ${component.constructor.name} not rendered by a deep render`);
+        }
+      }
     }
   } catch (error: any) {
     problems.push(`throws ${error.message}`);
   }
   app.destroy();
+  if (world.alive.size) {
+    problems.push(`${world.alive.size} component(s) not destroyed with the app`);
+  }
   if (problems.length) {
     const defs = [...comps, ...calls].map((d) => `\n  ${d.name}: ${toXml(d.body)}`).join("");
     return [`${xml}${defs}\n  ${problems.join("\n  ")}`];
