@@ -186,6 +186,48 @@ function replaceInterpolations(template: string, replacer: (expr: string) => str
 
 // the characters after which a / starts a regular expression, not a division
 const REGEXP_PREFIX_RE = /[(,=:[!&|?{};+\-*%<>~^]/;
+// the words after which the tokenizer reads a / as a regular expression: the
+// keywords an operand follows and the word operators
+const REGEXP_PREFIX_WORDS = new Set([
+  "return",
+  "void",
+  "typeof",
+  "delete",
+  "in",
+  "new",
+  ...Object.keys(WORD_REPLACEMENT),
+]);
+
+/**
+ * Whether a / after the code character at `previous` (-1: none) starts a
+ * regular expression, as the tokenizer decides it: after an operator or an
+ * opening, but not after a ++ or a --, and after a keyword or word operator
+ * that is not a property name.
+ */
+function startsRegExp(str: string, previous: number): boolean {
+  if (previous < 0) {
+    return true;
+  }
+  const char = str[previous];
+  if ((char === "+" || char === "-") && str[previous - 1] === char) {
+    return false;
+  }
+  if (REGEXP_PREFIX_RE.test(char)) {
+    return true;
+  }
+  let start = previous + 1;
+  while (start > 0 && IDENTIFIER_CHAR_RE.test(str[start - 1])) {
+    start--;
+  }
+  if (!REGEXP_PREFIX_WORDS.has(str.slice(start, previous + 1))) {
+    return false;
+  }
+  let before = start - 1;
+  while (before >= 0 && /\s/.test(str[before])) {
+    before--;
+  }
+  return str[before] !== ".";
+}
 
 /**
  * Returns the index of the } that closes the code starting at `start`, past
@@ -193,8 +235,9 @@ const REGEXP_PREFIX_RE = /[(,=:[!&|?{};+\-*%<>~^]/;
  */
 function findClosingBrace(str: string, start: number): number {
   let depth = 0;
-  // the last character of code, for a / to tell a division from a regexp
-  let previous = "";
+  // the index of the last character of code, for a / to tell a division from
+  // a regexp
+  let previous = -1;
   for (let i = start; i < str.length; i++) {
     const char = str[i];
     if (char === "'" || char === '"') {
@@ -208,7 +251,7 @@ function findClosingBrace(str: string, start: number): number {
     } else if (str.startsWith("/*", i) || str.startsWith("//", i)) {
       i = commentEnd(str, i) - 1;
       continue;
-    } else if (char === "/" && (!previous || REGEXP_PREFIX_RE.test(previous))) {
+    } else if (char === "/" && startsRegExp(str, previous)) {
       i = regExpEnd(str, i);
     } else if (char === "{") {
       depth++;
@@ -219,7 +262,7 @@ function findClosingBrace(str: string, start: number): number {
       depth--;
     }
     if (!/\s/.test(char)) {
-      previous = str[i];
+      previous = i;
     }
   }
   throw new OwlError("Invalid expression");

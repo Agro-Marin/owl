@@ -511,6 +511,22 @@ describe("interpolate", () => {
     expect(interpolate("#{ {a: 1}.a } and {{b}}")).toBe("`${{a:1}.a} and ${ctx['b']}`");
   });
 
+  test("a / after a ++, a --, a ) or a ] is a division, after a keyword a regular expression", () => {
+    expect(interpolate("{{ x }} {{ a++ / b }}")).toBe("`${ctx['x']} ${ctx['a']++/ctx['b']}`");
+    expect(interpolate("{{ a-- / b }}")).toBe("(ctx['a']--/ctx['b'])");
+    expect(interpolate("#{ (a) / b } #{ l[0] / b }")).toBe(
+      "`${(ctx['a'])/ctx['b']} ${ctx['l'][0]/ctx['b']}`"
+    );
+    expect(compileExpr("`${ a++ / b }`")).toBe("`${ctx['a']++/ctx['b']}`");
+    expect(compileExpr("`${ f((v) => { return /}/.test(v); }) }`")).toBe(
+      "`${ctx['f']((_v)=>{return/}/.test(_v);})}`"
+    );
+    expect(interpolate("{{ typeof /}/ }}")).toBe("(typeof /}/)");
+    expect(interpolate("{{ o.return / 2 }}{{ o.in/2/1 }}")).toBe(
+      "`${ctx['o'].return/2}${ctx['o'].in/2/1}`"
+    );
+  });
+
   test("an unclosed interpolation is text", () => {
     expect(interpolate("a{{b")).toBe("`a{{b`");
     expect(interpolate("a{{b}")).toBe("`a{{b}`");
