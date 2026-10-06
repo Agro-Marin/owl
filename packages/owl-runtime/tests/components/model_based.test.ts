@@ -14,8 +14,10 @@ import { makeTestFixture, nextMicroTick, nextTick } from "../helpers";
 // Random sequences of state changes, slow onWillUpdateProps hooks resolved in
 // any order, and ticks, against a small tree: once everything settles, the DOM
 // must be the render of the final state, every live component mounted and
-// tracked by its parent, and no onWillUpdateProps hook may run again for props
-// whose hooks already settled.
+// tracked by its parent, no onWillUpdateProps hook may run again for props
+// whose hooks already settled, and a click on any element must run the
+// handlers of that element and its ancestors, with their latest context (the
+// t-on of a component in a loop, of an element in a slot, a memoized item's).
 
 function prng(seed: number) {
   let s = seed;
@@ -27,6 +29,7 @@ function prng(seed: number) {
 
 interface World {
   pending: { resolve: () => void }[];
+  clicks: string[];
   violations: string[];
   live: Set<Component>;
   // whether the bomb's render threw: its boundary shows the fallback from then on
@@ -53,18 +56,21 @@ function makeApp(world: World) {
     world.live.add(component);
     onWillDestroy(() => world.live.delete(component));
   }
+  const click = (entry: string) => world.clicks.push(entry);
 
   class Slow extends Component {
-    static template = xml`<b t-out="this.props.value"/>`;
+    static template = xml`<b t-on-click="() => this.click('slow:' + this.props.value)" t-out="this.props.value"/>`;
     props = props();
+    click = click;
     setup() {
       tracked(this);
       slowUpdates(this, (p) => String(p.value));
     }
   }
   class Item extends Component {
-    static template = xml`<li><t t-out="this.props.list"/><t t-out="this.props.id"/>:<t t-out="this.props.label"/>:<t t-out="this.state.n"/><t t-if="this.props.isSelected(this.props.id)">*</t></li>`;
+    static template = xml`<li t-on-click="() => this.click('li:' + this.props.list + this.props.id)"><t t-out="this.props.list"/><t t-out="this.props.id"/>:<t t-out="this.props.label"/>:<t t-out="this.state.n"/><t t-if="this.props.isSelected(this.props.id)">*</t></li>`;
     props = props();
+    click = click;
     state = proxy({ n: 0 });
     setup() {
       tracked(this);
@@ -74,15 +80,17 @@ function makeApp(world: World) {
     }
   }
   class Box extends Component {
-    static template = xml`<section><t t-call-slot="default"/></section>`;
+    static template = xml`<section t-on-click="() => this.click('box')"><t t-call-slot="default"/></section>`;
     props = props();
+    click = click;
     setup() {
       tracked(this);
     }
   }
   class Bomb extends Component {
-    static template = xml`<s t-out="this.check()"/>`;
+    static template = xml`<s t-on-click="() => this.click('bomb')" t-out="this.check()"/>`;
     props = props();
+    click = click;
     setup() {
       tracked(this);
     }
@@ -108,13 +116,15 @@ function makeApp(world: World) {
   }
   class Parent extends Component {
     static template = xml`
-      <div>
+      <div t-on-click="() => this.click('div')">
         <Slow value="this.state.value"/>
-        <ul><t t-foreach="this.state.items" t-as="id" t-key="id"><Item list="'u'" id="id" label="this.state.label" isSelected="this.isSelected"/></t></ul>
-        <ol><t t-foreach="this.state.items" t-as="id" t-key="id" t-memo="[this.state.label]"><Item list="'o'" id="id" label="this.state.label" isSelected="this.isSelected"/></t></ol>
-        <Box><i t-out="this.state.value"/></Box>
+        <ul><t t-foreach="this.state.items" t-as="id" t-key="id"><Item list="'u'" id="id" label="this.state.label" isSelected="this.isSelected" t-on-click="() => this.click('u:' + id + '@' + id_index)"/></t></ul>
+        <ol><t t-foreach="this.state.items" t-as="id" t-key="id" t-memo="[this.state.label]"><Item list="'o'" id="id" label="this.state.label" isSelected="this.isSelected" t-on-click="() => this.click('o:' + id)"/></t></ol>
+        <Box><i t-on-click="() => this.click('slot:' + this.state.value)" t-out="this.state.value"/></Box>
         <Guard armed="this.state.armed"/>
         <Slow t-if="this.state.flag" value="this.state.value * 10"/>
+        <p><u t-on-click="() => this.click('pu')"/></p>
+        <a t-on-click="() => this.click('pa')"/>
       </div>`;
     static components = { Slow, Item, Box, Guard };
     state = proxy({
@@ -126,6 +136,7 @@ function makeApp(world: World) {
       items: [1, 2, 3] as number[],
     });
     isSelected = selector(() => this.state.selected);
+    click = click;
     setup() {
       tracked(this);
     }
@@ -143,12 +154,59 @@ function expectedHtml(state: any, itemStates: Map<string, number>, threw: boolea
       .join("");
   const extra = state.flag ? `<b>${state.value * 10}</b>` : "";
   const guard = threw ? "<em>failed</em>" : "<s>ok</s>";
-  return `<div><b>${state.value}</b><ul>${items("u")}</ul><ol>${items("o")}</ol><section><i>${state.value}</i></section>${guard}${extra}</div>`;
+  return `<div><b>${state.value}</b><ul>${items("u")}</ul><ol>${items("o")}</ol><section><i>${state.value}</i></section>${guard}${extra}<p><u></u></p><a></a></div>`;
+}
+
+// the handlers a click on the element runs, by its place in expectedHtml: its
+// own, then for an Item's li, its parent's t-on on the Item (with the loop id
+// and index: a stale context gets the index wrong after a reorder), then the
+// ancestors'
+function expectedClicks(target: Element): string[] {
+  const ran: string[] = [];
+  for (let el: Element | null = target; el && el.tagName !== "DIV"; el = el.parentElement) {
+    const text = el.textContent!;
+    switch (el.tagName) {
+      case "LI": {
+        const [, list, id] = text.match(/^([uo])(\d+):/)!;
+        const index = [...el.parentElement!.children].indexOf(el);
+        // a memoized item keeps the context it was rendered with: its index
+        // may be an old one
+        ran.push(`li:${list}${id}`, list === "u" ? `u:${id}@${index}` : `o:${id}`);
+        break;
+      }
+      case "B":
+        ran.push(`slow:${text}`);
+        break;
+      case "SECTION":
+        ran.push("box");
+        break;
+      case "I":
+        ran.push(`slot:${text}`);
+        break;
+      case "S":
+        ran.push("bomb");
+        break;
+      case "U":
+        ran.push("pu");
+        break;
+      case "A":
+        ran.push("pa");
+        break;
+    }
+  }
+  ran.push("div");
+  return ran;
 }
 
 async function runScenario(seed: number, steps: number) {
   const fixture = makeTestFixture();
-  const world: World = { pending: [], violations: [], live: new Set(), threw: false };
+  const world: World = {
+    pending: [],
+    clicks: [],
+    violations: [],
+    live: new Set(),
+    threw: false,
+  };
   const Parent = makeApp(world);
   const parent: any = await mount(Parent, fixture);
   const random = prng(seed);
@@ -231,6 +289,14 @@ async function runScenario(seed: number, steps: number) {
     }
     if (node.parent && ![...(node.parent.childMap?.values() || [])].includes(node)) {
       problems.push(`${component.constructor.name} not in its parent's childMap`);
+    }
+  }
+  for (const el of fixture.querySelectorAll("*")) {
+    world.clicks = [];
+    el.dispatchEvent(new Event("click", { bubbles: true }));
+    const expected = expectedClicks(el);
+    if (world.clicks.join(",") !== expected.join(",")) {
+      problems.push(`click on ${el.outerHTML}: ran ${world.clicks} expected ${expected}`);
     }
   }
   const items = itemComponents();
