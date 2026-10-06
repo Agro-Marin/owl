@@ -134,6 +134,28 @@ function recycleFiber(node: ComponentNode, current: Fiber, root: RootFiber): Fib
 // pattern as nodeErrorHandlers): only sub-roots have entries, and they are
 // GC'd with their node.
 export const subRootHosts = new WeakMap<ComponentNode, ComponentNode>();
+// the other way: the sub-roots each host holds, while they live
+export const hostedSubRoots = new WeakMap<ComponentNode, Set<ComponentNode>>();
+
+// A deep render of a host renders its mounted sub-roots deep too: their
+// content is its template's (a slot), but no child fiber reaches it. Each
+// renders as a root of its own, after the host's pass (see above).
+function renderSubRootsDeep(node: ComponentNode) {
+  const subRoots = hostedSubRoots.get(node);
+  if (subRoots) {
+    for (const subRoot of subRoots) {
+      if (subRoot.status === STATUS.MOUNTED) {
+        if (debug.fiber) {
+          debugLog(
+            "fiber",
+            `deep render of ${node.componentName} reaches its sub-root ${subRoot.componentName}`
+          );
+        }
+        subRoot.render(true);
+      }
+    }
+  }
+}
 
 /**
  * The node whose in-flight render this node's own render must yield to.
@@ -299,6 +321,9 @@ export class Fiber {
           memoResume(outerCollection);
         }
       });
+      if (this.deep && this.bdom) {
+        renderSubRootsDeep(node);
+      }
       const newCounter = root.counter - 1;
       root.counter = newCounter;
       if (debug.fiber) {

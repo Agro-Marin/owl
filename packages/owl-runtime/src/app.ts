@@ -16,7 +16,14 @@ import {
   toRaw,
 } from "@odoo/owl-core";
 import { nodeErrorHandlers } from "./rendering/error_handling";
-import { Fiber, MountFiber, MountOptions, RootFiber, subRootHosts } from "./rendering/fibers";
+import {
+  Fiber,
+  hostedSubRoots,
+  MountFiber,
+  MountOptions,
+  RootFiber,
+  subRootHosts,
+} from "./rendering/fibers";
 import { Scheduler } from "./rendering/scheduler";
 import { TemplateSet, TemplateSetConfig } from "./template_set";
 import { validateTarget } from "./utils";
@@ -164,6 +171,11 @@ export class App extends TemplateSet {
       }
       if (subConfig.host) {
         subRootHosts.set(node, subConfig.host);
+        let subRoots = hostedSubRoots.get(subConfig.host);
+        if (!subRoots) {
+          hostedSubRoots.set(subConfig.host, (subRoots = new Set()));
+        }
+        subRoots.add(node);
       }
     } catch (e) {
       error = e;
@@ -280,6 +292,9 @@ export class App extends TemplateSet {
         }
         destroyed = true;
         this.roots.delete(root);
+        if (subConfig.host && node) {
+          hostedSubRoots.get(subConfig.host)?.delete(node);
+        }
         node?.destroy();
         // The scheduler drops fibers whose node is destroyed, so complete()
         // (and with it onPrepared) will never run. Resolve here instead, so

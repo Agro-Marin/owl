@@ -717,3 +717,26 @@ test("content rendered with its host mounts after the onMounted of that render",
   expect(target.innerHTML).toBe('<span class="content">portaled</span>');
   expect(steps).toEqual(["dialog mounted, content in target: false", "content mounted"]);
 });
+
+test("a deep render renders the components of its content again", async () => {
+  const target = makeOutside("portal-target-deep");
+  target.dataset.testPortal = "1";
+  // not reactive: only a deep render shows a change
+  const data = { label: "a" };
+  class Label extends Component {
+    static template = xml`<b t-out="this.data.label"/>`;
+    data = data;
+  }
+  class Root extends Component {
+    static components = { Portal, Label };
+    static template = xml`<div><Portal target="this.target"><Label/></Portal><Label/></div>`;
+    target = target;
+  }
+  const root = await mount(Root, fixture);
+  await nextTick();
+  expect(fixture.innerHTML + target.innerHTML).toBe("<div><b>a</b></div><b>a</b>");
+  data.label = "b";
+  (root as any).__owl__.render(true);
+  await nextTick();
+  expect(fixture.innerHTML + target.innerHTML).toBe("<div><b>b</b></div><b>b</b>");
+});

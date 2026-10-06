@@ -77,6 +77,10 @@ into the source tree's [scope](scope.md) and plugin chain:
 - **Errors** — exceptions thrown in the portaled subtree (including
   `onWillStart` rejections) propagate to the nearest `onError` handler
   on the Portal's parent chain, the same as in-tree errors.
+- **Deep renders** — a `render(true)` reaching the Portal renders the
+  portaled content deep too, its components included, once the render pass
+  of the Portal is done (as a root of its own). The same holds for a
+  `Suspense`'s content.
 
 What does **not** transfer:
 

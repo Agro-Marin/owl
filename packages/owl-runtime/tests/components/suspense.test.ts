@@ -551,3 +551,23 @@ test("an error nobody handles under Suspense destroys the app, reported as not h
     "lifecycle: destroy app, 2 root(s)",
   ]);
 });
+
+test("a deep render renders the components of its content again", async () => {
+  // not reactive: only a deep render shows a change
+  const data = { label: "a" };
+  class Label extends Component {
+    static template = xml`<b t-out="this.data.label"/>`;
+    data = data;
+  }
+  class Root extends Component {
+    static components = { Suspense, Label };
+    static template = xml`<div><Suspense><Label/></Suspense><Label/></div>`;
+  }
+  const root = await mount(Root, fixture);
+  await nextTick();
+  expect(fixture.innerHTML).toBe("<div><b>a</b><b>a</b></div>");
+  data.label = "b";
+  (root as any).__owl__.render(true);
+  await nextTick();
+  expect(fixture.innerHTML).toBe("<div><b>b</b><b>b</b></div>");
+});
