@@ -71,20 +71,21 @@ function makeSyncedPropSetter(name: string): Setter<HTMLElement> {
 // Main compiler code
 // -----------------------------------------------------------------------------
 
-type BlockType = (data?: any[], children?: (VNode | undefined)[]) => VNode;
-
 type Handlers = readonly (HandlerFn | null)[];
 
-interface ParsedBlock {
-  Block: BlockClass;
-  hasChildren: boolean;
-  handlerN: number;
-  // the block type of a block without handlers
-  block: BlockType | null;
-}
+// a block with handlers is given their code at each call, as its third argument
+type BlockType = (
+  data?: any[],
+  children?: (VNode | undefined)[] | null,
+  handlers?: Handlers
+) => VNode;
 
-const cache: { [key: string]: ParsedBlock } = Object.create(null);
-const NO_HANDLERS: Handlers = [];
+// The block type of each block string, the value itself: a template's
+// functions are made once per App, and the common call, a string seen
+// before and no handlers to check, reads nothing else
+const types: { [key: string]: BlockType } = Object.create(null);
+// the number of handlers of each block string
+const handlerCounts: { [key: string]: number } = Object.create(null);
 
 /**
  * Compiling blocks is a multi-step process:
@@ -98,38 +99,57 @@ const NO_HANDLERS: Handlers = [];
  * 4. make a dynamic block class, which will efficiently collect references and
  *    create/update dynamic locations/children
  *
- * The block class is made once per block string. The code of its handlers
- * (block-handler-N, in the order of N) is static, given here, and each block
- * carries it: its data holds their contexts. Each call with handlers makes a
- * block type (a function): compiled code makes one per block site.
+ * The block class and its type are made once per block string. The code of
+ * its handlers (block-handler-N, in the order of N) is static: each call of
+ * the type gives it (`type(data, children, handlers)`), and each block
+ * carries it; the data holds the handlers' contexts.
  *
  * @param str
- * @param handlers the code of each handler, null for an empty one
- * @returns a new block type, that can build concrete blocks
+ * @param handlers the code of each handler, null for an empty one: checked
+ *   here, against the string's handlers, so that a call can give them as they are
+ * @returns the block type of the string, that can build concrete blocks
  */
-export function createBlock(str: string, handlers: Handlers = NO_HANDLERS): BlockType {
-  const parsed = cache[str] || (cache[str] = parseBlock(str));
-  if (handlers.length !== parsed.handlerN) {
-    throw new OwlError(
-      `Invalid block "${str}": ${parsed.handlerN} handlers, ${handlers.length} given`
-    );
+export function createBlock(str: string, handlers?: Handlers): BlockType {
+  const type = types[str];
+  if (type !== undefined && handlers === undefined) {
+    return type;
   }
-  if (!handlers.length) {
-    return parsed.block || (parsed.block = makeBlockType(parsed, NO_HANDLERS));
-  }
-  for (const fn of handlers) {
-    // an empty handler (`t-on-click.stop=""`) is null
-    if (fn !== null && typeof fn !== "function") {
-      throw new OwlError(`Invalid handler (expected a function, received: '${fn}')`);
-    }
-  }
-  return makeBlockType(parsed, handlers);
+  return makeBlockType(str, handlers);
 }
 
-function makeBlockType({ Block, hasChildren }: ParsedBlock, handlers: Handlers): BlockType {
-  return hasChildren
-    ? (data?: any[], children: (VNode | undefined)[] = []) => new Block(data, handlers, children)
-    : (data?: any[]) => new Block(data, handlers);
+function makeBlockType(str: string, handlers: Handlers | undefined): BlockType {
+  let type = types[str];
+  if (type === undefined) {
+    const { Block, hasChildren, handlerN } = parseBlock(str);
+    if (debug.template) {
+      debugLog("template", `block type made: ${handlerN} handlers, ${str}`);
+    }
+    type = hasChildren
+      ? (data, children = [], handlers) => new Block(data, handlers, children)
+      : (data, children, handlers) => new Block(data, handlers);
+    types[str] = type;
+    handlerCounts[str] = handlerN;
+  }
+  if (handlers !== undefined) {
+    if (handlers.length !== handlerCounts[str]) {
+      throw new OwlError(
+        `Invalid block "${str}": ${handlerCounts[str]} handlers, ${handlers.length} given`
+      );
+    }
+    for (const fn of handlers) {
+      // an empty handler (`t-on-click.stop=""`) is null
+      if (fn !== null && typeof fn !== "function") {
+        throw new OwlError(`Invalid handler (expected a function, received: '${fn}')`);
+      }
+    }
+  }
+  return type;
+}
+
+interface ParsedBlock {
+  Block: BlockClass;
+  hasChildren: boolean;
+  handlerN: number;
 }
 
 function parseBlock(str: string): ParsedBlock {
@@ -149,10 +169,9 @@ function parseBlock(str: string): ParsedBlock {
 
   // step 3: build the block class
   return {
-    Block: buildBlock(tree.el as HTMLElement, context),
+    Block: buildBlock(tree.el as HTMLElement, context, str),
     hasChildren: context.children.length > 0,
     handlerN: context.handlers.length,
-    block: null,
   };
 }
 
@@ -603,8 +622,8 @@ function updateCtx(ctx: BlockCtx, tree: IntermediateTree) {
 // building the concrete block class
 // -----------------------------------------------------------------------------
 
-function buildBlock(template: HTMLElement, ctx: BlockCtx): BlockClass {
-  let B = createBlockClass(template, ctx);
+function buildBlock(template: HTMLElement, ctx: BlockCtx, str: string): BlockClass {
+  let B = createBlockClass(template, ctx, str);
 
   if (ctx.children.length) {
     B = class extends B {
@@ -622,7 +641,7 @@ function buildBlock(template: HTMLElement, ctx: BlockCtx): BlockClass {
 type Constructor<T> = new (...args: any[]) => T;
 type BlockClass = Constructor<VNode<any>>;
 
-function createBlockClass(template: HTMLElement, ctx: BlockCtx): BlockClass {
+function createBlockClass(template: HTMLElement, ctx: BlockCtx, str: string): BlockClass {
   const { refN, collectors, children, locations, cbRefs } = ctx;
   const locN = locations.length;
   const childN = children.length;
@@ -747,8 +766,18 @@ function createBlockClass(template: HTMLElement, ctx: BlockCtx): BlockClass {
           locSetters[i].call(refs[locRefIdxs[i]], data[i]);
         }
       }
-      for (let i = 0; i < handlerN; i++) {
-        handlerSetups[i].call(refs[handlerRefIdxs[i]] as HTMLElement, this);
+      if (handlerN) {
+        // the type takes the handlers at each call: a call without them
+        // fails here, not at the first event
+        const handlers = this.handlers;
+        if (handlers?.length !== handlerN) {
+          throw new OwlError(
+            `Invalid block "${str}": ${handlerN} handlers, ${handlers ? handlers.length : 0} given`
+          );
+        }
+        for (let i = 0; i < handlerN; i++) {
+          handlerSetups[i].call(refs[handlerRefIdxs[i]] as HTMLElement, this);
+        }
       }
 
       // preparing all children (off-DOM, before inserting el into the live document)

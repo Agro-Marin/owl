@@ -226,8 +226,10 @@ exports[`misc > other complex template 1`] = `
   const comp1 = createComponent(app, \`BundlesList\`, true, false, false, ["bundles","category_custom_views","search"]);
   const comp2 = createComponent(app, \`BundlesList\`, true, false, false, ["bundles","search"]);
   
-  let block1 = createBlock(\`<div><header><nav class="navbar navbar-expand-md navbar-light bg-light"><a block-attribute-0="href"><b style="color:#777;"><block-child-0/></b></a><button type="button" class="navbar-toggler" data-toggle="collapse" data-target="#top_menu_collapse"><span class="navbar-toggler-icon"/></button><div class="collapse navbar-collapse" id="top_menu_collapse" aria-expanded="false"><ul class="nav navbar-nav ml-auto text-right" id="top_menu"><block-child-1/><li class="nav-item divider"/><block-child-2/></ul><div><div class="input-group input-group-sm"><div class="input-group-prepend input-group-sm"><button class="btn btn-default fa fa-cog" title="Settings" block-handler-1="click"/><button class="btn btn-default" block-handler-2="click"> More </button><block-child-3/></div><input class="form-control" type="text" placeholder="Search" aria-label="Search" name="search" block-sync-property-3="value" block-handler-4="keyup" block-handler-5="change" block-ref="6"/><div class="input-group-append"><button class="btn btn-default fa fa-eraser" block-handler-7="click"/></div></div></div></div></nav></header><div class="container-fluid" block-ref="8"><div class="row"><div class="form-group col-md-6"><h5>Triggers</h5><block-child-4/></div></div></div><div class="container-fluid frontend"><div class="row"><div class="col-md-12"><block-child-5/></div><div class="col-md-12"><block-child-6/><block-child-7/><block-child-8/></div></div></div></div>\`, [hdlr_fn2, hdlr_fn3, hdlr_fn4, hdlr_fn4, hdlr_fn5]);
-  let block4 = createBlock(\`<li class="nav-item"><a class="nav-link" href="#" block-handler-0="click"><block-child-0/></a></li>\`, [hdlr_fn1]);
+  const block1_handlers = [hdlr_fn2, hdlr_fn3, hdlr_fn4, hdlr_fn4, hdlr_fn5];
+  let block1 = createBlock(\`<div><header><nav class="navbar navbar-expand-md navbar-light bg-light"><a block-attribute-0="href"><b style="color:#777;"><block-child-0/></b></a><button type="button" class="navbar-toggler" data-toggle="collapse" data-target="#top_menu_collapse"><span class="navbar-toggler-icon"/></button><div class="collapse navbar-collapse" id="top_menu_collapse" aria-expanded="false"><ul class="nav navbar-nav ml-auto text-right" id="top_menu"><block-child-1/><li class="nav-item divider"/><block-child-2/></ul><div><div class="input-group input-group-sm"><div class="input-group-prepend input-group-sm"><button class="btn btn-default fa fa-cog" title="Settings" block-handler-1="click"/><button class="btn btn-default" block-handler-2="click"> More </button><block-child-3/></div><input class="form-control" type="text" placeholder="Search" aria-label="Search" name="search" block-sync-property-3="value" block-handler-4="keyup" block-handler-5="change" block-ref="6"/><div class="input-group-append"><button class="btn btn-default fa fa-eraser" block-handler-7="click"/></div></div></div></div></nav></header><div class="container-fluid" block-ref="8"><div class="row"><div class="form-group col-md-6"><h5>Triggers</h5><block-child-4/></div></div></div><div class="container-fluid frontend"><div class="row"><div class="col-md-12"><block-child-5/></div><div class="col-md-12"><block-child-6/><block-child-7/><block-child-8/></div></div></div></div>\`, block1_handlers);
+  const block4_handlers = [hdlr_fn1];
+  let block4 = createBlock(\`<li class="nav-item"><a class="nav-link" href="#" block-handler-0="click"><block-child-0/></a></li>\`, block4_handlers);
   let block7 = createBlock(\`<li class="nav-item dropdown"><b><a class="nav-link" block-attribute-0="href">Login</a></b></li>\`);
   let block10 = createBlock(\`<li class="nav-item"><a href="/runbot/errors" class="nav-link text-danger" block-attribute-0="title"><i class="fa fa-bug"/><block-child-0/></a></li>\`);
   let block12 = createBlock(\`<li class="nav-item divider"/>\`);
@@ -236,8 +238,10 @@ exports[`misc > other complex template 1`] = `
   let block16 = createBlock(\`<li class="nav-item dropdown"><a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown"><b><span><block-child-0/></span></b></a><div class="dropdown-menu js_usermenu" role="menu"><a class="dropdown-item" id="o_logout" role="menuitem" block-attribute-0="href">Logout</a><a class="dropdown-item" role="menuitem" block-attribute-1="href">Web</a></div></li>\`);
   let block18 = createBlock(\`<select class="custom-select" name="category" id="category"><block-child-0/></select>\`);
   let block20 = createBlock(\`<option block-attribute-0="value" block-sync-property-1="selected"><block-child-0/></option>\`);
-  let block25 = createBlock(\`<div class="form-check"><input class="form-check-input" type="checkbox" block-attribute-0="name" block-attribute-1="id" block-sync-property-2="checked" block-attribute-3="data-trigger_id" block-handler-4="change"/><label class="form-check-label" block-attribute-5="for"><block-child-0/></label></div>\`, [hdlr_fn6]);
-  let block27 = createBlock(\`<div><button class="btn btn-sm btn-default" block-handler-0="click">All</button><button class="btn btn-sm btn-default" block-handler-1="click">None</button><button class="btn btn-sm btn-info" block-handler-2="click">Default</button><button class="btn btn-sm btn-default" block-handler-3="click">Close</button></div>\`, [hdlr_fn7, hdlr_fn8, hdlr_fn9, hdlr_fn2]);
+  const block25_handlers = [hdlr_fn6];
+  let block25 = createBlock(\`<div class="form-check"><input class="form-check-input" type="checkbox" block-attribute-0="name" block-attribute-1="id" block-sync-property-2="checked" block-attribute-3="data-trigger_id" block-handler-4="change"/><label class="form-check-label" block-attribute-5="for"><block-child-0/></label></div>\`, block25_handlers);
+  const block27_handlers = [hdlr_fn7, hdlr_fn8, hdlr_fn9, hdlr_fn2];
+  let block27 = createBlock(\`<div><button class="btn btn-sm btn-default" block-handler-0="click">All</button><button class="btn btn-sm btn-default" block-handler-1="click">None</button><button class="btn btn-sm btn-info" block-handler-2="click">Default</button><button class="btn btn-sm btn-default" block-handler-3="click">Close</button></div>\`, block27_handlers);
   let block29 = createBlock(\`<div class="alert alert-warning" role="alert"><block-child-0/> </div>\`);
   let block31 = createBlock(\`<div class="mb32"><h1>No project</h1></div>\`);
   let block32 = createBlock(\`<div><block-child-0/><block-child-1/></div>\`);
@@ -253,7 +257,7 @@ exports[`misc > other complex template 1`] = `
       ctx["project"] = k_block3[i1];
       const key1 = ctx['project'].id;
       const b5 = safeOutput(ctx['project'].name, node, key, "\\u00022", 1, key1);
-      c_block3[i1] = withKey(block4([ctx], [b5]), key1);
+      c_block3[i1] = withKey(block4([ctx], [b5], block4_handlers), key1);
     }
     b3 = list(c_block3);
     if (ctx['user']) {
@@ -315,12 +319,12 @@ exports[`misc > other complex template 1`] = `
           let attr9 = attrValue(ctx['trigger'].id);
           let attr10 = \`trigger_\${ctx['trigger'].id}\`;
           const b26 = safeOutput(ctx['trigger'].name, node, key, "\\u00026", 1, key1);
-          b25 = block25([attr7, attr8, prop3, attr9, ctx, attr10], [b26]);
+          b25 = block25([attr7, attr8, prop3, attr9, ctx, attr10], [b26], block25_handlers);
         }
         c_block23[i1] = withKey(multi([b25]), key1);
       }
       const b23 = list(c_block23);
-      const b27 = block27([ctx, ctx, ctx, ctx]);
+      const b27 = block27([ctx, ctx, ctx, ctx], null, block27_handlers);
       b22 = multi([b23, b27]);
     }
     if (ctx['load_infos']) {
@@ -337,7 +341,7 @@ exports[`misc > other complex template 1`] = `
       const b34 = comp2({bundles: ctx['bundles'].dev,search: ctx['search']}, key + \`\\u000210\`, node, this, null);
       b32 = block32([], [b33, b34]);
     }
-    return block1([attr1, ctx, ctx, prop2, ctx, ctx, ref1, ctx, ref2], [b2, b3, b6, b18, b22, b28, b29, b31, b32]);
+    return block1([attr1, ctx, ctx, prop2, ctx, ctx, ref1, ctx, ref2], [b2, b3, b6, b18, b22, b28, b29, b31, b32], block1_handlers);
   }
 }"
 `;

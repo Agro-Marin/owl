@@ -47,6 +47,8 @@ export interface Elem {
   // t-att-value, t-att-checked, t-att-disabled: properties
   bound: [string, string][];
   model: Model | null;
+  // written with t-tag (its block type is made per tag)
+  dynTag?: boolean;
 }
 // a component or a t-call template: one per use
 export interface Def {
@@ -146,6 +148,9 @@ export function generator(random: () => number, interactive = false) {
   // a component's template reads the values through `this`
   const g = (name: string) => (interactive ? `this.${name}` : name);
   let handlerId = 0;
+  // every third plain element of an interactive template is written with
+  // t-tag: a count, no draw, so that a seed generates the templates it did
+  let plainElements = 0;
   let setId = 0;
   let portals = 0;
   let suspenses = 0;
@@ -390,6 +395,7 @@ export function generator(random: () => number, interactive = false) {
       el.children = nodes(inner);
       if (interactive) {
         el.on = handlers(env);
+        el.dynTag = ++plainElements % 3 === 0;
       }
       return el;
     }
@@ -478,8 +484,12 @@ export function nodeXml(n: TNode): string {
         const target = row ? `${row}.v` : `this.${proxy ? "m" : "ms"}.${MODEL_KEY[kind]}`;
         attrs.push(`t-model${suffix}="${target}"`);
       }
-      const open = `${n.tag}${attrs.length ? " " + attrs.join(" ") : ""}${onXml(n.on)}`;
-      return `<${open}>${toXml(n.children)}</${n.tag}>`;
+      const tag = n.dynTag ? "t" : n.tag;
+      if (n.dynTag) {
+        attrs.unshift(`t-tag="'${n.tag}'"`);
+      }
+      const open = `${tag}${attrs.length ? " " + attrs.join(" ") : ""}${onXml(n.on)}`;
+      return `<${open}>${toXml(n.children)}</${tag}>`;
     }
     case "if": {
       let out = "";

@@ -552,11 +552,12 @@ exports[`refs > refs and t-key 1`] = `
   let { keyOf, createRef } = helpers;
   const hdlr_fn1 = (ctx)=>ctx['this'].state.renderId++;
   
-  let block2 = createBlock(\`<button block-handler-0="click"/>\`, [hdlr_fn1]);
+  const block2_handlers = [hdlr_fn1];
+  let block2 = createBlock(\`<button block-handler-0="click"/>\`, block2_handlers);
   let block3 = createBlock(\`<p block-ref="0"/>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = block2([ctx]);
+    const b2 = block2([ctx], null, block2_handlers);
     const tKey_1 = keyOf(ctx['this'].state.renderId);
     let ref1 = createRef(ctx['this'].root, node);
     const b3 = toggler(tKey_1, block3([ref1]));
@@ -574,11 +575,12 @@ exports[`refs > refs are properly bound in slots 1`] = `
   const comp1 = createComponent(app, \`Dialog\`, true, true, false, []);
   
   let block1 = createBlock(\`<div><span class="counter"><block-child-0/></span><block-child-1/></div>\`);
-  let block3 = createBlock(\`<button block-handler-0="click" block-ref="1">do something</button>\`, [hdlr_fn1]);
+  const block3_handlers = [hdlr_fn1];
+  let block3 = createBlock(\`<button block-handler-0="click" block-ref="1">do something</button>\`, block3_handlers);
   
   function slot1(ctx, node, key = "") {
     let ref1 = createRef(ctx['this'].button, node);
-    return block3([ctx, ref1]);
+    return block3([ctx, ref1], null, block3_handlers);
   }
   
   return function template(ctx, node, key = "") {

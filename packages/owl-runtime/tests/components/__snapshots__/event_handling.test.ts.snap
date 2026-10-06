@@ -6,10 +6,11 @@ exports[`a handler receives the event alone, with no trailing argument 1`] = `
   let { text, createBlock, list, multi, html, toggler } = bdom;
   const hdlr_fn1 = (ctx,..._args)=>ctx['this'].onClick(..._args);
   
-  let block1 = createBlock(\`<button block-handler-0="click">x</button>\`, [hdlr_fn1]);
+  const block1_handlers = [hdlr_fn1];
+  let block1 = createBlock(\`<button block-handler-0="click">x</button>\`, block1_handlers);
   
   return function template(ctx, node, key = "") {
-    return block1([ctx]);
+    return block1([ctx], null, block1_handlers);
   }
 }"
 `;
@@ -21,10 +22,11 @@ exports[`event handling > Invalid handler throws an error 1`] = `
   let { callHandler } = helpers;
   const hdlr_fn1 = (ctx, ev) => callHandler(ctx['this'].dosomething, ctx, ev);
   
-  let block1 = createBlock(\`<button block-handler-0="click">click</button>\`, [hdlr_fn1]);
+  const block1_handlers = [hdlr_fn1];
+  let block1 = createBlock(\`<button block-handler-0="click">click</button>\`, block1_handlers);
   
   return function template(ctx, node, key = "") {
-    return block1([ctx]);
+    return block1([ctx], null, block1_handlers);
   }
 }"
 `;
@@ -41,15 +43,17 @@ exports[`event handling > each element runs its own handler when a child block s
   const hdlr_fn6 = (ctx)=>ctx['this'].log('sliderkey');
   const hdlr_fn7 = (ctx)=>ctx['this'].log('input');
   
-  let block1 = createBlock(\`<div class="root" block-handler-0="click" block-handler-1="keydown"><div class="area" block-handler-2="pointerdown"><div id="pointer" block-handler-3="keydown"/></div><block-child-0/><input class="hex" block-handler-4="input"/></div>\`, [hdlr_fn1, hdlr_fn2, hdlr_fn3, hdlr_fn4, hdlr_fn7]);
-  let block2 = createBlock(\`<div class="slider" block-handler-0="pointerdown"><div class="sp" block-handler-1="keydown"/></div>\`, [hdlr_fn5, hdlr_fn6]);
+  const block1_handlers = [hdlr_fn1, hdlr_fn2, hdlr_fn3, hdlr_fn4, hdlr_fn7];
+  let block1 = createBlock(\`<div class="root" block-handler-0="click" block-handler-1="keydown"><div class="area" block-handler-2="pointerdown"><div id="pointer" block-handler-3="keydown"/></div><block-child-0/><input class="hex" block-handler-4="input"/></div>\`, block1_handlers);
+  const block2_handlers = [hdlr_fn5, hdlr_fn6];
+  let block2 = createBlock(\`<div class="slider" block-handler-0="pointerdown"><div class="sp" block-handler-1="keydown"/></div>\`, block2_handlers);
   
   return function template(ctx, node, key = "") {
     let b2;
     if (ctx['this'].show) {
-      b2 = block2([ctx, ctx]);
+      b2 = block2([ctx, ctx], null, block2_handlers);
     }
-    return block1([ctx, ctx, ctx, ctx, ctx], [b2]);
+    return block1([ctx, ctx, ctx, ctx, ctx], [b2], block1_handlers);
   }
 }"
 `;
@@ -61,10 +65,11 @@ exports[`event handling > handler is not called if component is destroyed 1`] = 
   let { callHandler } = helpers;
   const hdlr_fn1 = (ctx, ev) => callHandler(ctx['this'].click, ctx, ev);
   
-  let block1 = createBlock(\`<span block-handler-0="click"/>\`, [hdlr_fn1]);
+  const block1_handlers = [hdlr_fn1];
+  let block1 = createBlock(\`<span block-handler-0="click"/>\`, block1_handlers);
   
   return function template(ctx, node, key = "") {
-    return block1([ctx]);
+    return block1([ctx], null, block1_handlers);
   }
 }"
 `;
@@ -77,12 +82,13 @@ exports[`event handling > handler receive the event as argument 1`] = `
   const hdlr_fn1 = (ctx, ev) => callHandler(ctx['this'].inc, ctx, ev);
   const comp1 = createComponent(app, \`Child\`, true, false, false, []);
   
-  let block1 = createBlock(\`<span block-handler-0="click"><block-child-0/><block-child-1/></span>\`, [hdlr_fn1]);
+  const block1_handlers = [hdlr_fn1];
+  let block1 = createBlock(\`<span block-handler-0="click"><block-child-0/><block-child-1/></span>\`, block1_handlers);
   
   return function template(ctx, node, key = "") {
     const b2 = comp1({}, key + \`\\u00021\`, node, this, null);
     const b3 = safeOutput(ctx['this'].state.value, node, key, "\\u00022");
-    return block1([ctx], [b2, b3]);
+    return block1([ctx], [b2, b3], block1_handlers);
   }
 }"
 `;
@@ -107,10 +113,11 @@ exports[`event handling > handler works when app is mounted in an iframe 1`] = `
   let { callHandler } = helpers;
   const hdlr_fn1 = (ctx, ev) => callHandler(ctx['this'].inc, ctx, ev);
   
-  let block1 = createBlock(\`<span block-handler-0="click">click me</span>\`, [hdlr_fn1]);
+  const block1_handlers = [hdlr_fn1];
+  let block1 = createBlock(\`<span block-handler-0="click">click me</span>\`, block1_handlers);
   
   return function template(ctx, node, key = "") {
-    return block1([ctx]);
+    return block1([ctx], null, block1_handlers);
   }
 }"
 `;
@@ -141,10 +148,11 @@ exports[`event handling > input blur event is not called if component is destroy
   let { callHandler } = helpers;
   const hdlr_fn1 = (ctx, ev) => callHandler(ctx['this'].blur, ctx, ev);
   
-  let block1 = createBlock(\`<input block-handler-0="blur"/>\`, [hdlr_fn1]);
+  const block1_handlers = [hdlr_fn1];
+  let block1 = createBlock(\`<input block-handler-0="blur"/>\`, block1_handlers);
   
   return function template(ctx, node, key = "") {
-    return block1([ctx]);
+    return block1([ctx], null, block1_handlers);
   }
 }"
 `;
@@ -157,7 +165,8 @@ exports[`event handling > objects from scope are properly captured by t-on 1`] =
   const hdlr_fn1 = (ctx,_ev)=>ctx['this'].onClick(ctx['item'].val,_ev);
   
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
-  let block3 = createBlock(\`<div class="item" block-handler-0="click"/>\`, [hdlr_fn1]);
+  const block3_handlers = [hdlr_fn1];
+  let block3 = createBlock(\`<div class="item" block-handler-0="click"/>\`, block3_handlers);
   
   return function template(ctx, node, key = "") {
     const ctx1 = ctx;
@@ -166,7 +175,7 @@ exports[`event handling > objects from scope are properly captured by t-on 1`] =
       let ctx = Object.create(ctx1);
       ctx["item"] = k_block2[i1];
       const key1 = ctx['item'];
-      c_block2[i1] = withKey(block3([ctx]), key1);
+      c_block2[i1] = withKey(block3([ctx], null, block3_handlers), key1);
     }
     const b2 = list(c_block2);
     return block1([], [b2]);
@@ -181,11 +190,12 @@ exports[`event handling > support for callable expression in event handler 1`] =
   let { safeOutput, callHandler } = helpers;
   const hdlr_fn1 = (ctx, ev) => callHandler(ctx['this'].obj.onInput, ctx, ev);
   
-  let block1 = createBlock(\`<div><block-child-0/><input type="text" block-handler-0="input"/></div>\`, [hdlr_fn1]);
+  const block1_handlers = [hdlr_fn1];
+  let block1 = createBlock(\`<div><block-child-0/><input type="text" block-handler-0="input"/></div>\`, block1_handlers);
   
   return function template(ctx, node, key = "") {
     const b2 = safeOutput(ctx['this'].state.value, node, key, "\\u00021");
-    return block1([ctx], [b2]);
+    return block1([ctx], [b2], block1_handlers);
   }
 }"
 `;
@@ -198,7 +208,8 @@ exports[`event handling > t-on with handler bound to dynamic argument on a t-for
   const hdlr_fn1 = (ctx,_ev)=>ctx['this'].onClick(ctx['item'],_ev);
   
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
-  let block3 = createBlock(\`<div class="item" block-handler-0="click"/>\`, [hdlr_fn1]);
+  const block3_handlers = [hdlr_fn1];
+  let block3 = createBlock(\`<div class="item" block-handler-0="click"/>\`, block3_handlers);
   
   return function template(ctx, node, key = "") {
     const ctx1 = ctx;
@@ -207,7 +218,7 @@ exports[`event handling > t-on with handler bound to dynamic argument on a t-for
       let ctx = Object.create(ctx1);
       ctx["item"] = k_block2[i1];
       const key1 = ctx['item'];
-      c_block2[i1] = withKey(block3([ctx]), key1);
+      c_block2[i1] = withKey(block3([ctx], null, block3_handlers), key1);
     }
     const b2 = list(c_block2);
     return block1([], [b2]);

@@ -64,8 +64,14 @@ test("do not catch events outside of itself", async () => {
 });
 
 describe("synthetic events follow native propagation", () => {
+  // a block type given its handlers at each call, as compiled code does
+  const withHandlers = (str: string, handlers: any[]) => {
+    const type = createBlock(str, handlers);
+    return (data: any[]) => type(data, null, handlers);
+  };
+
   const outerInner = () =>
-    createBlock(
+    withHandlers(
       '<div block-handler-0="click.synthetic"><p block-handler-1="click.synthetic">x</p></div>',
       [run, run]
     );
@@ -82,7 +88,7 @@ describe("synthetic events follow native propagation", () => {
   });
 
   const twoOnInner = (modifier = "") =>
-    createBlock(
+    withHandlers(
       `<div block-handler-0="click.synthetic"><p block-handler-1="click.synthetic${modifier}" block-handler-2="click.synthetic">x</p></div>`,
       [run, run, run]
     );
@@ -143,11 +149,15 @@ describe("synthetic events follow native propagation", () => {
 
   test("capture handlers run outermost first", async () => {
     const calls: string[] = [];
+    const block_handlers = [run, run];
     const block = createBlock(
       '<div block-handler-0="click.synthetic.capture"><p block-handler-1="click.synthetic.capture">x</p></div>',
-      [run, run]
+      block_handlers
     );
-    mount(block([() => calls.push("outer"), () => calls.push("inner")]), fixture);
+    mount(
+      block([() => calls.push("outer"), () => calls.push("inner")], null, block_handlers),
+      fixture
+    );
     fixture.querySelector("p")!.click();
     expect(calls).toEqual(["outer", "inner"]);
   });
@@ -155,43 +165,53 @@ describe("synthetic events follow native propagation", () => {
   test("inside an open shadow root", async () => {
     const shadow = fixture.attachShadow({ mode: "open" });
     let n = 0;
-    const block = createBlock('<p block-handler-0="click.synthetic">x</p>', [run]);
-    mount(block([() => n++]), shadow as any);
+    const block_handlers = [run];
+    const block = createBlock('<p block-handler-0="click.synthetic">x</p>', block_handlers);
+    mount(block([() => n++], null, block_handlers), shadow as any);
     (shadow.firstChild as HTMLElement).click();
     expect(n).toBe(1);
   });
 
   test("passive and other handlers of an event are replayed in one pass, in path order", async () => {
     const calls: string[] = [];
+    const block_handlers = [run, run];
     const block = createBlock(
       '<div block-handler-0="keyup.synthetic"><p block-handler-1="keyup.synthetic.passive">x</p></div>',
-      [run, run]
+      block_handlers
     );
     const outer = () => calls.push("outer");
-    const tree = block([outer, () => calls.push("inner")]);
+    const tree = block([outer, () => calls.push("inner")], null, block_handlers);
     mount(tree, fixture);
     const p = fixture.querySelector("p")!;
     p.dispatchEvent(new Event("keyup", { bubbles: true }));
     expect(calls).toEqual(["inner", "outer"]);
     calls.length = 0;
-    patch(tree, block([outer, (ev: Event) => (calls.push("inner"), ev.stopPropagation())]));
+    patch(
+      tree,
+      block(
+        [outer, (ev: Event) => (calls.push("inner"), ev.stopPropagation())],
+        null,
+        block_handlers
+      )
+    );
     p.dispatchEvent(new Event("keyup", { bubbles: true }));
     expect(calls).toEqual(["inner"]);
   });
 
   test("a passive handler cannot prevent the default when the listener is not passive", async () => {
+    const block_handlers = [run, run];
     const block = createBlock(
       '<div block-handler-0="keypress.synthetic"><p block-handler-1="keypress.synthetic.passive">x</p></div>',
-      [run, run]
+      block_handlers
     );
     const prevent = (ev: Event) => ev.preventDefault();
-    const tree = block([() => {}, prevent]);
+    const tree = block([() => {}, prevent], null, block_handlers);
     mount(tree, fixture);
     const p = fixture.querySelector("p")!;
     const fromPassive = new Event("keypress", { bubbles: true, cancelable: true });
     p.dispatchEvent(fromPassive);
     expect(fromPassive.defaultPrevented).toBe(false);
-    patch(tree, block([prevent, () => {}]));
+    patch(tree, block([prevent, () => {}], null, block_handlers));
     const fromOther = new Event("keypress", { bubbles: true, cancelable: true });
     p.dispatchEvent(fromOther);
     expect(fromOther.defaultPrevented).toBe(true);
@@ -199,9 +219,10 @@ describe("synthetic events follow native propagation", () => {
 
   test("a composed event from a shadow root: each root replays its own nodes", async () => {
     const calls: string[] = [];
+    const outerBlock_handlers = [run, run];
     const outerBlock = createBlock(
       '<div block-handler-0="mouseover.synthetic.capture" block-handler-1="mouseover.synthetic"><block-child-0/></div>',
-      [run, run]
+      outerBlock_handlers
     );
     const host = document.createElement("section");
     mount(
@@ -210,16 +231,18 @@ describe("synthetic events follow native propagation", () => {
           (ev: Event) => calls.push(`outer capture ${(ev.target as Element).tagName}`),
           () => calls.push("outer bubble"),
         ],
-        []
+        [],
+        outerBlock_handlers
       ),
       fixture
     );
     fixture.firstChild!.appendChild(host);
     host.addEventListener("mouseover", () => calls.push("host"));
     const shadow = host.attachShadow({ mode: "open" });
+    const inner_handlers = [run, run];
     const inner = createBlock(
       '<p block-handler-0="mouseover.synthetic.capture.self" block-handler-1="mouseover.synthetic"><block-child-0/></p>',
-      [run, run]
+      inner_handlers
     );
     const catcher = createCatcher({ "mouseover.synthetic.capture": 0 }, [
       (ctx: any, ev: Event) => calls.push(`catcher ${(ev.target as Element).tagName}`),
@@ -231,7 +254,8 @@ describe("synthetic events follow native propagation", () => {
           (ev: Event) => calls.push(`inner capture ${(ev.target as Element).tagName}`),
           () => calls.push("inner bubble"),
         ],
-        [catcher(span(), {})]
+        [catcher(span(), {})],
+        inner_handlers
       ),
       shadow as any
     );
@@ -261,17 +285,26 @@ describe("synthetic events follow native propagation", () => {
   test("a capture handler in a closed shadow root runs for a composed event", async () => {
     const shadow = fixture.attachShadow({ mode: "closed" });
     let n = 0;
-    const block = createBlock('<p block-handler-0="mouseout.synthetic.capture">x</p>', [run]);
-    mount(block([() => n++]), shadow as any);
+    const block_handlers = [run];
+    const block = createBlock(
+      '<p block-handler-0="mouseout.synthetic.capture">x</p>',
+      block_handlers
+    );
+    mount(block([() => n++], null, block_handlers), shadow as any);
     shadow.firstChild!.dispatchEvent(new Event("mouseout", { bubbles: true, composed: true }));
     expect(n).toBe(1);
   });
 
   test("a passive registration does not make a later one passive", async () => {
-    const passive = createBlock('<p block-handler-0="wheel.synthetic.passive">x</p>', [run]);
-    mount(passive([() => {}]), fixture);
-    const active = createBlock('<p block-handler-0="wheel.synthetic">y</p>', [run]);
-    mount(active([(ev: Event) => ev.preventDefault()]), fixture);
+    const passive_handlers = [run];
+    const passive = createBlock(
+      '<p block-handler-0="wheel.synthetic.passive">x</p>',
+      passive_handlers
+    );
+    mount(passive([() => {}], null, passive_handlers), fixture);
+    const active_handlers = [run];
+    const active = createBlock('<p block-handler-0="wheel.synthetic">y</p>', active_handlers);
+    mount(active([(ev: Event) => ev.preventDefault()], null, active_handlers), fixture);
     const ev = new Event("wheel", { bubbles: true, cancelable: true });
     fixture.lastChild!.dispatchEvent(ev);
     expect(ev.defaultPrevented).toBe(true);
@@ -284,8 +317,9 @@ test("a native handler fires inside nested shadow roots", async () => {
   outer.appendChild(host);
   const inner = host.attachShadow({ mode: "open" });
   let n = 0;
-  const block = createBlock('<button block-handler-0="click">b</button>', [run]);
-  mount(block([() => n++]), inner as any);
+  const block_handlers = [run];
+  const block = createBlock('<button block-handler-0="click">b</button>', block_handlers);
+  mount(block([() => n++], null, block_handlers), inner as any);
   (inner.firstChild as HTMLElement).click();
   expect(n).toBe(1);
 });
@@ -309,15 +343,17 @@ test("an empty handler on a catcher only applies its modifiers", async () => {
 
 test("removing a catcher keeps the other synthetic handlers of its parent", async () => {
   const calls: string[] = [];
-  const parent = createBlock('<div block-handler-0="click.synthetic"><block-child-0/></div>', [
-    run,
-  ]);
+  const parent_handlers = [run];
+  const parent = createBlock(
+    '<div block-handler-0="click.synthetic"><block-child-0/></div>',
+    parent_handlers
+  );
   const catcher = createCatcher({ "click.synthetic": 0 }, [() => calls.push("comp")]);
   const inner = createBlock("<span>c</span>");
   const outer = () => calls.push("outer");
-  const tree = parent([outer], [catcher(inner(), {})]);
+  const tree = parent([outer], [catcher(inner(), {})], parent_handlers);
   mount(tree, fixture);
-  patch(tree, parent([outer], [undefined]));
+  patch(tree, parent([outer], [undefined], parent_handlers));
   (fixture.firstChild as HTMLElement).click();
   expect(calls).toEqual(["outer"]);
 });
@@ -364,8 +400,9 @@ test("the synthetic document listener carries a marker a test harness can recogn
     return (add as any).apply(this, args);
   } as any;
   try {
-    const block = createBlock('<p block-handler-0="dblclick.synthetic">x</p>', [run]);
-    mount(block([() => {}]), fixture);
+    const block_handlers = [run];
+    const block = createBlock('<p block-handler-0="dblclick.synthetic">x</p>', block_handlers);
+    mount(block([() => {}], null, block_handlers), fixture);
   } finally {
     document.addEventListener = add;
   }
@@ -382,21 +419,26 @@ describe("synthetic events in a shadow root", () => {
 
   test("an event that does not leave the shadow root reaches its handler", async () => {
     const calls: string[] = [];
-    const block = createBlock('<input block-handler-0="change.synthetic"/>', [run]);
+    const block_handlers = [run];
+    const block = createBlock('<input block-handler-0="change.synthetic"/>', block_handlers);
     const shadow = shadowRoot();
-    mount(block([() => calls.push("change")]), shadow);
+    mount(block([() => calls.push("change")], null, block_handlers), shadow);
     shadow.querySelector("input")!.dispatchEvent(new Event("change", { bubbles: true }));
     expect(calls).toEqual(["change"]);
   });
 
   test("an event crossing the shadow root runs its handlers once", async () => {
     const calls: string[] = [];
+    const block_handlers = [run, run];
     const block = createBlock(
       '<div block-handler-0="click.synthetic"><p block-handler-1="click.synthetic">x</p></div>',
-      [run, run]
+      block_handlers
     );
     const shadow = shadowRoot();
-    mount(block([() => calls.push("outer"), () => calls.push("inner")]), shadow);
+    mount(
+      block([() => calls.push("outer"), () => calls.push("inner")], null, block_handlers),
+      shadow
+    );
     shadow.querySelector("p")!.click();
     expect(calls).toEqual(["inner", "outer"]);
   });
@@ -405,8 +447,12 @@ describe("synthetic events in a shadow root", () => {
     const calls: string[] = [];
     const shadow = shadowRoot();
     mount(createBlock("<div><block-child-0/></div>")([], []), shadow);
-    const block = createBlock('<form block-handler-0="reset.synthetic"/>', [run]);
-    mount(block([() => calls.push("reset")]), shadow.firstChild as HTMLElement);
+    const block_handlers = [run];
+    const block = createBlock('<form block-handler-0="reset.synthetic"/>', block_handlers);
+    mount(
+      block([() => calls.push("reset")], null, block_handlers),
+      shadow.firstChild as HTMLElement
+    );
     shadow.querySelector("form")!.dispatchEvent(new Event("reset", { bubbles: true }));
     expect(calls).toEqual(["reset"]);
   });

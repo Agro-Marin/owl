@@ -142,11 +142,12 @@ exports[`basics > sub widget is interactive 2`] = `
   let { callHandler, safeOutput } = helpers;
   const hdlr_fn1 = (ctx, ev) => callHandler(ctx['this'].inc, ctx, ev);
   
-  let block1 = createBlock(\`<span><button block-handler-0="click">click</button>child<block-child-0/></span>\`, [hdlr_fn1]);
+  const block1_handlers = [hdlr_fn1];
+  let block1 = createBlock(\`<span><button block-handler-0="click">click</button>child<block-child-0/></span>\`, block1_handlers);
   
   return function template(ctx, node, key = "") {
     const b2 = safeOutput(ctx['this'].state.val, node, key, "\\u00021");
-    return block1([ctx], [b2]);
+    return block1([ctx], [b2], block1_handlers);
   }
 }"
 `;

@@ -29,7 +29,8 @@ exports[`.alike suffix in a list 2`] = `
   let { callHandler, safeOutput } = helpers;
   const hdlr_fn1 = (ctx, ev) => callHandler(ctx['this'].props.toggle, ctx, ev);
   
-  let block1 = createBlock(\`<button block-handler-0="click"><block-child-0/><block-child-1/></button>\`, [hdlr_fn1]);
+  const block1_handlers = [hdlr_fn1];
+  let block1 = createBlock(\`<button block-handler-0="click"><block-child-0/><block-child-1/></button>\`, block1_handlers);
   
   return function template(ctx, node, key = "") {
     let b2, b3;
@@ -37,7 +38,7 @@ exports[`.alike suffix in a list 2`] = `
     if (ctx['this'].props.todo.isChecked) {
       b3 = text(\`V\`);
     }
-    return block1([ctx], [b2, b3]);
+    return block1([ctx], [b2, b3], block1_handlers);
   }
 }"
 `;
@@ -744,7 +745,8 @@ exports[`arrow function props re-render when captured variable changes 2`] = `
   let { callHandler, safeOutput } = helpers;
   const hdlr_fn1 = (ctx, ev) => callHandler(ctx['this'].props.toggle, ctx, ev);
   
-  let block1 = createBlock(\`<button block-handler-0="click"><block-child-0/><block-child-1/></button>\`, [hdlr_fn1]);
+  const block1_handlers = [hdlr_fn1];
+  let block1 = createBlock(\`<button block-handler-0="click"><block-child-0/><block-child-1/></button>\`, block1_handlers);
   
   return function template(ctx, node, key = "") {
     let b2, b3;
@@ -752,7 +754,7 @@ exports[`arrow function props re-render when captured variable changes 2`] = `
     if (ctx['this'].props.todo.isChecked) {
       b3 = text(\`V\`);
     }
-    return block1([ctx], [b2, b3]);
+    return block1([ctx], [b2, b3], block1_handlers);
   }
 }"
 `;
@@ -854,10 +856,11 @@ exports[`basics > arrow functions as prop correctly capture their scope 2`] = `
   let { callHandler } = helpers;
   const hdlr_fn1 = (ctx, ev) => callHandler(ctx['this'].props.onClick, ctx, ev);
   
-  let block1 = createBlock(\`<button block-handler-0="click"/>\`, [hdlr_fn1]);
+  const block1_handlers = [hdlr_fn1];
+  let block1 = createBlock(\`<button block-handler-0="click"/>\`, block1_handlers);
   
   return function template(ctx, node, key = "") {
-    return block1([ctx]);
+    return block1([ctx], null, block1_handlers);
   }
 }"
 `;
@@ -941,10 +944,11 @@ exports[`basics > support prop names that aren't valid bare object property name
   let { callHandler } = helpers;
   const hdlr_fn1 = (ctx, ev) => callHandler(ctx['this'].props.onClick, ctx, ev);
   
-  let block1 = createBlock(\`<button block-handler-0="click"/>\`, [hdlr_fn1]);
+  const block1_handlers = [hdlr_fn1];
+  let block1 = createBlock(\`<button block-handler-0="click"/>\`, block1_handlers);
   
   return function template(ctx, node, key = "") {
-    return block1([ctx]);
+    return block1([ctx], null, block1_handlers);
   }
 }"
 `;
@@ -1185,11 +1189,12 @@ exports[`default props don't cause spurious updates with t-props 1`] = `
   const hdlr_fn1 = (ctx, ev) => callHandler(ctx['this'].increment, ctx, ev);
   const comp1 = createComponent(app, \`Child\`, true, false, true, []);
   
-  let block2 = createBlock(\`<div block-handler-0="click">tick: <block-child-0/></div>\`, [hdlr_fn1]);
+  const block2_handlers = [hdlr_fn1];
+  let block2 = createBlock(\`<div block-handler-0="click">tick: <block-child-0/></div>\`, block2_handlers);
   
   return function template(ctx, node, key = "") {
     const b3 = safeOutput(ctx['this'].v(), node, key, "\\u00021");
-    const b2 = block2([ctx], [b3]);
+    const b2 = block2([ctx], [b3], block2_handlers);
     const b4 = comp1({...ctx['this'].makeProps()}, key + \`\\u00022\`, node, this, null);
     return multi([b2, b4]);
   }

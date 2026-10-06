@@ -263,11 +263,12 @@ exports[`hooks > useListener ignores the event that created its component 1`] = 
   const hdlr_fn1 = (ctx)=>ctx['this'].show.set(true);
   const comp1 = createComponent(app, \`Child\`, true, false, false, []);
   
-  let block2 = createBlock(\`<button block-handler-0="click">open</button>\`, [hdlr_fn1]);
+  const block2_handlers = [hdlr_fn1];
+  let block2 = createBlock(\`<button block-handler-0="click">open</button>\`, block2_handlers);
   
   return function template(ctx, node, key = "") {
     let b2, b3;
-    b2 = block2([ctx]);
+    b2 = block2([ctx], null, block2_handlers);
     if (ctx['this'].show()) {
       b3 = comp1({}, key + \`\\u00021\`, node, this, null);
     }
@@ -340,11 +341,12 @@ exports[`hooks > useListener still receives an event dispatched while it is bein
   const hdlr_fn1 = (ctx)=>ctx['this'].show.set(true);
   const comp1 = createComponent(app, \`MyComponent\`, true, false, false, []);
   
-  let block2 = createBlock(\`<button block-handler-0="click">open</button>\`, [hdlr_fn1]);
+  const block2_handlers = [hdlr_fn1];
+  let block2 = createBlock(\`<button block-handler-0="click">open</button>\`, block2_handlers);
   
   return function template(ctx, node, key = "") {
     let b2, b3;
-    b2 = block2([ctx]);
+    b2 = block2([ctx], null, block2_handlers);
     if (ctx['this'].show()) {
       b3 = comp1({}, key + \`\\u00021\`, node, this, null);
     }

@@ -118,6 +118,17 @@ describe("what a render allocates", () => {
     expect(lines.filter((line) => /\[\s*(hdlr_fn\d+|hdlr\d+|null)\b/.test(line))).toEqual([]);
   });
 
+  test("making a template's functions makes no block type per block with handlers", () => {
+    const code = compile(
+      `<div><button t-on-click="this.f"/><p t-on-click="this.g"><i/></p></div>`
+    ).toString();
+    // the handlers of each block are listed once, the type is the string's,
+    // and each call gives the handlers
+    expect(code).toContain("const block1_handlers = [hdlr_fn1, hdlr_fn2];");
+    expect(code).toMatch(/let block1 = createBlock\(`[^`]*`, block1_handlers\);/);
+    expect(code).toContain("return block1([ctx, ctx], null, block1_handlers);");
+  });
+
   test("a block with a dynamic tag and a handler makes its block type once per tag", async () => {
     const template = `<t t-tag="this.tag()" t-on-click="() => this.clicks++">x</t>`;
     expect(compile(template).toString()).toContain(

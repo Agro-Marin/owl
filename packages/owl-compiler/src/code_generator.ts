@@ -166,6 +166,10 @@ class BlockDescription {
       if (hasChildren) {
         params += ", [" + this.children.map((c) => c.varName).join(", ") + "]";
       }
+      if (this.handlers.length) {
+        // the code of its handlers, made once with the template's functions
+        params += `${hasChildren ? "" : ", null"}, ${this.blockName}_handlers`;
+      }
       if (this.dynamicTagName) {
         return `toggler(${this.dynamicTagName}, ${this.blockName}(${this.dynamicTagName})(${params}))`;
       }
@@ -380,18 +384,22 @@ export class CodeGenerator {
             xmlString = xmlString.slice(0, -close.length) + `</${tag}>\``;
           }
           if (block.handlers.length) {
-            // a block type with handlers is made per createBlock call: once
-            // per tag here
+            // the handlers are checked once per tag, and the string made once
             const types = `${block.blockName}_types`;
-            mainCode.push(`const ${types} = Object.create(null);`);
             mainCode.push(
-              `let ${block.blockName} = tag => ${types}[tag] || (${types}[tag] = createBlock(${xmlString}, [${block.handlers.join(", ")}]));`
+              `const ${block.blockName}_handlers = [${block.handlers.join(", ")}];`,
+              `const ${types} = Object.create(null);`,
+              `let ${block.blockName} = tag => ${types}[tag] || (${types}[tag] = createBlock(${xmlString}, ${block.blockName}_handlers));`
             );
           } else {
             mainCode.push(`let ${block.blockName} = tag => createBlock(${xmlString});`);
           }
         } else {
-          const handlers = block.handlers.length ? `, [${block.handlers.join(", ")}]` : "";
+          let handlers = "";
+          if (block.handlers.length) {
+            handlers = `, ${block.blockName}_handlers`;
+            mainCode.push(`const ${block.blockName}_handlers = [${block.handlers.join(", ")}];`);
+          }
           mainCode.push(`let ${block.blockName} = createBlock(${xmlString}${handlers});`);
         }
       }

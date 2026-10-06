@@ -133,6 +133,8 @@ test("the template channel traces a compilation", async () => {
   }
   setDebug("template");
   await mount(Tpl, fixture);
-  expect(lines.length).toBe(1);
+  expect(lines.length).toBe(2);
   expect(lines[0]).toMatch(/^template: __template__\d+: compiled in _ ms, \d+ chars$/);
+  // the template's functions, made after, make the type of its block string
+  expect(lines[1]).toBe("template: block type made: 0 handlers, <p>compiled</p>");
 });

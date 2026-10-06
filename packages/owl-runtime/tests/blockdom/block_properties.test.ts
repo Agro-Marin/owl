@@ -196,5 +196,7 @@ test("the template channel says when a synced flag is not written", () => {
     setDebug(false);
     setDebugSink(null);
   }
-  expect(lines).toEqual(["template: disabled of <button>: not written, it is already true"]);
+  expect(lines.filter((line) => line.includes(" of <"))).toEqual([
+    "template: disabled of <button>: not written, it is already true",
+  ]);
 });
