@@ -739,7 +739,7 @@ exports[`t-call > t-call-context: ComponentNode is not looked up in the context 
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { createRef, safeOutput, markRaw, createComponent } = helpers;
+  let { createRef, safeOutput, createComponent } = helpers;
   const comp1 = createComponent(app, \`Child\`, true, true, false, []);
   
   let block2 = createBlock(\`<div block-ref="0">outside slot</div>\`);
@@ -759,7 +759,7 @@ exports[`t-call > t-call-context: ComponentNode is not looked up in the context 
   return function template(ctx, node, key = "") {
     let ref1 = createRef(ctx['this'].myRef, node);
     const b2 = block2([ref1]);
-    const b7 = comp1({prop: (ctx['this'].method).bind(this),slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`\\u00022\`, node, this, null);
+    const b7 = comp1({prop: (ctx['this'].method).bind(this),slots: {"default": {__render: slot1, __ctx: ctx, __owner: this}}}, key + \`\\u00022\`, node, this, null);
     return multi([b2, b7]);
   }
 }"
@@ -794,7 +794,7 @@ exports[`t-call > t-call-context: slots don't make component available again whe
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { safeOutput, markRaw, createComponent } = helpers;
+  let { safeOutput, createComponent } = helpers;
   const comp1 = createComponent(app, \`Child\`, true, true, false, []);
   
   function slot1(ctx, node, key = "") {
@@ -804,7 +804,7 @@ exports[`t-call > t-call-context: slots don't make component available again whe
   return function template(ctx, node, key = "") {
     ctx = Object.create(ctx);
     ctx["dummy"] = 0;
-    const props1 = {slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})};
+    const props1 = {slots: {"default": {__render: slot1, __ctx: ctx, __owner: this}}};
     return comp1(props1, key + \`\\u00022\`, node, this, null);
   }
 }"

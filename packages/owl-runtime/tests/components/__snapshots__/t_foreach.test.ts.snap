@@ -386,7 +386,7 @@ exports[`list of components > order is correct when slots are not of same type 1
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { markRaw, createComponent } = helpers;
+  let { createComponent } = helpers;
   const comp1 = createComponent(app, \`Child\`, true, true, false, []);
   
   let block2 = createBlock(\`<div>A</div>\`);
@@ -408,7 +408,7 @@ exports[`list of components > order is correct when slots are not of same type 1
   }
   
   return function template(ctx, node, key = "") {
-    return comp1({slots: markRaw({"a": {__render: slot1, __ctx: ctx, __owner: this, active: !ctx['this'].state.active}, "b": {__render: slot2, __ctx: ctx, __owner: this, active: true}, "c": {__render: slot3, __ctx: ctx, __owner: this, active: ctx['this'].state.active}})}, key + \`\\u00021\`, node, this, null);
+    return comp1({slots: {"a": {__render: slot1, __ctx: ctx, __owner: this, active: !ctx['this'].state.active}, "b": {__render: slot2, __ctx: ctx, __owner: this, active: true}, "c": {__render: slot3, __ctx: ctx, __owner: this, active: ctx['this'].state.active}}}, key + \`\\u00021\`, node, this, null);
   }
 }"
 `;

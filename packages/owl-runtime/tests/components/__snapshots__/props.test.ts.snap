@@ -282,7 +282,7 @@ exports[`.signal suffix: one signal per child > a .signal in slot content and on
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { createComponent, markRaw } = helpers;
+  let { createComponent } = helpers;
   const comp1 = createComponent(app, \`Leaf\`, true, false, false, [], ["v"]);
   const comp2 = createComponent(app, \`Child\`, true, true, false, []);
   
@@ -291,7 +291,7 @@ exports[`.signal suffix: one signal per child > a .signal in slot content and on
   }
   
   return function template(ctx, node, key = "") {
-    return comp2({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`\\u00022\`, node, this, null);
+    return comp2({slots: {"default": {__render: slot1, __ctx: ctx, __owner: this}}}, key + \`\\u00022\`, node, this, null);
   }
 }"
 `;

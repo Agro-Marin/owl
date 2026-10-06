@@ -2202,7 +2202,7 @@ exports[`slot content renders after microtick when child has willStart 1`] = `
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { safeOutput, markRaw, createComponent } = helpers;
+  let { safeOutput, createComponent } = helpers;
   const comp1 = createComponent(app, \`Child\`, true, true, false, []);
   const comp2 = createComponent(app, \`Sibling\`, true, false, false, []);
   
@@ -2215,7 +2215,7 @@ exports[`slot content renders after microtick when child has willStart 1`] = `
   }
   
   return function template(ctx, node, key = "") {
-    const b4 = comp1({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`\\u00022\`, node, this, null);
+    const b4 = comp1({slots: {"default": {__render: slot1, __ctx: ctx, __owner: this}}}, key + \`\\u00022\`, node, this, null);
     const b5 = comp2({}, key + \`\\u00023\`, node, this, null);
     return block1([], [b4, b5]);
   }
@@ -2256,7 +2256,7 @@ exports[`slot content renders synchronously when child has no willStart 1`] = `
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { safeOutput, markRaw, createComponent } = helpers;
+  let { safeOutput, createComponent } = helpers;
   const comp1 = createComponent(app, \`Child\`, true, true, false, []);
   const comp2 = createComponent(app, \`Sibling\`, true, false, false, []);
   
@@ -2269,7 +2269,7 @@ exports[`slot content renders synchronously when child has no willStart 1`] = `
   }
   
   return function template(ctx, node, key = "") {
-    const b4 = comp1({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`\\u00022\`, node, this, null);
+    const b4 = comp1({slots: {"default": {__render: slot1, __ctx: ctx, __owner: this}}}, key + \`\\u00022\`, node, this, null);
     const b5 = comp2({}, key + \`\\u00023\`, node, this, null);
     return block1([], [b4, b5]);
   }

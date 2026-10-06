@@ -4,6 +4,8 @@ import {
   mount,
   onWillUpdateProps,
   props,
+  proxy,
+  toRaw,
   setDebug,
   setDebugSink,
   signal,
@@ -51,6 +53,17 @@ describe("what a render allocates", () => {
     expect(lines.length).toBeGreaterThan(0);
     const allocating = lines.filter((line) => /\.bind\(|=>/.test(line));
     expect(allocating).toEqual([]);
+  });
+
+  test("slots are given as they are, not marked raw on every render", () => {
+    const lines = renderFunctionLines(`
+      <div>
+        <Child><span>default</span></Child>
+        <Child t-props="this.p"><span>with t-props</span></Child>
+        <Child slots="this.s"><t t-set-slot="a">with a slots prop</t></Child>
+      </div>`);
+    expect(lines.filter((line) => line.includes("slots")).length).toBeGreaterThanOrEqual(3);
+    expect(lines.filter((line) => line.includes("markRaw("))).toEqual([]);
   });
 
   test("a slot called without attributes passes no scope object", () => {
@@ -337,5 +350,91 @@ describe("the owner of slots, slot defaults and t-call bodies", () => {
     }
     await mount(Parent, fixture);
     expect(fixture.innerHTML).toBe("<div>object:0</div>");
+  });
+});
+
+describe("slots reached through a proxy", () => {
+  // a component can hand the slots it received to a child through proxied
+  // state (`t-props` of a proxy holding them, a copy of them in a store): the
+  // slot still renders with the raw `this` and context of the template that
+  // wrote it, whose class may have private members no proxy can reach
+  class Inner extends Component {
+    static template = xml`<div><t t-call-slot="default"/><t t-call-slot="named" v="'scoped'"/></div>`;
+  }
+  class Owner extends Component {
+    static components: any;
+    static template = xml`
+      <Wrapper>
+        <b t-out="this.secret"/><i t-out="this.isRaw()"/>
+        <t t-set-slot="named" t-slot-scope="s"><u t-out="s.v + this.secret"/></t>
+      </Wrapper>`;
+    #secret = "s";
+    get secret() {
+      return this.#secret;
+    }
+    isRaw() {
+      return toRaw(this) === this ? "raw" : "proxy";
+    }
+  }
+  const expected = "<div><b>s</b><i>raw</i><u>scopeds</u></div>";
+
+  test("slots held in proxied state and given with t-props", async () => {
+    class Wrapper extends Component {
+      static template = xml`<Inner t-props="this.state"/>`;
+      static components = { Inner };
+      props = props();
+      state = proxy({ slots: this.props.slots });
+    }
+    Owner.components = { Wrapper };
+    await mount(Owner, fixture);
+    expect(fixture.innerHTML).toBe(expected);
+  });
+
+  test("a copy of the slots in proxied state, given as the slots prop", async () => {
+    class Wrapper extends Component {
+      static template = xml`<Inner slots="this.state.slots"/>`;
+      static components = { Inner };
+      props = props();
+      state = proxy({ slots: { ...this.props.slots } });
+    }
+    Owner.components = { Wrapper };
+    await mount(Owner, fixture);
+    expect(fixture.innerHTML).toBe(expected);
+  });
+
+  test("the template channel says a slot rendered from the raw object of a proxy", async () => {
+    class Wrapper extends Component {
+      static template = xml`<Inner t-props="this.state"/>`;
+      static components = { Inner };
+      props = props();
+      state = proxy({ slots: { ...this.props.slots } });
+    }
+    Owner.components = { Wrapper };
+    const lines: string[] = [];
+    setDebugSink((channel, message) => lines.push(`${channel}: ${message}`));
+    setDebug(["template"]);
+    try {
+      await mount(Owner, fixture);
+    } finally {
+      setDebug(false);
+      setDebugSink(null);
+    }
+    expect(fixture.innerHTML).toBe(expected);
+    expect(lines.filter((line) => line.includes("slot"))).toEqual([
+      'template: slot "default": its descriptor is a proxy, rendered from its raw object',
+      'template: slot "named": its descriptor is a proxy, rendered from its raw object',
+    ]);
+  });
+
+  test("a slot descriptor held in proxied state, given in a slots prop", async () => {
+    class Wrapper extends Component {
+      static template = xml`<Inner slots="{ default: this.props.slots.default, named: this.store.named }"/>`;
+      static components = { Inner };
+      props = props();
+      store = proxy({ named: this.props.slots.named });
+    }
+    Owner.components = { Wrapper };
+    await mount(Owner, fixture);
+    expect(fixture.innerHTML).toBe(expected);
   });
 });

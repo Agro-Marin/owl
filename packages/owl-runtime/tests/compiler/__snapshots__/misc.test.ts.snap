@@ -346,7 +346,7 @@ exports[`names taken from the template are data in the generated code > slot nam
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { callSlot, markRaw, createComponent } = helpers;
+  let { callSlot, createComponent } = helpers;
   const comp1 = createComponent(app, \`Child\`, true, true, false, []);
   
   function slot1(ctx, node, key = "") {
@@ -355,7 +355,7 @@ exports[`names taken from the template are data in the generated code > slot nam
   
   return function template(ctx, node, key = "") {
     const b2 = callSlot(ctx, node, key + \`\\u00021\`, "it's", false, {v: 1});
-    const b4 = comp1({slots: markRaw({"it's": {__render: slot1, __ctx: ctx, __owner: this, __scope: "s\\""}})}, key + \`\\u00022\`, node, this, null);
+    const b4 = comp1({slots: {"it's": {__render: slot1, __ctx: ctx, __owner: this, __scope: "s\\""}}}, key + \`\\u00022\`, node, this, null);
     return multi([b2, b4]);
   }
 }"

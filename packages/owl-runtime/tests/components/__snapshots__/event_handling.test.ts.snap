@@ -219,7 +219,7 @@ exports[`event handling > unnamed slot should call the event only once 1`] = `
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { markRaw, createComponent, createCatcher, callHandler } = helpers;
+  let { createComponent, createCatcher, callHandler } = helpers;
   const comp1 = createComponent(app, \`Child\`, true, true, false, []);
   const hdlr_fn1 = (ctx, ev) => callHandler(ctx['this'].inc, ctx, ev);
   const catcher1 = createCatcher({"click":0}, [hdlr_fn1]);
@@ -236,7 +236,7 @@ exports[`event handling > unnamed slot should call the event only once 1`] = `
   }
   
   return function template(ctx, node, key = "") {
-    return catcher1(comp1({slots: markRaw({"named": {__render: slot1, __ctx: ctx, __owner: this}, "default": {__render: slot2, __ctx: ctx, __owner: this}})}, key + \`\\u00021\`, node, this, null), ctx);
+    return catcher1(comp1({slots: {"named": {__render: slot1, __ctx: ctx, __owner: this}, "default": {__render: slot2, __ctx: ctx, __owner: this}}}, key + \`\\u00021\`, node, this, null), ctx);
   }
 }"
 `;

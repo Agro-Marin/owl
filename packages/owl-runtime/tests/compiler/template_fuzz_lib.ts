@@ -52,6 +52,9 @@ export interface Elem {
 export interface Def {
   name: string;
   body: TNode[];
+  // a component used through a relay, which hands it the slots it receives
+  // held in proxied state: as they are (1) or copied (2)
+  relay?: 0 | 1 | 2;
 }
 export type TNode =
   | { kind: "text"; value: string }
@@ -271,7 +274,10 @@ export function generator(random: () => number, interactive = false) {
     return el;
   }
   function component(env: GenEnv): TNode {
-    const def: Def = { name: `C${comps.length + 1}`, body: [] };
+    // the relay mode follows the component's number: no draw of its own, so
+    // that a seed generates the templates it generated before relays existed
+    const relay = (comps.length % 3) as 0 | 1 | 2;
+    const def: Def = { name: `C${comps.length + 1}`, body: [], relay };
     comps.push(def);
     const depth = env.depth + 1;
     def.body = nodes({
@@ -487,10 +493,12 @@ export function nodeXml(n: TNode): string {
     }
     case "foreach":
       return `<t t-foreach="${n.list}" t-as="${n.as}" t-key="${n.key}">${toXml(n.children)}</t>`;
-    case "comp":
+    case "comp": {
+      const name = n.def.relay ? `R${n.def.name}` : n.def.name;
       return n.slot
-        ? `<${n.def.name}${onXml(n.on)}>${toXml(n.slot)}</${n.def.name}>`
-        : `<${n.def.name}${onXml(n.on)}/>`;
+        ? `<${name}${onXml(n.on)}>${toXml(n.slot)}</${name}>`
+        : `<${name}${onXml(n.on)}/>`;
+    }
     case "slot":
       return `<t t-call-slot="default"${onXml(n.on)}/>`;
     case "call":

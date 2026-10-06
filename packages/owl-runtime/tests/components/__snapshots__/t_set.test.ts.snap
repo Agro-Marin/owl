@@ -45,7 +45,7 @@ exports[`a t-set body in an attribute is its string at render > in a slot, whose
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { LazyValue, safeOutput, attrValue, markRaw, createComponent } = helpers;
+  let { LazyValue, safeOutput, attrValue, createComponent } = helpers;
   const comp1 = createComponent(app, \`Box\`, true, true, false, []);
   
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
@@ -66,7 +66,7 @@ exports[`a t-set body in an attribute is its string at render > in a slot, whose
   return function template(ctx, node, key = "") {
     ctx = Object.create(ctx);
     ctx["b"] = new LazyValue(value1, ctx, this, node, key + \`\\u00022\`);
-    const b6 = comp1({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`\\u00024\`, node, this, null);
+    const b6 = comp1({slots: {"default": {__render: slot1, __ctx: ctx, __owner: this}}}, key + \`\\u00024\`, node, this, null);
     return block1([], [b6]);
   }
 }"
@@ -135,7 +135,7 @@ exports[`t-set > slot setted value (with t-set) not accessible with t-out 1`] = 
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { safeOutput, markRaw, createComponent } = helpers;
+  let { safeOutput, createComponent } = helpers;
   const comp1 = createComponent(app, \`Childcomp\`, true, true, false, []);
   
   let block1 = createBlock(\`<div><p><block-child-0/></p><block-child-1/><p><block-child-2/></p></div>\`);
@@ -150,7 +150,7 @@ exports[`t-set > slot setted value (with t-set) not accessible with t-out 1`] = 
     ctx = Object.create(ctx);
     ctx["iter"] = 'source';
     const b2 = safeOutput(ctx['iter'], node, key, "\\u00021");
-    const b3 = comp1({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`\\u00022\`, node, this, null);
+    const b3 = comp1({slots: {"default": {__render: slot1, __ctx: ctx, __owner: this}}}, key + \`\\u00022\`, node, this, null);
     const b4 = safeOutput(ctx['iter'], node, key, "\\u00023");
     return block1([], [b2, b3, b4]);
   }
@@ -179,7 +179,7 @@ exports[`t-set > slots with a t-set with a component in body 1`] = `
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { LazyValue, createComponent, safeOutput, markRaw } = helpers;
+  let { LazyValue, createComponent, safeOutput } = helpers;
   const comp1 = createComponent(app, \`C\`, true, false, false, []);
   const comp2 = createComponent(app, \`Child\`, true, true, false, []);
   
@@ -196,7 +196,7 @@ exports[`t-set > slots with a t-set with a component in body 1`] = `
   }
   
   return function template(ctx, node, key = "") {
-    return comp2({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`\\u00024\`, node, this, null);
+    return comp2({slots: {"default": {__render: slot1, __ctx: ctx, __owner: this}}}, key + \`\\u00024\`, node, this, null);
   }
 }"
 `;
@@ -230,7 +230,7 @@ exports[`t-set > slots with an t-set with a component in body 1`] = `
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { LazyValue, createComponent, safeOutput, markRaw } = helpers;
+  let { LazyValue, createComponent, safeOutput } = helpers;
   const comp1 = createComponent(app, \`Child\`, true, false, false, []);
   const comp2 = createComponent(app, \`Blorg\`, true, true, false, []);
   
@@ -251,7 +251,7 @@ exports[`t-set > slots with an t-set with a component in body 1`] = `
   }
   
   return function template(ctx, node, key = "") {
-    return comp2({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`\\u00024\`, node, this, null);
+    return comp2({slots: {"default": {__render: slot1, __ctx: ctx, __owner: this}}}, key + \`\\u00024\`, node, this, null);
   }
 }"
 `;
@@ -285,7 +285,7 @@ exports[`t-set > slots with an unused t-set with a component in body 1`] = `
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { LazyValue, createComponent, markRaw } = helpers;
+  let { LazyValue, createComponent } = helpers;
   const comp1 = createComponent(app, \`Child\`, true, false, false, []);
   const comp2 = createComponent(app, \`Child\`, true, true, false, []);
   
@@ -300,7 +300,7 @@ exports[`t-set > slots with an unused t-set with a component in body 1`] = `
   }
   
   return function template(ctx, node, key = "") {
-    return comp2({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`\\u00023\`, node, this, null);
+    return comp2({slots: {"default": {__render: slot1, __ctx: ctx, __owner: this}}}, key + \`\\u00023\`, node, this, null);
   }
 }"
 `;

@@ -692,7 +692,7 @@ exports[`props validation > can validate through slots 1`] = `
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { createComponent, markRaw } = helpers;
+  let { createComponent } = helpers;
   const comp1 = createComponent(app, \`Child\`, true, false, false, []);
   const comp2 = createComponent(app, \`Wrapper\`, true, true, false, []);
   
@@ -702,7 +702,7 @@ exports[`props validation > can validate through slots 1`] = `
   }
   
   return function template(ctx, node, key = "") {
-    const props2 = {slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})};
+    const props2 = {slots: {"default": {__render: slot1, __ctx: ctx, __owner: this}}};
     return comp2(props2, key + \`\\u00022\`, node, this, null);
   }
 }"

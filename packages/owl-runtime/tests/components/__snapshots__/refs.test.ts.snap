@@ -124,7 +124,7 @@ exports[`refs > ref in slot is unset across a t-if nested inside the slot conten
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { createRef, markRaw, createComponent } = helpers;
+  let { createRef, createComponent } = helpers;
   const comp1 = createComponent(app, \`Wrapper\`, true, true, false, []);
   
   let block3 = createBlock(\`<span block-ref="0">hi</span>\`);
@@ -141,7 +141,7 @@ exports[`refs > ref in slot is unset across a t-if nested inside the slot conten
   return function template(ctx, node, key = "") {
     let b4;
     if (ctx['this'].visible()) {
-      b4 = comp1({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`\\u00021\`, node, this, null);
+      b4 = comp1({slots: {"default": {__render: slot1, __ctx: ctx, __owner: this}}}, key + \`\\u00021\`, node, this, null);
     }
     return multi([b4]);
   }
@@ -167,7 +167,7 @@ exports[`refs > ref in slot is unset when an intermediate host is removed in pla
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { createRef, markRaw, createComponent } = helpers;
+  let { createRef, createComponent } = helpers;
   const comp1 = createComponent(app, \`Inner\`, true, true, false, []);
   
   let block2 = createBlock(\`<div><block-child-0/></div>\`);
@@ -181,7 +181,7 @@ exports[`refs > ref in slot is unset when an intermediate host is removed in pla
   return function template(ctx, node, key = "") {
     let b2;
     if (ctx['this'].show()) {
-      const b4 = comp1({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`\\u00021\`, node, this, null);
+      const b4 = comp1({slots: {"default": {__render: slot1, __ctx: ctx, __owner: this}}}, key + \`\\u00021\`, node, this, null);
       b2 = block2([], [b4]);
     }
     return multi([b2]);
@@ -208,7 +208,7 @@ exports[`refs > ref in slot is unset when forwarded through a nested component 1
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { createRef, markRaw, createComponent } = helpers;
+  let { createRef, createComponent } = helpers;
   const comp1 = createComponent(app, \`Wrapper\`, true, true, false, []);
   
   let block2 = createBlock(\`<b block-ref="0">x</b>\`);
@@ -221,7 +221,7 @@ exports[`refs > ref in slot is unset when forwarded through a nested component 1
   return function template(ctx, node, key = "") {
     let b3;
     if (ctx['this'].visible()) {
-      b3 = comp1({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`\\u00021\`, node, this, null);
+      b3 = comp1({slots: {"default": {__render: slot1, __ctx: ctx, __owner: this}}}, key + \`\\u00021\`, node, this, null);
     }
     return multi([b3]);
   }
@@ -232,7 +232,7 @@ exports[`refs > ref in slot is unset when forwarded through a nested component 2
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { callSlot, markRaw, createComponent } = helpers;
+  let { callSlot, createComponent } = helpers;
   const comp1 = createComponent(app, \`Inner\`, true, true, false, []);
   
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
@@ -242,7 +242,7 @@ exports[`refs > ref in slot is unset when forwarded through a nested component 2
   }
   
   return function template(ctx, node, key = "") {
-    const b3 = comp1({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`\\u00022\`, node, this, null);
+    const b3 = comp1({slots: {"default": {__render: slot1, __ctx: ctx, __owner: this}}}, key + \`\\u00022\`, node, this, null);
     return block1([], [b3]);
   }
 }"
@@ -267,7 +267,7 @@ exports[`refs > ref in slot is unset when the host removes it in place (host sur
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { createRef, markRaw, createComponent } = helpers;
+  let { createRef, createComponent } = helpers;
   const comp1 = createComponent(app, \`Wrapper\`, true, true, false, []);
   
   let block1 = createBlock(\`<span class="slotted" block-ref="0">hi</span>\`);
@@ -278,7 +278,7 @@ exports[`refs > ref in slot is unset when the host removes it in place (host sur
   }
   
   return function template(ctx, node, key = "") {
-    return comp1({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`\\u00021\`, node, this, null);
+    return comp1({slots: {"default": {__render: slot1, __ctx: ctx, __owner: this}}}, key + \`\\u00021\`, node, this, null);
   }
 }"
 `;
@@ -306,7 +306,7 @@ exports[`refs > ref in slot is unset when the slot host is removed 1`] = `
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { createRef, markRaw, createComponent } = helpers;
+  let { createRef, createComponent } = helpers;
   const comp1 = createComponent(app, \`Wrapper\`, true, true, false, []);
   
   let block2 = createBlock(\`<div class="slotted" block-ref="0">Coucou</div>\`);
@@ -319,7 +319,7 @@ exports[`refs > ref in slot is unset when the slot host is removed 1`] = `
   return function template(ctx, node, key = "") {
     let b3;
     if (ctx['this'].visible()) {
-      b3 = comp1({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`\\u00021\`, node, this, null);
+      b3 = comp1({slots: {"default": {__render: slot1, __ctx: ctx, __owner: this}}}, key + \`\\u00021\`, node, this, null);
     }
     return multi([b3]);
   }
@@ -386,7 +386,7 @@ exports[`refs > ref is unset even when a sub-root is destroyed re-entrantly mid-
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { createRef, markRaw, createComponent } = helpers;
+  let { createRef, createComponent } = helpers;
   const comp1 = createComponent(app, \`Wrapper\`, true, true, false, []);
   
   let block2 = createBlock(\`<span block-ref="0">hi</span>\`);
@@ -399,7 +399,7 @@ exports[`refs > ref is unset even when a sub-root is destroyed re-entrantly mid-
   return function template(ctx, node, key = "") {
     let b3;
     if (ctx['this'].show()) {
-      b3 = comp1({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`\\u00021\`, node, this, null);
+      b3 = comp1({slots: {"default": {__render: slot1, __ctx: ctx, __owner: this}}}, key + \`\\u00021\`, node, this, null);
     }
     return multi([b3]);
   }
@@ -488,7 +488,7 @@ exports[`refs > ref shared between t-if and t-else, t-else has a slotted compone
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { createRef, markRaw, createComponent } = helpers;
+  let { createRef, createComponent } = helpers;
   const comp1 = createComponent(app, \`SlotCp\`, true, true, false, []);
   
   let block2 = createBlock(\`<div class="ifbranch" block-ref="0"/>\`);
@@ -505,7 +505,7 @@ exports[`refs > ref shared between t-if and t-else, t-else has a slotted compone
       let ref1 = createRef(ctx['this'].ref, node);
       b2 = block2([ref1]);
     } else {
-      b4 = comp1({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`\\u00021\`, node, this, null);
+      b4 = comp1({slots: {"default": {__render: slot1, __ctx: ctx, __owner: this}}}, key + \`\\u00021\`, node, this, null);
     }
     return multi([b2, b4]);
   }
@@ -569,7 +569,7 @@ exports[`refs > refs are properly bound in slots 1`] = `
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { safeOutput, callHandler, createRef, markRaw, createComponent } = helpers;
+  let { safeOutput, callHandler, createRef, createComponent } = helpers;
   const hdlr_fn1 = (ctx, ev) => callHandler(ctx['this'].doSomething, ctx, ev);
   const comp1 = createComponent(app, \`Dialog\`, true, true, false, []);
   
@@ -583,7 +583,7 @@ exports[`refs > refs are properly bound in slots 1`] = `
   
   return function template(ctx, node, key = "") {
     const b2 = safeOutput(ctx['this'].state.val, node, key, "\\u00021");
-    const b4 = comp1({slots: markRaw({"footer": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`\\u00022\`, node, this, null);
+    const b4 = comp1({slots: {"footer": {__render: slot1, __ctx: ctx, __owner: this}}}, key + \`\\u00022\`, node, this, null);
     return block1([], [b2, b4]);
   }
 }"
@@ -686,7 +686,7 @@ exports[`refs > set-like ref in slot drops its element when the slot host is rem
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { createRef, markRaw, createComponent } = helpers;
+  let { createRef, createComponent } = helpers;
   const comp1 = createComponent(app, \`Wrapper\`, true, true, false, []);
   
   let block2 = createBlock(\`<div class="slotted" block-ref="0">Coucou</div>\`);
@@ -699,7 +699,7 @@ exports[`refs > set-like ref in slot drops its element when the slot host is rem
   return function template(ctx, node, key = "") {
     let b3;
     if (ctx['this'].visible()) {
-      b3 = comp1({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`\\u00021\`, node, this, null);
+      b3 = comp1({slots: {"default": {__render: slot1, __ctx: ctx, __owner: this}}}, key + \`\\u00021\`, node, this, null);
     }
     return multi([b3]);
   }

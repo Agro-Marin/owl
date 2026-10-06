@@ -5,8 +5,10 @@ import {
   onWillDestroy,
   onWillStart,
   Portal,
+  props,
   proxy,
   Suspense,
+  toRaw,
 } from "../../src";
 import { makeTestFixture } from "../helpers";
 import {
@@ -68,7 +70,10 @@ interface World {
 const MODEL: Scope = { t: "init", c: true, r: "y", s: "z" };
 
 function makeRoot(world: World, comps: Def[]) {
+  // read through a private member: a template run with a proxy of its
+  // component as `this` (a slot rendered through a proxied descriptor) throws
   class Base extends Component {
+    #world = world;
     setup() {
       world.alive.add(this);
       onWillDestroy(() => world.alive.delete(this));
@@ -80,7 +85,7 @@ function makeRoot(world: World, comps: Def[]) {
       };
     }
     get m() {
-      return world.model;
+      return this.#world.model;
     }
     get ms() {
       return world.accessors;
@@ -95,7 +100,7 @@ function makeRoot(world: World, comps: Def[]) {
       return target;
     }
     log(ev: Event, id: string, ...value: unknown[]) {
-      world.log.push({
+      this.#world.log.push({
         entry: value.length ? `${id}:${String(value[0])}` : id,
         node: world.listener,
         synthetic: !(ev.currentTarget instanceof Element),
@@ -127,6 +132,20 @@ function makeRoot(world: World, comps: Def[]) {
     };
     // named in owl's debug logs
     Object.defineProperty(components[def.name], "name", { value: def.name });
+    if (def.relay) {
+      const copy = def.relay === 2;
+      components[`R${def.name}`] = class extends Component {
+        static template = `R${def.name}`;
+        static components = components;
+        props = props();
+        box = proxy({ slots: undefined as any });
+        // the slots this render received, read back through the proxy
+        relayed() {
+          toRaw(this.box).slots = copy ? { ...this.props.slots } : this.props.slots;
+          return this.box;
+        }
+      };
+    }
   }
   return class Root extends Base {
     static template = "root";
@@ -528,6 +547,9 @@ async function runInteractive(generated: Generated): Promise<string[]> {
   app.addTemplate("gate", "<i>g</i>");
   for (const def of [...comps, ...calls]) {
     app.addTemplate(def.name, toXml(def.body));
+    if (def.relay) {
+      app.addTemplate(`R${def.name}`, `<${def.name} t-props="this.relayed()"/>`);
+    }
   }
   let root: any;
   const problems: string[] = [];

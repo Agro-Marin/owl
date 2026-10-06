@@ -19,7 +19,7 @@ exports[`t-esc is deprecated > t-esc on a component is its default slot, as t-ou
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { safeOutput, markRaw, createComponent } = helpers;
+  let { safeOutput, createComponent } = helpers;
   const comp1 = createComponent(app, \`Child\`, true, true, false, []);
   
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
@@ -29,7 +29,7 @@ exports[`t-esc is deprecated > t-esc on a component is its default slot, as t-ou
   }
   
   return function template(ctx, node, key = "") {
-    const b3 = comp1({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`\\u00022\`, node, this, null);
+    const b3 = comp1({slots: {"default": {__render: slot1, __ctx: ctx, __owner: this}}}, key + \`\\u00022\`, node, this, null);
     return block1([], [b3]);
   }
 }"

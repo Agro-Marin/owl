@@ -4,7 +4,7 @@ exports[`t-on > a slot's t-on mounted by its component's own render runs, then t
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { markRaw, createComponent, createCatcher } = helpers;
+  let { createComponent, createCatcher } = helpers;
   const comp1 = createComponent(app, \`Child\`, true, true, false, []);
   const hdlr_fn1 = (ctx)=>ctx['this'].log('child');
   const catcher1 = createCatcher({"click":0}, [hdlr_fn1]);
@@ -17,7 +17,7 @@ exports[`t-on > a slot's t-on mounted by its component's own render runs, then t
   }
   
   return function template(ctx, node, key = "") {
-    const b3 = catcher1(comp1({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`\\u00021\`, node, this, null), ctx);
+    const b3 = catcher1(comp1({slots: {"default": {__render: slot1, __ctx: ctx, __owner: this}}}, key + \`\\u00021\`, node, this, null), ctx);
     return block1([], [b3]);
   }
 }"
@@ -165,7 +165,7 @@ exports[`t-on > t-on on a t-set-slot whose content ends with a t-set 1`] = `
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { safeOutput, createCatcher, markRaw, createComponent } = helpers;
+  let { safeOutput, createCatcher, createComponent } = helpers;
   const hdlr_fn1 = (ctx)=>ctx['this'].state.count++;
   const catcher1 = createCatcher({"click":0}, [hdlr_fn1]);
   const comp1 = createComponent(app, \`Child\`, true, true, false, []);
@@ -181,7 +181,7 @@ exports[`t-on > t-on on a t-set-slot whose content ends with a t-set 1`] = `
   }
   
   return function template(ctx, node, key = "") {
-    return comp1({slots: markRaw({"myslot": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`\\u00022\`, node, this, null);
+    return comp1({slots: {"myslot": {__render: slot1, __ctx: ctx, __owner: this}}}, key + \`\\u00022\`, node, this, null);
   }
 }"
 `;
@@ -434,7 +434,7 @@ exports[`t-on > t-on on slot, with 'prevent' modifier 1`] = `
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { markRaw, createComponent } = helpers;
+  let { createComponent } = helpers;
   const comp1 = createComponent(app, \`Child\`, true, true, false, []);
   
   let block1 = createBlock(\`<button>button</button>\`);
@@ -444,7 +444,7 @@ exports[`t-on > t-on on slot, with 'prevent' modifier 1`] = `
   }
   
   return function template(ctx, node, key = "") {
-    return comp1({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`\\u00021\`, node, this, null);
+    return comp1({slots: {"default": {__render: slot1, __ctx: ctx, __owner: this}}}, key + \`\\u00021\`, node, this, null);
   }
 }"
 `;
@@ -467,7 +467,7 @@ exports[`t-on > t-on on t-call-slots 1`] = `
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { markRaw, createComponent } = helpers;
+  let { createComponent } = helpers;
   const comp1 = createComponent(app, \`Child\`, true, true, false, []);
   
   let block1 = createBlock(\`<p>something</p>\`);
@@ -477,7 +477,7 @@ exports[`t-on > t-on on t-call-slots 1`] = `
   }
   
   return function template(ctx, node, key = "") {
-    return comp1({slots: markRaw({"default": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`\\u00021\`, node, this, null);
+    return comp1({slots: {"default": {__render: slot1, __ctx: ctx, __owner: this}}}, key + \`\\u00021\`, node, this, null);
   }
 }"
 `;
@@ -504,7 +504,7 @@ exports[`t-on > t-on on t-set-slots 1`] = `
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { safeOutput, createCatcher, markRaw, createComponent } = helpers;
+  let { safeOutput, createCatcher, createComponent } = helpers;
   const hdlr_fn1 = (ctx)=>ctx['this'].state.count++;
   const catcher1 = createCatcher({"click":0}, [hdlr_fn1]);
   const comp1 = createComponent(app, \`Child\`, true, true, false, []);
@@ -522,7 +522,7 @@ exports[`t-on > t-on on t-set-slots 1`] = `
     const b2 = text(\` [\`);
     const b3 = safeOutput(ctx['this'].state.count, node, key, "\\u00021");
     const b4 = text(\`] \`);
-    const b8 = comp1({slots: markRaw({"myslot": {__render: slot1, __ctx: ctx, __owner: this}})}, key + \`\\u00022\`, node, this, null);
+    const b8 = comp1({slots: {"myslot": {__render: slot1, __ctx: ctx, __owner: this}}}, key + \`\\u00022\`, node, this, null);
     return multi([b2, b3, b4, b8]);
   }
 }"

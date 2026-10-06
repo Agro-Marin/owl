@@ -3,12 +3,12 @@ import {
   computed,
   debug,
   debugLog,
-  markRaw,
   OwlError,
   readArrayItems,
   ReadonlyReactiveValue,
   signal,
   Signal,
+  toRaw,
   untrack,
 } from "@odoo/owl-core";
 import { App } from "../app";
@@ -50,10 +50,24 @@ function callSlot(
   owner?: any
 ): BDom {
   const slots = ctx.__owl__.props.slots;
-  const slot = slots && slots[name];
+  let slot = slots && slots[name];
   let slotBDom: BDom | null = null;
   const segment = escapeKey(name);
   if (slot && slot.__render) {
+    // a descriptor read through a proxy (slots held in proxied state) would
+    // give its proxied context and owner, whose private members it cannot
+    // reach: the slot renders from the raw descriptor. Slots are not marked
+    // raw for this: that cost a WeakSet entry per render, for its outer object only
+    const raw = toRaw(slot);
+    if (raw !== slot) {
+      if (debug.template) {
+        debugLog(
+          "template",
+          `slot "${name}": its descriptor is a proxy, rendered from its raw object`
+        );
+      }
+      slot = raw;
+    }
     // a slot renders in the context it was written in: a scope of its own
     // only for its slot scope variable. Its code writes no variable into the
     // context it is given (a t-set makes a scope first), and a context put
@@ -768,7 +782,6 @@ export const helpers = {
   attrValue,
   attrsValue,
   createCatcher,
-  markRaw,
   OwlError,
   createRef,
   modelExpr,
