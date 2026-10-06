@@ -2,6 +2,7 @@ import { compile } from "@odoo/owl-compiler";
 import {
   App,
   Component,
+  mount,
   onMounted,
   onWillDestroy,
   onWillPatch,
@@ -378,4 +379,34 @@ test("a destroyed app creates no root", () => {
   app.destroy();
   expect(() => app.createRoot(Root)).toThrow("Cannot create a root in a destroyed app");
   expect(app.roots.size).toBe(0);
+});
+
+describe("mount()", () => {
+  test("a failed mount leaves no app behind", async () => {
+    const log: string[] = [];
+    class C extends Component {
+      static template = xml`<div/>`;
+      setup() {
+        onWillDestroy(() => log.push("destroyed"));
+      }
+    }
+    const before = App.apps.size;
+    await expect(mount(C, document.createElement("div"))).rejects.toThrow(
+      "Cannot mount a component on a detached dom node"
+    );
+    expect(App.apps.size).toBe(before);
+    expect(log).toEqual(["destroyed"]);
+  });
+
+  test("a setup error leaves no app behind", async () => {
+    class C extends Component {
+      static template = xml`<div/>`;
+      setup() {
+        throw new Error("setup");
+      }
+    }
+    const before = App.apps.size;
+    await expect(mount(C, document.createElement("div"))).rejects.toThrow("setup");
+    expect(App.apps.size).toBe(before);
+  });
 });

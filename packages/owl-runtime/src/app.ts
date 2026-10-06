@@ -336,15 +336,28 @@ export async function mount<T extends ComponentConstructor>(
   config: AppConfig & RootConfig<GetProps<ComponentInstance<T>>> & MountOptions = {}
 ): Promise<ComponentInstance<T>> {
   const app = new App(config);
-  if (app.pluginManager.status < STATUS.MOUNTED) {
-    // Plugins are still starting: wait for them before building the root, so
-    // the root's setup/field initializers can safely call plugin() — including
-    // plugins that only start in a later sequence batch.
-    await app.pluginManager.ready;
-    if (app.destroyed) {
-      throw makeAbortError();
+  try {
+    if (app.pluginManager.status < STATUS.MOUNTED) {
+      // Plugins are still starting: wait for them before building the root, so
+      // the root's setup/field initializers can safely call plugin() — including
+      // plugins that only start in a later sequence batch.
+      await app.pluginManager.ready;
+      if (app.destroyed) {
+        throw makeAbortError();
+      }
     }
+    const root = app.createRoot(C, config);
+    return (await root.mount(target, config)) as any;
+  } catch (error) {
+    // the caller has no handle on this app: a failed mount must not leave it
+    // registered, nor its root alive
+    if (!app.destroyed) {
+      try {
+        app.destroy();
+      } catch {
+        // the mount's own error is the one reported
+      }
+    }
+    throw error;
   }
-  const root = app.createRoot(C, config);
-  return root.mount(target, config) as any;
 }

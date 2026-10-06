@@ -238,6 +238,32 @@ exports[`app.destroy() finishes the teardown when an onWillDestroy throws, then 
 }"
 `;
 
+exports[`mount() > a failed mount leaves no app behind 1`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  
+  let block1 = createBlock(\`<div/>\`);
+  
+  return function template(ctx, node, key = "") {
+    return block1();
+  }
+}"
+`;
+
+exports[`mount() > a setup error leaves no app behind 1`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  
+  let block1 = createBlock(\`<div/>\`);
+  
+  return function template(ctx, node, key = "") {
+    return block1();
+  }
+}"
+`;
+
 exports[`useApp > destroy remove the widget from the DOM 1`] = `
 "function anonymous(app, bdom, helpers
 ) {
