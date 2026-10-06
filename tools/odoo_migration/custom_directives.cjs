@@ -26,6 +26,9 @@ module.exports = {
     );
   },
   portal: (node, value) => {
+    if (node.nodeName.toLowerCase() !== "t") {
+      throw new Error("t-custom-portal should be on a 't' element");
+    }
     node.setAttribute("t-component", "__globals__.Portal");
     node.setAttribute("selector", value);
   },
