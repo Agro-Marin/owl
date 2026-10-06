@@ -404,6 +404,21 @@ function updateChild(node: ComponentNode, props: Record<string, any>, parentFibe
   }
 }
 
+// A dynamic component's key starts with its class's: a node is reused only by
+// the class that created it. An id, not the class name, which two classes may
+// share.
+const classKeys = new WeakMap<Function, string>();
+let nextClassKey = 1;
+
+function classKey(C: Function): string {
+  let key = classKeys.get(C);
+  if (key === undefined) {
+    key = `${C.name}#${nextClassKey++}`;
+    classKeys.set(C, key);
+  }
+  return key;
+}
+
 function createComponent<P extends Record<string, any>>(
   app: App,
   name: string | null,
@@ -443,10 +458,10 @@ function createComponent<P extends Record<string, any>>(
   const initiateRender = ComponentNode.prototype.initiateRender;
 
   return (props: P, key: string, ctx: ComponentNode, parent: any, C: any) => {
-    let node: any = ctx.childMap?.get(key);
-    if (isDynamic && node && node.component.constructor !== C) {
-      node = undefined;
+    if (isDynamic) {
+      key = classKey(C) + key;
     }
+    let node: any = ctx.childMap?.get(key);
     const parentFiber = ctx.fiber!;
     let signals: Record<string, PropSignal> | undefined;
     if (signalProps) {
@@ -487,7 +502,8 @@ function createComponent<P extends Record<string, any>>(
       if (signals) {
         propSignals.set(node, signals);
       }
-      (ctx.childMap ||= new Map()).set(key, node);
+      // only in the render's children: the node joins ctx.childMap once
+      // that render is committed
       const fiber = new Fiber(node, parentFiber);
       if (node.willStart.length) {
         initiateRender.call(node, fiber);

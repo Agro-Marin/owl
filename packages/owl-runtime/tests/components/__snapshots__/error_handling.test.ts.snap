@@ -737,7 +737,7 @@ exports[`can catch errors > can catch an error in onmounted 1`] = `
     b2 = text(\`Main\`);
     if (ctx['this'].state.ok) {
       const Comp1 = ctx['this'].component;
-      b3 = toggler(Comp1, comp1({}, (Comp1).name + key + \`__1\`, node, this, Comp1));
+      b3 = toggler(Comp1, comp1({}, key + \`__1\`, node, this, Comp1));
     }
     return multi([b2, b3]);
   }
@@ -1403,7 +1403,7 @@ exports[`can catch errors > catching error, rethrow, render parent  -- a main co
   
   function slot1(ctx, node, key = "") {
     const Comp1 = ctx['cp'].Comp;
-    return toggler(Comp1, comp1({}, (Comp1).name + key + \`__1\`, node, this, Comp1));
+    return toggler(Comp1, comp1({}, key + \`__1\`, node, this, Comp1));
   }
   
   return function template(ctx, node, key = "") {
@@ -1482,7 +1482,7 @@ exports[`can catch errors > catching in child makes parent render 1`] = `
   
   function slot1(ctx, node, key = "") {
     const Comp1 = ctx['elem'][1];
-    return toggler(Comp1, comp1({id: ctx['elem'][0]}, (Comp1).name + key + \`__1\`, node, this, Comp1));
+    return toggler(Comp1, comp1({id: ctx['elem'][0]}, key + \`__1\`, node, this, Comp1));
   }
   
   return function template(ctx, node, key = "") {
@@ -1616,7 +1616,7 @@ exports[`can catch errors > error in onMounted, graceful recovery 1`] = `
   
   return function template(ctx, node, key = "") {
     const Comp1 = ctx['this'].component;
-    return toggler(Comp1, comp1({}, (Comp1).name + key + \`__1\`, node, this, Comp1));
+    return toggler(Comp1, comp1({}, key + \`__1\`, node, this, Comp1));
   }
 }"
 `;
@@ -1683,7 +1683,7 @@ exports[`can catch errors > error in onMounted, graceful recovery, variation 1`]
     b2 = text(\`R\`);
     if (ctx['this'].state.gogogo) {
       const Comp1 = ctx['this'].component;
-      b3 = toggler(Comp1, comp1({}, (Comp1).name + key + \`__1\`, node, this, Comp1));
+      b3 = toggler(Comp1, comp1({}, key + \`__1\`, node, this, Comp1));
     }
     return multi([b2, b3]);
   }

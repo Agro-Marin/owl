@@ -1329,7 +1329,7 @@ export class CodeGenerator {
       expr = `\`${ast.name}\``;
     }
 
-    let keyArg = this.scopeKey(ctx, true);
+    const keyArg = this.scopeKey(ctx, true);
     let id = this.generateId("comp");
     this.helpers.add("createComponent");
     this.staticDefs.push({
@@ -1341,13 +1341,7 @@ export class CodeGenerator {
       })`,
     });
 
-    if (ast.isDynamic) {
-      // If the component class changes, this can cause delayed renders to go
-      // through if the key doesn't change. Use the component name for now.
-      // This means that two component classes with the same name isn't supported
-      // in t-component. We can generate a unique id per class later if needed.
-      keyArg = `(${expr}).name + ${keyArg}`;
-    }
+    // a dynamic component's key gets its class's id at run time (createComponent)
     let blockExpr = `${id}(${propString}, ${keyArg}, node, this, ${ast.isDynamic ? expr : null})`;
     if (ast.isDynamic) {
       blockExpr = `toggler(${expr}, ${blockExpr})`;

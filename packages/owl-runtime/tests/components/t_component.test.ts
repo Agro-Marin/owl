@@ -1,5 +1,15 @@
-import { Component, mount, proxy, xml } from "../../src";
 import {
+  App,
+  Component,
+  mount,
+  onWillDestroy,
+  onWillStart,
+  onWillUnmount,
+  proxy,
+  xml,
+} from "../../src";
+import {
+  makeDeferred,
   makeTestFixture,
   nextTick,
   render,
@@ -212,5 +222,61 @@ describe("t-component", () => {
     expect(error!.message).toBe(
       `Directive 't-component' can only be used on <t> nodes (used on a <div>)`
     );
+  });
+});
+
+describe("t-component with two classes of the same name", () => {
+  function sameNamed(log: string[], def: Promise<void>) {
+    const B = class Same extends Component {
+      static template = xml`<span>B<t t-out="this.state.n"/></span>`;
+      state = proxy({ n: 0 });
+      setup() {
+        log.push("B setup");
+        onWillUnmount(() => log.push("B willUnmount"));
+        onWillDestroy(() => log.push("B willDestroy"));
+      }
+    };
+    const C = class Same extends Component {
+      static template = xml`<span>C</span>`;
+      setup() {
+        onWillStart(() => def);
+        onWillDestroy(() => log.push("C willDestroy"));
+      }
+    };
+    class Parent extends Component {
+      static template = xml`<div><t t-component="this.state.C"/></div>`;
+      state = proxy({ C: B as any });
+    }
+    return { B, C, Parent };
+  }
+
+  test("destroying the app while the other class's render is pending destroys both", async () => {
+    const log: string[] = [];
+    const { C, Parent } = sameNamed(log, makeDeferred());
+    const app = new App({ test: true });
+    const parent = await app.createRoot(Parent).mount(fixture);
+    parent.state.C = C;
+    await nextTick();
+    expect(
+      Object.values(parent.__owl__.children).map((n) => n.component.constructor)
+    ).not.toContain(C);
+    app.destroy();
+    expect(log).toEqual(["B setup", "B willUnmount", "B willDestroy", "C willDestroy"]);
+  });
+
+  test("switching back before the other class rendered keeps the mounted component", async () => {
+    const log: string[] = [];
+    const { B, C, Parent } = sameNamed(log, makeDeferred());
+    const parent = await mount(Parent, fixture);
+    const b = Object.values(parent.__owl__.children)[0].component as any;
+    b.state.n = 5;
+    await nextTick();
+    parent.state.C = C;
+    await nextTick();
+    parent.state.C = B;
+    await nextTick();
+    expect(fixture.innerHTML).toBe("<div><span>B5</span></div>");
+    expect(Object.values(parent.__owl__.children).map((n) => n.component)).toEqual([b]);
+    expect(log).toEqual(["B setup", "C willDestroy"]);
   });
 });

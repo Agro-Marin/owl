@@ -248,11 +248,6 @@ export class ComponentNode extends Scope implements VNode<ComponentNode> {
     }
   }
 
-  cancel() {
-    this.parent!.childMap?.delete(this.parentKey!);
-    this._destroy();
-  }
-
   destroy() {
     let shouldRemove = this.status === STATUS.MOUNTED;
     removalDepth++;
@@ -301,6 +296,17 @@ export class ComponentNode extends Scope implements VNode<ComponentNode> {
         child._destroy();
       } catch (error) {
         failure ||= { error };
+      }
+    }
+    // the children a pending render created are not in childMap until it is
+    // committed
+    for (const child of this.fiber?.childrenMap?.values() || []) {
+      if (child.status === STATUS.NEW) {
+        try {
+          child._destroy();
+        } catch (error) {
+          failure ||= { error };
+        }
       }
     }
     // an error no handler catches destroys the app and is rethrown: the other

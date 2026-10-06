@@ -1536,7 +1536,7 @@ exports[`delayed render does not go through when t-component value changed 1`] =
   return function template(ctx, node, key = "") {
     const b2 = text(\`A\`);
     const Comp1 = ctx['this'].state.component;
-    const b3 = toggler(Comp1, comp1({}, (Comp1).name + key + \`__1\`, node, this, Comp1));
+    const b3 = toggler(Comp1, comp1({}, key + \`__1\`, node, this, Comp1));
     return multi([b2, b3]);
   }
 }"
@@ -2334,7 +2334,7 @@ exports[`t-foreach with dynamic async component 1`] = `
       let b3;
       if (ctx['arr']) {
         const Comp1 = ctx['this'].myComp;
-        b3 = toggler(Comp1, comp1({key: ctx['arr'][0]}, (Comp1).name + key + \`__1__\${skey1}\`, node, this, Comp1));
+        b3 = toggler(Comp1, comp1({key: ctx['arr'][0]}, key + \`__1__\${skey1}\`, node, this, Comp1));
       }
       c_block1[i1] = withKey(multi([b3]), key1);
     }
@@ -2370,7 +2370,7 @@ exports[`t-key on dom node having a component 1`] = `
   return function template(ctx, node, key = "") {
     const tKey_1 = keyOf(ctx['this'].key);
     const Comp1 = ctx['this'].myComp;
-    const b2 = toggler(tKey_1, toggler(Comp1, comp1({key: ctx['this'].key}, (Comp1).name + tKey_1 + key + \`__1\`, node, this, Comp1)));
+    const b2 = toggler(tKey_1, toggler(Comp1, comp1({key: ctx['this'].key}, tKey_1 + key + \`__1\`, node, this, Comp1)));
     return toggler(tKey_1, block1([], [b2]));
   }
 }"
@@ -2398,7 +2398,7 @@ exports[`t-key on dynamic async component (toggler is never patched) 1`] = `
   return function template(ctx, node, key = "") {
     const tKey_1 = keyOf(ctx['this'].key);
     const Comp1 = ctx['this'].myComp;
-    return toggler(tKey_1, toggler(Comp1, comp1({key: ctx['this'].key}, (Comp1).name + tKey_1 + key + \`__1\`, node, this, Comp1)));
+    return toggler(tKey_1, toggler(Comp1, comp1({key: ctx['this'].key}, tKey_1 + key + \`__1\`, node, this, Comp1)));
   }
 }"
 `;

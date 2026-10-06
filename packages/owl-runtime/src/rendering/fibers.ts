@@ -137,7 +137,7 @@ function cancelFibers(fibers: Fiber[]): number {
     let node = fiber.node;
     fiber.render = throwOnRender;
     if (node.status === STATUS.NEW) {
-      node.cancel();
+      node._destroy();
     }
     node.fiber = null;
     if (fiber.phase !== FiberPhase.NEW) {
