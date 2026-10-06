@@ -679,11 +679,15 @@ function writeKey(
   const own = Reflect.getOwnPropertyDescriptor(target, key);
   if (
     targets.get(receiver) === target &&
+    hasOrdinaryPrototype(target) &&
     (own !== undefined ? "value" in own : !inheritsAccessor(target, key))
   ) {
-    // A data property written through its own proxy: the engine would only
-    // come back through the proxy's defineProperty trap, to define it on the
-    // target. Written on the target, it costs no trap.
+    // A data property of a plain object or array written through its own
+    // proxy: the engine would only come back through the proxy's
+    // defineProperty trap, to define it on the target. Written on the target,
+    // it costs no trap. Any other target (a class instance, which may sit
+    // behind its own Proxy whose set trap tells writes apart by their
+    // receiver) is written with the reactive proxy as the receiver.
     const ret = Reflect.set(target, key, stored);
     const changed = !(isArray && key === "length") && !Object.is(own?.value, target[key]);
     onWriteKey(target, key, own !== undefined, changed, isArray, originalLength, atoms);
@@ -707,6 +711,11 @@ function writeKey(
     !(isArray && key === "length") && !Object.is(originalValue, Reflect.get(target, key, receiver));
   onWriteKey(target, key, own !== undefined, changed, isArray, originalLength, atoms);
   return ret;
+}
+
+function hasOrdinaryPrototype(target: Target): boolean {
+  const proto = Object.getPrototypeOf(target);
+  return proto === Object.prototype || proto === Array.prototype || proto === null;
 }
 
 // Whether a write of a key `target` does not own reaches a setter, or a

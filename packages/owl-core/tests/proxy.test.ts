@@ -2,6 +2,7 @@ import v8 from "node:v8";
 import vm from "node:vm";
 import {
   effect,
+  immediateEffect,
   markRaw,
   observe,
   OwlError,
@@ -292,6 +293,41 @@ describe("writes", () => {
     expect(Reflect.set(sealed, "b", 2)).toBe(false);
     expect(Reflect.set(sealed, "a", 2)).toBe(true);
     expect(sealed.a).toBe(2);
+  });
+
+  test("a write to an object behind its own proxy reaches its set trap with the reactive proxy as receiver, and notifies once", async () => {
+    // Odoo mail's records: a class instance behind a Proxy whose set trap
+    // tells a write through the reactive proxy from an internal one by its
+    // receiver; an internal write notifies on its own, through the proxy
+    class Message {
+      body = "";
+    }
+    let reactive: any;
+    let internal = false;
+    const receivers: string[] = [];
+    const inner = new Proxy(new Message(), {
+      set(target, key, value, receiver) {
+        receivers.push(receiver === reactive ? "reactive" : "other");
+        if (receiver !== reactive && !internal) {
+          internal = true;
+          try {
+            reactive[key] = value;
+          } finally {
+            internal = false;
+          }
+          return true;
+        }
+        return Reflect.set(target, key, value, receiver);
+      },
+    });
+    reactive = proxy(inner);
+    const seen: string[] = [];
+    immediateEffect(() => {
+      seen.push(reactive.body);
+    });
+    reactive.body = "test";
+    expect(receivers).toEqual(["reactive"]);
+    expect(seen).toEqual(["", "test"]);
   });
 
   test("Object.defineProperty notifies the readers of the value and of the keys", async () => {
