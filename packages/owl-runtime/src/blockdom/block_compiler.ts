@@ -28,7 +28,14 @@ let stringifying = 0;
 function makePropSetter(name: string): Setter<HTMLElement> {
   return function setProp(this: HTMLElement, value: any) {
     // support 0, fallback to empty string for other falsy values
-    (this as any)[name] = value === 0 ? 0 : value ? value.valueOf() : "";
+    const prop = value === 0 ? 0 : value ? value.valueOf() : "";
+    // the compiler wraps each value in a new object so that a value the user
+    // changed is set back on every patch: the element is read instead, and
+    // written only when it differs (a reflected property such as disabled
+    // writes its attribute even when unchanged)
+    if ((this as any)[name] !== prop) {
+      (this as any)[name] = prop;
+    }
   };
 }
 

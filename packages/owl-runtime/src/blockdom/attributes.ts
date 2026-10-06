@@ -366,7 +366,7 @@ function patchStyle(el: HTMLElement, oldVal: StyleObj, val: StyleObj) {
       changed = true;
     }
   }
-  if (!style.cssText) {
+  if (!style.length) {
     removeAttribute.call(el, "style");
   }
 }

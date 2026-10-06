@@ -101,3 +101,25 @@ test("an input's value is set after the attributes bounding it", () => {
   patch(tree, block(["250", "300", "120"]));
   expect(input.value).toBe("250");
 });
+
+test("a property already holding its value is not written again", () => {
+  const block = createBlock(
+    `<div><button block-property-0="disabled"/><input block-property-1="readOnly" block-property-2="value"/></div>`
+  );
+  const data = () => [new Boolean(true), new Boolean(true), new String("x")];
+  const tree = block(data());
+  mount(tree, fixture);
+  const observer = new MutationObserver(() => {});
+  observer.observe(fixture, { attributes: true, subtree: true });
+  for (let i = 0; i < 100; i++) {
+    patch(tree, block(data()));
+  }
+  const records = observer.takeRecords().length;
+  observer.disconnect();
+  expect(records).toBe(0);
+  // a value the user changed is still set back
+  const input = fixture.querySelector("input")!;
+  input.value = "typed";
+  patch(tree, block(data()));
+  expect(input.value).toBe("x");
+});
