@@ -16,7 +16,13 @@ import type { VNode } from "./index";
 import { VMulti } from "./multi";
 import { toText } from "./text";
 
-import { characterDataSetData, nodeGetFirstChild, nodeGetNextSibling } from "./dom";
+import {
+  characterDataSetData,
+  nodeCloneNode,
+  nodeGetFirstChild,
+  nodeGetNextSibling,
+  nodeInsertBefore,
+} from "./dom";
 
 const NO_OP = () => {};
 const XMLNS_URI = "http://www.w3.org/2000/xmlns/";
@@ -529,11 +535,9 @@ function createBlockClass(template: HTMLElement, ctx: BlockCtx): BlockClass {
       (((c.afterRefIdx ?? 0) & 0x7fff) << 16)
   );
 
-  // these values are defined here to make them faster to lookup in the class
-  // block scope
-  const nodeProto = Node.prototype;
-  const nodeCloneNode = nodeProto.cloneNode;
-  const nodeInsertBefore = nodeProto.insertBefore;
+  // read when the class is built, not once for all with the other DOM methods
+  // (dom.ts): a test environment patches Element.prototype.remove to fire the
+  // events a browser dispatches from inside a removal (refs.test.ts)
   const elementRemove = Element.prototype.remove;
 
   class Block {

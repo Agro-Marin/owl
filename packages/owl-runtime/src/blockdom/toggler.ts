@@ -1,3 +1,4 @@
+import { nodeInsertBefore, nodeRemoveChild } from "./dom";
 import type { VNode } from "./index";
 
 // -----------------------------------------------------------------------------
@@ -45,7 +46,7 @@ class VToggler {
       const firstNode = child1.firstNode()!;
       // a ShadowRoot parent is a node, not an element
       const parent = firstNode.parentNode as HTMLElement;
-      parent.insertBefore(txt, firstNode);
+      nodeInsertBefore.call(parent, txt, firstNode);
       if (withBeforeRemove) {
         child1.beforeRemove();
       }
@@ -53,7 +54,7 @@ class VToggler {
       // the old child's removal
       child1.remove();
       child2.mount(parent, txt);
-      parent.removeChild(txt);
+      nodeRemoveChild.call(parent, txt);
       this.child = child2;
       this.kind = other.kind;
     }
