@@ -91,9 +91,10 @@ its own value` instead of recursing (upstream hangs); a computed that catches
   the setter writes runs once, after it returns.
 - **A shallow proxy** (`signal.Array`, `signal.Object`) keeps a proxy written
   into it, as shallow Maps and Sets did.
-- **`Object.defineProperty` through a proxy notifies like a write**, and
-  `obj.hasOwnProperty(k)` subscribes to the presence of `k`. `Object.hasOwn`
-  stays untracked (a descriptor trap slows every `Object.keys`).
+- **`obj.hasOwnProperty(k)` through a proxy subscribes to the presence of
+  `k`**, as `in` does. `Object.defineProperty` and `Object.hasOwn` stay
+  untracked, as upstream (Odoo's web_studio defines a label getter on a
+  proxied field inside a computed).
 - **A locked (non-configurable, non-writable) property** is handed out as it
   is by collections and `observe()` views too, as the Proxy invariant requires.
 - **A collection's own properties** are read with the proxy as `this` (a
@@ -102,8 +103,9 @@ its own value` instead of recursing (upstream hangs); a computed that catches
 - **`includes` / `indexOf` / `lastIndexOf`** on a proxied plain array
   subscribe to its items as one atom and search the raw array; a subclass of
   `Array` is searched through its proxy, as for `t-foreach`.
-- **Through an `observe()` view**, `push` / `pop` / `shift` / `unshift` /
-  `splice` do not subscribe the view, and `forEach` hands out views.
+- **Through an `observe()` view**, `forEach` hands out views; a `push` or
+  `splice` reads the length through the view and calls its callback, as OWL 2's
+  `reactive([], callback)` did.
 - **A constructor in a type schema** (`{ a: String }`) throws instead of
   accepting everything; a `customValidator` of an optional type is optional,
   with that type's default.

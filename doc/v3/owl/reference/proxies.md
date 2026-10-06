@@ -119,8 +119,7 @@ view.count; // read again: observed again
 - Reads through the view still subscribe the computation they happen in (a
   render, an effect), as a plain proxy read does.
 - An array method that changes the length (`push`, `pop`, `shift`, `unshift`,
-  `splice`) does not subscribe the view to what it reads to do so: pushing
-  through the view calls `callback` only if the view read the length or the
-  items before.
+  `splice`) reads the length through the view, so pushing through it calls
+  `callback`, as OWL 2's `reactive([], callback)` did.
 - Use it to bridge to code that expects a callback; within components, prefer
   `proxy` with `effect` or a render.

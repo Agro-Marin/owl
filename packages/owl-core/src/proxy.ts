@@ -660,35 +660,6 @@ class BasicHandler implements ProxyHandler<any> {
     return ret;
   }
 
-  // Object.defineProperty notifies as a write does. The engine also defines
-  // through it the key a set trap writes (the proxy is the receiver): that
-  // write notifies on its own.
-  defineProperty(target: any, key: PropertyKey, descriptor: PropertyDescriptor): boolean {
-    if (target === writingTarget && key === writingKey) {
-      return Reflect.defineProperty(target, key, descriptor);
-    }
-    const before = Reflect.getOwnPropertyDescriptor(target, key);
-    const isArray = Array.isArray(target);
-    const originalLength = isArray ? target.length : 0;
-    if (!this.shallow && "value" in descriptor) {
-      descriptor.value = toRaw(descriptor.value);
-    }
-    const ret = Reflect.defineProperty(target, key, descriptor);
-    if (ret) {
-      const atoms = this.host ?? target;
-      const after = Reflect.getOwnPropertyDescriptor(target, key)!;
-      if (before !== undefined && before.enumerable !== after.enumerable) {
-        onWriteTargetKey(atoms, KEYCHANGES);
-      }
-      const changed =
-        !Object.is(before?.value, after.value) ||
-        before?.get !== after.get ||
-        before?.set !== after.set;
-      onWriteKey(target, key, before !== undefined, changed, isArray, originalLength, atoms);
-    }
-    return ret;
-  }
-
   ownKeys(target: any): ArrayLike<string | symbol> {
     onReadTargetKey(this.host ?? target, KEYCHANGES);
     return Reflect.ownKeys(target);
@@ -700,10 +671,6 @@ class BasicHandler implements ProxyHandler<any> {
   }
 }
 
-// The key a set trap is writing, which the defineProperty trap leaves alone
-let writingTarget: Target | null = null;
-let writingKey: PropertyKey | undefined;
-
 function writeKey(
   target: any,
   key: PropertyKey,
@@ -714,77 +681,37 @@ function writeKey(
 ): boolean {
   // a shallow proxy hands its values back as stored: it keeps a proxy
   const stored = shallow ? value : toRaw(value);
+  const own = Reflect.getOwnPropertyDescriptor(target, key);
+  // An own data property runs no code. Any other write may reach a setter: one
+  // batch, so a setter writing other keys runs an immediate reader of them and
+  // of this key once, after the write.
+  return own !== undefined && "value" in own
+    ? write(target, key, stored, receiver, own, atoms)
+    : batch(() => write(target, key, stored, receiver, own, atoms));
+}
+
+// The write itself, with the reactive proxy as the receiver: an accessor runs
+// with it as `this`, and a target behind its own Proxy sees it in its set trap.
+// A write that failed changed nothing.
+function write(
+  target: any,
+  key: PropertyKey,
+  stored: any,
+  receiver: any,
+  own: PropertyDescriptor | undefined,
+  atoms: Target
+): boolean {
   const isArray = Array.isArray(target);
   const originalLength = isArray ? target.length : 0;
-  const own = Reflect.getOwnPropertyDescriptor(target, key);
-  if (targets.get(receiver) === target && hasOrdinaryPrototype(target)) {
-    // A data property of a plain object or array written through its own
-    // proxy: the engine would only come back through the proxy's
-    // defineProperty trap, to define it on the target. Written on the target,
-    // it costs no trap. Any other target (a class instance, which may sit
-    // behind its own Proxy whose set trap tells writes apart by their
-    // receiver) is written with the reactive proxy as the receiver. A key the
-    // target does not own is compared with the value it inherits, and a write
-    // that failed changed nothing.
-    const data = own !== undefined ? ("value" in own ? own : null) : inheritedData(target, key);
-    if (data !== null) {
-      if (!Reflect.set(target, key, stored)) {
-        return false;
-      }
-      const changed = !(isArray && key === "length") && !Object.is(data.value, target[key]);
-      onWriteKey(target, key, own !== undefined, changed, isArray, originalLength, atoms);
-      return true;
-    }
+  const originalValue =
+    own !== undefined && "value" in own ? own.value : Reflect.get(target, key, receiver);
+  if (!Reflect.set(target, key, stored, receiver)) {
+    return false;
   }
-  // An accessor runs with the proxy as `this`, and a write through another
-  // receiver defines the key on it. One batch: a setter writing other keys
-  // runs an immediate reader of them and of this key once, after the write.
-  return batch(() => {
-    const originalValue = Reflect.get(target, key, receiver);
-    const previousTarget = writingTarget;
-    const previousKey = writingKey;
-    writingTarget = target;
-    writingKey = key;
-    let ret: boolean;
-    try {
-      ret = Reflect.set(target, key, stored, receiver);
-    } finally {
-      writingTarget = previousTarget;
-      writingKey = previousKey;
-    }
-    const changed =
-      !(isArray && key === "length") &&
-      !Object.is(originalValue, Reflect.get(target, key, receiver));
-    onWriteKey(target, key, own !== undefined, changed, isArray, originalLength, atoms);
-    return ret;
-  });
-}
-
-function hasOrdinaryPrototype(target: Target): boolean {
-  const proto = Object.getPrototypeOf(target);
-  return proto === Object.prototype || proto === Array.prototype || proto === null;
-}
-
-const NO_PROPERTY: PropertyDescriptor = Object.freeze({ value: undefined });
-
-// The data property a write of a key `target` does not own would shadow
-// (NO_PROPERTY if none), or null when the write reaches a setter, or a proxy,
-// up the prototype chain.
-function inheritedData(target: Target, key: PropertyKey): PropertyDescriptor | null {
-  for (
-    let proto = Object.getPrototypeOf(target);
-    proto !== null;
-    proto = Object.getPrototypeOf(proto)
-  ) {
-    if (targets.has(proto)) {
-      return null;
-    }
-    const desc = Reflect.getOwnPropertyDescriptor(proto, key);
-    if (desc !== undefined) {
-      return "value" in desc ? desc : null;
-    }
-  }
-  return NO_PROPERTY;
+  const changed =
+    !(isArray && key === "length") && !Object.is(originalValue, Reflect.get(target, key, receiver));
+  onWriteKey(target, key, own !== undefined, changed, isArray, originalLength, atoms);
+  return true;
 }
 
 // Notifies a write of `key`: its creation, its value, and for an array its
@@ -1327,11 +1254,6 @@ class CollectionHandler extends BasicHandler {
   deleteProperty(target: any, key: PropertyKey): boolean {
     this.host ??= propertyHost(target);
     return super.deleteProperty(target, key);
-  }
-
-  defineProperty(target: any, key: PropertyKey, descriptor: PropertyDescriptor): boolean {
-    this.host ??= propertyHost(target);
-    return super.defineProperty(target, key, descriptor);
   }
 
   ownKeys(target: any): ArrayLike<string | symbol> {

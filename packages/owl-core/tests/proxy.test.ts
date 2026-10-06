@@ -1,6 +1,7 @@
 import v8 from "node:v8";
 import vm from "node:vm";
 import {
+  computed,
   effect,
   immediateEffect,
   markRaw,
@@ -467,47 +468,25 @@ describe("writes", () => {
     expect(seen).toEqual(["", "test"]);
   });
 
-  test("Object.defineProperty notifies the readers of the value and of the keys", async () => {
-    const state = proxy({ a: 1 } as any);
-    const values: number[] = [];
-    const keys: string[][] = [];
+  test("Object.defineProperty through a proxy defines on the target and notifies nothing (Odoo web_studio's activeNode)", async () => {
+    // web_studio defines a label getter on a proxied field inside a computed:
+    // notifying would re-run what read the field
+    const field = proxy({ name: "a", label: "A" } as any);
+    const labels: string[] = [];
     effect(() => {
-      values.push(state.a);
+      labels.push(field.label);
     });
-    effect(() => {
-      keys.push(Object.keys(state));
+    const node = computed(() => {
+      Object.defineProperty(field, "label", { get: () => "B", configurable: true });
+      return field.name;
     });
-    Object.defineProperty(state, "a", { value: 2 });
+    effect(() => node());
     await waitScheduler();
-    Object.defineProperty(state, "b", { value: 3, enumerable: true, configurable: true });
-    await waitScheduler();
-    Object.defineProperty(state, "b", { enumerable: false });
-    await waitScheduler();
-    expect(values).toEqual([1, 2]);
-    expect(keys).toEqual([["a"], ["a", "b"], ["a"]]);
-  });
-
-  test("Object.defineProperty stores the raw object of a proxy", () => {
+    expect(labels).toEqual(["A"]);
+    expect(toRaw(field).label).toBe("B");
     const item = proxy({ a: 1 });
-    const state = proxy({} as any);
-    Object.defineProperty(state, "item", { value: item, configurable: true, writable: true });
-    expect(toRaw(state).item).toBe(toRaw(item));
-  });
-
-  test("Object.defineProperty past the end of an array notifies its length", async () => {
-    const list = proxy([1]);
-    const seen: number[] = [];
-    effect(() => {
-      seen.push(list.length);
-    });
-    Object.defineProperty(list, 3, {
-      value: 4,
-      writable: true,
-      configurable: true,
-      enumerable: true,
-    });
-    await waitScheduler();
-    expect(seen).toEqual([1, 4]);
+    Object.defineProperty(field, "item", { value: item, configurable: true, writable: true });
+    expect(toRaw(field).item).toBe(item);
   });
 
   test("a write notifies its key once, through the set trap only", () => {
