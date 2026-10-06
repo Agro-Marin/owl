@@ -452,59 +452,50 @@ export function observe<T extends Target>(target: T, callback: () => void): T {
   computation.notifiesWithoutRecompute = true;
   const views = new WeakMap<Target, any>();
   const read = <R>(fn: () => R): R => withObserver(computation, fn);
-  const wrap = (value: any): any =>
-    typeof value === "object" && value !== null && targets.has(value) ? view(value) : value;
+  // a proxy read through the view is a view too
+  const wrap = (value: any): any => (targets.has(value) ? view(value) : value);
   function view(target: any): any {
     const reactive = viewBases.get(target) ?? target;
-    let result = views.get(reactive);
-    if (result) {
-      return result;
+    const known = views.get(reactive);
+    if (known) {
+      return known;
     }
     const raw = toRaw(reactive);
     const type = collectionType(raw);
     const methodKeys = type ? collectionMethods[type] : null;
-    // the functions handed out for the methods the view runs on its proxy
-    let methods: Map<Function, Function> | null = null;
-    const method = (value: Function, make: () => Function): Function => {
-      let result = (methods ??= new Map()).get(value);
-      if (result === undefined) {
-        result = make();
-        methods.set(value, result);
-      }
-      return result;
-    };
+    // the functions handed out for the methods the view runs on its proxy, by
+    // the method the proxy handed out
+    let methods: Map<Function, Function> | undefined;
     const self: any = new Proxy(reactive, {
       get(r, key, receiver) {
         // the view is the receiver: a getter, or a target that is itself a
         // proxy, reads through it and so subscribes the callback
         const value = read(() => Reflect.get(r, key, receiver));
-        if (typeof value === "function") {
-          if (methodKeys?.has(key)) {
-            return method(value, () =>
-              key === "forEach"
+        if (typeof value !== "function") {
+          const result = wrap(value);
+          return result !== value && isLocked(raw, key) ? value : result;
+        }
+        if (!methodKeys?.has(key) && !viewReaders.has(value)) {
+          return value;
+        }
+        let method = (methods ??= new Map()).get(value);
+        if (!method) {
+          methods.set(
+            value,
+            (method =
+              methodKeys && key === "forEach"
                 ? (callback: Function, thisArg?: any) => {
-                    for (const [k, v] of observedIterator(read(() => r.entries()))) {
+                    for (const [k, v] of self.entries()) {
                       callback.call(thisArg, v, k, self);
                     }
                   }
                 : (...args: any[]) => {
                     const result = read(() => value.apply(r, args));
                     return isIterator(result) ? observedIterator(result) : wrap(result);
-                  }
-            );
-          }
-          if (viewReaders.has(value)) {
-            return method(
-              value,
-              () =>
-                (...args: any[]) =>
-                  read(() => value.apply(r, args))
-            );
-          }
-          return value;
+                  })
+          );
         }
-        const result = wrap(value);
-        return result !== value && isLocked(raw, key) ? value : result;
+        return method;
       },
       has(r, key) {
         return read(() => Reflect.has(r, key));
@@ -522,11 +513,10 @@ export function observe<T extends Target>(target: T, callback: () => void): T {
         return Reflect.deleteProperty(r, key);
       },
     });
-    result = self;
-    views.set(reactive, result);
-    viewBases.set(result, reactive);
-    targets.set(result, raw);
-    return result;
+    views.set(reactive, self);
+    viewBases.set(self, reactive);
+    targets.set(self, raw);
+    return self;
   }
   // a collection's iterator reads its entries as it advances: each step is
   // read through the view, not only the call that created the iterator
