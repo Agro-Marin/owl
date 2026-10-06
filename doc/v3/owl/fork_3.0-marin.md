@@ -172,8 +172,11 @@ true })` creates an effect owned by nothing. When a computed and an effect
   flag only when the element differs); upstream wraps each in a new
   `String`/`Boolean` per render. `t-model`'s property is set only when the
   model changes.
-- **A handler's code is static**: `createBlock(str, [fns])`,
-  `createCatcher(spec, [fns])`; a render gives a handler only its context (a
+- **A block string has one block type**, given its handlers at each call
+  (`type(data, children, handlers)`, the list checked by
+  `createBlock(str, list)`; a missing list throws at mount), so making an
+  App's template functions makes no block type per handler site.
+- **A handler's code is static**: `createCatcher(spec, [fns])`; a render gives a handler only its context (a
   `t-model`'s model in a slot linked by `block-handler-arg-N`), the element
   reads code, context and model from its block when the event fires, and
   modifiers come from the key. `config.mainEventHandler` is
@@ -237,6 +240,15 @@ true })` creates an effect owned by nothing. When a computed and an effect
   compiles; a context variable cannot be named `delete`); `{{ }}` and `#{ }`
   end at the brace that closes them; an arrow prop's free variables include
   those its parameter defaults read.
+- **Slots are not marked raw per render**: `callSlot` renders a descriptor
+  read through a proxy from its raw object (logged on `template`); slots put in
+  proxied state come back proxied, like any prop.
+- **An item of a loop in a loop, and a t-call context (with attributes or a
+  body) in a loop, are made under the outer item's prototype with a copy of
+  its loop names**, when no `t-set` writes that loop level and no expression
+  of the template assigns a context variable: the outer item does not become a
+  prototype (V8 deoptimizes a fresh object made one). Only a context variable
+  assigned at event time by a bare-called template could tell the difference.
 - **A slot without a slot scope and a t-call with neither attributes nor body
   render in the context they are given**, not a child of it (only a bare-name
   `t-model.proxy` can tell): a new context under one made in this render costs
@@ -255,7 +267,8 @@ built from `DEBUG_CHANNELS`.
 ## Odoo integration contract
 
 Odoo reaches into these internals; a refactor must keep their shape:
-Block strings, handler data and `mainEventHandler` are internal; Odoo reads
+Block strings, block types (called with their handler list as third
+argument), handler data and `mainEventHandler` are internal; Odoo reads
 none of them. A slot descriptor is `{__render, __ctx, __owner, __scope?, ...attrs}`
 (`__render` static, run with `__owner`), and a t-call body sits in the call
 context under the `zero` / `zeroCtx` helper symbols; Odoo reads none of them.
