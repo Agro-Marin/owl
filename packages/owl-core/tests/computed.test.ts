@@ -882,6 +882,78 @@ describe("cycles", () => {
   });
 });
 
+describe("a write during its own run", () => {
+  test("a getter that writes a source it read ends out of date: the next read recomputes it", () => {
+    const s = signal(1);
+    const c = computed(() => {
+      s.set(s() + 1);
+      return s();
+    });
+    expect([c(), s(), c(), s()]).toEqual([2, 2, 3, 3]);
+  });
+
+  test("a getter that initializes what it reads recomputes once more, then caches", () => {
+    const cache = signal<number | null>(null);
+    let runs = 0;
+    const c = computed(() => {
+      runs++;
+      if (cache() === null) {
+        cache.set(42);
+      }
+      return cache();
+    });
+    expect([c(), runs]).toEqual([42, 1]);
+    expect([c(), runs]).toEqual([42, 2]);
+    expect([c(), runs]).toEqual([42, 2]);
+  });
+
+  test("a write the getter reverts before it returns changes nothing for it", () => {
+    const s = signal(1);
+    let runs = 0;
+    const c = computed(() => {
+      runs++;
+      const value = s();
+      s.set(value + 1);
+      s.set(value);
+      return value;
+    });
+    expect([c(), c(), runs]).toEqual([1, 1, 1]);
+  });
+
+  test("through a computed it reads, the same", () => {
+    const s = signal(1);
+    const double = computed(() => s() * 2);
+    const c = computed(() => {
+      const value = double();
+      s.set(s() + 1);
+      return value;
+    });
+    expect([c(), s()]).toEqual([2, 2]);
+    expect([c(), s()]).toEqual([4, 3]);
+  });
+
+  test("an effect reading such a computed still follows it", async () => {
+    const s = signal(0);
+    const c = computed(() => {
+      s.set(s() + 1);
+      return s();
+    });
+    const seen: number[] = [];
+    effect(() => {
+      seen.push(c());
+    });
+    expect(seen).toEqual([1]);
+    s.set(10);
+    await waitScheduler();
+    expect(seen.length).toBe(2);
+    expect(seen[1]).toBe(s());
+    s.set(20);
+    await waitScheduler();
+    expect(seen.length).toBe(3);
+    expect(seen[2]).toBe(s());
+  });
+});
+
 describe("a failing source in a pending check", () => {
   test("the reader stays subscribed and runs again on its next change", async () => {
     class IntentionalTestError extends Error {

@@ -87,6 +87,48 @@ test("the computed channel names a recompute and an equal result", async () => {
   ]);
 });
 
+test("the reactivity and computed channels trace a write reaching a run that read it", async () => {
+  setDebug(["reactivity", "computed"]);
+  const s = signal(0);
+  const c = computed(() => s(), { name: "c" });
+  const dispose = effect(
+    () => {
+      if (c() === 0) {
+        s.set(1);
+      }
+    },
+    { name: "resetter" }
+  );
+  const self = computed(
+    () => {
+      s.set(s() + 1);
+      return s();
+    },
+    { name: "self" }
+  );
+  self();
+  s.set(5);
+  await waitScheduler();
+  dispose();
+  expect(lines).toEqual([
+    "computed: run c",
+    "reactivity: write, 1 observer(s)",
+    "reactivity: resetter invalidated by a write during its run",
+    "reactivity: c forwards the next write, resetter read it",
+    "computed: run self",
+    "reactivity: write, 2 observer(s)",
+    "reactivity: forward through c",
+    "reactivity: self invalidated by a write during its run",
+    "computed: self ends out of date, a write reached it while it ran",
+    "reactivity: write, 2 observer(s)",
+    "reactivity: forward through self",
+    "computed: run c",
+    "reactivity: write, 1 observer(s)",
+    "computed: dispose unobserved self",
+    "computed: dispose c, resetter was its last observer",
+  ]);
+});
+
 test("the plugin and scope channels trace a start, a failed setup and its undo", () => {
   setDebug(["plugin", "scope"]);
   class Dep extends Plugin {}

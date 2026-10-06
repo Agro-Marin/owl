@@ -21,6 +21,16 @@ Dependency tracking is dynamic: only the values read during the **last**
 evaluation are tracked. If a branch is not taken, the values it would have
 read are not subscribed to.
 
+A getter that writes a value it has read leaves the computed out of date as
+soon as it returns: the next read evaluates it again, against what it wrote. A
+getter that initializes what it reads (`if (!cache()) cache.set(...)`) thus
+runs once more, then caches; one that sets a signal back to the value it
+read before returning stays up to date (default equality only, as for any
+reader of a signal). An effect, in the same position, does not run
+again for its own write: an effect that writes the source of a computed it
+read keeps the value of the computed it read, as it keeps the value of a
+signal, and runs when a later write changes the computed from that value.
+
 A computed value is read-only by default: its type
 (`ReadonlyReactiveValue`) has no `.set()`, and calling it anyway throws an
 `OwlError`. To make it writable, provide a `set` option (see below).

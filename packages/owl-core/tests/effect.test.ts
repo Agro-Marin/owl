@@ -237,7 +237,7 @@ describe("effect", () => {
     expect(seen).toEqual([[], [50, 60], [10, 20]]);
   });
 
-  test("a computed recomputed by a run invalidates a source that run read: the run settles it", async () => {
+  test("a computed recomputed by a run invalidates a source that run read: it forwards the next write", async () => {
     // c was disposed while d still read it: d stays up to date, c goes stale
     // and stops following s. The effect reads d, then c untracked, whose
     // recompute (s changed meanwhile) invalidates d after the effect read it.
@@ -256,10 +256,54 @@ describe("effect", () => {
     t.set(1);
     await waitScheduler();
     expect(seen).toEqual([11, 12]);
-    // d was settled at the end of that run: it still propagates
+    // d, left out of date by that run, forwards the next write to it
     s.set(3);
     await waitScheduler();
     expect(seen).toEqual([11, 12, 33]);
+  });
+
+  test("an effect that resets a signal through a computed compares what it read, as it does for the signal", async () => {
+    for (const throughComputed of [false, true]) {
+      const s = signal(false);
+      const read = throughComputed ? computed(() => s()) : s;
+      let runs = 0;
+      immediateEffect(() => {
+        runs++;
+        if (read()) {
+          s.set(false);
+        }
+      });
+      s.set(true);
+      expect([s(), runs]).toEqual([false, 2]);
+      // the value it read when it ran: nothing changed for it
+      s.set(true);
+      expect([s(), runs]).toEqual([true, 2]);
+      s.set(false);
+      expect([s(), runs]).toEqual([false, 3]);
+      s.set(true);
+      expect([s(), runs]).toEqual([false, 4]);
+    }
+  });
+
+  test("a write that invalidates a chain of computeds a run read reaches it again", async () => {
+    const s = signal(0);
+    const c1 = computed(() => s() + 1);
+    const c2 = computed(() => c1() * 10);
+    const seen: number[] = [];
+    effect(() => {
+      const value = c2();
+      seen.push(value);
+      if (value === 10) {
+        s.set(5);
+      }
+    });
+    expect(seen).toEqual([10]);
+    s.set(1);
+    await waitScheduler();
+    expect(seen).toEqual([10, 20]);
+    s.set(2);
+    await waitScheduler();
+    expect(seen).toEqual([10, 20, 30]);
   });
 
   test("an effect with a cleanup keeps its subscriptions, and its turn, across re-runs", async () => {

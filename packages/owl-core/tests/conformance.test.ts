@@ -35,13 +35,9 @@ const owl: ReactiveFramework = {
   },
 };
 
-// Where owl knowingly differs: a run does not invalidate itself through its
-// own writes (an effect writing what it read does not loop). A fix flips its
-// case to a failure here.
-const KNOWN_DIVERGENCES = new Set([
-  "#179 computed self-increment: intra-run read-after-write values correct",
-  "#180 inner write through computed chain resets signal",
-]);
+// Where owl knowingly differs (none at present): a case named here is run as
+// an expected failure, so a fix flips it to a failure here.
+const KNOWN_DIVERGENCES = new Set<string>([]);
 
 setExpect(expect as any);
 

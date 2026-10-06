@@ -46,6 +46,9 @@ export enum ComputationState {
   EXECUTED = 0,
   STALE = 1,
   PENDING = 2,
+  // its compute runs and no write has reached a source it read since: a write
+  // that does makes it PENDING or STALE, as for an idle one
+  RUNNING = 3,
 }
 
 // One edge of the dependency graph, member of two doubly linked lists: the
@@ -143,6 +146,11 @@ export interface ComputationAtom<T = any> extends Atom<T> {
   // true while its compute runs: a write it makes can reach a computation that
   // would otherwise pull it forward as its owner
   running: boolean;
+  // A derived computation out of date whose observers may not know it: a
+  // write reached it while one of them ran, and that one ran on. The next
+  // write that reaches it goes on to its observers, as through an up-to-date
+  // one, instead of stopping there.
+  forward: boolean;
   // what debug logging calls it
   name: string;
 }
@@ -219,11 +227,9 @@ let currentComputation: ComputationAtom | undefined;
 // a computation being pulled lazily is unobserved while it recomputes — so
 // the flush re-checks before disposing.
 let pendingDisposals = new Set<ComputationAtom>();
-// Bumped by every write that invalidates an up-to-date computation: a run
-// during which it did not move cannot have invalidated one of its own sources.
-// (A computed notifying its readers of a new value on recompute does not move
-// it: those readers were invalidated already, when the computed was.)
-let invalidations = 0;
+// the computations a walk of the graph has yet to visit (markDownstream's,
+// endInvalidatedRun's: neither calls user code, so one stack serves them all)
+const graphWalk: ComputationAtom[] = [];
 
 export function createComputation(
   compute: () => any,
@@ -252,6 +258,7 @@ export function createComputation(
     owner: null,
     isEffect: false,
     running: false,
+    forward: false,
     name,
   };
 }
@@ -443,13 +450,13 @@ export function onWriteAtom(atom: Atom, comparable: boolean = false) {
   }
   for (let link = atom.subs; link !== undefined; link = link.nextSub) {
     const ctx = link.sub;
-    if (ctx.state === ComputationState.EXECUTED) {
+    const state = ctx.state;
+    if (state === ComputationState.EXECUTED || ctx.forward) {
       if (link.version !== ctx.version) {
         // a running render has yet to read it again, a scheduled one has
         // detached it: as if it were not subscribed
         continue;
       }
-      invalidations++;
       if (ctx.isDerived) {
         markDownstream(ctx);
       } else if (ctx.immediate) {
@@ -457,6 +464,12 @@ export function onWriteAtom(atom: Atom, comparable: boolean = false) {
       } else {
         observers.push(ctx);
       }
+    } else if (state === ComputationState.RUNNING) {
+      if (link.version !== ctx.version) {
+        // a source of its previous run it has not read (yet)
+        continue;
+      }
+      invalidatedWhileRunning(ctx);
     }
     ctx.state =
       comparable && ctx.state !== ComputationState.STALE && !ctx.notifiesWithoutRecompute
@@ -666,16 +679,19 @@ export function updateComputation(computation: ComputationAtom) {
         debugLog("error", `${computation.name}: a source threw while it was checked`, error);
       }
       computation.state = ComputationState.EXECUTED;
+      computation.forward = false;
       throw error;
     }
     // If the state is still not stale after processing the sources, none of
     // the dependencies have actually changed.
     if (computation.state !== ComputationState.STALE) {
       computation.state = ComputationState.EXECUTED;
+      computation.forward = false;
       return;
     }
   }
-  const invalidationsBefore = invalidations;
+  computation.state = ComputationState.RUNNING;
+  computation.forward = false;
   computation.running = true;
   if (computation.isEffect ? debug.effect : computation.isDerived && debug.computed) {
     debugLog(computation.isEffect ? "effect" : "computed", `run ${computation.name}`);
@@ -701,14 +717,12 @@ export function updateComputation(computation: ComputationAtom) {
     throw error;
   } finally {
     computation.running = false;
-    try {
-      if (invalidations !== invalidationsBefore) {
-        settleDerivedSources(computation);
-      }
-    } finally {
-      // A computation that threw stays subscribed to what it read before the
-      // throw, and runs again when one of those changes.
+    // A computation that threw stays subscribed to what it read before the
+    // throw, and runs again when one of those changes.
+    if (computation.state === ComputationState.RUNNING) {
       computation.state = ComputationState.EXECUTED;
+    } else {
+      endInvalidatedRun(computation);
     }
   }
   if (releaseFailure) {
@@ -749,18 +763,54 @@ function detachAndRun(computation: ComputationAtom) {
   return runUnowned(computation.compute);
 }
 
-// A derived source the run read and then invalidated, by a write of its own,
-// is brought up to date before the run counts as done: left stale, it would
-// never propagate a later change to this computation. As with a signal the
-// run wrote after reading it, the run does not start over.
-function settleDerivedSources(computation: ComputationAtom) {
-  for (let link = computation.deps; link !== undefined; link = link.nextDep) {
-    const source = link.dep as ComputationAtom;
-    if (source.isDerived && source.state !== ComputationState.EXECUTED) {
-      if (debug.computed) {
-        debugLog("computed", `settle ${source.name}, invalidated by ${computation.name}`);
+// out of date already, its observers maybe not: a write goes on to them
+function forwardThrough(computation: ComputationAtom) {
+  computation.forward = false;
+  if (debug.reactivity) {
+    debugLog("reactivity", `forward through ${computation.name}`);
+  }
+}
+
+function invalidatedWhileRunning(computation: ComputationAtom) {
+  if (debug.reactivity) {
+    debugLog("reactivity", `${computation.name} invalidated by a write during its run`);
+  }
+}
+
+// A write during the run reached a source the run had read already (the
+// run's own write, or one it triggered). A computed ends out of date: its
+// next read checks its sources again, and recomputes if one changed since the
+// run read it. Anything else does not run again for it (an effect writing
+// what it read does not loop), and compares what it read when a later write
+// queues it, as it does for a signal. Either way, its sources left out of
+// date keep the value it read, and forward the next write that reaches them:
+// they stopped it before, its observers being notified already, but this run
+// was not.
+function endInvalidatedRun(computation: ComputationAtom) {
+  if (computation.isDerived) {
+    computation.forward = true;
+    if (debug.computed) {
+      debugLog("computed", `${computation.name} ends out of date, a write reached it while it ran`);
+    }
+  } else {
+    computation.state = ComputationState.EXECUTED;
+  }
+  const stack = graphWalk;
+  stack.push(computation);
+  let current: ComputationAtom | undefined;
+  while ((current = stack.pop())) {
+    for (let link = current.deps; link !== undefined; link = link.nextDep) {
+      const source = link.dep as ComputationAtom;
+      if (source.isDerived && source.state !== ComputationState.EXECUTED && !source.forward) {
+        if (debug.reactivity) {
+          debugLog(
+            "reactivity",
+            `${source.name} forwards the next write, ${computation.name} read it`
+          );
+        }
+        source.forward = true;
+        stack.push(source);
       }
-      updateComputation(source);
     }
   }
 }
@@ -914,12 +964,11 @@ export function disposeOwned(computation: ComputationAtom) {
   }
 }
 
-// the derived computations markDownstream has yet to visit (it calls no user
-// code, so one stack serves every call)
-const downstream: ComputationAtom[] = [];
-
 function markDownstream(computation: ComputationAtom) {
-  const stack = downstream;
+  const stack = graphWalk;
+  if (computation.forward) {
+    forwardThrough(computation);
+  }
   stack.push(computation);
   let current: ComputationAtom | undefined;
   while ((current = stack.pop())) {
@@ -930,7 +979,20 @@ function markDownstream(computation: ComputationAtom) {
       if (observer.isDerived && observer.subs === undefined) {
         pendingDisposals.add(observer);
       }
-      if (observer.state !== ComputationState.EXECUTED || link.version !== observer.version) {
+      if (link.version !== observer.version) {
+        continue;
+      }
+      const state = observer.state;
+      if (state !== ComputationState.EXECUTED) {
+        if (observer.forward) {
+          forwardThrough(observer);
+          stack.push(observer);
+        } else if (state === ComputationState.RUNNING) {
+          invalidatedWhileRunning(observer);
+          observer.state = observer.notifiesWithoutRecompute
+            ? ComputationState.STALE
+            : ComputationState.PENDING;
+        }
         continue;
       }
       observer.state = observer.notifiesWithoutRecompute
