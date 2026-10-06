@@ -2184,14 +2184,16 @@ test("concurrent renderings scenario 15", async () => {
 test("concurrent renderings scenario 16", async () => {
   let b: B | undefined = undefined;
   let c: C | undefined = undefined;
+  const dStarts: ReturnType<typeof makeDeferred>[] = [];
   class D extends Component {
     static template = xml`D`;
 
     setup() {
       useLogLifecycle(this);
-      onWillStart(async () => {
-        await nextTick();
-        await nextTick();
+      onWillStart(() => {
+        const started = makeDeferred();
+        dStarts.push(started);
+        return started;
       });
     }
   }
@@ -2281,7 +2283,7 @@ test("concurrent renderings scenario 16", async () => {
   // at this point, C rendering is still pending, and nothing should have been
   // updated yet.
   expect(fixture.innerHTML).toBe("1:2:3: ");
-  await nextTick();
+  dStarts.forEach((started) => started.resolve());
   await nextTick();
   expect(fixture.innerHTML).toBe("11:12:13: D");
   expect(steps.splice(0)).toMatchInlineSnapshot(`
