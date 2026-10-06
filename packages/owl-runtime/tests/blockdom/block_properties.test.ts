@@ -1,4 +1,4 @@
-import { mount, patch, createBlock } from "../../src/blockdom";
+import { list, mount, patch, createBlock } from "../../src/blockdom";
 import { makeTestFixture } from "./helpers";
 
 //------------------------------------------------------------------------------
@@ -67,4 +67,37 @@ test("input type=checkbox with checked property", () => {
   expect(fixture.innerHTML).toBe(`<input type="checkbox">`);
   const input = fixture.querySelector("input")!;
   expect(input.checked).toBe(true);
+});
+
+test("a select's value is set once the options a child mounts exist", () => {
+  const select = createBlock(`<select block-property-0="value"><block-child-0/></select>`);
+  const option = createBlock(`<option block-attribute-0="value"><block-text-1/></option>`);
+  const options = (values: string[]) =>
+    list(
+      values.map((v) => {
+        const vnode = option([v, v]);
+        vnode.key = v;
+        return vnode;
+      })
+    );
+  const tree = select(["b"], [options(["a", "b", "c"])]);
+  mount(tree, fixture);
+  const el = fixture.querySelector("select")!;
+  expect(el.value).toBe("b");
+
+  // the option and the value arrive in the same patch
+  patch(tree, select(["d"], [options(["a", "b", "c", "d"])]));
+  expect(el.value).toBe("d");
+});
+
+test("an input's value is set after the attributes bounding it", () => {
+  const block = createBlock(
+    `<input type="range" block-property-0="value" block-attribute-1="max" block-attribute-2="min"/>`
+  );
+  const tree = block(["150", "200", "120"]);
+  mount(tree, fixture);
+  const input = fixture.querySelector("input")!;
+  expect(input.value).toBe("150");
+  patch(tree, block(["250", "300", "120"]));
+  expect(input.value).toBe("250");
 });

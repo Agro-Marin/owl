@@ -298,6 +298,9 @@ interface Location {
   refIdx: number;
   setData: Setter;
   updateData: Updater;
+  // applied after the other locations and the children: a value property
+  // needs the attributes bounding it (min, max) and the options of a select
+  late?: boolean;
 }
 
 interface IndexedLocation extends Location {
@@ -390,6 +393,7 @@ function updateCtx(ctx: BlockCtx, tree: IntermediateTree) {
           refIdx,
           setData: setProp,
           updateData: setProp,
+          late: info.name === "value",
         });
         break;
       }
@@ -491,6 +495,11 @@ function createBlockClass(template: HTMLElement, ctx: BlockCtx): BlockClass {
   const locRefIdxs: number[] = locations.map((l) => l.refIdx);
   const locSetters: Setter[] = locations.map((l) => l.setData);
   const locUpdaters: Updater[] = locations.map((l) => l.updateData);
+  // a block with late locations applies the others first, by index
+  const lateLocs: number[] = [];
+  const earlyLocs: number[] = [];
+  locations.forEach((l, i) => (l.late ? lateLocs : earlyLocs).push(i));
+  const lateN = lateLocs.length;
 
   // Bitpack collectors into uint32 array
   // Layout: bits 0-14: idx, bits 15-29: prevIdx, bit 30: isFirstChild
@@ -578,8 +587,12 @@ function createBlockClass(template: HTMLElement, ctx: BlockCtx): BlockClass {
       }
 
       // applying data to all update points
-      if (locN) {
-        const data = this.data!;
+      const data = this.data!;
+      if (lateN) {
+        for (const i of earlyLocs) {
+          locSetters[i].call(refs[locRefIdxs[i]], data[i]);
+        }
+      } else {
         for (let i = 0; i < locN; i++) {
           locSetters[i].call(refs[locRefIdxs[i]], data[i]);
         }
@@ -598,6 +611,9 @@ function createBlockClass(template: HTMLElement, ctx: BlockCtx): BlockClass {
             child.mount(refs[info & 0x7fff] as any, afterNode);
           }
         }
+      }
+      for (const i of lateLocs) {
+        locSetters[i].call(refs[locRefIdxs[i]], data[i]);
       }
 
       nodeInsertBefore.call(parent, el, afterNode);
@@ -620,9 +636,17 @@ function createBlockClass(template: HTMLElement, ctx: BlockCtx): BlockClass {
       }
       const refs = this.refs!;
       // update texts/attributes/
-      if (locN) {
-        const data1 = this.data!;
-        const data2 = other.data!;
+      const data1 = this.data!;
+      const data2 = other.data!;
+      if (lateN) {
+        for (const i of earlyLocs) {
+          const val1 = data1[i];
+          const val2 = data2[i];
+          if (val1 !== val2) {
+            locUpdaters[i].call(refs[locRefIdxs[i]], val2, val1);
+          }
+        }
+      } else {
         for (let i = 0; i < locN; i++) {
           const val1 = data1[i];
           const val2 = data2[i];
@@ -630,8 +654,8 @@ function createBlockClass(template: HTMLElement, ctx: BlockCtx): BlockClass {
             locUpdaters[i].call(refs[locRefIdxs[i]], val2, val1);
           }
         }
-        this.data = data2;
       }
+      this.data = data2;
 
       // update children
       if (childN) {
@@ -658,6 +682,13 @@ function createBlockClass(template: HTMLElement, ctx: BlockCtx): BlockClass {
             child2.mount(refs[info & 0x7fff] as any, afterNode);
             children1![i] = child2;
           }
+        }
+      }
+      for (const i of lateLocs) {
+        const val1 = data1[i];
+        const val2 = data2[i];
+        if (val1 !== val2) {
+          locUpdaters[i].call(refs[locRefIdxs[i]], val2, val1);
         }
       }
     };
