@@ -18,7 +18,7 @@ exports[`t-call > a dynamic t-call in a loop keeps the components of two items a
       ctx["item_value"] = v_block1[i1];
       const key1 = ctx['item'].id;
       const skey1 = keyOf(key1);
-      c_block1[i1] = withKey(callTemplate((ctx['item'].t), this, app, Object.assign(Object.create(ctx), {v: ctx['item'].id, [zero]: null}), node, key + \`__1__\${skey1}\`), key1);
+      c_block1[i1] = withKey(callTemplate((ctx['item'].t), this, app, Object.assign(Object.create(ctx), {v: ctx['item'].id+ctx['this'].suffix, [zero]: null}), node, key + \`__1__\${skey1}\`), key1);
     }
     return list(c_block1);
   }

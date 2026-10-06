@@ -19,14 +19,15 @@ describe("t-call", () => {
       static components = { Child };
       static template = xml`
           <t t-foreach="this.items" t-as="item" t-key="item.id">
-            <t t-call="{{item.t}}" v="item.id"/>
+            <t t-call="{{item.t}}" v="item.id + this.suffix"/>
           </t>`;
       items = [
         { id: "1", t: "2b" },
         { id: "12", t: "b" },
       ];
+      suffix = "";
     }
-    await mount(Root, fixture, {
+    const root = await mount(Root, fixture, {
       templates: `
         <templates>
           <t t-name="2b"><Child v="v"/></t>
@@ -34,6 +35,12 @@ describe("t-call", () => {
         </templates>`,
     });
     expect(fixture.innerHTML).toBe("<i>1</i><i>12</i>");
+    // the first render creates both children; a shared key shows on the next
+    // one, which finds a single child for both items
+    root.suffix = "x";
+    render(root);
+    await nextTick();
+    expect(fixture.innerHTML).toBe("<i>1x</i><i>12x</i>");
   });
 
   test("dynamic t-call", async () => {
