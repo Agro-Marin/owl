@@ -511,6 +511,32 @@ describe("miscellaneous operations", () => {
     patch(tree, block([], [list([])]));
     expect(fixture.innerHTML).toBe("<div></div>");
   });
+
+  test("an only child emptied keeps the nodes its parent got from elsewhere", () => {
+    const block = createBlock("<div><block-child-0/></div>");
+    const tree = block([], [list([1, 2].map(n))]);
+    mount(tree, fixture);
+    const div = fixture.firstChild as HTMLElement;
+    const before = document.createElement("b");
+    const after = document.createElement("i");
+    div.prepend(before);
+    div.append(after);
+    patch(tree, block([], [list([])]));
+    expect(div.innerHTML).toBe("<b></b><i></i>");
+    patch(tree, block([], [list([3].map(n))]));
+    expect(div.innerHTML).toBe("<b></b>3<i></i>");
+    patch(tree, block([], []));
+    expect(div.innerHTML).toBe("<b></b><i></i>");
+  });
+
+  test("a NaN key matched through the key map is not used as an anchor again", () => {
+    const tree = list([kSpan("a", NaN)]);
+    mount(tree, fixture);
+    patch(tree, list([kSpan("a", NaN), kSpan("b", 1)]));
+    expect(fixture.innerHTML).toBe("<span>a</span><span>b</span>");
+    patch(tree, list([kSpan("c", 2), kSpan("a", NaN), kSpan("b", 1)]));
+    expect(fixture.innerHTML).toBe("<span>c</span><span>a</span><span>b</span>");
+  });
 });
 
 describe("repeated keys", () => {

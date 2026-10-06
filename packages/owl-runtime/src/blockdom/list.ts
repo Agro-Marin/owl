@@ -1,3 +1,4 @@
+import { debug, debugLog } from "@odoo/owl-core";
 import { releaseCatchers } from "./event_catcher";
 import type { VNode } from "./index";
 import { nodeAppendChild, nodeInsertBefore, nodeRemoveChild, nodeSetTextContent } from "./dom";
@@ -77,7 +78,7 @@ class VList {
     const parent = this.parentEl!;
 
     // fast path: no new child => only remove
-    if (ch2.length === 0 && isOnlyChild) {
+    if (ch2.length === 0 && isOnlyChild && ownsParent(parent, cFirstNode.call(ch1[0]), _anchor)) {
       if (withBeforeRemove) {
         for (let i = 0, l = ch1.length; i < l; i++) {
           beforeRemove.call(ch1[i]);
@@ -172,6 +173,10 @@ class VList {
         cPatch.call(elmToMove, startVn2, withBeforeRemove);
         ch2[startIdx2] = elmToMove;
         ch1[idxInOld] = null as any;
+        if (elmToMove === startVn1) {
+          // only a NaN key misses the start match and is found by the map
+          startVn1 = ch1[++startIdx1];
+        }
       }
       startVn2 = ch2[++startIdx2];
     }
@@ -210,7 +215,7 @@ class VList {
 
   remove() {
     const { parentEl, anchor } = this;
-    if (this.isOnlyChild) {
+    if (this.isOnlyChild && ownsParent(parentEl!, this.firstNode(), anchor!)) {
       nodeSetTextContent.call(parentEl!, "");
       releaseCatchers(parentEl!);
     } else {
@@ -251,4 +256,17 @@ function createMapping(ch1: VNode[], startIdx1: number, endIdx1: number): Map<an
     mapping.set(ch1[i].key, i);
   }
   return mapping;
+}
+
+// An only child clears its parent in bulk, unless the parent holds nodes put
+// there by someone else (a Portal's content, a widget's DOM) before its first
+// node or after its anchor: those must survive.
+function ownsParent(parent: HTMLElement, first: Node | undefined, anchor: Node): boolean {
+  if (parent.firstChild === first && parent.lastChild === anchor) {
+    return true;
+  }
+  if (debug.template) {
+    debugLog("template", "list removed child by child: its parent holds nodes it does not own");
+  }
+  return false;
 }

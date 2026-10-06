@@ -109,4 +109,14 @@ describe("multi blocks", () => {
     expect(fixture.innerHTML).toBe("<p>x</p>y");
     expect(created).toBe(1);
   });
+
+  test("an only child removed keeps the nodes its parent got from elsewhere", () => {
+    const block = createBlock("<div><block-child-0/></div>");
+    const tree = block([], [multi([text("foo"), undefined, text("bar")])]);
+    mount(tree, fixture);
+    const div = fixture.firstChild as HTMLElement;
+    div.append(document.createElement("i"));
+    patch(tree, block([], []));
+    expect(div.innerHTML).toBe("<i></i>");
+  });
 });

@@ -1,6 +1,5 @@
-import { releaseCatchers } from "./event_catcher";
 import type { VNode } from "./index";
-import { nodeInsertBefore, nodeRemoveChild, nodeSetTextContent } from "./dom";
+import { nodeInsertBefore, nodeRemoveChild } from "./dom";
 
 // -----------------------------------------------------------------------------
 // Multi NODE
@@ -10,7 +9,6 @@ export class VMulti {
   children: (VNode | undefined)[];
   anchors?: Node[] | undefined;
   parentEl?: HTMLElement | undefined;
-  isOnlyChild?: boolean | undefined;
 
   constructor(children: (VNode | undefined)[]) {
     this.children = children;
@@ -111,21 +109,19 @@ export class VMulti {
     }
   }
 
+  // Child by child even as its parent's only child: the multi has no end
+  // anchor telling where its nodes stop, so clearing the parent in bulk would
+  // also remove nodes put there by someone else (a Portal's content).
   remove() {
     const parentEl = this.parentEl;
-    if (this.isOnlyChild) {
-      nodeSetTextContent.call(parentEl!, "");
-      releaseCatchers(parentEl!);
-    } else {
-      const children = this.children;
-      const anchors = this.anchors;
-      for (let i = 0, l = children.length; i < l; i++) {
-        const child = children[i];
-        if (child) {
-          child.remove();
-        } else {
-          nodeRemoveChild.call(parentEl, anchors![i]);
-        }
+    const children = this.children;
+    const anchors = this.anchors;
+    for (let i = 0, l = children.length; i < l; i++) {
+      const child = children[i];
+      if (child) {
+        child.remove();
+      } else {
+        nodeRemoveChild.call(parentEl, anchors![i]);
       }
     }
   }
