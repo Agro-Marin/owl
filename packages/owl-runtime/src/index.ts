@@ -49,6 +49,7 @@ export type { GetProps, isProps } from "./props";
 export { status } from "./status";
 export {
   asyncComputed,
+  batch,
   computed,
   effect,
   immediateEffect,

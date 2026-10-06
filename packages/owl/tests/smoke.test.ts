@@ -33,3 +33,23 @@ test("umbrella wiring: addTemplates parses XML strings", async () => {
   expect(fixture.innerHTML).toBe("<span>ok</span>");
   app.destroy();
 });
+
+test("both builds export batch(), which runs an immediate effect once after its writes", async () => {
+  const full = await import("../src");
+  const runtime = await import("../src/runtime");
+  expect(runtime.batch).toBe(full.batch);
+  const a = full.signal(1);
+  const b = full.signal(2);
+  const seen: number[][] = [];
+  full.immediateEffect(() => {
+    seen.push([a(), b()]);
+  });
+  full.batch(() => {
+    a.set(5);
+    b.set(6);
+  });
+  expect(seen).toEqual([
+    [1, 2],
+    [5, 6],
+  ]);
+});
