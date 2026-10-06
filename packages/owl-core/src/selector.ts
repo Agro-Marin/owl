@@ -1,5 +1,6 @@
 import {
   Atom,
+  batch,
   ComputationState,
   createAtom,
   createComputation,
@@ -8,6 +9,7 @@ import {
   isObserving,
   onReadAtom,
   onWriteAtom,
+  removeSources,
   untrack,
   updateComputation,
 } from "./computations";
@@ -36,26 +38,46 @@ export function selector<K>(source: () => K, options: SelectorOptions = {}): (ke
   // the atom of each key a computation read, created on that read
   const atoms = new Map<K, Atom>();
   let swept = 0;
+  // source changes since the last sweep: sweeping every as many changes as
+  // there are keys finds the keys nobody reads any more, at O(1) a change
+  let changes = 0;
   let current: K;
+  // whether the computation follows the source: it does while a key is read
   let started = false;
+  // what the source threw: every key rethrows it until the source recovers
+  let failure: { error: unknown } | null = null;
   let disposed = false;
   const computation = createComputation(
     () => {
-      const next = source();
+      const previous = current;
+      const answered = started && !failure;
+      try {
+        current = source();
+        failure = null;
+      } catch (error) {
+        if (debug.computed) {
+          debugLog(
+            "computed",
+            `${computation.name}: its source failed, every key rethrows it`,
+            error
+          );
+        }
+        failure = { error };
+      }
       if (!started) {
         started = true;
-        current = next;
-        return;
+      } else if (answered !== !failure) {
+        // failed or recovered: every key's answer changed
+        notifyAll();
+      } else if (!failure && !Object.is(previous, current)) {
+        notifyKeys(previous, current);
+        if (++changes >= atoms.size) {
+          sweep();
+        }
       }
-      const previous = current;
-      if (Object.is(previous, next)) {
-        return;
+      if (atoms.size === 0) {
+        release();
       }
-      current = next;
-      untrack(() => {
-        notify(previous);
-        notify(next);
-      });
     },
     false,
     ComputationState.STALE,
@@ -74,6 +96,21 @@ export function selector<K>(source: () => K, options: SelectorOptions = {}): (ke
     }
   }
 
+  // one batch: an immediate reader runs once, after every key is notified,
+  // and one that throws does not keep the others from being notified
+  function notifyKeys(previous: K, next: K) {
+    untrack(() =>
+      batch(() => {
+        notify(previous);
+        notify(next);
+      })
+    );
+  }
+
+  function notifyAll() {
+    untrack(() => batch(() => atoms.forEach((_, key) => notify(key))));
+  }
+
   // keys read once and never again would keep their atoms: drop the
   // unobserved ones whenever the table doubled since the last sweep
   function sweep() {
@@ -84,6 +121,7 @@ export function selector<K>(source: () => K, options: SelectorOptions = {}): (ke
       }
     });
     swept = atoms.size;
+    changes = 0;
     if (debug.computed) {
       debugLog(
         "computed",
@@ -92,12 +130,30 @@ export function selector<K>(source: () => K, options: SelectorOptions = {}): (ke
     }
   }
 
+  // no key is read: stop following the source until one is read again
+  function release() {
+    if (debug.computed) {
+      debugLog("computed", `${computation.name}: no key is read, stops following its source`);
+    }
+    started = false;
+    failure = null;
+    removeSources(computation);
+  }
+
+  function update() {
+    // a reader its run notifies reads the answer that run has set
+    if (computation.running) {
+      return;
+    }
+    if (!started) {
+      computation.state = ComputationState.STALE;
+    }
+    updateComputation(computation);
+  }
+
   function isSelected(key: K): boolean {
     if (disposed) {
       return Object.is(current, key);
-    }
-    if (computation.state !== ComputationState.EXECUTED) {
-      updateComputation(computation);
     }
     if (isObserving()) {
       let atom = atoms.get(key);
@@ -108,7 +164,17 @@ export function selector<K>(source: () => K, options: SelectorOptions = {}): (ke
         atom = createAtom(undefined, "key");
         atoms.set(key, atom);
       }
+      // subscribed before the source is asked: a reader it fails for runs
+      // again once it recovers
       onReadAtom(atom);
+    } else if (!started) {
+      // nothing follows the source: ask it
+      current = source();
+      return Object.is(current, key);
+    }
+    update();
+    if (failure) {
+      throw failure.error;
     }
     return Object.is(current, key);
   }

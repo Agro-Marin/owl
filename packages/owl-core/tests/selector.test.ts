@@ -1,4 +1,15 @@
-import { effect, PluginManager, selector, setDebug, setDebugSink, signal } from "../src";
+import {
+  atomSymbol,
+  computed,
+  effect,
+  immediateEffect,
+  observersOf,
+  PluginManager,
+  selector,
+  setDebug,
+  setDebugSink,
+  signal,
+} from "../src";
 import { batch } from "../src/computations";
 import { waitScheduler } from "./helpers";
 
@@ -107,5 +118,110 @@ describe("selector", () => {
     // 1000 keys were read, at most 50 of them by a live computation at a time
     expect(kept.length).toBeGreaterThan(0);
     expect(Math.max(...kept)).toBeLessThanOrEqual(50);
+  });
+  test("a reader of the previous key that throws leaves the readers of the new key notified", () => {
+    const selected = signal("a");
+    const isSelected = selector(() => selected());
+    const seenB: boolean[] = [];
+    immediateEffect(() => {
+      if (!isSelected("a") && seenB.length) {
+        throw new Error("boom");
+      }
+    });
+    immediateEffect(() => {
+      seenB.push(isSelected("b"));
+    });
+    expect(() => selected.set("b")).toThrow("boom");
+    expect(seenB).toEqual([false, true]);
+  });
+
+  test("an immediate reader of both keys of a change runs once", () => {
+    const selected = signal("a");
+    const isSelected = selector(() => selected());
+    let runs = 0;
+    immediateEffect(() => {
+      runs++;
+      isSelected("a");
+      isSelected("b");
+    });
+    selected.set("b");
+    expect(runs).toBe(2);
+  });
+
+  test("a failing source is rethrown for every key, and its readers run again once it recovers", async () => {
+    const broken = signal(true);
+    const source = computed(() => {
+      if (broken()) {
+        throw new Error("no selection");
+      }
+      return "a";
+    });
+    const isSelected = selector(source);
+    const seen: Array<boolean | string> = [];
+    effect(() => {
+      try {
+        seen.push(isSelected("a"));
+      } catch (error: any) {
+        seen.push(error.message);
+      }
+    });
+    expect(() => isSelected("a")).toThrow("no selection");
+    broken.set(false);
+    await waitScheduler();
+    expect(seen).toEqual(["no selection", true]);
+    broken.set(true);
+    await waitScheduler();
+    expect(seen).toEqual(["no selection", true, "no selection"]);
+  });
+
+  test("a selector disposed while its run is queued does not follow its source again", () => {
+    const selected = signal("a");
+    const manager = new PluginManager({});
+    // subscribed first: its run comes before the selector's
+    immediateEffect(() => {
+      if (selected() === "b") {
+        manager.destroy();
+      }
+    });
+    const isSelected = manager.run(() => selector(() => selected(), { name: "rows" }));
+    const rows = rowsReading(isSelected as any, ["a"] as any);
+    selected.set("b");
+    expect(observersOf((selected as any)[atomSymbol]).map((c) => c.name)).toEqual([
+      "immediateEffect",
+    ]);
+    rows.stop();
+  });
+
+  test("a selector no computation reads any more stops following its source", async () => {
+    const selected = signal(1);
+    const isSelected = selector(() => selected(), { name: "rows" });
+    const sourceAtom = (selected as any)[atomSymbol];
+    const rows = rowsReading(isSelected, [1, 2]);
+    await waitScheduler();
+    expect(observersOf(sourceAtom).map((c) => c.name)).toEqual(["rows"]);
+    rows.stop();
+    selected.set(3);
+    await waitScheduler();
+    expect(observersOf(sourceAtom)).toEqual([]);
+    // read again, it follows the source again
+    expect(isSelected(3)).toBe(true);
+    const again = rowsReading(isSelected, [3, 4]);
+    await waitScheduler();
+    selected.set(4);
+    await waitScheduler();
+    expect(again.seen).toEqual({ 3: false, 4: true });
+    again.stop();
+  });
+
+  test("a selector whose keys are no longer read is released within as many changes as it has keys", async () => {
+    const selected = signal(0);
+    const isSelected = selector(() => selected(), { name: "rows" });
+    const rows = rowsReading(isSelected, [1, 2, 3, 4, 5]);
+    await waitScheduler();
+    rows.stop();
+    for (let i = 10; i < 20; i++) {
+      selected.set(i);
+    }
+    expect(observersOf((selected as any)[atomSymbol])).toEqual([]);
   });
 });

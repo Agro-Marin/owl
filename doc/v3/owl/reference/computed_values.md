@@ -140,9 +140,12 @@ key, and renders as a whole.
 
 Keys are compared with `Object.is`. A read outside any computation answers
 without subscribing; inside a `batch`, it already sees a source change made
-earlier in the batch. Like `computed`, a selector is disposed with the scope it
-is created in (pass `{ detached: true }` to keep it), after which it keeps its
-last answer and tracks nothing.
+earlier in the batch. A source that throws makes every key throw that error;
+its readers run again once the source recovers. A selector follows its source
+only while a computation reads one of its keys, and stops once none does. Like
+`computed`, a selector is disposed with the scope it is created in (pass
+`{ detached: true }` to keep it), after which it keeps its last answer and
+tracks nothing.
 
 ## Async Computed Values
 
