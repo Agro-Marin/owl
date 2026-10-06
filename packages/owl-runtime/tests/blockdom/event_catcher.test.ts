@@ -273,6 +273,50 @@ test("the synthetic document listener carries a marker a test harness can recogn
   expect(added[0][Symbol.for("owl.syntheticListener")]).toBe(true);
 });
 
+describe("synthetic events in a shadow root", () => {
+  function shadowRoot(): ShadowRoot {
+    const host = document.createElement("div");
+    fixture.appendChild(host);
+    return host.attachShadow({ mode: "open" });
+  }
+
+  test("an event that does not leave the shadow root reaches its handler", async () => {
+    const calls: string[] = [];
+    const block = createBlock('<input block-handler-0="change.synthetic"/>');
+    const shadow = shadowRoot();
+    mount(block([[() => calls.push("change"), {}]]), shadow);
+    shadow.querySelector("input")!.dispatchEvent(new Event("change", { bubbles: true }));
+    expect(calls).toEqual(["change"]);
+  });
+
+  test("an event crossing the shadow root runs its handlers once", async () => {
+    const calls: string[] = [];
+    const block = createBlock(
+      '<div block-handler-0="click.synthetic"><p block-handler-1="click.synthetic">x</p></div>'
+    );
+    const shadow = shadowRoot();
+    mount(
+      block([
+        [() => calls.push("outer"), {}],
+        [() => calls.push("inner"), {}],
+      ]),
+      shadow
+    );
+    shadow.querySelector("p")!.click();
+    expect(calls).toEqual(["inner", "outer"]);
+  });
+
+  test("an event type first used after the mount reaches a handler there", async () => {
+    const calls: string[] = [];
+    const shadow = shadowRoot();
+    mount(createBlock("<div><block-child-0/></div>")([], []), shadow);
+    const block = createBlock('<form block-handler-0="reset.synthetic"/>');
+    mount(block([[() => calls.push("reset"), {}]]), shadow.firstChild as HTMLElement);
+    shadow.querySelector("form")!.dispatchEvent(new Event("reset", { bubbles: true }));
+    expect(calls).toEqual(["reset"]);
+  });
+});
+
 describe("a parent cleared in bulk releases the catchers listening on it", () => {
   function countListeners(el: HTMLElement) {
     const live = new Set<any>();

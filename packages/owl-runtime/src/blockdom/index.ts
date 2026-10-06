@@ -8,6 +8,7 @@ export { multi } from "./multi";
 export { text } from "./text";
 export { html } from "./html";
 export { createCatcher } from "./event_catcher";
+import { addSyntheticRoot } from "./events";
 
 export type MountTarget = HTMLElement | ShadowRoot;
 
@@ -29,6 +30,7 @@ export interface VNode<T = any> {
 export type BDom = VNode<any>;
 
 export function mount(vnode: VNode, fixture: MountTarget, afterNode: Node | null = null) {
+  addSyntheticRoot(fixture);
   vnode.mount(fixture, afterNode);
 }
 

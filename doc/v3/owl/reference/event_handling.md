@@ -68,12 +68,14 @@ This will simply stop the propagation of the event.
 
 In some cases, attaching an event handler for each element of large lists has
 a non trivial cost. Owl provides a way to efficiently improve the performance:
-with synthetic event, it actually adds only one handler on the document body,
-and will properly call the handler, just as expected.
+with synthetic event, it actually adds only one handler on the document (and
+on the shadow root or other document an app is mounted in, which an event
+that is not composed, such as `change` or `submit`, never leaves), and will
+properly call the handler, just as expected.
 
-The only difference with regular events is that the event is caught at the document
-body, so it cannot be stopped before it actually gets there. Since it may be
-surprising in some cases, it is not enabled by default.
+The only difference with regular events is that the event is caught at the
+document (or that root), so it cannot be stopped before it actually gets
+there. Since it may be surprising in some cases, it is not enabled by default.
 
 To enable it, one can just use the `.synthetic` suffix:
 

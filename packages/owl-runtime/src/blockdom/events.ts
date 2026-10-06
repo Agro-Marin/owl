@@ -100,7 +100,19 @@ function createSyntheticHandler(
 // when it stopped it immediately. The event's stopImmediatePropagation is
 // shadowed for the replay only, to learn about that call (the flag it sets is
 // not readable); a direct Event.prototype call goes unnoticed.
-function nativeToSyntheticEvent(eventKey: string, capture: boolean, event: Event) {
+function nativeToSyntheticEvent(
+  eventKey: string,
+  capture: boolean,
+  replayed: WeakSet<Event> | null,
+  event: Event
+) {
+  // a root listener and the document's both see an event crossing the root
+  if (replayed) {
+    if (replayed.has(event)) {
+      return;
+    }
+    replayed.add(event);
+  }
   const path = event.composedPath();
   const last = path.length - 1;
   let stoppedImmediately = false;
@@ -138,7 +150,27 @@ function nativeToSyntheticEvent(eventKey: string, capture: boolean, event: Event
 
 export const SYNTHETIC_LISTENER = Symbol.for("owl.syntheticListener");
 
-const CONFIGURED_SYNTHETIC_EVENTS: { [event: string]: boolean } = {};
+interface SyntheticEvent {
+  evName: string;
+  options: AddEventListenerOptions;
+  listener: (event: Event) => void;
+  // the events already replayed, once a root other than the document listens
+  replayed: WeakSet<Event> | null;
+}
+
+// One listener per synthetic event key on every root an app is mounted in:
+// the document, and each shadow root or other document, which an event that
+// is not composed (change, submit, reset...) never leaves.
+const syntheticEvents = new Map<string, SyntheticEvent>();
+const syntheticRoots = new WeakSet<Node>();
+const syntheticRootRefs: WeakRef<Node>[] = [];
+
+function listenOn(root: Node, event: SyntheticEvent) {
+  if (root !== document) {
+    event.replayed ||= new WeakSet();
+  }
+  root.addEventListener(event.evName, event.listener, event.options);
+}
 
 function setupSyntheticEvent(
   evName: string,
@@ -146,13 +178,46 @@ function setupSyntheticEvent(
   capture: boolean = false,
   passive: boolean = false
 ) {
-  if (CONFIGURED_SYNTHETIC_EVENTS[eventKey]) {
+  if (syntheticEvents.has(eventKey)) {
     return;
   }
-  const listener = (event: Event) => nativeToSyntheticEvent(eventKey, capture, event);
+  const listener = (event: Event) =>
+    nativeToSyntheticEvent(eventKey, capture, syntheticEvent.replayed, event);
   // registered once for the page's lifetime: a harness that removes the
   // listeners a test left behind must recognize this one and keep it
   (listener as any)[SYNTHETIC_LISTENER] = true;
-  document.addEventListener(evName, listener, { capture, passive });
-  CONFIGURED_SYNTHETIC_EVENTS[eventKey] = true;
+  const syntheticEvent: SyntheticEvent = {
+    evName,
+    options: { capture, passive },
+    listener,
+    replayed: null,
+  };
+  syntheticEvents.set(eventKey, syntheticEvent);
+  listenOn(document, syntheticEvent);
+  for (const ref of syntheticRootRefs) {
+    const root = ref.deref();
+    if (root) {
+      listenOn(root, syntheticEvent);
+    }
+  }
+}
+
+/**
+ * Makes the synthetic handlers of what is mounted in `target` reachable when
+ * its root is a shadow root or another document than the global one.
+ */
+export function addSyntheticRoot(target: Node) {
+  const root = target.getRootNode();
+  if (
+    root === document ||
+    syntheticRoots.has(root) ||
+    !(root instanceof ShadowRoot || root.nodeType === Node.DOCUMENT_NODE)
+  ) {
+    return;
+  }
+  syntheticRoots.add(root);
+  syntheticRootRefs.push(new WeakRef(root));
+  for (const syntheticEvent of syntheticEvents.values()) {
+    listenOn(root, syntheticEvent);
+  }
 }
