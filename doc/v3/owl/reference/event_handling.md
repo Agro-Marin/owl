@@ -104,3 +104,6 @@ This will catch all click events on any html element contained in the `Child`
 sub component. Note that if the child component is reduced to one (or more) text
 nodes, then clicking on it will not call the handler, since the event will be
 dispatched by the browser on the parent element (a `div` in this case).
+
+On a component, `.self` runs the handler when the event targets one of the
+child's root elements itself, not an element inside one.

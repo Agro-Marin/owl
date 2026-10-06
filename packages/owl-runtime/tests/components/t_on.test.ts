@@ -459,4 +459,23 @@ describe("t-on", () => {
     document.body.removeEventListener("click", onBody);
     expect(reached).toBe(1);
   });
+
+  test("t-on.self on a component runs for an event targeting one of its root nodes", async () => {
+    const calls: string[] = [];
+    class Child extends Component {
+      static template = xml`<div class="c"><span>in</span></div>`;
+    }
+    class Parent extends Component {
+      static template = xml`<section><Child t-on-click.self="() => this.log('self')"/></section>`;
+      static components = { Child };
+      log(s: string) {
+        calls.push(s);
+      }
+    }
+    await mount(Parent, fixture);
+    fixture.querySelector("span")!.click();
+    expect(calls).toEqual([]);
+    fixture.querySelector<HTMLElement>(".c")!.click();
+    expect(calls).toEqual(["self"]);
+  });
 });

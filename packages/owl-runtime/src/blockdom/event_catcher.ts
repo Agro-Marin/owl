@@ -65,6 +65,8 @@ export function createCatcher(eventsSpec: EventsSpec): Catcher {
     // Registered once per event, it reads the latest handler data at dispatch,
     // and applies its modifiers only to an event from inside the child: the
     // listener sits on the parent, which the child shares with its siblings.
+    // The child's root node holding the target stands for the current target
+    // (what .self compares the target with): the parent is not the child's.
     makeDispatcher(index: number) {
       return (_: null, ev: Event) => {
         const target = ev.target as Node;
@@ -72,7 +74,7 @@ export function createCatcher(eventsSpec: EventsSpec): Catcher {
         let currentNode: Node | null | undefined = this.child.firstNode();
         while (currentNode && currentNode !== afterNode) {
           if (currentNode.contains(target)) {
-            config.mainEventHandler(this.handlerData[index], ev, this.parentEl);
+            config.mainEventHandler(this.handlerData[index], ev, currentNode);
             return;
           }
           currentNode = currentNode.nextSibling;

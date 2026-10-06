@@ -555,6 +555,38 @@ exports[`t-on > t-on when first component child is an empty component 2`] = `
 }"
 `;
 
+exports[`t-on > t-on.self on a component runs for an event targeting one of its root nodes 1`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { createComponent, createCatcher } = helpers;
+  const comp1 = createComponent(app, \`Child\`, true, false, false, []);
+  const hdlr_fn1 = (ctx)=>ctx['this'].log('self');
+  const catcher1 = createCatcher({"click.self":0});
+  
+  let block1 = createBlock(\`<section><block-child-0/></section>\`);
+  
+  return function template(ctx, node, key = "") {
+    const hdlr1 = [hdlr_fn1, ctx, 4];
+    const b2 = catcher1(comp1({}, key + \`__1\`, node, this, null), [hdlr1]);
+    return block1([], [b2]);
+  }
+}"
+`;
+
+exports[`t-on > t-on.self on a component runs for an event targeting one of its root nodes 2`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  
+  let block1 = createBlock(\`<div class="c"><span>in</span></div>\`);
+  
+  return function template(ctx, node, key = "") {
+    return block1();
+  }
+}"
+`;
+
 exports[`t-on > t-on.stop on a component does not stop a click on its sibling 1`] = `
 "function anonymous(app, bdom, helpers
 ) {
