@@ -402,6 +402,25 @@ describe("catchers of one site sharing a parent", () => {
     expect(calls).toEqual(["c2", "c1"]);
   });
 
+  test("a catcher of another site nested in one runs before it, whichever site listened first", () => {
+    const calls: string[] = [];
+    const outerSite = createCatcher({ click: 0 });
+    const innerSite = createCatcher({ click: 0 });
+    const outer = (name: string, content: any) => outerSite(content, [log(calls, name)]);
+    const inner = (name: string) => innerSite(span([name]), [log(calls, name)]);
+    // the first catcher on the parent holds no inner one: its site listens first
+    const tree = multi([
+      outer("o1", span(["a1"])),
+      outer("o2", multi([span(["a2"]), inner("i2")])),
+    ]);
+    mount(tree, fixture);
+    click("i2");
+    expect(calls).toEqual(["i2", "o2"]);
+    calls.length = 0;
+    click("a1");
+    expect(calls).toEqual(["o1"]);
+  });
+
   test("a catcher nested in another one's child runs before it", () => {
     const calls: string[] = [];
     const inner = (name: string) => catcher(span([name]), [log(calls, name)]);

@@ -9,138 +9,128 @@ type Catcher = (child: VNode, handlers: any[]) => VNode;
 
 type EventHandler = ReturnType<typeof createEventHandler>;
 
-// What one catcher site (one createCatcher call) shares between its instances:
-// a single listener per event on each parent element, however many instances
-// that parent holds (a t-foreach of components with t-on). At dispatch, the
-// instance owning the target is found from the end anchors of the parent's
-// children.
-interface CatcherSite {
-  handlers: EventHandler[];
-  // the instances of this site living in each parent element
-  counts: WeakMap<Node, number>;
+// A catcher listens on its parent element, which outlives it, with one
+// listener per event key (name and modifiers) per parent, however many catchers
+// of however many sites (createCatcher calls) that parent holds: a t-foreach of
+// components with t-on costs one listener, and the catchers of every site are
+// dispatched by one walk, innermost first, as the event would bubble through
+// their elements. At dispatch, the catcher owning the target is found from the
+// end anchors of the parent's children.
+interface ParentListener {
+  handler: EventHandler;
+  count: number;
 }
 
-// A catcher listens on its parent element, which outlives it. A list that is
-// its parent's only child clears that parent with textContent = "" instead of
-// removing each child, so the catchers it held never run remove(): the clear
-// releases their listeners from here.
-const sitesByParent = new WeakMap<Node, Set<CatcherSite>>();
+const listenersByParent = new WeakMap<Node, Map<string, ParentListener>>();
 
-function release(site: CatcherSite, parent: Node) {
-  for (const handler of site.handlers) {
-    handler.remove.call(parent as HTMLElement);
-  }
-  site.counts.delete(parent);
-}
-
-export function releaseCatchers(parent: Node) {
-  const sites = sitesByParent.get(parent);
-  if (sites) {
-    sitesByParent.delete(parent);
-    for (const site of sites) {
-      release(site, parent);
-    }
-  }
-}
+// the catcher whose child ends at an end anchor, of any site
+const byEnd = new WeakMap<Node, VCatcherBase>();
 
 // the catchers whose mount or patch is running: one mounted meanwhile in the
-// same parent element, by the same site, is nested in it (a recursive
-// component with several roots)
-const updating: { site: CatcherSite; parent: Node; catcher: any }[] = [];
+// same parent element is nested in the innermost of them (a component with
+// several roots holding another one)
+const updating: { parent: Node; catcher: VCatcherBase }[] = [];
+
+interface VCatcherBase {
+  // event key -> index of its handler data
+  spec: EventsSpec;
+  handlerData: any[];
+  // the catcher enclosing this one in the same parent element, of any site
+  outer: VCatcherBase | null;
+  holds(node: Node): boolean;
+}
+
+// A list that is its parent's only child clears that parent with
+// textContent = "" instead of removing each child, so the catchers it held
+// never run remove(): the clear releases their listeners from here.
+export function releaseCatchers(parent: Node) {
+  const listeners = listenersByParent.get(parent);
+  if (listeners) {
+    listenersByParent.delete(parent);
+    for (const { handler } of listeners.values()) {
+      handler.remove.call(parent as HTMLElement);
+    }
+  }
+}
+
+// Each listener reads the latest handler data at dispatch, and applies its
+// modifiers only to an event from inside a child: the listener sits on the
+// parent, which the children share with their siblings. The child's root node
+// holding the target stands for the current target (what .self compares the
+// target with): the parent is not the child's.
+function dispatch(key: string, parent: Node, ev: Event) {
+  let node = ev.target as Node | null;
+  while (node && node.parentNode !== parent) {
+    node = node.parentNode;
+  }
+  if (!node) {
+    return;
+  }
+  for (let catcher = ownerOf(node, node); catcher; catcher = catcher.outer) {
+    const index = catcher.spec[key];
+    if (index !== undefined) {
+      config.mainEventHandler(catcher.handlerData[index], ev, node);
+    }
+  }
+}
+
+// The first end anchor after the node closes the innermost catcher holding it,
+// or one that starts after it, nested in the same catchers as the node: then
+// its first enclosing catcher holding the node is the one.
+function ownerOf(node: Node, from: Node | null): VCatcherBase | null {
+  for (let n = from; n; n = n.nextSibling) {
+    let catcher = byEnd.get(n) || null;
+    if (catcher) {
+      while (catcher && !catcher.holds(node)) {
+        catcher = catcher.outer;
+      }
+      return catcher;
+    }
+  }
+  return null;
+}
+
+function listen(keys: string[], parent: HTMLElement) {
+  let listeners = listenersByParent.get(parent);
+  if (!listeners) {
+    listenersByParent.set(parent, (listeners = new Map()));
+  }
+  for (const key of keys) {
+    const listener = listeners.get(key);
+    if (listener) {
+      listener.count++;
+      continue;
+    }
+    const handler = createEventHandler(key);
+    // the parent is the context: the runtime handler passes it on
+    handler.setup.call(parent, [(p: Node, ev: Event) => dispatch(key, p, ev), parent]);
+    listeners.set(key, { handler, count: 1 });
+  }
+}
+
+function unlisten(keys: string[], parent: HTMLElement) {
+  const listeners = listenersByParent.get(parent);
+  if (!listeners) {
+    // released in bulk already
+    return;
+  }
+  for (const key of keys) {
+    const listener = listeners.get(key)!;
+    if (--listener.count === 0) {
+      listener.handler.remove.call(parent);
+      listeners.delete(key);
+    }
+  }
+}
 
 export function createCatcher(eventsSpec: EventsSpec): Catcher {
-  const names = Object.keys(eventsSpec);
-  // the instance of this site whose child ends at an end anchor
-  const byEnd = new WeakMap<Node, VCatcher>();
-  let site: CatcherSite | null = null;
+  const keys = Object.keys(eventsSpec);
 
-  // Each listener reads the latest handler data at dispatch, and applies its
-  // modifiers only to an event from inside a child: the listener sits on the
-  // parent, which the children share with their siblings. The child's root
-  // node holding the target stands for the current target (what .self
-  // compares the target with): the parent is not the child's.
-  function dispatch(index: number, parent: Node, ev: Event) {
-    let node = ev.target as Node | null;
-    while (node && node.parentNode !== parent) {
-      node = node.parentNode;
-    }
-    if (!node) {
-      return;
-    }
-    let catcher = ownerOf(node);
-    while (catcher) {
-      config.mainEventHandler(catcher.handlerData[index], ev, node);
-      catcher = catcher.outer;
-    }
-  }
-
-  // The first end anchor of this site after the node closes the innermost
-  // instance holding it, or one that starts after it, nested in the same
-  // instances as the node: then its first enclosing instance holding the node
-  // is the one.
-  function ownerOf(node: Node, from: Node | null = node): VCatcher | null {
-    for (let n = from; n; n = n.nextSibling) {
-      let catcher = byEnd.get(n) || null;
-      if (catcher) {
-        while (catcher && !catcher.holds(node)) {
-          catcher = catcher.outer;
-        }
-        return catcher;
-      }
-    }
-    return null;
-  }
-
-  function getSite(): CatcherSite {
-    if (!site) {
-      site = {
-        handlers: names.map((name) => createEventHandler(name)),
-        counts: new WeakMap(),
-      };
-    }
-    return site;
-  }
-
-  function listen(site: CatcherSite, parent: HTMLElement) {
-    const count = site.counts.get(parent) || 0;
-    site.counts.set(parent, count + 1);
-    if (count) {
-      return;
-    }
-    for (const name of names) {
-      const index = eventsSpec[name];
-      // the parent is the context: the runtime handler passes it on
-      site.handlers[index].setup.call(parent, [
-        (p: Node, ev: Event) => dispatch(index, p, ev),
-        parent,
-      ]);
-    }
-    let sites = sitesByParent.get(parent);
-    if (!sites) {
-      sitesByParent.set(parent, (sites = new Set()));
-    }
-    sites.add(site);
-  }
-
-  function unlisten(site: CatcherSite, parent: HTMLElement) {
-    const count = site.counts.get(parent);
-    if (count === undefined) {
-      // released in bulk already
-      return;
-    }
-    if (count > 1) {
-      site.counts.set(parent, count - 1);
-    } else {
-      release(site, parent);
-      sitesByParent.get(parent)?.delete(site);
-    }
-  }
-
-  class VCatcher {
+  class VCatcher implements VCatcherBase {
     child: VNode;
+    spec = eventsSpec;
     handlerData: any[];
-    // the instance of this site enclosing this one in the same parent
-    outer: VCatcher | null = null;
+    outer: VCatcherBase | null = null;
 
     parentEl?: HTMLElement | undefined;
     afterNode: Text | null = null;
@@ -151,19 +141,17 @@ export function createCatcher(eventsSpec: EventsSpec): Catcher {
     }
 
     mount(parent: HTMLElement, afterNode: Node | null) {
-      const site = getSite();
       this.parentEl = parent;
       const end = (this.afterNode = document.createTextNode(""));
       nodeInsertBefore.call(parent, end, afterNode);
       byEnd.set(end, this);
       for (let i = updating.length - 1; i >= 0; i--) {
-        const entry = updating[i];
-        if (entry.site === site && entry.parent === parent) {
-          this.outer = entry.catcher;
+        if (updating[i].parent === parent) {
+          this.outer = updating[i].catcher;
           break;
         }
       }
-      updating.push({ site, parent, catcher: this });
+      updating.push({ parent, catcher: this });
       try {
         this.child.mount(parent, end);
       } finally {
@@ -171,16 +159,19 @@ export function createCatcher(eventsSpec: EventsSpec): Catcher {
       }
       if (!this.outer) {
         // mounted by a render of its own (a component re-rendering alone):
-        // an enclosing instance is complete, found after the end anchor
+        // an enclosing catcher is complete, found after the end anchor
         this.outer = ownerOf(this.child.firstNode()!, end.nextSibling);
       }
-      listen(site, parent);
+      listen(keys, parent);
     }
 
     holds(node: Node): boolean {
-      const first = this.child.firstNode()!;
+      // the end anchor bounds it: only its start is compared
+      const first = this.child.firstNode();
       return (
-        first === node || !!(first.compareDocumentPosition(node) & Node.DOCUMENT_POSITION_FOLLOWING)
+        !!first &&
+        (first === node ||
+          !!(first.compareDocumentPosition(node) & Node.DOCUMENT_POSITION_FOLLOWING))
       );
     }
 
@@ -202,7 +193,7 @@ export function createCatcher(eventsSpec: EventsSpec): Catcher {
         return;
       }
       this.handlerData = other.handlerData;
-      updating.push({ site: site!, parent: this.parentEl!, catcher: this });
+      updating.push({ parent: this.parentEl!, catcher: this });
       try {
         this.child.patch(other.child, withBeforeRemove);
       } finally {
@@ -215,7 +206,7 @@ export function createCatcher(eventsSpec: EventsSpec): Catcher {
     }
 
     remove() {
-      unlisten(site!, this.parentEl!);
+      unlisten(keys, this.parentEl!);
       this.child.remove();
       this.afterNode!.remove();
     }
