@@ -475,3 +475,51 @@ describe("collections", () => {
     expect(notifiedKeys(() => map.delete("b"))).toEqual([]);
   });
 });
+
+describe("array searches", () => {
+  test("a search subscribes to the items as one atom, not to each index", () => {
+    const list = proxy([{ a: 1 }, { a: 2 }, { a: 3 }] as any[]);
+    effect(() => list.includes(99));
+    expect(notifiedKeys(() => (list[1] = 0))).toEqual([]);
+  });
+
+  test("a search re-runs when an item is added, replaced or removed", async () => {
+    const item = { a: 1 };
+    const list = proxy([] as any[]);
+    const seen: number[] = [];
+    effect(() => {
+      seen.push(list.indexOf(item));
+    });
+    list.push(item);
+    await waitScheduler();
+    list.unshift(0);
+    await waitScheduler();
+    list[1] = 0;
+    await waitScheduler();
+    list.length = 0;
+    await waitScheduler();
+    expect(seen).toEqual([-1, 0, 1, -1, -1]);
+  });
+
+  test("a search finds an item by its raw object or its proxy, from an index", () => {
+    const item = { a: 1 };
+    const list = proxy([item, 1, item]);
+    expect(list.includes(item)).toBe(true);
+    expect(list.includes(list[0])).toBe(true);
+    expect(list.indexOf(list[0])).toBe(0);
+    expect(list.indexOf(item, 1)).toBe(2);
+    expect(list.lastIndexOf(list[0])).toBe(2);
+    expect(list.lastIndexOf(item, 1)).toBe(0);
+    expect(list.includes(NaN as any)).toBe(false);
+    expect(proxy([NaN]).includes(NaN)).toBe(true);
+  });
+
+  test("a search through an observe() view observes the items", () => {
+    let calls = 0;
+    const list = proxy([1, 2]);
+    const view = observe(list, () => calls++);
+    expect(view.includes(3)).toBe(false);
+    list.push(3);
+    expect(calls).toBe(1);
+  });
+});

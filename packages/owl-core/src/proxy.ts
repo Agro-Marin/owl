@@ -761,6 +761,17 @@ function isPlainArray(raw: object): boolean {
   return Object.getPrototypeOf(raw) === Array.prototype;
 }
 
+function onReadItems(raw: Target): void {
+  if (isObserving()) {
+    let atom = itemsAtoms.get(raw);
+    if (atom === undefined) {
+      atom = createAtom(undefined, "key");
+      itemsAtoms.set(raw, atom);
+    }
+    onReadAtom(atom);
+  }
+}
+
 /**
  * The items of `array`, a proxy() of a plain array, read at once: one
  * subscription for the whole array instead of one per index, and each object
@@ -775,14 +786,7 @@ export function readArrayItems<T>(array: T[]): T[] {
   if (raw === undefined || deepProxies.get(raw) !== array || !isPlainArray(raw)) {
     return array;
   }
-  if (isObserving()) {
-    let atom = itemsAtoms.get(raw);
-    if (atom === undefined) {
-      atom = createAtom(undefined, "key");
-      itemsAtoms.set(raw, atom);
-    }
-    onReadAtom(atom);
-  }
+  onReadItems(raw);
   // the get trap hands out a frozen array's items raw (a proxy invariant)
   if (Object.isFrozen(raw)) {
     return raw.slice();
@@ -842,21 +846,34 @@ for (const name of ["pop", "push", "shift", "splice", "unshift"] as const) {
   replacedMethods.set(method, writer);
   lengthWriters.add(writer);
 }
-for (const name of ["includes", "indexOf", "lastIndexOf"] as const) {
-  const method = Array.prototype[name] as Function;
-  replacedMethods.set(method, function (this: unknown[], ...args: unknown[]) {
-    const result = method.apply(this, args);
-    if (result !== -1 && result !== false) {
-      return result;
-    }
-    // the call above read every item through the proxy, which observes them
-    return method.apply(toRaw(this), [toRaw(args[0] as object), ...args.slice(1)]);
-  });
-}
-
 // The replaced methods that read through something other than the proxy's
 // traps: an observe() view runs them on its proxy, observed.
 const viewReaders = new Set<Function>();
+
+// The searches read the items as one atom, as readArrayItems does, and search
+// the raw array: a search reading each index through the proxy would make an
+// atom per index, and a proxy per object item, for an answer that depends on
+// every item anyway. An object is looked for as given, then as its raw object
+// (which a deep array holds).
+for (const name of ["includes", "indexOf", "lastIndexOf"] as const) {
+  const method = Array.prototype[name] as Function;
+  const search = function (this: unknown[], ...args: unknown[]) {
+    const raw = toRaw(this);
+    onReadItems(raw);
+    const result = method.apply(raw, args);
+    const item = args[0];
+    if (result !== -1 && result !== false) {
+      return result;
+    }
+    if (typeof item !== "object" || item === null || toRaw(item) === item) {
+      return result;
+    }
+    args[0] = toRaw(item);
+    return method.apply(raw, args);
+  };
+  replacedMethods.set(method, search);
+  viewReaders.add(search);
+}
 
 // hasOwnProperty reads the presence of the key it asks about, as `in` does
 const hasOwnPropertyReader = function (this: object, key: PropertyKey) {
