@@ -417,7 +417,7 @@ describe("catchers of one site sharing a parent", () => {
     // a slot of the outer child filled by a render of its own (a component
     // re-rendering alone), not by a patch of the outer catcher
     calls.length = 0;
-    content.patch(multi([span(["outer"]), inner("inner"), inner("late")]), false);
+    content.patch(multi([span(["outer"]), inner("inner"), inner("late")]) as any, false);
     click("late");
     expect(calls).toEqual(["late", "outer"]);
   });
