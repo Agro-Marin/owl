@@ -27,8 +27,6 @@ const ITEMS = Symbol("items");
 type Target = object;
 type Reactive<T extends Target> = T;
 
-type CollectionRawType = "Set" | "Map" | "WeakMap";
-
 const objectToString = Object.prototype.toString;
 const objectHasOwnProperty = Object.prototype.hasOwnProperty;
 
@@ -43,10 +41,11 @@ function canBeMadeReactive(value: any): boolean {
     return false;
   }
   const raw = toRaw(value);
-  if (Array.isArray(raw) || raw instanceof Set || raw instanceof Map || raw instanceof WeakMap) {
-    return true;
-  }
-  return objectToString.call(raw) === "[object Object]";
+  return (
+    Array.isArray(raw) ||
+    collectionMethods(raw) !== null ||
+    objectToString.call(raw) === "[object Object]"
+  );
 }
 /**
  * The deep proxy of `value` when it can have one, `value` itself otherwise
@@ -383,8 +382,10 @@ export function proxifyTarget<T extends Target>(target: T, shallow: boolean): T 
     return reactive as T;
   }
 
-  const type = collectionType(target);
-  const handler = type ? new CollectionHandler(type, shallow) : new BasicHandler(shallow);
+  const methodKeys = collectionMethods(target);
+  const handler = methodKeys
+    ? new CollectionHandler(methodKeys, shallow)
+    : new BasicHandler(shallow);
   const proxy = new Proxy(target, handler as ProxyHandler<T>) as Reactive<T>;
 
   cache.set(target, proxy);
@@ -455,8 +456,7 @@ export function observe<T extends Target>(target: T, callback: () => void): T {
       return known;
     }
     const raw = toRaw(reactive);
-    const type = collectionType(raw);
-    const methodKeys = type ? collectionMethods[type] : null;
+    const methodKeys = collectionMethods(raw);
     // the functions handed out for the methods the view runs on its proxy, by
     // the method the proxy handed out
     let methods: Map<Function, Function> | undefined;
@@ -797,7 +797,7 @@ for (const name of ["includes", "indexOf", "lastIndexOf"] as const) {
 const hasOwnPropertyReader = function (this: object, key: PropertyKey) {
   const raw = toRaw(this);
   onReadTargetKey(
-    collectionType(raw) ? propertyHost(raw) : raw,
+    collectionMethods(raw) ? propertyHost(raw) : raw,
     typeof key === "symbol" ? key : String(key),
     presenceAtoms
   );
@@ -805,16 +805,6 @@ const hasOwnPropertyReader = function (this: object, key: PropertyKey) {
 };
 replacedMethods.set(objectHasOwnProperty, hasOwnPropertyReader);
 viewReaders.add(hasOwnPropertyReader);
-
-function collectionType(target: Target): CollectionRawType | null {
-  return target instanceof Map
-    ? "Map"
-    : target instanceof Set
-      ? "Set"
-      : target instanceof WeakMap
-        ? "WeakMap"
-        : null;
-}
 
 // A collection's own properties (a subclass's fields, an expando) have atoms
 // of their own, keyed by this stand-in: an entry of the same key is another
@@ -831,7 +821,7 @@ function propertyHost(target: Target): Target {
 
 /**
  * The method of a collection proxy that replaces the method `key` (one of
- * collectionMethods): it observes, or notifies, the keys it touches. Eg: `has`
+ * collectionMethods()): it observes, or notifies, the keys it touches. Eg: `has`
  * on a proxy set observes the key it is asked about, `add` notifies it.
  */
 function makeMethod(key: PropertyKey, target: any, shallow: boolean): Function {
@@ -1032,7 +1022,7 @@ const setLikeMethods: PropertyKey[] = [
   "entries",
   Symbol.iterator,
 ];
-const weakMapMethods: PropertyKey[] = ["has", "get", "set", "delete"];
+const weakMapMethods = new Set<PropertyKey>(["has", "get", "set", "delete"]);
 // ES2025 Set methods, where the engine has them
 const setOperations = [
   "difference",
@@ -1044,12 +1034,20 @@ const setOperations = [
   "union",
 ].filter((name) => name in Set.prototype);
 
-// the methods a collection proxy replaces (see makeMethod), by raw type
-const collectionMethods: Record<CollectionRawType, Set<PropertyKey>> = {
-  Set: new Set([...setLikeMethods, "add", ...setOperations]),
-  Map: new Set([...setLikeMethods, ...weakMapMethods]),
-  WeakMap: new Set(weakMapMethods),
-};
+const mapMethods = new Set([...setLikeMethods, ...weakMapMethods]);
+const setMethods = new Set([...setLikeMethods, "add", ...setOperations]);
+
+// the methods a proxy of `target` replaces (see makeMethod), if it is a
+// collection
+function collectionMethods(target: Target): Set<PropertyKey> | null {
+  return target instanceof Map
+    ? mapMethods
+    : target instanceof Set
+      ? setMethods
+      : target instanceof WeakMap
+        ? weakMapMethods
+        : null;
+}
 
 /**
  * The handler of a Set, Map or WeakMap proxy. Its methods are built on first
@@ -1065,10 +1063,10 @@ class CollectionHandler extends BasicHandler {
   methods: Map<PropertyKey, Function> | undefined = undefined;
   properties: Target | undefined = undefined;
 
-  constructor(type: CollectionRawType, shallow: boolean) {
+  constructor(methodKeys: Set<PropertyKey>, shallow: boolean) {
     super(shallow);
-    this.methodKeys = collectionMethods[type];
-    this.hasSize = type !== "WeakMap";
+    this.methodKeys = methodKeys;
+    this.hasSize = methodKeys !== weakMapMethods;
   }
 
   get(target: any, key: PropertyKey, receiver: any): any {
