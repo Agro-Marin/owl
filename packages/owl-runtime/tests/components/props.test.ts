@@ -1459,3 +1459,54 @@ describe("a props view read through a proxy", () => {
     expect(seen).toEqual([2, 4]);
   });
 });
+
+describe("a component held in reactive state reads its props through a getter", () => {
+  // a component kept in reactive state (an action's owner, say) is read back
+  // as a proxy: its getters then run with the proxy as `this`
+  test("of a schema view", async () => {
+    let child: any;
+    class Child extends Component {
+      static template = xml`<span><t t-out="this.label"/></span>`;
+      props = props({ label: t.string() });
+      get label() {
+        return this.props.label;
+      }
+      setup() {
+        child = this;
+      }
+    }
+    class Parent extends Component {
+      static template = xml`<Child label="'hola'"/>`;
+      static components = { Child };
+    }
+
+    await mount(Parent, fixture);
+    const holder = proxy({ owner: child });
+
+    expect(holder.owner.label).toBe("hola");
+    expect(holder.owner.props.label).toBe("hola");
+  });
+
+  test("of a schema-less view", async () => {
+    let child: any;
+    class Child extends Component {
+      static template = xml`<span><t t-out="this.label"/></span>`;
+      props = props();
+      get label() {
+        return this.props.label;
+      }
+      setup() {
+        child = this;
+      }
+    }
+    class Parent extends Component {
+      static template = xml`<Child label="'hola'"/>`;
+      static components = { Child };
+    }
+
+    await mount(Parent, fixture);
+    const holder = proxy({ owner: child });
+
+    expect(holder.owner.label).toBe("hola");
+  });
+});
