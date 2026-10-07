@@ -162,8 +162,10 @@ true })` creates an effect owned by nothing. When a computed and an effect
 - **A constructor in a type schema** (`{ a: String }`) throws instead of
   accepting everything; a `customValidator` of an optional type is optional,
   with that type's default.
-- **A plugin dependency cycle through `setup()`** throws "Circular plugin
-  dependency"; a synchronous start failure leaves no later batch pending.
+- **A plugin dependency cycle through constructors or field initializers**
+  throws "Circular plugin dependency" instead of overflowing the stack; plugins
+  asking for each other in `setup()` each get the other (logged on the `plugin`
+  channel). A synchronous start failure leaves no later batch pending.
 - **A forced `registry.use()`** restores the entry it overwrote when it ends.
 
 ### Components and rendering

@@ -375,7 +375,10 @@ If the constructor or `setup()` throws, the start is undone: the plugin and
 any plugin it started as a dependency are unregistered, their `onWillStart`
 callbacks dropped and their `onWillDestroy` callbacks run at once. Two
 plugins whose field initializers ask for each other throw `Circular plugin
-dependency: A -> B -> A`.
+dependency: A -> B -> A`: neither exists yet. Two plugins asking for each
+other in `setup()` each get the other, already constructed but with its
+`setup()` still running, so they may hold each other for later use but not
+rely on what the other's `setup()` has yet to do.
 
 The computed values created during `setup()` are disposed when the plugin is
 destroyed. A plain `effect()` is not tied to any scope: use `useEffect()` for

@@ -1619,12 +1619,45 @@ describe("plugin start failures and lookups", () => {
 });
 
 describe("plugin start: cycles, failures, ids", () => {
-  test("a cycle through two setups throws instead of handing out a plugin mid-setup", () => {
+  test("plugins asking for each other in their setups each get the other", () => {
+    // the devtools' store and components plugins hold each other this way
     class A extends Plugin {
-      ready = false;
+      b: any = null;
+      setup() {
+        this.b = plugin(B);
+      }
+    }
+    class B extends Plugin {
+      a: any = null;
+      setup() {
+        this.a = plugin(A);
+      }
+    }
+    const manager = new PluginManager(new App());
+    manager.startPlugins([A]);
+    const a = manager.getPlugin(A)!;
+    const b = manager.getPlugin(B)!;
+    expect(a.b).toBe(b);
+    expect(b.a).toBe(a);
+  });
+
+  test("a setup asking for its own plugin gets it", () => {
+    let self: any = null;
+    class A extends Plugin {
+      setup() {
+        self = plugin(A);
+      }
+    }
+    const manager = new PluginManager(new App());
+    manager.startPlugins([A]);
+    expect(self).toBe(manager.getPlugin(A));
+  });
+
+  test("a plugin handed out mid-setup is dropped with the start that fails", () => {
+    class A extends Plugin {
       setup() {
         plugin(B);
-        this.ready = true;
+        throw new Error("A fails");
       }
     }
     class B extends Plugin {
@@ -1633,26 +1666,21 @@ describe("plugin start: cycles, failures, ids", () => {
       }
     }
     const manager = new PluginManager(new App());
-    expect(() => manager.startPlugins([A])).toThrow("Circular plugin dependency: A -> B -> A");
+    expect(() => manager.startPlugins([A])).toThrow("A fails");
     expect(manager.getPlugin(A)).toBe(null);
     expect(manager.getPlugin(B)).toBe(null);
   });
 
-  test("a setup asking for its own plugin is a cycle", () => {
+  test("a cycle, and a handout mid-setup, are logged on the plugin channel", () => {
     class A extends Plugin {
-      setup() {
-        plugin(A);
-      }
+      b: any = plugin(B);
     }
-    expect(() => new PluginManager(new App()).startPlugins([A])).toThrow(
-      "Circular plugin dependency: A -> A"
-    );
-  });
-
-  test("a cycle is logged on the plugin channel", () => {
-    class A extends Plugin {
+    class B extends Plugin {
+      a: any = plugin(A);
+    }
+    class C extends Plugin {
       setup() {
-        plugin(A);
+        plugin(C);
       }
     }
     const lines: string[] = [];
@@ -1660,11 +1688,13 @@ describe("plugin start: cycles, failures, ids", () => {
     setDebug(["plugin"]);
     try {
       expect(() => new PluginManager(new App()).startPlugins([A])).toThrow("Circular");
+      new PluginManager(new App()).startPlugins([C]);
     } finally {
       setDebug(false);
       setDebugSink(null);
     }
-    expect(lines).toContain("plugin: circular dependency A -> A");
+    expect(lines).toContain("plugin: circular dependency A -> B -> A");
+    expect(lines).toContain("plugin: C handed out before its setup ends");
   });
 
   test("a later batch is no longer pending once the first batch failed synchronously", () => {

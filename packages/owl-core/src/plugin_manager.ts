@@ -173,9 +173,18 @@ export class PluginManager extends Scope {
   }
 
   /**
-   * Throws when the plugin of `pluginConstructor` is being started (its
-   * constructor or its setup is running): it asked, through other plugins,
-   * for itself, and would get itself half started.
+   * Whether the plugin of `pluginConstructor` is being started (its
+   * constructor or its setup is running).
+   */
+  isStarting(pluginConstructor: Function): boolean {
+    return this.startingPath.includes(pluginConstructor as PluginConstructor);
+  }
+
+  /**
+   * Throws when the plugin of `pluginConstructor` is being constructed again:
+   * its constructor asked, through other plugins, for itself, which does not
+   * exist yet. (Asked for while its setup runs, it exists: usePlugin hands it
+   * out.)
    */
   assertNotStarting(pluginConstructor: Function): void {
     const index = this.startingPath.indexOf(pluginConstructor as PluginConstructor);

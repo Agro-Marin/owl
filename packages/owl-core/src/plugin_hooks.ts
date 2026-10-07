@@ -1,3 +1,4 @@
+import { debug, debugLog } from "./debug";
 import { OwlError } from "./owl_error";
 import { PluginConstructor, PluginManager } from "./plugin_manager";
 import { useScope } from "./scope";
@@ -25,8 +26,10 @@ export function usePlugin<T extends PluginConstructor>(pluginType: T): PluginIns
   if (!plugin) {
     throw new OwlError(`Unknown plugin "${pluginType.id}"`);
   }
-  if (isPlugin) {
-    manager.assertNotStarting(plugin.constructor);
+  if (isPlugin && debug.plugin && manager.isStarting(plugin.constructor)) {
+    // asked for, through other plugins, while its own setup runs: it exists,
+    // and is handed out as it is (plugins that hold each other for later use)
+    debugLog("plugin", `${pluginType.id} handed out before its setup ends`);
   }
 
   // A plugin can define a specialized, per-consumer view of itself (see
