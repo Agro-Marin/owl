@@ -160,6 +160,7 @@ export function generator(random: () => number, interactive = false) {
   // t-tag: a count, no draw, so that a seed generates the templates it did
   let plainElements = 0;
   let setId = 0;
+  let sets = 0;
   let portals = 0;
   let suspenses = 0;
   // every plain element but every fourth has classes: a count, no draw
@@ -324,17 +325,21 @@ export function generator(random: () => number, interactive = false) {
     let vars = env.vars;
     for (let i = 0; i < count; i++) {
       if (interactive && env.depth <= 3 && !env.inSet && random() < 0.1) {
-        // read by the nodes after it, and their descendants
-        const name = `sv${++setId}`;
+        // read by the nodes after it, and their descendants. Every third one
+        // sets again a variable of its kind in scope (a count, no draw): in a
+        // t-if or an element the nodes after them read it, in a loop the next
+        // items too, if the variable was set outside the loop in this template
         const inner = { ...env, vars, depth: env.depth + 1 };
-        if (random() < 0.4) {
-          const body = nodes({ ...inner, multi: true, inSet: true });
-          result.push({ kind: "set", name, value: null, body });
-          vars = [...vars, { name, body: true }];
+        const body = random() < 0.4;
+        const same = ++sets % 3 ? [] : vars.filter((v) => v.body === body);
+        const name = same.length ? same[sets % same.length].name : `sv${++setId}`;
+        if (body) {
+          const content = nodes({ ...inner, multi: true, inSet: true });
+          result.push({ kind: "set", name, value: null, body: content });
         } else {
           result.push({ kind: "set", name, value: valueExpr(inner), body: null });
-          vars = [...vars, { name, body: false }];
         }
+        vars = [...vars.filter((v) => v.name !== name), { name, body }];
       }
       const n = node({ ...env, vars });
       if ((n.kind === "portal" || n.kind === "suspense") && random() < 0.6) {
@@ -462,6 +467,7 @@ export function generator(random: () => number, interactive = false) {
   return (): Generated => {
     handlerId = 0;
     setId = 0;
+    sets = 0;
     portals = 0;
     suspenses = 0;
     slotCalls = 0;
@@ -606,21 +612,26 @@ export interface REnv {
 }
 export interface RCtx {
   self: unknown;
+  // the scope the code runs in: an object over the scopes it is in (a loop
+  // item over the scope of its loop), written in place by a t-set
   locals: Scope;
+  // the scope of each loop level of the function being rendered (0: its own)
+  levels?: Scope[];
   // the content a t-call-slot renders here, and where it was written
   slot: { nodes: TNode[]; ctx: RCtx } | null;
   env: REnv;
 }
 
 // a t-set body: rendered where t-out reads it, and its HTML where a string is
-// needed (text as it is, an element's markup escaped)
+// needed (text as it is, an element's markup escaped). Its variables have the
+// values they had at its t-set (ctx holds a copy of them)
 export class BodyValue {
   constructor(
     readonly body: TNode[],
     readonly ctx: RCtx
   ) {}
   toString(): string {
-    return renderList(this.body, this.ctx)
+    return renderTarget(this.body, this.ctx, this.ctx.locals)
       .map((c) => (typeof c === "string" ? c : serialize(c, false)))
       .join("");
   }
@@ -628,7 +639,10 @@ export class BodyValue {
 
 export const compiled = new Map<string, Function>();
 export function evaluate(expr: string, ctx: RCtx): any {
-  const names = Object.keys(ctx.locals);
+  const names: string[] = [];
+  for (const name in ctx.locals) {
+    names.push(name);
+  }
   const key = `${names.join(",")}|${expr}`;
   const fn = compiled.getOrInsertComputed(
     key,
@@ -693,12 +707,81 @@ export function adopt(el: VEl) {
 }
 
 // a t-set is seen by the nodes after it in its list
+// The loop level each t-set of a function writes, as the compiler decides it:
+// its own, or the level of a t-set of the same name earlier in the function
+// at a lower level (a loop writes that variable of its enclosing scope). A
+// function with a t-set at its top level makes a scope of its own first.
+const writeLevels = new WeakMap<TNode, number>();
+const protects = new WeakMap<TNode[], boolean>();
+
+function annotate(list: TNode[]): boolean {
+  let protect = protects.get(list);
+  if (protect !== undefined) {
+    return protect;
+  }
+  protect = false;
+  const defined = new Map<string, number>();
+  const walk = (nodes: TNode[], level: number) => {
+    for (const n of nodes) {
+      switch (n.kind) {
+        case "set": {
+          const def = defined.get(n.name);
+          if (def !== undefined && level > def) {
+            writeLevels.set(n, def);
+          } else {
+            writeLevels.set(n, level);
+            defined.set(n.name, level);
+            protect ||= level === 0;
+          }
+          break;
+        }
+        case "elem":
+          walk(n.children, level);
+          break;
+        case "if":
+          for (const [, body] of n.branches) {
+            walk(body, level);
+          }
+          if (n.otherwise) {
+            walk(n.otherwise, level);
+          }
+          break;
+        case "foreach":
+          walk(n.children, level + 1);
+          break;
+        // a component's, a slot's, a called template's, a Portal's or a
+        // Suspense's content is a function of its own
+      }
+    }
+  };
+  walk(list, 0);
+  protects.set(list, protect);
+  return protect;
+}
+
+// the values of a scope now, for what reads them later
+function copyOf(scope: Scope): Scope {
+  const copy: Scope = {};
+  for (const name in scope) {
+    copy[name] = scope[name];
+  }
+  return copy;
+}
+
+// a function of its own (a template, a slot's content...) run in `base`
+export function renderTarget(list: TNode[], ctx: RCtx, base: Scope): VChild[] {
+  const scope = annotate(list) ? Object.create(base) : base;
+  return renderList(list, { ...ctx, locals: scope, levels: [scope] });
+}
+
 export function renderList(list: TNode[], ctx: RCtx): VChild[] {
   const result: VChild[] = [];
   for (const n of list) {
     if (n.kind === "set") {
-      const value = n.body ? new BodyValue(n.body, ctx) : evaluate(n.value!, ctx);
-      ctx = { ...ctx, locals: { ...ctx.locals, [n.name]: value } };
+      const value = n.body
+        ? new BodyValue(n.body, { ...ctx, locals: copyOf(ctx.locals) })
+        : evaluate(n.value!, ctx);
+      ctx.levels![writeLevels.get(n)!][n.name] = value;
     } else {
       result.push(...renderNode(n, ctx));
     }
@@ -713,12 +796,14 @@ export function renderNode(n: TNode, ctx: RCtx): VChild[] {
     case "out": {
       const value = evaluate(n.expr, ctx);
       if (value instanceof BodyValue) {
-        return renderList(value.body, value.ctx);
+        return renderTarget(value.body, value.ctx, value.ctx.locals);
       }
       return value === undefined || value === null ? [] : [String(value)];
     }
     case "elem": {
-      const el = vel(n.tag, renderList(n.children, ctx));
+      // its attributes and handlers are read before its content runs (a t-set
+      // in it comes after them)
+      const el = vel(n.tag, []);
       el.attrs = [...n.attrs];
       if (n.cls) {
         const words = [
@@ -750,6 +835,8 @@ export function renderNode(n: TNode, ctx: RCtx): VChild[] {
           el.attrs.push(["disabled", ""]);
         }
       }
+      el.children = renderList(n.children, ctx);
+      adopt(el);
       return [el];
     }
     case "if": {
@@ -761,28 +848,27 @@ export function renderNode(n: TNode, ctx: RCtx): VChild[] {
       return n.otherwise ? renderList(n.otherwise, ctx) : [];
     }
     case "foreach": {
+      // an item is a scope over the loop's: a t-set writing the loop's
+      // scope, or an enclosing one, is seen by the next items
       const items = evaluate(n.list, ctx) as unknown[];
-      return items.flatMap((item, i) =>
-        renderList(n.children, {
-          ...ctx,
-          locals: {
-            ...ctx.locals,
-            [n.as]: item,
-            [`${n.as}_index`]: i,
-            [`${n.as}_first`]: i === 0,
-            [`${n.as}_last`]: i === items.length - 1,
-          },
-        })
-      );
+      return items.flatMap((item, i) => {
+        const scope: Scope = Object.create(ctx.locals);
+        scope[n.as] = item;
+        scope[`${n.as}_index`] = i;
+        scope[`${n.as}_first`] = i === 0;
+        scope[`${n.as}_last`] = i === items.length - 1;
+        return renderList(n.children, { ...ctx, locals: scope, levels: [...ctx.levels!, scope] });
+      });
     }
     case "comp": {
+      // the slot's content reads the values at the component
       const inner: RCtx = {
         self: ctx.self,
         locals: {},
-        slot: n.slot ? { nodes: n.slot, ctx } : null,
+        slot: n.slot ? { nodes: n.slot, ctx: { ...ctx, locals: copyOf(ctx.locals) } } : null,
         env: ctx.env,
       };
-      return withCatcher(renderList(n.def.body, inner), n.on, ctx);
+      return withCatcher(renderTarget(n.def.body, inner, inner.locals), n.on, ctx);
     }
     case "slot": {
       // a dynamic name other than "default" names no slot: the default
@@ -790,21 +876,19 @@ export function renderNode(n: TNode, ctx: RCtx): VChild[] {
       const named = !n.dyn || n.dyn === "'default'";
       const content =
         named && ctx.slot
-          ? renderList(ctx.slot.nodes, ctx.slot.ctx)
+          ? renderTarget(ctx.slot.nodes, ctx.slot.ctx, ctx.slot.ctx.locals)
           : n.dyn
             ? [vel("s", [SLOT_DEFAULT_TEXT])]
             : [];
       return withCatcher(content, n.on, ctx);
     }
     case "call": {
-      if (!n.args.length) {
-        return renderList(n.def.body, ctx);
-      }
-      const locals = { ...ctx.locals };
+      // the called template reads the values at the call
+      const locals = copyOf(ctx.locals);
       for (const [name, expr] of n.args) {
         locals[name] = evaluate(expr, ctx);
       }
-      return renderList(n.def.body, { ...ctx, locals });
+      return renderTarget(n.def.body, ctx, locals);
     }
     case "set":
       // handled by renderList
@@ -814,16 +898,16 @@ export function renderNode(n: TNode, ctx: RCtx): VChild[] {
       // nothing of it
       const key = [n.target, ...n.indexes.map((l) => ctx.locals[`${l}_index`])].join(":");
       const target = ctx.env.portals.getOrInsertComputed(key, () => vel("article", []));
-      target.children.push(...renderList(n.content, ctx));
+      target.children.push(...renderTarget(n.content, ctx, copyOf(ctx.locals)));
       adopt(target);
       return [];
     }
     case "suspense": {
       let content: VChild[];
       if (n.slow && !ctx.env.loaded) {
-        content = n.fallback ? renderList(n.fallback, ctx) : [];
+        content = n.fallback ? renderTarget(n.fallback, ctx, copyOf(ctx.locals)) : [];
       } else {
-        content = renderList(n.content, ctx);
+        content = renderTarget(n.content, ctx, copyOf(ctx.locals));
         if (n.slow) {
           content.unshift(vel("i", ["g"]));
         }
@@ -834,7 +918,7 @@ export function renderNode(n: TNode, ctx: RCtx): VChild[] {
 }
 
 export function renderRoot(list: TNode[], ctx: RCtx): VEl {
-  return vel("div", renderList(list, ctx));
+  return vel("div", renderTarget(list, ctx, ctx.locals));
 }
 
 // a class's words in any order: a patch adds and removes words
@@ -856,12 +940,13 @@ export function serialize(v: VChild, sorted: boolean): string {
 }
 
 export function render(list: TNode[], scope: Scope): string {
-  return renderList(list, {
+  const ctx: RCtx = {
     self: undefined,
     locals: scope,
     slot: null,
     env: { loaded: true, portals: new Map() },
-  })
+  };
+  return renderTarget(list, ctx, scope)
     .map((c) => serialize(c, false))
     .join("");
 }

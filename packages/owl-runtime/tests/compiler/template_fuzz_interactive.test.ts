@@ -1,3 +1,4 @@
+import { writeFileSync } from "fs";
 import {
   App,
   blockDom,
@@ -569,6 +570,10 @@ async function runInteractive(generated: Generated): Promise<string[]> {
       }
     }
     for (const [el, v] of roots) {
+      if (!el) {
+        problems.push(`${stage}: no element for ${v.tag}; host ${appHost.innerHTML.slice(0, 300)}`);
+        return null;
+      }
       const found = pair(el, v);
       if (typeof found === "string") {
         problems.push(`${stage}: ${found}`);
@@ -672,9 +677,26 @@ test(
   "random interactive templates run the handlers and hold the form state the reference expects",
   async () => {
     const next = generator(prng(Number(process.env.OWL_TEMPLATE_FUZZ_SEED || 29)), true);
+    const only = process.env.OWL_TEMPLATE_FUZZ_ONLY
+      ? Number(process.env.OWL_TEMPLATE_FUZZ_ONLY)
+      : undefined;
     const failures: string[] = [];
     for (let i = 0; i < COUNT && failures.length < 3; i++) {
       const generated = next();
+      // OWL_TEMPLATE_FUZZ_ONLY=<n>: run the template #n alone, and with
+      // OWL_TEMPLATE_FUZZ_DUMP=<file>, write its templates there
+      if (only !== undefined && i !== only) {
+        continue;
+      }
+      if (only !== undefined && process.env.OWL_TEMPLATE_FUZZ_DUMP) {
+        const defs = [...generated.comps, ...generated.calls].map(
+          (d) => `${d.name}${d.relay ? " (relay)" : ""}: ${toXml(d.body)}`
+        );
+        writeFileSync(
+          process.env.OWL_TEMPLATE_FUZZ_DUMP,
+          [`<div>${toXml(generated.tree)}</div>`, ...defs].join("\n")
+        );
+      }
       for (const failure of await runInteractive(generated)) {
         failures.push(`#${i} ${failure}`);
       }

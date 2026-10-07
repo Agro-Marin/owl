@@ -355,7 +355,12 @@ snapshot of the committed children; `App.version` + `__info__.hash` scope the te
   on the handler-order bug d6c1a1da fixed, which owl's other suites missed
   (that bug did not need a child block: a handler on a nested element
   followed by a sibling's sufficed). `model_based.test.ts` checks click
-  dispatch, a stale loop context included.
+  dispatch, a stale loop context included. Its reference renderer scopes
+  variables as the compiler does (a `t-if` or an element opens no scope, a
+  loop item does and writes a variable `t-set` earlier outside it), and every
+  third `t-set` it generates sets again a variable in scope: against upstream's
+  live contexts it fails within six templates, and it found a body output at
+  one site patched with another body's blocks.
 
 - `owl-core/tests/foreign_proxy.ts`: targets behind a foreign Proxy (Odoo
   mail's record and `RecordList` shapes, forwarding Proxies); the owl-core and
