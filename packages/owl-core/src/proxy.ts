@@ -109,7 +109,7 @@ export function markRaw<T extends Target>(value: T): T {
 
 function isClassPrototype(value: any): boolean {
   return (
-    objectHasOwnProperty.call(value, "constructor") &&
+    Object.hasOwn(value, "constructor") &&
     typeof value.constructor === "function" &&
     value.constructor.prototype === value
   );
@@ -165,7 +165,7 @@ function declaresMember(target: Target, member?: string, className?: string): bo
     return true;
   }
   for (let proto = Object.getPrototypeOf(target); proto; proto = Object.getPrototypeOf(proto)) {
-    const ctor = objectHasOwnProperty.call(proto, "constructor") ? proto.constructor : undefined;
+    const ctor = Object.hasOwn(proto, "constructor") ? proto.constructor : undefined;
     if (
       typeof ctor === "function" &&
       (className !== undefined
@@ -603,7 +603,7 @@ class BasicHandler implements ProxyHandler<any> {
   }
 
   deleteProperty(target: any, key: PropertyKey): boolean {
-    const hadKey = objectHasOwnProperty.call(target, key);
+    const hadKey = Object.hasOwn(target, key);
     const ret = Reflect.deleteProperty(target, key);
     if (hadKey && ret) {
       // one batch: an immediate reader of the key, its presence and the keys
@@ -686,7 +686,7 @@ function write(
     }
     return true;
   }
-  const created = own === undefined && objectHasOwnProperty.call(target, key);
+  const created = own === undefined && Object.hasOwn(target, key);
   const changed = !Object.is(before, Reflect.get(target, key, receiver));
   if (created) {
     onWriteKeyPresence(atoms, key);
@@ -817,7 +817,7 @@ function replaceMethods(): Map<Function, Function> {
       typeof key === "symbol" ? key : String(key),
       presenceAtoms
     );
-    return objectHasOwnProperty.call(raw, key);
+    return Object.hasOwn(raw, key);
   };
   replaced.set(objectHasOwnProperty, hasOwnPropertyReader);
   viewReaders.add(hasOwnPropertyReader);

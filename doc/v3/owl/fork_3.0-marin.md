@@ -145,9 +145,16 @@ true })` creates an effect owned by nothing. When a computed and an effect
 - **A shallow proxy** (`signal.Array`, `signal.Object`) keeps a proxy written
   into it, as shallow Maps and Sets did.
 - **`obj.hasOwnProperty(k)` through a proxy subscribes to the presence of
-  `k`**, as `in` does. `Object.defineProperty` and `Object.hasOwn` stay
-  untracked, as upstream (Odoo's web_studio defines a label getter on a
-  proxied field inside a computed).
+  `k`**, as `in` does. `Object.defineProperty` stays untracked, as upstream
+  (Odoo's web_studio defines a label getter on a proxied field inside a
+  computed). `Object.hasOwn`, `propertyIsEnumerable` and
+  `Object.getOwnPropertyDescriptor` stay untracked too: tracking them takes a
+  `getOwnPropertyDescriptor` trap, which also runs for every write through the
+  proxy (the write asks its receiver, the proxy, for the key's descriptor) and
+  for every key `Object.keys`, a spread or `JSON.stringify` lists. Measured on
+  Node 26, a forwarding trap alone: a write 244 -> 355 ns, `Object.keys` of 100
+  keys 16 -> 24 µs; in Odoo, 11 000 to 14 000 trap calls per list or kanban
+  navigation over 49 records. Ask with `in` or `obj.hasOwnProperty(k)`.
 - **A locked (non-configurable, non-writable) property** is handed out as it
   is by collections and `observe()` views too, as the Proxy invariant requires.
 - **A collection's own properties** are read with the proxy as `this` (a
