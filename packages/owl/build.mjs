@@ -1,6 +1,7 @@
 import * as esbuild from "esbuild";
 import { execSync } from "child_process";
 import { buildHash } from "./build_hash.mjs";
+import { TARGET } from "./build_target.mjs";
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync } from "fs";
 import { join, relative, resolve } from "path";
 
@@ -56,7 +57,7 @@ async function buildVariant(entry, suffix) {
   const iifeMin = addSuffix(iife, "min");
 
   const plugins = suffix ? [] : [bundledCompilerPlugin];
-  const common = { entryPoints: [entry], bundle: true, define, target: "es2022", alias, plugins };
+  const common = { entryPoints: [entry], bundle: true, define, target: TARGET, alias, plugins };
 
   await Promise.all([
     esbuild.build({ ...common, outfile: esm, format: "esm" }),
@@ -83,7 +84,7 @@ async function buildCompilerModule() {
     entryPoints: ["src/compiler.ts"],
     bundle: true,
     define,
-    target: "es2022",
+    target: TARGET,
     alias: { ...alias, "@odoo/owl-core": "./src/compiler_core.ts" },
     metafile: true,
   };

@@ -3,11 +3,23 @@
    ** Base TypeScript configuration shared across all packages.
    ** Commented-out options have their default values.
    **/
+  "files": ["./types/target_lib.d.ts"],
   "compilerOptions": {
                                                                 // Main options
-    "target": "ES2022",
+    // what every target of the dist has (packages/owl/build_target.mjs): ES2025
+    // is ES2024 and the esnext libs below in TypeScript 5.9, plus the APIs
+    // types/target_lib.d.ts declares
+    "target": "ES2024",
     "module": "es6",
-    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "lib": [
+      "ES2024",
+      "ESNext.Collection",
+      "ESNext.Iterator",
+      "ESNext.Promise",
+      "ESNext.Float16",
+      "DOM",
+      "DOM.Iterable"
+    ],
                                                                 // Strict typechecking options
     "strict": true,
                                                                 // Additional checks
