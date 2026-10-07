@@ -8,18 +8,40 @@ differently from upstream.
 
 ## Added API
 
-| API                                      | What it does                                                                                                                                                                                                                                                                                              | Reference                                                           |
-| ---------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
-| `immediateEffect(fn)`                    | an effect that runs synchronously on each change, not in the next microtask                                                                                                                                                                                                                               | [effects](reference/effects.md)                                     |
-| `observe(target, callback)`              | OWL 2's `reactive(target, callback)`: a view of `target` that calls `callback` once a value read through it changes                                                                                                                                                                                       | [proxies](reference/proxies.md#observe)                             |
-| `computed(fn, { detached: true })`       | a computed that outlives the scope that created it                                                                                                                                                                                                                                                        | [computed values](reference/computed_values.md)                     |
-| `selector(source)`                       | `isSelected(key)`, whose readers depend on the answer for their key only                                                                                                                                                                                                                                  | [computed values](reference/computed_values.md#selectors)           |
-| `t-memo="[deps]"`                        | on a keyed `t-foreach`: an item whose dependencies are unchanged keeps its previous content (child components included)                                                                                                                                                                                   | [template syntax](reference/template_syntax.md#memoized-list-items) |
-| `setDebug(channels)`, `setDebugSink(fn)` | opt-in debug logging per channel (reactivity, effect, computed, scope, plugin, scheduler, fiber, lifecycle, error, template, event)                                                                                                                                                                       | [debug logging](reference/debug_logging.md)                         |
-| `@odoo/owl/runtime`                      | the runtime without the template compiler (`owl.runtime.es.js`, 34% smaller), for pages whose templates arrive precompiled                                                                                                                                                                                | —                                                                   |
-| `@odoo/owl/compiler`                     | the compiler alone (`owl.compiler.es.js`, `owl.compiler.cjs` for `require()`, `owl.compiler.iife.js`); it imports nothing and registers itself, keyed by its build (version and hash), on `globalThis[Symbol.for("@odoo/owl/compiler")]`; a runtime takes its own build's, so two builds can share a page | [precompiling templates](reference/precompiling_templates.md)       |
-| `batch(fn)`                              | groups writes: immediate effects run once, after the outermost batch (exported by `@odoo/owl` and `@odoo/owl/runtime`)                                                                                                                                                                                    | [reactivity](reference/reactivity.md)                               |
-| `markRaw(Class.prototype)`               | every instance of the class and of its subclasses stays raw: what a class with private members (`#x`) needs                                                                                                                                                                                               | [proxies](reference/proxies.md)                                     |
+| API                                      | What it does                                                                                                                                                                                                                                                          | Reference                                                           |
+| ---------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
+| `immediateEffect(fn)`                    | an effect that runs synchronously on each change, not in the next microtask                                                                                                                                                                                           | [effects](reference/effects.md)                                     |
+| `observe(target, callback)`              | OWL 2's `reactive(target, callback)`: a view of `target` that calls `callback` once a value read through it changes                                                                                                                                                   | [proxies](reference/proxies.md#observe)                             |
+| `computed(fn, { detached: true })`       | a computed that outlives the scope that created it                                                                                                                                                                                                                    | [computed values](reference/computed_values.md)                     |
+| `selector(source)`                       | `isSelected(key)`, whose readers depend on the answer for their key only                                                                                                                                                                                              | [computed values](reference/computed_values.md#selectors)           |
+| `t-memo="[deps]"`                        | on a keyed `t-foreach`: an item whose dependencies are unchanged keeps its previous content (child components included)                                                                                                                                               | [template syntax](reference/template_syntax.md#memoized-list-items) |
+| `setDebug(channels)`, `setDebugSink(fn)` | opt-in debug logging per channel (reactivity, effect, computed, scope, plugin, scheduler, fiber, lifecycle, error, template, event)                                                                                                                                   | [debug logging](reference/debug_logging.md)                         |
+| `@odoo/owl/runtime`                      | the runtime without the template compiler (`owl.runtime.es.js`, 34% smaller), for pages whose templates arrive precompiled                                                                                                                                            | —                                                                   |
+| `@odoo/owl/compiler`                     | the compiler alone (`owl.compiler.es.js`, `owl.compiler.iife.js`); it imports nothing and registers itself, keyed by its build (version and hash), on `globalThis[Symbol.for("@odoo/owl/compiler")]`; a runtime takes its own build's, so two builds can share a page | [precompiling templates](reference/precompiling_templates.md)       |
+| `batch(fn)`                              | groups writes: immediate effects run once, after the outermost batch (exported by `@odoo/owl` and `@odoo/owl/runtime`)                                                                                                                                                | [reactivity](reference/reactivity.md)                               |
+| `markRaw(Class.prototype)`               | every instance of the class and of its subclasses stays raw: what a class with private members (`#x`) needs                                                                                                                                                           | [proxies](reference/proxies.md)                                     |
+
+## Packaging and targets
+
+- **A true ES module package**: every entry is one ES module (no CommonJS
+  twin; Node's `require()` loads the same instance as `import`). Importing a
+  build changes no global and registers nothing, so a bundle keeps only what
+  it uses (`import { signal }` bundles to 5.9 KB gz of the runtime's 35);
+  `"sideEffects"` names the compiler module (whose registration is its
+  purpose) and the IIFE files. `window.__OWL_DEVTOOLS__` is set by the first
+  `App`; owl's own components make their template on first read (as
+  `__owl__<Name>`); `requestAnimationFrame` is still captured when the module
+  is evaluated, before a test framework can mock it (HOOT relies on that).
+- **Targets the latest only**: the dist is built for chrome154, firefox157,
+  safari27 and node26 (`packages/owl/build_target.mjs`, Odoo's
+  `_ESBUILD_TARGET` plus the server's Node), with no down-levelling; the
+  sources may use any API all four have (today `Promise.withResolvers` and
+  `WeakMap.getOrInsertComputed`), and `tests/dist.test.ts` keeps the dist off
+  any a target lacks. The toolchain requires Node >=26 (`.node-version`),
+  runs the compiler's TypeScript sources directly for the standalone
+  precompiler, and the internal workspace packages are private.
+- In the full build, `TemplateSet.compiler = undefined` restores its bundled
+  compiler.
 
 ## Behaviour that differs from upstream
 
@@ -280,8 +302,8 @@ snapshot of the committed children; `App.version` + `__info__.hash` scope the te
 
 ## Checks before re-vendoring into Odoo
 
-1. `tools/odoo_migration/compile_templates.cjs`: every Odoo template file
-   compiles with the new build.
+1. `tools/odoo_migration/compile_templates.mjs <roots>`: every Odoo template
+   file compiles with the new build.
 2. `tools/odoo_migration/compile_inherited_templates.mjs`: every template
    compiles after Odoo's own template inheritance, with the new and the old
    build; it must print no `REGRESSION` line. `FREE_NAMES=1` also lists the
