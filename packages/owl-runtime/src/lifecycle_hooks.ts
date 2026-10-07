@@ -42,10 +42,5 @@ export function onWillUnmount(fn: (scope: ComponentNode) => void | any) {
 type OnErrorCallback = (error: any) => void | any;
 export function onError(callback: OnErrorCallback) {
   const scope = getComponentScope();
-  let handlers = nodeErrorHandlers.get(scope);
-  if (!handlers) {
-    handlers = [];
-    nodeErrorHandlers.set(scope, handlers);
-  }
-  handlers.push(callback.bind(scope.component));
+  nodeErrorHandlers.getOrInsertComputed(scope, () => []).push(callback.bind(scope.component));
 }

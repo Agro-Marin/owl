@@ -157,8 +157,7 @@ export function asyncComputed<T>(
       return Promise.resolve();
     }
     if (!pending) {
-      let resolve!: () => void;
-      pending = { promise: new Promise<void>((res) => (resolve = res)), resolve };
+      pending = Promise.withResolvers<void>();
       if (!inFlight) {
         // The queued re-run comes in the effect flush, a microtask scheduled
         // before this one: after it, the run is in flight (and settles the

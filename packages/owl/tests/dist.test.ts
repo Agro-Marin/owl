@@ -230,7 +230,7 @@ describe("the dist and its targets", () => {
       "Temporal",
       "DisposableStack, AsyncDisposableStack",
     ]);
-    const adopted: string[] = [];
+    const adopted = ["Map/WeakMap getOrInsert, getOrInsertComputed", "Promise.withResolvers"];
     expect(calls["owl.es.js"]).toEqual(adopted);
     expect(calls["owl.runtime.es.js"]).toEqual(adopted);
     expect(calls["owl.compiler.es.js"]).toEqual([]);

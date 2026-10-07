@@ -124,12 +124,7 @@ function makeProps(type?: any): Props<{}> {
 const schemaKeyLists = new WeakMap<object, string[]>();
 
 function schemaKeys(type: object): string[] {
-  let keys = schemaKeyLists.get(type);
-  if (!keys) {
-    keys = Object.keys(type);
-    schemaKeyLists.set(type, keys);
-  }
-  return keys;
+  return schemaKeyLists.getOrInsertComputed(type, Object.keys);
 }
 
 // A typed view is a plain object with one accessor per schema key. The

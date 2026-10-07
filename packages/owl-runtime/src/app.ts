@@ -156,12 +156,7 @@ export class App extends TemplateSet {
       debugLog("lifecycle", `create root ${Root.name}${this.name ? ` in app ${this.name}` : ""}`);
     }
     const props = config.props || ({} as any);
-    let resolve!: (value: any) => void;
-    let reject!: (reason?: any) => void;
-    const promise = new Promise<any>((res, rej) => {
-      resolve = res;
-      reject = rej;
-    });
+    const { promise, resolve, reject } = Promise.withResolvers<any>();
     let node: ComponentNode;
     let error: any = null;
     // Sub-roots (Portal/Suspense) thread their host's scope and error routing
@@ -173,20 +168,11 @@ export class App extends TemplateSet {
         node.pluginManager = subConfig.pluginManager;
       }
       if (subConfig.onError) {
-        const handlers = nodeErrorHandlers.get(node);
-        if (handlers) {
-          handlers.unshift(subConfig.onError);
-        } else {
-          nodeErrorHandlers.set(node, [subConfig.onError]);
-        }
+        nodeErrorHandlers.getOrInsertComputed(node, () => []).unshift(subConfig.onError);
       }
       if (subConfig.host) {
         subRootHosts.set(node, subConfig.host);
-        let subRoots = hostedSubRoots.get(subConfig.host);
-        if (!subRoots) {
-          hostedSubRoots.set(subConfig.host, (subRoots = new Set()));
-        }
-        subRoots.add(node);
+        hostedSubRoots.getOrInsertComputed(subConfig.host, () => new Set()).add(node);
       }
     } catch (e) {
       error = e;
@@ -222,12 +208,7 @@ export class App extends TemplateSet {
           finalize();
           reject(error);
         };
-        let handlers = nodeErrorHandlers.get(node);
-        if (!handlers) {
-          handlers = [];
-          nodeErrorHandlers.set(node, handlers);
-        }
-        handlers.unshift(rejectMount);
+        nodeErrorHandlers.getOrInsertComputed(node, () => []).unshift(rejectMount);
       }
 
       const ready = new Promise<void>((res) => {
