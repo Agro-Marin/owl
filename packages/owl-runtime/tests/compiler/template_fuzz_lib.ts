@@ -65,7 +65,10 @@ export type TNode =
   | { kind: "if"; branches: [string, TNode[]][]; otherwise: TNode[] | null }
   | { kind: "foreach"; list: string; as: string; key: string; children: TNode[] }
   | { kind: "comp"; def: Def; on: Handler[]; slot: TNode[] | null }
-  | { kind: "slot"; on: Handler[] }
+  // dyn: a dynamic slot name ({{ expr }}), with default content: a name the
+  // component gives, one it does not, or undefined (Odoo's AutoComplete calls
+  // `{{ source.optionSlot }}`, undefined for a source without one)
+  | { kind: "slot"; on: Handler[]; dyn?: string }
   // args: the call's attributes, [name, expression]
   | { kind: "call"; def: Def; args: [string, string][] }
   // t-set with t-value, or with a body
@@ -155,6 +158,10 @@ export function generator(random: () => number, interactive = false) {
   let setId = 0;
   let portals = 0;
   let suspenses = 0;
+  // every third slot call has a dynamic name: a count, no draw
+  let slotCalls = 0;
+  const dynSlot = () =>
+    ++slotCalls % 3 ? undefined : DYN_SLOT_NAMES[(slotCalls / 3) % DYN_SLOT_NAMES.length];
   let comps: Def[] = [];
   let calls: Def[] = [];
   const read = (local: string) => (isRow(local) ? `${local}.${pick(["v", "id"])}` : local);
@@ -300,6 +307,7 @@ export function generator(random: () => number, interactive = false) {
       def.body.splice(Math.floor(random() * (def.body.length + 1)), 0, {
         kind: "slot",
         on: handlers({ ...env, locals: [], vars: [] }),
+        dyn: dynSlot(),
       });
     }
     return { kind: "comp", def, on: handlers(env), slot };
@@ -358,7 +366,7 @@ export function generator(random: () => number, interactive = false) {
         return { kind: "call", def, args };
       }
       if (q < 0.16 && inComp) {
-        return { kind: "slot", on: handlers(env) };
+        return { kind: "slot", on: handlers(env), dyn: dynSlot() };
       }
       if (q < 0.28) {
         return control(env);
@@ -442,6 +450,7 @@ export function generator(random: () => number, interactive = false) {
     setId = 0;
     portals = 0;
     suspenses = 0;
+    slotCalls = 0;
     comps = [];
     calls = [];
     const env: GenEnv = {
@@ -518,7 +527,9 @@ export function nodeXml(n: TNode): string {
         : `<${name}${onXml(n.on)}/>`;
     }
     case "slot":
-      return `<t t-call-slot="default"${onXml(n.on)}/>`;
+      return n.dyn
+        ? `<t t-call-slot="{{ ${n.dyn} }}"${onXml(n.on)}><s>${SLOT_DEFAULT_TEXT}</s></t>`
+        : `<t t-call-slot="default"${onXml(n.on)}/>`;
     case "call":
       return `<t t-call="${n.def.name}"${n.args.map(([k, v]) => ` ${k}="${escapeAttr(v)}"`).join("")}/>`;
     case "set":
@@ -633,6 +644,9 @@ export function withCatcher(children: VChild[], on: Handler[], ctx: RCtx): VChil
   return children;
 }
 
+export const DYN_SLOT_NAMES = ["'default'", "undefined", "'missing'"];
+export const SLOT_DEFAULT_TEXT = "fb";
+
 export function vel(tag: string, children: VChild[]): VEl {
   const el: VEl = {
     tag,
@@ -741,7 +755,15 @@ export function renderNode(n: TNode, ctx: RCtx): VChild[] {
       return withCatcher(renderList(n.def.body, inner), n.on, ctx);
     }
     case "slot": {
-      const content = ctx.slot ? renderList(ctx.slot.nodes, ctx.slot.ctx) : [];
+      // a dynamic name other than "default" names no slot: the default
+      // content renders, as it does when the component gives no slot
+      const named = !n.dyn || n.dyn === "'default'";
+      const content =
+        named && ctx.slot
+          ? renderList(ctx.slot.nodes, ctx.slot.ctx)
+          : n.dyn
+            ? [vel("s", [SLOT_DEFAULT_TEXT])]
+            : [];
       return withCatcher(content, n.on, ctx);
     }
     case "call": {
