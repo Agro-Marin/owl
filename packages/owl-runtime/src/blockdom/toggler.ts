@@ -13,11 +13,13 @@ import type { VNode } from "./index";
 const txt = /* @__PURE__ */ globalThis.document?.createTextNode("")!;
 
 class VToggler {
-  // not `key`: a toggler in a keyed list gets its list key written there
-  kind: string;
+  // not `key`: a toggler in a keyed list gets its list key written there.
+  // Children of one kind patch each other: a string, or the function a
+  // t-set body renders with
+  kind: unknown;
   child: VNode;
 
-  constructor(kind: string, child: VNode) {
+  constructor(kind: unknown, child: VNode) {
     this.kind = kind;
     this.child = child;
   }
@@ -77,6 +79,6 @@ class VToggler {
   }
 }
 
-export function toggler(kind: string, child: VNode): VNode<VToggler> {
+export function toggler(kind: unknown, child: VNode): VNode<VToggler> {
   return new VToggler(kind, child);
 }

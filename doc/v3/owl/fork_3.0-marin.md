@@ -263,6 +263,10 @@ true })` creates an effect owned by nothing. When a computed and an effect
 
 ### Templates
 
+- **A `t-out` showing one `t-set` body, then another** (the variable set again
+  in a branch) replaces the content: upstream patched one body's blocks with
+  the other's, which crashed when one was a list, and else kept showing the
+  first.
 - **A directive that needs an expression throws on an empty one**, naming it;
   a `t-set-slot` nested directly in another throws.
 - **`t-model.number`** checks the radio, or selects the static option, whose

@@ -339,13 +339,15 @@ export function safeOutput(
   if (value === undefined || value === null) {
     return toggler("undefined", text(""));
   }
-  let safeKey;
+  let safeKey: unknown;
   let block;
   if (value instanceof Markup) {
     safeKey = `string_safe`;
     block = html(value);
   } else if (value instanceof LazyValue) {
-    safeKey = `lazy_value`;
+    // two bodies output at one site are two kinds of content: a body is
+    // patched by the same body only (each makes blocks of its own)
+    safeKey = value.fn;
     let siteKey = key + site;
     if (depth) {
       siteKey += MARK + ":" + keyOf(k1);

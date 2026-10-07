@@ -1,5 +1,85 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`a site outputting one body, then another > a list, then an element 1`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { LazyValue, prepareList, safeOutput, withKey } = helpers;
+  
+  let block1 = createBlock(\`<div><block-child-0/></div>\`);
+  let block3 = createBlock(\`<li><block-child-0/></li>\`);
+  let block5 = createBlock(\`<i>x</i>\`);
+  
+  function value1(ctx, node, key = "") {
+    const ctx1 = ctx;
+    const [k_block2, v_block2, l_block2, c_block2] = prepareList([1,2]);
+    for (let i1 = 0; i1 < l_block2; i1++) {
+      let ctx = Object.create(ctx1);
+      ctx["i"] = k_block2[i1];
+      const key1 = ctx['i'];
+      const b4 = safeOutput(ctx['i'], node, key, "\\u00021", 1, key1);
+      c_block2[i1] = withKey(block3([], [b4]), key1);
+    }
+    return list(c_block2);
+  }
+  
+  function value2(ctx, node, key = "") {
+    return block5();
+  }
+  
+  return function template(ctx, node, key = "") {
+    ctx = Object.create(ctx);
+    let b6;
+    ctx["b"] = new LazyValue(value1, ctx, this, node, key + \`\\u00022\`);
+    if (ctx['this'].s.flag) {
+      ctx["b"] = new LazyValue(value2, ctx, this, node, key + \`\\u00023\`);
+    }
+    b6 = safeOutput(ctx['b'], node, key, "\\u00024");
+    return block1([], [b6]);
+  }
+}"
+`;
+
+exports[`a site outputting one body, then another > an element, then a list 1`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { LazyValue, prepareList, safeOutput, withKey } = helpers;
+  
+  let block1 = createBlock(\`<div><block-child-0/></div>\`);
+  let block2 = createBlock(\`<i>x</i>\`);
+  let block4 = createBlock(\`<li><block-child-0/></li>\`);
+  
+  function value1(ctx, node, key = "") {
+    return block2();
+  }
+  
+  function value2(ctx, node, key = "") {
+    const ctx1 = ctx;
+    const [k_block3, v_block3, l_block3, c_block3] = prepareList([1,2]);
+    for (let i1 = 0; i1 < l_block3; i1++) {
+      let ctx = Object.create(ctx1);
+      ctx["i"] = k_block3[i1];
+      const key1 = ctx['i'];
+      const b5 = safeOutput(ctx['i'], node, key, "\\u00022", 1, key1);
+      c_block3[i1] = withKey(block4([], [b5]), key1);
+    }
+    return list(c_block3);
+  }
+  
+  return function template(ctx, node, key = "") {
+    ctx = Object.create(ctx);
+    let b6;
+    ctx["b"] = new LazyValue(value1, ctx, this, node, key + \`\\u00021\`);
+    if (ctx['this'].s.flag) {
+      ctx["b"] = new LazyValue(value2, ctx, this, node, key + \`\\u00023\`);
+    }
+    b6 = safeOutput(ctx['b'], node, key, "\\u00024");
+    return block1([], [b6]);
+  }
+}"
+`;
+
 exports[`t-set > a t-set body holding a component can be output in a loop 1`] = `
 "function anonymous(app, bdom, helpers
 ) {

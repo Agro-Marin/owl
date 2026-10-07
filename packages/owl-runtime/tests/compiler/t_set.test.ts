@@ -476,3 +476,38 @@ describe("t-set", () => {
     expect(mounted).toBe(0);
   });
 });
+
+describe("a site outputting one body, then another", () => {
+  // the same t-out shows the body a t-set in a branch set: each body makes
+  // blocks of its own, which the other's must not be patched with
+  test.each([
+    [
+      "a list, then an element",
+      `<t t-set="b"><t t-foreach="[1, 2]" t-as="i" t-key="i"><li t-out="i"/></t></t>`,
+      `<i>x</i>`,
+      "<div><li>1</li><li>2</li></div>",
+      "<div><i>x</i></div>",
+    ],
+    [
+      "an element, then a list",
+      `<t t-set="b"><i>x</i></t>`,
+      `<t t-foreach="[1, 2]" t-as="i" t-key="i"><li t-out="i"/></t>`,
+      "<div><i>x</i></div>",
+      "<div><li>1</li><li>2</li></div>",
+    ],
+  ])("%s", async (_name, first, second, before, after) => {
+    const template = `<div>${first}<t t-if="this.s.flag"><t t-set="b">${second}</t></t><t t-out="b"/></div>`;
+    class Root extends Component {
+      static template = xml(Object.assign([template], { raw: [template] }) as any);
+      s = proxy({ flag: false });
+    }
+    const root = await mount(Root, fixture);
+    expect(fixture.innerHTML).toBe(before);
+    root.s.flag = true;
+    await nextTick();
+    expect(fixture.innerHTML).toBe(after);
+    root.s.flag = false;
+    await nextTick();
+    expect(fixture.innerHTML).toBe(before);
+  });
+});
