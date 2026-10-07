@@ -91,13 +91,9 @@ function makeRoot(world: World, comps: Def[]) {
       return world.accessors;
     }
     pt(...key: number[]) {
-      const name = key.join(":");
-      let target = world.targets.get(name);
-      if (!target) {
-        target = world.container.appendChild(document.createElement("article"));
-        world.targets.set(name, target);
-      }
-      return target;
+      return world.targets.getOrInsertComputed(key.join(":"), () =>
+        world.container.appendChild(document.createElement("article"))
+      );
     }
     log(ev: Event, id: string, ...value: unknown[]) {
       this.#world.log.push({

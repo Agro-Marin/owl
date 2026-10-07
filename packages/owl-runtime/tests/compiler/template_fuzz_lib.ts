@@ -630,11 +630,10 @@ export const compiled = new Map<string, Function>();
 export function evaluate(expr: string, ctx: RCtx): any {
   const names = Object.keys(ctx.locals);
   const key = `${names.join(",")}|${expr}`;
-  let fn = compiled.get(key);
-  if (!fn) {
-    fn = new Function(...names, `return (${expr.replace(/\blt\b/g, "<")});`);
-    compiled.set(key, fn);
-  }
+  const fn = compiled.getOrInsertComputed(
+    key,
+    () => new Function(...names, `return (${expr.replace(/\blt\b/g, "<")});`)
+  );
   return fn.call(ctx.self, ...names.map((n) => ctx.locals[n]));
 }
 
@@ -814,10 +813,7 @@ export function renderNode(n: TNode, ctx: RCtx): VChild[] {
       // the content is elsewhere: a catcher on the Portal, or around it, holds
       // nothing of it
       const key = [n.target, ...n.indexes.map((l) => ctx.locals[`${l}_index`])].join(":");
-      let target = ctx.env.portals.get(key);
-      if (!target) {
-        ctx.env.portals.set(key, (target = vel("article", [])));
-      }
+      const target = ctx.env.portals.getOrInsertComputed(key, () => vel("article", []));
       target.children.push(...renderList(n.content, ctx));
       adopt(target);
       return [];

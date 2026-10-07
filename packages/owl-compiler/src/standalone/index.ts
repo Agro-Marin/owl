@@ -1,7 +1,7 @@
 // -----------------------------------------------------------------------------
-// This file exports a function that compiles templates ahead of time. It is
-// built into dist/compile_templates.mjs, which tools/compile_owl_templates.mjs
-// (`npm run compile_templates` in this repository) runs.
+// This file exports a function that compiles templates ahead of time:
+// tools/compile_owl_templates.mjs (`npm run compile_templates` in this
+// repository) runs it with Node, from its TypeScript source.
 // -----------------------------------------------------------------------------
 
 import { readdir, readFile, stat } from "fs/promises";

@@ -138,7 +138,7 @@ async function startRelease() {
 
   // ---------------------------------------------------------------------------
   log(`Step ${step++}/${STEPS}: building owl...`);
-  await execCommand("rm -rf packages/owl-compiler/dist packages/owl/dist");
+  await execCommand("rm -rf packages/owl/dist");
   const buildResult = await execCommand("npm run build");
   if (buildResult !== 0) {
     logError("Build failed. Aborting.");

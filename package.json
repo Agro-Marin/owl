@@ -11,8 +11,7 @@
     "node": ">=26"
   },
   "scripts": {
-    "build": "npm run build -w packages/owl-compiler && npm run build -w packages/owl",
-    "build:compiler": "npm run build -w packages/owl-compiler",
+    "build": "npm run build -w packages/owl",
     "build:types": "npm run build:types -w packages/owl",
     "build:devtools": "node tools/devtools/build.mjs",
     "dev:devtools-chrome": "node tools/devtools/build.mjs --browser=chrome",

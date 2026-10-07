@@ -1,5 +1,6 @@
 // @vitest-environment node
-import { mkdtemp, rm, writeFile } from "fs/promises";
+import { spawnSync } from "child_process";
+import { mkdtemp, readFile, rm, writeFile } from "fs/promises";
 import { tmpdir } from "os";
 import path from "path";
 import { compileTemplates } from "../src/standalone";
@@ -51,4 +52,25 @@ describe("standalone compiler", () => {
     expect(source).toContain("let { __globals__, safeOutput } = helpers;");
     expect(source).toContain(`// Template name: "web.g"`);
   });
+});
+
+// Node runs the compiler's TypeScript sources as they are (tools/ts_hooks.mjs):
+// a syntax it cannot strip, or a type imported as a value, breaks the tool
+test("npm run compile_templates runs the sources with Node, nothing built first", async () => {
+  await writeFile(
+    path.join(dir, "a.xml"),
+    `<templates><t t-name="a"><p t-out="x"/></t></templates>`
+  );
+  const output = path.join(dir, "out", "templates.js");
+  const root = path.join(__dirname, "..", "..", "..");
+  const run = spawnSync(
+    process.execPath,
+    [path.join(root, "tools", "compile_owl_templates.mjs"), dir, "-o", output],
+    { encoding: "utf8" }
+  );
+  expect(run.stderr).toBe("");
+  expect(run.stdout).toContain("1 templates compiled");
+  const code = await readFile(output, "utf8");
+  const templates = new Function(code.replace("export const templates =", "return"))();
+  expect(Object.keys(templates)).toEqual(["a"]);
 });

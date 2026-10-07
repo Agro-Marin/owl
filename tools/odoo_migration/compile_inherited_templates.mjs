@@ -113,10 +113,7 @@ for (const file of inputFiles) {
     if (!parent) {
       base.set(name, { el: t, file });
     } else if (t.getAttribute("t-inherit-mode") === "extension") {
-      if (!extensions.has(parent)) {
-        extensions.set(parent, []);
-      }
-      extensions.get(parent).push({ el: t, file });
+      extensions.getOrInsertComputed(parent, () => []).push({ el: t, file });
     } else if (name) {
       primary.set(name, { el: t, parent, file });
     }

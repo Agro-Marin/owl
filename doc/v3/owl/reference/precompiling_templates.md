@@ -24,10 +24,11 @@ Here is a more detailed explanation on how to compile xml files into a js file:
 1. clone the owl repository locally
 2. `npm install` to install all the required tooling
 3. `npm run build` to build the `owl.runtime.es.js` file (in
-   `packages/owl/dist/`) and the template compiler
-4. `npm run compile_templates -- path/to/your/templates` will scan your target
-   folder, find all xml files, get all templates, compile them, and generate a
-   `templates.js` file.
+   `packages/owl/dist/`)
+4. `npm run compile_templates -- path/to/your/templates` (Node 26 runs the
+   compiler's TypeScript sources: nothing to build for it) will scan your
+   target folder, find all xml files, get all templates, compile them, and
+   generate a `templates.js` file (`-o <path>` to name it).
 
 The generated `templates.js` exports a single `templates` object, whose keys
 are template names and whose values are precompiled template functions. It

@@ -1,5 +1,5 @@
 import { OwlError } from "@odoo/owl-core";
-import { CodeGenerator, CompileOptions } from "./code_generator";
+import { CodeGenerator, type CompileOptions } from "./code_generator";
 import { parse } from "./parser";
 
 export type CustomDirectives = Record<

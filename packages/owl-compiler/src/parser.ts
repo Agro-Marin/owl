@@ -1,4 +1,4 @@
-import { CustomDirectives } from ".";
+import type { CustomDirectives } from ".";
 import { OwlError } from "@odoo/owl-core";
 import { parseXML } from "./parse_xml";
 
@@ -921,7 +921,7 @@ function parseComponent(node: Element, ctx: ParsingContext): AST | null {
 
   let slots: ASTComponent["slots"] | null = null;
   if (node.hasChildNodes()) {
-    const clone = <Element>node.cloneNode(true);
+    const clone = node.cloneNode(true) as Element;
 
     // named slots
     // the slots of this component, found before any is parsed: parsing a

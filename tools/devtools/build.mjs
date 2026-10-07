@@ -15,7 +15,7 @@ const DEVTOOLS_DIST = "dist/devtools";
 // ---- Step 1: Pre-build (build owl, copy iife, compile templates) ----
 
 if (isProduction) {
-  execSync("npm run build && npm run build:compiler", { stdio: "inherit" });
+  execSync("npm run build", { stdio: "inherit" });
 }
 cpSync("packages/owl/dist/owl.iife.js", "tools/devtools/assets/owl.js");
 execSync("npm run compile_templates -- tools/devtools/src -o tools/devtools/assets/templates.js", {
