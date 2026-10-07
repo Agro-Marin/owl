@@ -2,11 +2,12 @@ import { signal, untrack } from "@odoo/owl-core";
 import { Component } from "./component";
 import { onError } from "./lifecycle_hooks";
 import { props } from "./props";
-import { xml } from "./template_set";
+import { ownTemplate } from "./template_set";
 import { types as t } from "./types";
 
 export class ErrorBoundary extends Component {
-  static template = xml`
+  static get template(): string {
+    return ownTemplate(ErrorBoundary, "ErrorBoundary").xml`
     <t t-if="this.props.error()">
       <t t-call-slot="fallback"/>
     </t>
@@ -14,6 +15,7 @@ export class ErrorBoundary extends Component {
       <t t-call-slot="default"/>
     </t>
   `;
+  }
 
   props = props({ error: t.signal().optional(() => signal<any>(null)) });
 

@@ -7,14 +7,16 @@ import { onMounted, onWillDestroy } from "./lifecycle_hooks";
 import { props } from "./props";
 import { forwardErrorToParent } from "./rendering/error_handling";
 import { STATUS } from "./status";
-import { xml } from "./template_set";
+import { ownTemplate } from "./template_set";
 import { types as t } from "./types";
 
 // Internal component used as the sub-root — its sole job is to render the
 // consumer's `default` slot so that descendant components are constructed and
 // their onWillStart fires. Not exported.
 class SuspenseHost extends Component {
-  static template = xml`<t t-call-slot="default"/>`;
+  static get template(): string {
+    return ownTemplate(SuspenseHost, "SuspenseHost").xml`<t t-call-slot="default"/>`;
+  }
 
   setup() {
     this.__owl__.props.content.node = this.__owl__;
@@ -74,11 +76,13 @@ class SuspenseContent implements VNode<SuspenseContent> {
 // the fast-path check below), so the very first render skips the fallback
 // — no flash.
 export class Suspense extends Component {
-  static template = xml`
+  static get template(): string {
+    return ownTemplate(Suspense, "Suspense").xml`
     <t t-if="!this.prepared()">
       <t t-call-slot="fallback"/>
     </t>
   `;
+  }
 
   props = props({ slots: t.object({ default: t.any(), fallback: t.any().optional() }) });
 

@@ -3,7 +3,8 @@ import type { compile, CustomDirectives, Template, TemplateFunction } from "@odo
 import { createBlock, html, list, multi, text, toggler } from "./blockdom";
 import { helpers } from "./rendering/template_helpers";
 import { ComponentNode } from "./component_node";
-import { buildHash, version } from "./build_info";
+import { build as BUILD } from "./build_info";
+import { bundledCompiler } from "./bundled_compiler";
 
 const bdom = { text, createBlock, list, multi, html, toggler };
 
@@ -34,8 +35,6 @@ export interface TemplateCompiler {
 // them their own way), and two runtime builds on one page each find their own
 export const COMPILER_KEY = Symbol.for("@odoo/owl/compiler");
 
-const BUILD = `${version}+${buildHash}`;
-
 // undefined: the compiler module of this build, once registered; null: none
 let ownCompiler: TemplateCompiler | null | undefined;
 
@@ -63,13 +62,20 @@ function checkBuild(compiler: TemplateCompiler) {
 
 export class TemplateSet {
   /**
-   * The compiler: the one the full build sets, else the compiler module of
-   * this runtime's build once it is registered. Setting a compiler checks
-   * that it is of this build; null leaves the runtime without one, undefined
-   * takes the registered one again.
+   * The compiler: the full build's own, else the compiler module of this
+   * runtime's build once it is registered. Setting a compiler checks that it
+   * is of this build; null leaves the runtime without one, undefined takes
+   * the build's own or the registered one again.
    */
   static get compiler(): TemplateCompiler | null {
     if (ownCompiler === undefined) {
+      if (bundledCompiler) {
+        if (debug.template) {
+          debugLog("template", `bundled compiler ${BUILD} installed`);
+        }
+        ownCompiler = bundledCompiler;
+        return ownCompiler;
+      }
       const registered: TemplateCompiler | undefined = (globalThis as any)[COMPILER_KEY]?.[BUILD];
       if (!registered) {
         return null;
@@ -255,14 +261,39 @@ function asOwnError(error: unknown, compiler: TemplateCompiler): unknown {
 export const globalTemplates: { [key: string]: string | Element | TemplateFunction } =
   Object.create(null);
 
-export function xml(...args: Parameters<typeof String.raw>) {
-  const name = `__template__${xml.nextId++}`;
-  const value = String.raw(...args);
-  globalTemplates[name] = value;
-  return name;
-}
+export const xml = /* @__PURE__ */ Object.assign(
+  function (...args: Parameters<typeof String.raw>): string {
+    const name = `__template__${xml.nextId++}`;
+    const value = String.raw(...args);
+    globalTemplates[name] = value;
+    return name;
+  },
+  { nextId: 1 }
+);
 
-xml.nextId = 1;
+/**
+ * The template of one of owl's components, made on its first read and the
+ * class's own `template` from then on, so that importing owl registers no
+ * template: `static get template() { return ownTemplate(Portal, "Portal").xml`...`; }`.
+ * It has a name of its own, not one of xml's counter (which a test may reset);
+ * the tag is spelled `.xml` so that a scanner of xml templates, as Odoo's
+ * precompiler is, finds it in the build.
+ */
+export function ownTemplate(C: Function, name: string): { xml: typeof String.raw } {
+  return {
+    xml(...args) {
+      const templateName = `__owl__${name}`;
+      globalTemplates[templateName] = String.raw(...args);
+      Object.defineProperty(C, "template", {
+        value: templateName,
+        writable: true,
+        enumerable: true,
+        configurable: true,
+      });
+      return templateName;
+    },
+  };
+}
 
 function areTemplatesEqual(t1: any, t2: any): boolean {
   if (t1 === t2) {

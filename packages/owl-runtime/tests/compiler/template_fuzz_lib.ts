@@ -49,6 +49,9 @@ export interface Elem {
   model: Model | null;
   // written with t-tag (its block type is made per tag)
   dynTag?: boolean;
+  // a class string, its words separated by any whitespace: static, dynamic
+  // (t-att-class, or through t-att's object when viaAtt) or both
+  cls?: { statics: string | null; expr: string; viaAtt: boolean };
 }
 // a component or a t-call template: one per use
 export interface Def {
@@ -97,6 +100,7 @@ export const CONTEXT: Scope = {
   words: ["alpha", "b&d"],
   nothing: undefined,
   flag: true,
+  cls: "  a \n b\tc  ",
   // loop keys that join into one string in nested loops (a__b then c, a then
   // b__c), or share a string form (1, "1"): what a component key that is not
   // exact gives two components (the interactive templates loop over them)
@@ -158,6 +162,8 @@ export function generator(random: () => number, interactive = false) {
   let setId = 0;
   let portals = 0;
   let suspenses = 0;
+  // every plain element but every fourth has classes: a count, no draw
+  let classedElements = 0;
   // every third slot call has a dynamic name: a count, no draw
   let slotCalls = 0;
   const dynSlot = () =>
@@ -408,6 +414,14 @@ export function generator(random: () => number, interactive = false) {
       );
       el.dyn = dyn;
       el.attf = attf;
+      const classes = ++classedElements % 4;
+      if (classes) {
+        el.cls = {
+          statics: classes > 1 ? "s a" : null,
+          expr: g(classedElements % 7 ? "cls" : "nothing"),
+          viaAtt: classes === 3,
+        };
+      }
       el.children = nodes(inner);
       if (interactive) {
         el.on = handlers(env);
@@ -491,6 +505,14 @@ export function nodeXml(n: TNode): string {
     case "elem": {
       const attrs = [
         ...n.attrs.map(([k, v]) => `${k}="${v}"`),
+        ...(n.cls?.statics ? [`class="${n.cls.statics}"`] : []),
+        ...(n.cls
+          ? [
+              n.cls.viaAtt
+                ? `t-att="${escapeAttr(`{ 'class': ${n.cls.expr} }`)}"`
+                : `t-att-class="${escapeAttr(n.cls.expr)}"`,
+            ]
+          : []),
         ...n.dyn.map(([k, v]) => `t-att-${k}="${escapeAttr(v)}"`),
         ...n.attf.map(([k, v]) => `t-attf-${k}="${escapeAttr(v)}"`),
         ...n.bound.map(([k, v]) => `t-att-${k}="${escapeAttr(v)}"`),
@@ -699,6 +721,15 @@ export function renderNode(n: TNode, ctx: RCtx): VChild[] {
     case "elem": {
       const el = vel(n.tag, renderList(n.children, ctx));
       el.attrs = [...n.attrs];
+      if (n.cls) {
+        const words = [
+          ...(n.cls.statics ?? "").split(/\s+/),
+          ...String(evaluate(n.cls.expr, ctx) ?? "").split(/\s+/),
+        ].filter(Boolean);
+        if (words.length) {
+          el.attrs.push(["class", [...new Set(words)].join(" ")]);
+        }
+      }
       el.on = rHandlers(n.on, ctx);
       el.model = n.model;
       el.row = n.model?.row ? (ctx.locals[n.model.row] as Scope) : null;
@@ -810,11 +841,18 @@ export function renderRoot(list: TNode[], ctx: RCtx): VEl {
   return vel("div", renderList(list, ctx));
 }
 
+// a class's words in any order: a patch adds and removes words
+function classWords(value: string): string {
+  return value.split(/\s+/).filter(Boolean).sort().join(" ");
+}
+
 export function serialize(v: VChild, sorted: boolean): string {
   if (typeof v === "string") {
     return escapeText(v);
   }
-  const attrs = v.attrs.map(([k, value]) => ` ${k}="${escapeHtmlAttr(value)}"`);
+  const attrs = v.attrs.map(
+    ([k, value]) => ` ${k}="${escapeHtmlAttr(sorted && k === "class" ? classWords(value) : value)}"`
+  );
   if (sorted) {
     attrs.sort();
   }
@@ -842,6 +880,7 @@ export const UPDATED: Scope = {
   words: ["b&d"],
   nothing: "now",
   flag: false,
+  cls: " b  d ",
   keys: ["c", "b__c", "a", 1, "a\u0002:b", "x"],
   rows: [
     { id: 3, v: "R" },
@@ -864,7 +903,12 @@ export function domString(node: ChildNode): string {
   }
   const el = node as Element;
   const attrs = [...el.attributes]
-    .map((a) => ` ${a.name}="${escapeHtmlAttr(a.value)}"`)
+    // an empty class is no class: removing the last word leaves the attribute
+    .filter((a) => a.name !== "class" || a.value.trim())
+    .map((a) => {
+      const value = a.name === "class" ? classWords(a.value) : a.value;
+      return ` ${a.name}="${escapeHtmlAttr(value)}"`;
+    })
     .sort()
     .join("");
   const tag = el.tagName.toLowerCase();

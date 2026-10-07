@@ -5,19 +5,23 @@ import { onMounted, onWillDestroy } from "./lifecycle_hooks";
 import { props } from "./props";
 import { forwardErrorToParent } from "./rendering/error_handling";
 import { STATUS } from "./status";
-import { xml } from "./template_set";
+import { ownTemplate } from "./template_set";
 import { types as t } from "./types";
 
 // Inner sub-root that simply renders the consumer's default slot. Module-level
 // so its template is compiled once and shared across all Portal instances.
 class PortalContent extends Component {
-  static template = xml`<t t-call-slot="default"/>`;
+  static get template(): string {
+    return ownTemplate(PortalContent, "PortalContent").xml`<t t-call-slot="default"/>`;
+  }
 }
 
 export type PortalTarget = string | HTMLElement | Signal<HTMLElement | null> | null | undefined;
 
 export class Portal extends Component {
-  static template = xml``;
+  static get template(): string {
+    return ownTemplate(Portal, "Portal").xml``;
+  }
 
   props = props({
     slots: t.object(["default"]),

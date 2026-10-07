@@ -1,5 +1,5 @@
 /// <reference path="./build-env.d.ts" />
-import { App } from "./app";
+import { version } from "./version";
 import {
   config,
   createBlock,
@@ -12,10 +12,7 @@ import {
   text,
   toggler,
 } from "./blockdom";
-import { mainEventHandler } from "./event_handling";
 export { Resource, Registry } from "@odoo/owl-core";
-
-config.mainEventHandler = mainEventHandler;
 
 export const blockDom = {
   config,
@@ -106,7 +103,7 @@ export { DEBUG_CHANNELS, setDebug, setDebugSink } from "@odoo/owl-core";
 export type { DebugChannel, DebugSink, EffectOptions } from "@odoo/owl-core";
 
 export const __info__: Record<string, string> = {
-  version: App.version,
+  version,
   date: __BUILD_DATE__,
   hash: __BUILD_HASH__,
   url: "https://github.com/odoo/owl",

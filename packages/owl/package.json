@@ -28,6 +28,11 @@
     "./package.json": "./package.json"
   },
   "type": "module",
+  "sideEffects": [
+    "./dist/owl.compiler.*",
+    "./dist/*.iife.js",
+    "./dist/*.iife.min.js"
+  ],
   "files": [
     "dist"
   ],

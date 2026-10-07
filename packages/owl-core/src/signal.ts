@@ -143,14 +143,17 @@ function signalSet<T>(
   return buildSignal<Set<T>>(initialValue, shallowProxy, options.equals);
 }
 
-export function signal<T>(value: T, options?: { equals?: Equals<T> }): Signal<T>;
-export function signal<T>(value: NoInfer<T>, options: SignalOptions<T>): Signal<T>;
-export function signal<T>(value: T, options: SignalOptions<T> = {}): Signal<T> {
+function plainSignal<T>(value: T, options?: { equals?: Equals<T> }): Signal<T>;
+function plainSignal<T>(value: NoInfer<T>, options: SignalOptions<T>): Signal<T>;
+function plainSignal<T>(value: T, options: SignalOptions<T> = {}): Signal<T> {
   return buildSignal<T>(value, identity, options.equals);
 }
-signal.trigger = triggerSignal;
-signal.ref = signalRef;
-signal.Array = signalArray;
-signal.Map = signalMap;
-signal.Object = signalObject;
-signal.Set = signalSet;
+
+export const signal = /* @__PURE__ */ Object.assign(plainSignal, {
+  trigger: triggerSignal,
+  ref: signalRef,
+  Array: signalArray,
+  Map: signalMap,
+  Object: signalObject,
+  Set: signalSet,
+});

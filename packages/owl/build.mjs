@@ -2,7 +2,7 @@ import * as esbuild from "esbuild";
 import { execSync } from "child_process";
 import { buildHash } from "./build_hash.mjs";
 import { existsSync, readFileSync, mkdirSync } from "fs";
-import { relative, resolve } from "path";
+import { join, relative, resolve } from "path";
 
 const pkg = JSON.parse(readFileSync("./package.json", "utf-8"));
 
@@ -37,13 +37,28 @@ function variantName(filename, variant) {
   return filename.replace(/^dist\/owl\./, `dist/owl.${variant}.`);
 }
 
+// the full build carries its compiler as owl-runtime's bundled compiler: a
+// value the TemplateSet reads, not a registration run on import
+const BUNDLED_COMPILER = resolve("src/bundled_compiler.ts");
+const bundledCompilerPlugin = {
+  name: "bundled-compiler",
+  setup(build) {
+    build.onResolve({ filter: /^\.\/bundled_compiler$/ }, (args) =>
+      args.importer.endsWith(join("owl-runtime", "src", "template_set.ts"))
+        ? { path: BUNDLED_COMPILER }
+        : undefined
+    );
+  },
+};
+
 async function buildVariant(entry, suffix) {
   const esm = suffix ? variantName(ES_FILENAME, suffix) : ES_FILENAME;
   const cjs = suffix ? variantName(CJS_FILENAME, suffix) : CJS_FILENAME;
   const iife = suffix ? variantName(IIFE_FILENAME, suffix) : IIFE_FILENAME;
   const iifeMin = addSuffix(iife, "min");
 
-  const common = { entryPoints: [entry], bundle: true, define, target: "es2022", alias };
+  const plugins = suffix ? [] : [bundledCompilerPlugin];
+  const common = { entryPoints: [entry], bundle: true, define, target: "es2022", alias, plugins };
 
   await Promise.all([
     esbuild.build({ ...common, outfile: esm, format: "esm" }),

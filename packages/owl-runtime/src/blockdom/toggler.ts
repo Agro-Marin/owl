@@ -10,7 +10,7 @@ import type { VNode } from "./index";
 // crash without a `document`: this lets the non-rendering APIs (reactivity,
 // type system, ...) run in environments such as Node.js. It is only ever read
 // in `patch`, which runs while rendering into a real DOM, so the `!` holds.
-const txt = globalThis.document?.createTextNode("")!;
+const txt = /* @__PURE__ */ globalThis.document?.createTextNode("")!;
 
 class VToggler {
   // not `key`: a toggler in a keyed list gets its list key written there

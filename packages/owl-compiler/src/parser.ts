@@ -679,11 +679,15 @@ function parseTForEach(node: Element, ctx: ParsingContext): AST | null {
   return wrapping(ast, body);
 }
 
-const UNVISITABLE: Partial<Record<ASTType, string>> = {
-  [ASTType.TCall]: "t-call",
-  [ASTType.TCallSlot]: "t-slot",
-  [ASTType.TCallBlock]: "t-call-block",
-};
+const UNVISITABLE: Partial<Record<ASTType, string>> = /* @__PURE__ */ unvisitableTypes();
+
+function unvisitableTypes(): Partial<Record<ASTType, string>> {
+  return {
+    [ASTType.TCall]: "t-call",
+    [ASTType.TCallSlot]: "t-slot",
+    [ASTType.TCallBlock]: "t-call-block",
+  };
+}
 
 /**
  * The first AST node in `value` for which `test` returns a name, and that

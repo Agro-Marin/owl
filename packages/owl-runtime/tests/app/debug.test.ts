@@ -20,9 +20,12 @@ let lines: string[] = [];
 beforeEach(() => {
   fixture = makeTestFixture();
   lines = [];
-  setDebugSink((channel: DebugChannel, message: string) =>
-    lines.push(`${channel}: ${message.replace(/[\d.]+ ms/, "_ ms")}`)
-  );
+  setDebugSink((channel: DebugChannel, message: string) => {
+    // the first App of the file exposes owl to the devtools (module_effects.test.ts)
+    if (!message.startsWith("window.__OWL_DEVTOOLS__")) {
+      lines.push(`${channel}: ${message.replace(/[\d.]+ ms/, "_ ms")}`);
+    }
+  });
 });
 
 afterEach(() => {

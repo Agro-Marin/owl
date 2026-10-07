@@ -38,7 +38,7 @@ type HookKind =
 
 // Shared by every node until it registers a hook of a kind: most components
 // register few hooks. Frozen, so a write that bypasses addHook fails loudly.
-const NO_HOOKS: LifecycleHook[] = Object.freeze([]) as any;
+const NO_HOOKS: LifecycleHook[] = /* @__PURE__ */ Object.freeze([]) as any;
 
 export class ComponentNode extends Scope implements VNode<ComponentNode> {
   fiber: Fiber | null = null;

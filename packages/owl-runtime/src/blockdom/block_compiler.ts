@@ -3,7 +3,8 @@ import {
   attrsSetter,
   attrsUpdater,
   createAttrUpdater,
-  makeAttrsUpdaters,
+  makeAttrsSetter,
+  makeAttrsUpdater,
   makeSharedClassUpdaters,
   makeSharedStyleUpdaters,
   setClass,
@@ -574,12 +575,12 @@ function updateCtx(ctx: BlockCtx, tree: IntermediateTree) {
         const { sharedClass, sharedStyle } = info;
         const shared =
           (sharedClass || sharedStyle) &&
-          makeAttrsUpdaters(sharedClass || updateClass, sharedStyle || updateStyle);
+          makeAttrsUpdater(sharedClass || updateClass, sharedStyle || updateStyle);
         ctx.locations.push({
           idx: info.idx,
           refIdx: info.refIdx!,
-          setData: shared ? shared.attrsSetter : attrsSetter,
-          updateData: shared ? shared.attrsUpdater : attrsUpdater,
+          setData: shared ? makeAttrsSetter(shared) : attrsSetter,
+          updateData: shared || attrsUpdater,
         });
         break;
       }

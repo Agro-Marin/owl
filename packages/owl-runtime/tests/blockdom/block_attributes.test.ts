@@ -268,7 +268,28 @@ describe("a class written by several sources", () => {
   });
 });
 
+test("a class string is split on any whitespace, its ends trimmed", async () => {
+  const block = createBlock('<div block-attribute-0="class"></div>');
+  const tree = block(["  a \n b\tc  "]);
+  mount(tree, fixture);
+  const div = fixture.firstChild as HTMLDivElement;
+  expect([...div.classList]).toEqual(["a", "b", "c"]);
+  patch(tree, block([" b "]));
+  expect(div.className).toBe("b");
+});
+
 describe("style", () => {
+  test("a style string's properties and values are trimmed, so a later one finds them", async () => {
+    const block = createBlock('<div block-attribute-0="style"></div>');
+    const tree = block([" color : red ;  font-weight : bold ; "]);
+    mount(tree, fixture);
+    const div = fixture.firstChild as HTMLDivElement;
+    expect(div.style.color).toBe("red");
+    expect(div.style.fontWeight).toBe("bold");
+    patch(tree, block(["color:blue"]));
+    expect(div.getAttribute("style")).toBe("color: blue;");
+  });
+
   test("removing a longhand re-applies the shorthand before it", async () => {
     const block = createBlock('<div block-attribute-0="style"></div>');
     const tree = block(["margin: 1px; margin-top: 5px"]);

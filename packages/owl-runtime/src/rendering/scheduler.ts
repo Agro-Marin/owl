@@ -6,14 +6,20 @@ import { APPLIED_TO_DOM, Fiber, RootFiber } from "./fibers";
 //  Scheduler
 // -----------------------------------------------------------------------------
 
-let requestAnimationFrame: Window["requestAnimationFrame"];
-if (typeof window !== "undefined") {
-  requestAnimationFrame = window.requestAnimationFrame.bind(window);
+function captureAnimationFrame(): Window["requestAnimationFrame"] {
+  return typeof window === "undefined"
+    ? (undefined as any)
+    : window.requestAnimationFrame.bind(window);
 }
 
+// captured when the module is evaluated, not when a scheduler is made: a test
+// framework (Odoo's HOOT) replaces window.requestAnimationFrame with its mocked
+// clock after it imported owl, and owl must keep rendering on the real frames.
+// Pure: a bundle that keeps no Scheduler drops it, one that keeps it evaluates
+// it with the module, as before.
+const requestAnimationFrame = /* @__PURE__ */ captureAnimationFrame();
+
 export class Scheduler {
-  // capture the value of requestAnimationFrame as soon as possible, to avoid
-  // interactions with other code, such as test frameworks that override them
   static requestAnimationFrame = requestAnimationFrame;
   // the schedulers that may hold a task: a node's ancestor may belong to
   // another app, whose render then delays it

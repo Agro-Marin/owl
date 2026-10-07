@@ -30,31 +30,34 @@ import { OwlError } from "@odoo/owl-core";
 // the names an expression reads as JavaScript's own, never from the
 // context: keywords, and the standard globals a template may call (Vue's
 // template allow-list) — a template writing `String(x)` means the global
-const RESERVED_WORDS = new Set(
-  (
-    "true,false,NaN,null,undefined,debugger,console,window,in,instanceof,new,function,return,eval,void,__globals__," +
+const RESERVED_WORDS = /* @__PURE__ */ wordSet(
+  "true,false,NaN,null,undefined,debugger,console,window,in,instanceof,new,function,return,eval,void,__globals__," +
     "Math,RegExp,Array,Object,Date,Number,Boolean,String,Symbol,BigInt,Map,Set,JSON,Intl,Error," +
     "Infinity,isFinite,isNaN,parseFloat,parseInt,decodeURI,decodeURIComponent,encodeURI,encodeURIComponent"
-  ).split(",")
 );
+
+function wordSet(words: string): Set<string> {
+  return new Set(words.split(","));
+}
 
 // the keywords that start a statement an arrow's block body cannot hold: it
 // takes declarations, expressions and return only
-const STATEMENT_KEYWORDS = new Set(
-  (
-    "break,case,catch,class,const,continue,default,do,else,enum,export,extends,finally,for,if," +
+const STATEMENT_KEYWORDS = /* @__PURE__ */ wordSet(
+  "break,case,catch,class,const,continue,default,do,else,enum,export,extends,finally,for,if," +
     "import,super,switch,throw,try,var,while,with,yield"
-  ).split(",")
 );
 
-const WORD_REPLACEMENT: { [key: string]: string } = Object.assign(Object.create(null), {
-  and: "&&",
-  or: "||",
-  gt: ">",
-  gte: ">=",
-  lt: "<",
-  lte: "<=",
-});
+const WORD_REPLACEMENT: { [key: string]: string } = /* @__PURE__ */ Object.assign(
+  Object.create(null),
+  {
+    and: "&&",
+    or: "||",
+    gt: ">",
+    gte: ">=",
+    lt: "<",
+    lte: "<=",
+  }
+);
 
 //------------------------------------------------------------------------------
 // Tokenizer
@@ -86,21 +89,24 @@ interface Token {
   isKeyword?: boolean;
 }
 
-const STATIC_TOKEN_MAP: { [key: string]: TKind } = Object.assign(Object.create(null), {
-  "{": "LEFT_BRACE",
-  "}": "RIGHT_BRACE",
-  "[": "LEFT_BRACKET",
-  "]": "RIGHT_BRACKET",
-  ":": "COLON",
-  ",": "COMMA",
-  "(": "LEFT_PAREN",
-  ")": "RIGHT_PAREN",
-});
+const STATIC_TOKEN_MAP: { [key: string]: TKind } = /* @__PURE__ */ Object.assign(
+  Object.create(null),
+  {
+    "{": "LEFT_BRACE",
+    "}": "RIGHT_BRACE",
+    "[": "LEFT_BRACKET",
+    "]": "RIGHT_BRACKET",
+    ":": "COLON",
+    ",": "COMMA",
+    "(": "LEFT_PAREN",
+    ")": "RIGHT_PAREN",
+  }
+);
 
 // the space after a word operator is relevant: the formatted expression keeps
 // one after it
 const OPERATORS =
-  "...,.,===,==,++,+,!==,!=,!,||,&&,>=,>,<=,<,??=,??,?.,?,--,-,*,/,%,typeof ,delete ,=>,=,;,in ,new ,|,&,^,~".split(
+  /* @__PURE__ */ "...,.,===,==,++,+,!==,!=,!,||,&&,>=,>,<=,<,??=,??,?.,?,--,-,*,/,%,typeof ,delete ,=>,=,;,in ,new ,|,&,^,~".split(
     ","
   );
 
@@ -188,15 +194,19 @@ function replaceInterpolations(template: string, replacer: (expr: string) => str
 const REGEXP_PREFIX_RE = /[(,=:[!&|?{};+\-*%<>~^]/;
 // the words after which the tokenizer reads a / as a regular expression: the
 // keywords an operand follows and the word operators
-const REGEXP_PREFIX_WORDS = new Set([
-  "return",
-  "void",
-  "typeof",
-  "delete",
-  "in",
-  "new",
-  ...Object.keys(WORD_REPLACEMENT),
-]);
+const REGEXP_PREFIX_WORDS = /* @__PURE__ */ regexpPrefixWords();
+
+function regexpPrefixWords(): Set<string> {
+  return new Set([
+    "return",
+    "void",
+    "typeof",
+    "delete",
+    "in",
+    "new",
+    ...Object.keys(WORD_REPLACEMENT),
+  ]);
+}
 
 /**
  * Whether a / after the code character at `previous` (-1: none) starts a
@@ -412,7 +422,7 @@ const TOKENIZERS = [
   tokenizeSymbol,
   tokenizeStatic,
 ];
-const PROPERTY_TOKENIZERS = [tokenizeProperty, ...TOKENIZERS];
+const PROPERTY_TOKENIZERS = /* @__PURE__ */ [tokenizeProperty].concat(TOKENIZERS);
 
 /**
  * Convert a javascript expression (as a string) into a list of tokens. For

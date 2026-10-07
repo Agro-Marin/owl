@@ -69,14 +69,18 @@ const skipped = new WeakSet<Target>();
 const rawPrototypes = new WeakSet<Target>();
 let hasRawPrototypes = false;
 // what every plain object, array, collection or function inherits from
-const builtinPrototypes = new Set<object>([
-  Object.prototype,
-  Array.prototype,
-  Map.prototype,
-  Set.prototype,
-  WeakMap.prototype,
-  Function.prototype,
-]);
+const builtinPrototypes = /* @__PURE__ */ builtinPrototypeSet();
+
+function builtinPrototypeSet(): Set<object> {
+  return new Set([
+    Object.prototype,
+    Array.prototype,
+    Map.prototype,
+    Set.prototype,
+    WeakMap.prototype,
+    Function.prototype,
+  ]);
+}
 
 /**
  * Mark an object or array so that it is ignored by the reactivity system: a
@@ -741,78 +745,84 @@ export function readArrayItems<T>(array: T[]): T[] {
   return items;
 }
 
+// The replaced methods that read through something other than the proxy's
+// traps: an observe() view runs them on its proxy, observed. Filled by
+// replaceMethods, the only source of the functions it holds.
+const viewReaders = new Set<Function>();
 // Methods a proxy replaces, by the function its read would return. The array
 // methods that write several keys run as one batch: an immediate computation
 // sees the array before or after the call, not in between. Those that search
 // an item by identity also find the raw object of an item they read as its
 // proxy.
-const replacedMethods = new Map<Function, Function>();
-for (const name of ["copyWithin", "fill", "reverse", "sort"] as const) {
-  const method = Array.prototype[name] as Function;
-  replacedMethods.set(method, function (this: unknown[], ...args: unknown[]) {
-    return batch(() => method.apply(this, args));
-  });
-}
-// The methods that change the length read it, and the items they shift, as
-// their own business, not as reads of the caller: tracked, an effect that only
-// pushes would re-run on every push of another, and two of them would re-run
-// each other forever. The others stay tracked: a sort reads the items its
-// comparator orders, and its caller depends on them (as in Vue).
-// Called on an observe() view they still read through it, which subscribes
-// the view: a push through it calls its callback, as OWL 2's reactive() did.
-for (const name of ["pop", "push", "shift", "splice", "unshift"] as const) {
-  const method = Array.prototype[name] as Function;
-  replacedMethods.set(method, function (this: unknown[], ...args: unknown[]) {
-    return batch(() => untrack(() => method.apply(this, args)));
-  });
-}
-// The replaced methods that read through something other than the proxy's
-// traps: an observe() view runs them on its proxy, observed.
-const viewReaders = new Set<Function>();
+const replacedMethods = /* @__PURE__ */ replaceMethods();
 
-// The searches of a plain array read its items as one atom, as readArrayItems
-// does, and search the raw array: a search reading each index through the
-// proxy would make an atom per index, and a proxy per object item, for an
-// answer that depends on every item anyway. Any other array (a subclass, which
-// may keep its items elsewhere and map its indices through its own traps) is
-// searched through the proxy, each index read tracked. An object is looked for
-// as given, then as its raw object (which a deep array holds).
-for (const name of ["includes", "indexOf", "lastIndexOf"] as const) {
-  const method = Array.prototype[name] as Function;
-  const search = function (this: unknown[], ...args: unknown[]) {
+function replaceMethods(): Map<Function, Function> {
+  const replaced = new Map<Function, Function>();
+  for (const name of ["copyWithin", "fill", "reverse", "sort"] as const) {
+    const method = Array.prototype[name] as Function;
+    replaced.set(method, function (this: unknown[], ...args: unknown[]) {
+      return batch(() => method.apply(this, args));
+    });
+  }
+  // The methods that change the length read it, and the items they shift, as
+  // their own business, not as reads of the caller: tracked, an effect that only
+  // pushes would re-run on every push of another, and two of them would re-run
+  // each other forever. The others stay tracked: a sort reads the items its
+  // comparator orders, and its caller depends on them (as in Vue).
+  // Called on an observe() view they still read through it, which subscribes
+  // the view: a push through it calls its callback, as OWL 2's reactive() did.
+  for (const name of ["pop", "push", "shift", "splice", "unshift"] as const) {
+    const method = Array.prototype[name] as Function;
+    replaced.set(method, function (this: unknown[], ...args: unknown[]) {
+      return batch(() => untrack(() => method.apply(this, args)));
+    });
+  }
+
+  // The searches of a plain array read its items as one atom, as readArrayItems
+  // does, and search the raw array: a search reading each index through the
+  // proxy would make an atom per index, and a proxy per object item, for an
+  // answer that depends on every item anyway. Any other array (a subclass, which
+  // may keep its items elsewhere and map its indices through its own traps) is
+  // searched through the proxy, each index read tracked. An object is looked for
+  // as given, then as its raw object (which a deep array holds).
+  for (const name of ["includes", "indexOf", "lastIndexOf"] as const) {
+    const method = Array.prototype[name] as Function;
+    const search = function (this: unknown[], ...args: unknown[]) {
+      const raw = toRaw(this);
+      const plain = isPlainArray(raw);
+      if (plain) {
+        onReadTargetKey(raw, ITEMS);
+      }
+      const result = method.apply(plain ? raw : this, args);
+      const item = args[0];
+      if (result !== -1 && result !== false) {
+        return result;
+      }
+      // a plain array holds no proxy: only a proxy argument can still match
+      if (plain && (typeof item !== "object" || item === null || toRaw(item) === item)) {
+        return result;
+      }
+      args[0] = toRaw(item as object);
+      return method.apply(raw, args);
+    };
+    replaced.set(method, search);
+    viewReaders.add(search);
+  }
+
+  // hasOwnProperty reads the presence of the key it asks about, as `in` does
+  const hasOwnPropertyReader = function (this: object, key: PropertyKey) {
     const raw = toRaw(this);
-    const plain = isPlainArray(raw);
-    if (plain) {
-      onReadTargetKey(raw, ITEMS);
-    }
-    const result = method.apply(plain ? raw : this, args);
-    const item = args[0];
-    if (result !== -1 && result !== false) {
-      return result;
-    }
-    // a plain array holds no proxy: only a proxy argument can still match
-    if (plain && (typeof item !== "object" || item === null || toRaw(item) === item)) {
-      return result;
-    }
-    args[0] = toRaw(item as object);
-    return method.apply(raw, args);
+    onReadTargetKey(
+      collectionMethods(raw) ? propertyHost(raw) : raw,
+      typeof key === "symbol" ? key : String(key),
+      presenceAtoms
+    );
+    return objectHasOwnProperty.call(raw, key);
   };
-  replacedMethods.set(method, search);
-  viewReaders.add(search);
+  replaced.set(objectHasOwnProperty, hasOwnPropertyReader);
+  viewReaders.add(hasOwnPropertyReader);
+  return replaced;
 }
-
-// hasOwnProperty reads the presence of the key it asks about, as `in` does
-const hasOwnPropertyReader = function (this: object, key: PropertyKey) {
-  const raw = toRaw(this);
-  onReadTargetKey(
-    collectionMethods(raw) ? propertyHost(raw) : raw,
-    typeof key === "symbol" ? key : String(key),
-    presenceAtoms
-  );
-  return objectHasOwnProperty.call(raw, key);
-};
-replacedMethods.set(objectHasOwnProperty, hasOwnPropertyReader);
-viewReaders.add(hasOwnPropertyReader);
 
 // A collection's own properties (a subclass's fields, an expando) have atoms
 // of their own, keyed by this stand-in: an entry of the same key is another
@@ -1026,7 +1036,7 @@ const setLikeMethods: PropertyKey[] = [
   Symbol.iterator,
 ];
 const weakMapMethods = new Set<PropertyKey>(["has", "get", "set", "delete"]);
-// ES2025 Set methods, where the engine has them
+// the ES2025 Set methods, which every engine owl targets has
 const setOperations = [
   "difference",
   "intersection",
@@ -1035,10 +1045,20 @@ const setOperations = [
   "isSupersetOf",
   "symmetricDifference",
   "union",
-].filter((name) => name in Set.prototype);
+];
 
-const mapMethods = new Set([...setLikeMethods, ...weakMapMethods]);
-const setMethods = new Set([...setLikeMethods, "add", ...setOperations]);
+const mapMethods = /* @__PURE__ */ unionOf(setLikeMethods, weakMapMethods);
+const setMethods = /* @__PURE__ */ unionOf(setLikeMethods, ["add"], setOperations);
+
+function unionOf(...lists: Iterable<PropertyKey>[]): Set<PropertyKey> {
+  const union = new Set<PropertyKey>();
+  for (const list of lists) {
+    for (const item of list) {
+      union.add(item);
+    }
+  }
+  return union;
+}
 
 // the methods a proxy of `target` replaces (see makeMethod), if it is a
 // collection

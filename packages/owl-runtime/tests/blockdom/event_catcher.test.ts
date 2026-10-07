@@ -1,23 +1,12 @@
-import {
-  config,
-  createBlock,
-  createCatcher,
-  list,
-  mount,
-  multi,
-  patch,
-  remove,
-} from "../../src/blockdom";
+import { createBlock, createCatcher, list, mount, multi, patch, remove } from "../../src/blockdom";
 import { setDebug, setDebugSink } from "@odoo/owl-core";
 import { makeTestFixture } from "./helpers";
-import { mainEventHandler } from "../../src/event_handling";
 
 //------------------------------------------------------------------------------
 // Setup and helpers
 //------------------------------------------------------------------------------
 
 let fixture: HTMLElement;
-config.mainEventHandler = mainEventHandler;
 
 // a handler's code is static, given with its block or catcher: this one runs
 // the function a render gives as its context

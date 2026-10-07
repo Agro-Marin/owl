@@ -113,7 +113,7 @@ function callSlot(
 //                   (the id of the component it was set in, when another one
 //                   outputs it)
 const MARK = "\u0002";
-const MARK2 = MARK + MARK;
+const MARK2 = "\u0002\u0002";
 
 // a slot or template name, which a dynamic one may not be: `{{ x.slot }}`
 // with no slot gives undefined, and slots[undefined] is slots["undefined"]

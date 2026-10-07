@@ -256,13 +256,19 @@ function getKeys(node: ComponentNode): string[] {
 // empty null-prototype object: no inherited key, yet unlike Object.create(null)
 // V8 keeps it in fast mode, and the views of a component class, reading the
 // same keys, share its shape.
-const AtomTable = function () {} as unknown as new () => Record<string, Atom>;
-AtomTable.prototype = Object.create(null);
+const AtomTable = /* @__PURE__ */ tableClass<Atom>(Object.create(null));
 
 // The schema views, built like an AtomTable: no inherited key, fast mode. Their
 // shared prototype is frozen: nothing can add a key every view would inherit.
-const PropsTable = function () {} as unknown as new () => Record<string, any>;
-PropsTable.prototype = Object.freeze(Object.create(null));
+const PropsTable = /* @__PURE__ */ tableClass<any>(
+  /* @__PURE__ */ Object.freeze(Object.create(null))
+);
+
+function tableClass<T>(prototype: object): new () => Record<string, T> {
+  const Table = function () {} as unknown as new () => Record<string, T>;
+  Table.prototype = prototype;
+  return Table;
+}
 
 // A schema-less view has no fixed key set: a key gets its atom on its first
 // tracked read, present or not, so a reader of a key that appears or disappears
@@ -366,7 +372,9 @@ const viewHandler: ProxyHandler<PropsView> = {
   deleteProperty: () => false,
 };
 
-export const useProps = Object.assign(makeProps, { static: staticProp }) as PropsFunction;
+export const useProps = /* @__PURE__ */ Object.assign(makeProps, {
+  static: staticProp,
+}) as PropsFunction;
 
 /** @deprecated alias for {@link useProps} */
 export const props = useProps;

@@ -1,18 +1,12 @@
 import { OwlError } from "@odoo/owl-core";
 import type { Setter, Updater } from "./block_compiler";
+import { fromDom } from "./dom";
 
-let elemSetAttribute: typeof Element.prototype.setAttribute;
-let removeAttribute: typeof Element.prototype.removeAttribute;
-let tokenListAdd: typeof DOMTokenList.prototype.add;
-let tokenListRemove: typeof DOMTokenList.prototype.remove;
-if (typeof Element !== "undefined") {
-  ({ setAttribute: elemSetAttribute, removeAttribute } = Element.prototype);
-  const tokenList = DOMTokenList.prototype;
-  tokenListAdd = tokenList.add;
-  tokenListRemove = tokenList.remove;
-}
+const elemSetAttribute = /* @__PURE__ */ fromDom(() => Element.prototype.setAttribute);
+const removeAttribute = /* @__PURE__ */ fromDom(() => Element.prototype.removeAttribute);
+const tokenListAdd = /* @__PURE__ */ fromDom(() => DOMTokenList.prototype.add);
+const tokenListRemove = /* @__PURE__ */ fromDom(() => DOMTokenList.prototype.remove);
 const isArray = Array.isArray;
-const { split, trim } = String.prototype;
 const wordRegexp = /\s+/;
 
 /**
@@ -42,7 +36,7 @@ export function createAttrUpdater(attr: string): Setter<HTMLElement> {
   };
 }
 
-const NO_ATTRS = Object.freeze({});
+const NO_ATTRS = /* @__PURE__ */ Object.freeze({});
 
 // t-att takes an object, a [name, value] pair, or nothing at all
 function toAttrs(attrs: any): { [name: string]: any } {
@@ -60,13 +54,10 @@ function toAttrs(attrs: any): { [name: string]: any } {
   return attrs;
 }
 
-export function makeAttrsUpdaters(
+export function makeAttrsUpdater(
   updateClassFn: Updater<HTMLElement>,
   updateStyleFn: Updater<HTMLElement>
-): {
-  attrsSetter: Setter<HTMLElement>;
-  attrsUpdater: Updater<HTMLElement>;
-} {
+): Updater<HTMLElement> {
   function updateAttr(el: HTMLElement, name: string, val: any, oldVal: any) {
     if (name === "class") {
       updateClassFn.call(el, val, oldVal);
@@ -91,13 +82,17 @@ export function makeAttrsUpdaters(
       }
     }
   }
-  function attrsSetter(this: HTMLElement, attrs: any) {
-    attrsUpdater.call(this, attrs, NO_ATTRS);
-  }
-  return { attrsSetter, attrsUpdater };
+  return attrsUpdater;
 }
 
-export const { attrsSetter, attrsUpdater } = makeAttrsUpdaters(updateClass, updateStyle);
+export function makeAttrsSetter(attrsUpdater: Updater<HTMLElement>): Setter<HTMLElement> {
+  return function attrsSetter(this: HTMLElement, attrs: any) {
+    attrsUpdater.call(this, attrs, NO_ATTRS);
+  };
+}
+
+export const attrsUpdater = /* @__PURE__ */ makeAttrsUpdater(updateClass, updateStyle);
+export const attrsSetter = /* @__PURE__ */ makeAttrsSetter(attrsUpdater);
 
 type ClassExpr = string | number | boolean | String | ClassExpr[] | { [c: string]: any };
 
@@ -140,9 +135,9 @@ function addClasses(result: { [c: string]: any }, expr: ClassExpr | null | undef
 }
 
 function addWords(result: { [c: string]: any }, str: string, value: any) {
-  str = trim.call(str);
+  str = str.trim();
   if (str) {
-    const words = split.call(str, wordRegexp);
+    const words = str.split(wordRegexp);
     for (let i = 0, l = words.length; i < l; i++) {
       result[words[i]] = value;
     }
@@ -219,7 +214,7 @@ function toStyleObj(expr: string | { [prop: string]: any }): StyleObj {
           }
           i++;
         }
-        const part = trim.call(str.slice(start, i));
+        const part = str.slice(start, i).trim();
         i++;
         if (!part) {
           continue;
@@ -228,8 +223,8 @@ function toStyleObj(expr: string | { [prop: string]: any }): StyleObj {
         if (colonIdx === -1) {
           continue;
         }
-        const prop = trim.call(part.slice(0, colonIdx));
-        const value = trim.call(part.slice(colonIdx + 1));
+        const prop = part.slice(0, colonIdx).trim();
+        const value = part.slice(colonIdx + 1).trim();
         if (prop && value && value !== "undefined") {
           result[prop] = value;
         }

@@ -101,8 +101,16 @@ interface Root<T extends ComponentConstructor> {
   destroy(): void;
 }
 
-if (typeof window !== "undefined") {
-  window.__OWL_DEVTOOLS__ ||= { apps, Fiber, RootFiber, toRaw, proxy };
+// what the owl devtools read, set by the first App (importing owl changes no
+// global): their page hook watches the property, so it finds the apps whether
+// it loads before or after it is set; a page's first owl keeps it
+function exposeToDevtools() {
+  if (typeof window !== "undefined" && !window.__OWL_DEVTOOLS__) {
+    window.__OWL_DEVTOOLS__ = { apps, Fiber, RootFiber, toRaw, proxy };
+    if (debug.lifecycle) {
+      debugLog("lifecycle", "window.__OWL_DEVTOOLS__ set");
+    }
+  }
 }
 
 export class App extends TemplateSet {
@@ -119,6 +127,9 @@ export class App extends TemplateSet {
   constructor(config: AppConfig = {}) {
     super(config.test ? { ...config, dev: true } : config);
     this.name = config.name || "";
+    if (!apps.size) {
+      exposeToDevtools();
+    }
     apps.add(this);
     this.pluginManager = new PluginManager(this, { config: config.config });
     if (config.plugins) {

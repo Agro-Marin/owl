@@ -62,9 +62,12 @@ export interface CompileOptions {
 
 // using a non-html document so that <inner/outer>HTML serializes as XML instead
 // of HTML (as we will parse it as xml later)
-let xmlDoc: Document;
-if (typeof document !== "undefined") {
-  xmlDoc = document.implementation.createDocument(null, null, null);
+const xmlDoc: Document = /* @__PURE__ */ makeXmlDocument();
+
+function makeXmlDocument(): Document {
+  return typeof document === "undefined"
+    ? (undefined as any)
+    : document.implementation.createDocument(null, null, null);
 }
 
 // a compiled attribute expression that cannot hold a t-set body: a string,
