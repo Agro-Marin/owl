@@ -1,8 +1,9 @@
 // @vitest-environment node
 // The built package, as its users get it: built once here, then bundled with
 // esbuild through the package's own exports and "sideEffects".
-import { execFileSync } from "child_process";
+import { execFileSync, spawnSync } from "child_process";
 import { build } from "esbuild";
+import { readdirSync } from "fs";
 import { dirname, join } from "path";
 import { fileURLToPath } from "url";
 
@@ -56,4 +57,46 @@ test("importing the compiler module for its effects keeps its registration", asy
   const code = await bundle(`import "@odoo/owl/compiler";`, false);
   expect(code).toContain('Symbol.for("@odoo/owl/compiler")');
   expect(code).toMatch(/\bCodeGenerator\b/);
+});
+
+test("the build makes ES modules and IIFE scripts, no CommonJS", () => {
+  const files = readdirSync(join(PACKAGE, "dist")).filter((name) => name.endsWith("js"));
+  expect(files.sort()).toEqual([
+    "owl.compiler.es.js",
+    "owl.compiler.iife.js",
+    "owl.es.js",
+    "owl.iife.js",
+    "owl.iife.min.js",
+    "owl.runtime.es.js",
+    "owl.runtime.iife.js",
+    "owl.runtime.iife.min.js",
+  ]);
+});
+
+describe("require()", () => {
+  // Node's require() of an ES module (require(esm)): the very module import()
+  // gives, so one process holds one owl however its code loads it
+  test("each entry loads as the module import() gives, without a warning", () => {
+    const script = `
+      import { createRequire } from "node:module";
+      const require = createRequire(process.cwd() + "/");
+      const result = {};
+      for (const entry of ["@odoo/owl", "@odoo/owl/runtime", "@odoo/owl/compiler"]) {
+        const required = require(entry);
+        const imported = await import(entry);
+        result[entry] = [required === imported, Object.keys(required).length > 1];
+      }
+      console.log(JSON.stringify(result));
+    `;
+    const run = spawnSync(process.execPath, ["--input-type=module", "-e", script], {
+      cwd: PACKAGE,
+      encoding: "utf8",
+    });
+    expect(run.stderr).toBe("");
+    expect(JSON.parse(run.stdout)).toEqual({
+      "@odoo/owl": [true, true],
+      "@odoo/owl/runtime": [true, true],
+      "@odoo/owl/compiler": [true, true],
+    });
+  });
 });

@@ -1,16 +1,15 @@
 import * as esbuild from "esbuild";
 import { execSync } from "child_process";
 import { buildHash } from "./build_hash.mjs";
-import { existsSync, readFileSync, mkdirSync } from "fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync } from "fs";
 import { join, relative, resolve } from "path";
 
 const pkg = JSON.parse(readFileSync("./package.json", "utf-8"));
 
 const IIFE_FILENAME = "dist/owl.iife.js";
-const CJS_FILENAME = "dist/owl.cjs";
 const ES_FILENAME = "dist/owl.es.js";
 
-if (pkg.module !== ES_FILENAME || pkg.main !== CJS_FILENAME) {
+if (pkg.main !== ES_FILENAME) {
   throw new Error("package.json has been modified. Build script should be updated accordingly");
 }
 
@@ -53,7 +52,6 @@ const bundledCompilerPlugin = {
 
 async function buildVariant(entry, suffix) {
   const esm = suffix ? variantName(ES_FILENAME, suffix) : ES_FILENAME;
-  const cjs = suffix ? variantName(CJS_FILENAME, suffix) : CJS_FILENAME;
   const iife = suffix ? variantName(IIFE_FILENAME, suffix) : IIFE_FILENAME;
   const iifeMin = addSuffix(iife, "min");
 
@@ -62,7 +60,6 @@ async function buildVariant(entry, suffix) {
 
   await Promise.all([
     esbuild.build({ ...common, outfile: esm, format: "esm" }),
-    esbuild.build({ ...common, outfile: cjs, format: "cjs" }),
     esbuild.build({ ...common, outfile: iife, format: "iife", globalName: "owl" }),
     esbuild.build({ ...common, outfile: iifeMin, format: "iife", globalName: "owl", minify: true }),
   ]);
@@ -77,11 +74,10 @@ const COMPILER_INPUTS = [
   /^packages\/owl-runtime\/src\/(version|build_info)\.ts$/,
 ];
 
-// dist/owl.compiler.es.js (and .cjs, .iife.js): the compiler for a page whose
-// owl is the runtime build. It imports nothing: it registers itself under a
-// global key the runtime reads, and the runtime checks that it is of its own
-// build. The .cjs is for require() on a Node that cannot require an ES module
-// (before 20.19; engines allows 20).
+// dist/owl.compiler.es.js (and .iife.js): the compiler for a page whose owl is
+// the runtime build. It imports nothing: it registers itself under a global key
+// the runtime reads, and the runtime checks that it is of its own build. On
+// Node, require() loads it as it loads every entry: an ES module.
 async function buildCompilerModule() {
   const common = {
     entryPoints: ["src/compiler.ts"],
@@ -93,7 +89,6 @@ async function buildCompilerModule() {
   };
   const results = await Promise.all([
     esbuild.build({ ...common, format: "esm", outfile: "dist/owl.compiler.es.js" }),
-    esbuild.build({ ...common, format: "cjs", outfile: "dist/owl.compiler.cjs" }),
     esbuild.build({ ...common, format: "iife", outfile: "dist/owl.compiler.iife.js" }),
   ]);
   for (const input of results.flatMap((result) => Object.keys(result.metafile.inputs))) {
@@ -135,6 +130,12 @@ switch (target) {
     buildTypes();
     break;
   default:
+    // a file an earlier build made and this one does not would still ship
+    for (const file of existsSync("dist") ? readdirSync("dist", { withFileTypes: true }) : []) {
+      if (file.isFile()) {
+        rmSync(join("dist", file.name));
+      }
+    }
     await buildVariant("src/index.ts");
     await buildVariant("src/runtime.ts", "runtime");
     await buildCompilerModule();

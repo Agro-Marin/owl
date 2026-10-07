@@ -7,7 +7,7 @@ export const SOURCES = ["owl-core", "owl-compiler", "owl-runtime", "owl"].map(
   (p) => `packages/${p}/src`
 );
 
-// written by tools/release.cjs before it builds and commits: the version is
+// written by tools/release.mjs before it builds and commits: the version is
 // named next to the hash already (App.version), so it is not a change
 export const GENERATED = ["packages/owl-runtime/src/version.ts"];
 

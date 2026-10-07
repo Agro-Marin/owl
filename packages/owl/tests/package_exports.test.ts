@@ -3,26 +3,25 @@ import { join } from "path";
 
 const pkg = JSON.parse(readFileSync(join(__dirname, "..", "package.json"), "utf-8"));
 
-describe("the package's exports", () => {
-  // engines allows Node 20, whose require() cannot load an ES module before
-  // 20.19: a module of the package that ESM can import, CommonJS can require
-  test("every subpath that has an import condition has a require condition to a .cjs file", () => {
-    const missing: string[] = [];
-    for (const [subpath, conditions] of Object.entries<any>(pkg.exports)) {
-      if (typeof conditions === "object" && conditions.import) {
-        if (!(typeof conditions.require === "string" && conditions.require.endsWith(".cjs"))) {
-          missing.push(subpath);
-        }
-      }
-    }
-    expect(missing).toEqual([]);
-  });
+function targets(value: unknown): string[] {
+  return typeof value === "string"
+    ? [value]
+    : Object.values(value as object).flatMap((v) => targets(v));
+}
 
-  test("a subpath's require condition comes before its default", () => {
+describe("the package's exports", () => {
+  // owl keeps module state (scheduler, reactive graph, debug flags): a CommonJS
+  // twin of an entry would be a second owl in a process that both requires and
+  // imports it. Node's require() loads the ES modules themselves.
+  test("every entry is an ES module, for import and require alike", () => {
+    expect(pkg.type).toBe("module");
+    expect(pkg.main).toBe("dist/owl.es.js");
+    expect(pkg.module).toBeUndefined();
+    const all = [pkg.main, ...targets(pkg.exports)];
+    expect(all.filter((target) => /\.c[jt]s$/.test(target))).toEqual([]);
     for (const conditions of Object.values<any>(pkg.exports)) {
-      if (typeof conditions === "object" && conditions.require) {
-        const keys = Object.keys(conditions);
-        expect(keys.indexOf("require")).toBeLessThan(keys.indexOf("default"));
+      if (typeof conditions === "object") {
+        expect(Object.keys(conditions)).toEqual(["types", "default"]);
       }
     }
   });

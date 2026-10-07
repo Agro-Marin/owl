@@ -33,7 +33,7 @@
     "prettier-fast": "git diff-tree --no-commit-id --name-only -r HEAD --diff-filter=d | xargs prettier --write",
     "check-formatting": "prettier {packages/*/src/*.ts,packages/*/src/**/*.ts,packages/*/tests/*.ts,packages/*/tests/**/*.ts,doc/*.md,doc/**/*.md,tools/devtools/**/*.js} --check",
     "lint": "eslint 'packages/*/src/**/*.ts' 'packages/*/tests/**/*.ts'",
-    "release": "node tools/release.cjs",
+    "release": "node tools/release.mjs",
     "compile_templates": "node tools/compile_owl_templates.mjs"
   },
   "repository": {
@@ -52,8 +52,6 @@
     "@typescript-eslint/eslint-plugin": "^8.54.0",
     "@typescript-eslint/parser": "^8.54.0",
     "@vitest/expect": "^4.1.4",
-    "chalk": "^3.0.0",
-    "current-git-branch": "^1.1.0",
     "dts-bundle-generator": "^9.5.1",
     "esbuild": "^0.28.0",
     "eslint": "^9.39.2",

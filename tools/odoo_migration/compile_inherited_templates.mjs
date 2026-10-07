@@ -1,14 +1,17 @@
 // Compiles every Odoo template after applying its inheritance (Odoo's own
 // web/static/src/core/template_inheritance.js), with two owl builds, and
 // reports the templates the new build rejects and the old one accepted.
-// compile_templates.cjs compiles template files as written: a directive an
+// compile_templates.mjs compiles template files as written: a directive an
 // inheriting template adds (a t-if on a t-else node) is invisible to it.
+// The files are those under the roots given as arguments, or listed on stdin
+// (template_files.mjs).
 //
-//   find <repos> -path '*/static/src/*' -name '*.xml' ... | \
-//     OWL=<owl checkout> OLD=<old owl.es.js> WEB=<odoo>/addons/web \
-//     node compile_inherited_templates.mjs
+//   OWL=<owl checkout> OLD=<old owl.es.js> WEB=<odoo>/addons/web \
+//     node compile_inherited_templates.mjs <repo> ...
 import fs from "node:fs";
 import { createRequire } from "node:module";
+import customDirectives from "./custom_directives.mjs";
+import { templateFiles } from "./template_files.mjs";
 
 const require = createRequire(import.meta.url);
 const { JSDOM } = require(process.env.OWL + "/node_modules/jsdom");
@@ -45,7 +48,6 @@ const { applyInheritance } = await import(
 const newOwl = await import(process.env.OWL + "/packages/owl/dist/owl.es.js");
 const oldOwl = await import(process.env.OLD);
 
-const customDirectives = require("./custom_directives.cjs");
 const config = {
   test: true,
   warnIfNoStaticProps: false,
@@ -72,7 +74,7 @@ function dependsOf(moduleDir) {
     return [];
   }
 }
-const inputFiles = fs.readFileSync(0, "utf8").split("\n").filter(Boolean);
+const inputFiles = await templateFiles();
 const moduleDirs = new Map();
 for (const file of inputFiles) {
   const dir = moduleOf(file);

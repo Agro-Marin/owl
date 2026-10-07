@@ -1,9 +1,9 @@
 // Odoo's template custom directives, for the template compile checks
-// (compile_templates.cjs, compile_inherited_templates.mjs): a template using
+// (compile_templates.mjs, compile_inherited_templates.mjs): a template using
 // t-custom-* compiles only with them. Copied from the sources, keep in step:
 // click from web/static/src/env.js, ref, model and portal from spreadsheet's
 // o_spreadsheet.js.
-module.exports = {
+export default {
   click: (node, value, modifiers) => {
     const mods = ["synthetic", "capture"]
       .filter((m) => modifiers.includes(m))

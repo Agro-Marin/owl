@@ -98,6 +98,14 @@ npm install @odoo/owl
 
 Or download directly: [latest release](https://github.com/odoo/owl/releases/latest)
 
+Owl is an ES module package, with no CommonJS build: `import` it, or on Node
+`require()` it (Node loads the ES module, the same instance `import` gets).
+Its entries are `@odoo/owl` (runtime and compiler), `@odoo/owl/runtime` (no
+compiler, for precompiled templates) and `@odoo/owl/compiler`; the `.iife.js`
+files of a release are scripts defining a global `owl`. Importing an entry has
+no side effect but the compiler module's (it registers itself), so a bundler
+keeps only what is used.
+
 ## Devtools
 
 The Owl devtools extension helps debug your applications with component tree

@@ -1,21 +1,29 @@
+// Compiles every Odoo template file as written with one owl build: the files
+// under the roots given as arguments, or listed on stdin (template_files.mjs).
+//
+//   OWL=<owl checkout> node compile_templates.mjs <repo> ...
+import fs from "node:fs";
+import { createRequire } from "node:module";
+import customDirectives from "./custom_directives.mjs";
+import { templateFiles } from "./template_files.mjs";
+
+const require = createRequire(import.meta.url);
 const { JSDOM } = require(process.env.OWL + "/node_modules/jsdom");
 const dom = new JSDOM("<!doctype html><html><body></body></html>", { pretendToBeVisual: true });
-global.window = dom.window;
-for (const k of Object.getOwnPropertyNames(dom.window)) { if (!(k in global)) { try { global[k] = dom.window[k]; } catch {} } }
-const fs = require("fs");
-// a 3.0 monorepo checkout builds packages/owl/dist/owl.cjs, a 2.8 one dist/owl.cjs.js
-const build = ["/packages/owl/dist/owl.cjs", "/dist/owl.cjs.js"]
+globalThis.window = dom.window;
+for (const k of Object.getOwnPropertyNames(dom.window)) { if (!(k in globalThis)) { try { globalThis[k] = dom.window[k]; } catch {} } }
+// a 3.0 monorepo checkout builds packages/owl/dist/owl.es.js, a 2.8 one dist/owl.es.js
+const build = ["/packages/owl/dist/owl.es.js", "/dist/owl.es.js"]
   .map((path) => process.env.OWL + path)
   .find((path) => fs.existsSync(path));
-const owl = require(build);
-const isOwl3 = build.endsWith("/packages/owl/dist/owl.cjs");
+const owl = await import(build);
+const isOwl3 = build.endsWith("/packages/owl/dist/owl.es.js");
 console.log(`owl build: ${build}`);
-const customDirectives = require("./custom_directives.cjs");
 const config = { test: true, warnIfNoStaticProps: false, customDirectives, globalValues: { click() {} } };
 // jsdom refuses a prefixed attribute (xmlns:xlink) a browser accepts: such a
 // template is reported apart, not counted as a failure
 const JSDOM_ONLY = /Invalid attribute localName|Failed to serialize XML/;
-const files = fs.readFileSync(0, "utf8").split("\n").filter(Boolean);
+const files = await templateFiles();
 let total = 0, bad = 0;
 for (const file of files) {
   const src = fs.readFileSync(file, "utf8");

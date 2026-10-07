@@ -46,7 +46,7 @@ globally for every subsequently created `App`.
 
 A page whose templates are mostly precompiled, but that may meet one that is
 not, can load the compiler later: importing `@odoo/owl/compiler`
-(`owl.compiler.es.js`, `owl.compiler.cjs` for `require()`, or
+(`owl.compiler.es.js`, which Node's `require()` loads too, or
 `owl.compiler.iife.js` beside `owl.runtime.iife.js`) installs it into the
 runtime, whichever way the two files are resolved. The
 compiler registers itself under its build (version and hash), and a runtime
@@ -56,4 +56,5 @@ find theirs. A runtime whose build's compiler is not loaded compiles nothing:
 the runtime's build and those of the compilers loaded. Setting
 `TemplateSet.compiler` by hand checks the same: a compiler that does not name
 its build, or names another, is refused; `null` leaves the runtime without a
-compiler, and `undefined` takes the registered one again.
+compiler, and `undefined` takes its own again (the full build's bundled one,
+or the registered one).

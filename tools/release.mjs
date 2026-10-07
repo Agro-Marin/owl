@@ -1,13 +1,13 @@
-const package = require("../packages/owl/package.json");
-const corePackage = require("../packages/owl-core/package.json");
-const compilerPackage = require("../packages/owl-compiler/package.json");
-const runtimePackage = require("../packages/owl-runtime/package.json");
-const packageLock = require("../package-lock.json");
-const readline = require("readline");
-const fs = require("fs");
-const exec = require("child_process").exec;
-const chalk = require("chalk");
-const branchName = require('current-git-branch');
+import { exec, execFileSync } from "node:child_process";
+import fs from "node:fs";
+import { readFile, writeFile } from "node:fs/promises";
+import { createInterface } from "node:readline/promises";
+import { promisify, styleText } from "node:util";
+import packageLock from "../package-lock.json" with { type: "json" };
+import compilerPackage from "../packages/owl-compiler/package.json" with { type: "json" };
+import corePackage from "../packages/owl-core/package.json" with { type: "json" };
+import runtimePackage from "../packages/owl-runtime/package.json" with { type: "json" };
+import owlPackage from "../packages/owl/package.json" with { type: "json" };
 
 const REL_NOTES_FILE = `dist/release-notes.md`;
 const branch = "master";
@@ -20,14 +20,10 @@ const SIBLING_PACKAGES = [
   { name: "@odoo/owl-runtime", path: "packages/owl-runtime/package.json", pkg: runtimePackage },
 ];
 
-const rl = readline.createInterface({
-  input: process.stdin,
-  output: process.stdout
-});
+const rl = createInterface({ input: process.stdin, output: process.stdout });
 
-startRelease().then(() => {
-  rl.close();
-});
+await startRelease();
+rl.close();
 
 // -----------------------------------------------------------------------------
 // Relase Script
@@ -35,13 +31,13 @@ startRelease().then(() => {
 
 async function startRelease() {
   // First check we are on master
-  if (branchName() !== branch) {
+  if (currentBranch() !== branch) {
     logError(`You shall not pass! You are not on the ${branch} branch!`)
     return;
   }
 
   log(`*** Owl release script ***`);
-  log(`Current Version: ${package.version}`);
+  log(`Current Version: ${owlPackage.version}`);
   log(`Warning: this script will push to the master branch!`);
   log(`Make sure that github is configured to allow it:`);
   log(`   settings => branches => edit master => uncheck Do not allow bypassing the above settings`);
@@ -62,7 +58,7 @@ async function startRelease() {
 
   // ---------------------------------------------------------------------------
   log(`Step ${step++}/${STEPS}: collecting info...`);
-  const currentVersion = package.version;
+  const currentVersion = owlPackage.version;
   let defaultNext = "";
   if (isAlpha) {
     const alphaMatch = currentVersion.match(/^(.+)-alpha\.(\d+)$/);
@@ -90,7 +86,7 @@ async function startRelease() {
   }
   let content;
   try {
-    content = await readFile("./" + file);
+    content = await readFile("./" + file, "utf8");
   } catch (e) {
     logSubContent(e.message);
     logError("Cannot find release notes... Aborting");
@@ -119,7 +115,7 @@ async function startRelease() {
   }
   // @odoo/owl's package.json: bump version, pin sibling devDeps to the new
   // version so the published tarball names the exact matching sources.
-  const owlUpdated = { ...package, version: next };
+  const owlUpdated = { ...owlPackage, version: next };
   if (owlUpdated.devDependencies) {
     for (const { name } of SIBLING_PACKAGES) {
       if (name in owlUpdated.devDependencies) {
@@ -222,12 +218,16 @@ async function startRelease() {
 // Helpers
 // -----------------------------------------------------------------------------
 
+function currentBranch() {
+  return execFileSync("git", ["rev-parse", "--abbrev-ref", "HEAD"], { encoding: "utf8" }).trim();
+}
+
 function log(text) {
-  console.log(chalk.yellow(formatLog(text)));
+  console.log(styleText("yellow", formatLog(text)));
 }
 
 function logError(text) {
-  console.log(chalk.red(formatLog(text)));
+  console.log(styleText("red", formatLog(text)));
 }
 
 function formatLog(text) {
@@ -235,7 +235,7 @@ function formatLog(text) {
 }
 
 function logSubContent(text) {
-  for (let line of text.split("\n")) {
+  for (let line of String(text).split("\n")) {
     if (line.trim()) {
       console.log("    " + line);
     }
@@ -243,11 +243,7 @@ function logSubContent(text) {
 }
 
 function ask(question) {
-  return new Promise(resolve => {
-    rl.question(question, result => {
-      resolve(result);
-    });
-  });
+  return rl.question(question);
 }
 
 function logStream(stream) {
@@ -258,7 +254,7 @@ function logStream(stream) {
 
 function execCommand(command) {
   return new Promise(resolve => {
-    const childProcess = exec(command, (err, stdout, stderr) => {
+    const childProcess = exec(command, (err) => {
       if (err) {
         resolve(err.code);
       }
@@ -271,42 +267,6 @@ function execCommand(command) {
   });
 }
 
-function readFile(file) {
-  return new Promise((resolve, reject) => {
-    fs.readFile(file, "utf8", function(err, content) {
-      if (err) {
-        reject(err);
-      } else {
-        resolve(content);
-      }
-    });
-  });
-}
-
-function writeFile(file, content) {
-  return new Promise((resolve, reject) => {
-    fs.writeFile(file, content, "utf8", err => {
-      if (err) {
-        reject(err);
-      } else {
-        resolve();
-      }
-    });
-  });
-}
-
 async function getOutput(command) {
-  return new Promise((resolve, reject) => {
-    const childProcess = exec(command, (err, stdout, stderr) => {
-      if (err) {
-        reject(err);
-      }
-      resolve(stdout);
-    });
-    childProcess.on("exit", code => {
-      if (code !== 0) {
-        reject(code);
-      }
-    });
-  });
+  return (await promisify(exec)(command)).stdout;
 }
