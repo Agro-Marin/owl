@@ -104,7 +104,8 @@ Its entries are `@odoo/owl` (runtime and compiler), `@odoo/owl/runtime` (no
 compiler, for precompiled templates) and `@odoo/owl/compiler`; the `.iife.js`
 files of a release are scripts defining a global `owl`. Importing an entry has
 no side effect but the compiler module's (it registers itself), so a bundler
-keeps only what is used.
+keeps only what is used. Building and testing owl needs Node 26
+(`.node-version`).
 
 ## Devtools
 

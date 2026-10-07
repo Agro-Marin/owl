@@ -1,5 +1,6 @@
 {
   "name": "@odoo/owl-compiler",
+  "private": true,
   "version": "3.0.0-alpha.49",
   "description": "Template compiler for Odoo Web Library (OWL)",
   "main": "src/index.ts",
@@ -19,7 +20,7 @@
     "dist"
   ],
   "engines": {
-    "node": ">=20.0.0"
+    "node": ">=26"
   },
   "scripts": {
     "build": "node build.mjs",

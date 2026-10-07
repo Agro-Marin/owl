@@ -1,5 +1,6 @@
 {
   "name": "@odoo/owl-runtime",
+  "private": true,
   "version": "3.0.0-alpha.49",
   "description": "Component runtime and blockdom for Odoo Web Library (OWL)",
   "main": "src/index.ts",
@@ -14,7 +15,7 @@
     "src"
   ],
   "engines": {
-    "node": ">=20.0.0"
+    "node": ">=26"
   },
   "scripts": {
     "test": "vitest run",

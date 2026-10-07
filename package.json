@@ -8,7 +8,7 @@
     "tools/playground"
   ],
   "engines": {
-    "node": ">=20.0.0"
+    "node": ">=26"
   },
   "scripts": {
     "build": "npm run build -w packages/owl-compiler && npm run build -w packages/owl",
