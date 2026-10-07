@@ -113,7 +113,8 @@ describe("t-on", () => {
     const buttons = fixture.querySelectorAll("button");
     buttons[0].click();
     buttons[1].click();
-    expect(comp.otherState.vals).toStrictEqual(["a_nova_0_1", "b_nova_0_1"]);
+    // each handler reads the values at its item, as OWL 2's did
+    expect(comp.otherState.vals).toStrictEqual(["a_nova_0", "b_nova_0_1"]);
   });
 
   test("t-on method call in t-foreach", async () => {
@@ -165,7 +166,8 @@ describe("t-on", () => {
     const buttons = fixture.querySelectorAll("button");
     buttons[0].click();
     buttons[1].click();
-    expect(comp.otherState.vals).toStrictEqual(["2_2", "2_2"]);
+    // not the value the loop ends with: a handler reads the variables at it
+    expect(comp.otherState.vals).toStrictEqual(["0_0", "1_1"]);
   });
 
   test("t-on on components", async () => {

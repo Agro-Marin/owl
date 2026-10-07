@@ -4,6 +4,7 @@ import {
   mount,
   onMounted,
   onWillDestroy,
+  onWillStart,
   props,
   proxy,
   signal,
@@ -2191,5 +2192,111 @@ describe("slots", () => {
     parent.state.k = 2;
     await nextTick();
     expect(fixture.innerHTML).toBe("<i></i><b>2</b>");
+  });
+});
+
+describe("the context a slot renders in", () => {
+  // a child renders its slots on its own too (its state changed, its
+  // onWillStart settled): what they show must not depend on when
+  test("a variable set again after the component keeps its value at the component, whoever renders", async () => {
+    let child: any;
+    class Child extends Component {
+      static template = xml`<b><t t-out="this.state.n"/>:<t t-call-slot="default"/></b>`;
+      state = proxy({ n: 0 });
+      setup() {
+        child = this;
+      }
+    }
+    class Parent extends Component {
+      static template = xml`<div><t t-set="x" t-value="1"/><Child><t t-out="x"/></Child><t t-set="x" t-value="2"/><t t-out="x"/></div>`;
+      static components = { Child };
+    }
+    await mount(Parent, fixture);
+    expect(fixture.innerHTML).toBe("<div><b>0:1</b>2</div>");
+    child.state.n = 1;
+    await nextTick();
+    expect(fixture.innerHTML).toBe("<div><b>1:1</b>2</div>");
+  });
+
+  test("a loop item's slot keeps the value an outer variable had at its item", async () => {
+    const kids: any[] = [];
+    class Child extends Component {
+      static template = xml`<b><t t-out="this.state.n"/>:<t t-call-slot="default"/></b>`;
+      state = proxy({ n: 0 });
+      setup() {
+        kids.push(this);
+      }
+    }
+    class Parent extends Component {
+      static template = xml`<div><t t-set="x" t-value="1"/><t t-foreach="[5, 6]" t-as="i" t-key="i"><Child><t t-out="x"/></Child><t t-set="x" t-value="i"/></t></div>`;
+      static components = { Child };
+    }
+    await mount(Parent, fixture);
+    expect(fixture.innerHTML).toBe("<div><b>0:1</b><b>0:5</b></div>");
+    kids[0].state.n = 1;
+    await nextTick();
+    expect(fixture.innerHTML).toBe("<div><b>1:1</b><b>0:5</b></div>");
+  });
+
+  test("a child whose onWillStart waits renders its slot with the values at the component", async () => {
+    let open: () => void;
+    const gate = new Promise<void>((resolve) => (open = resolve));
+    class Child extends Component {
+      static template = xml`<b><t t-call-slot="default"/></b>`;
+      setup() {
+        onWillStart(() => gate);
+      }
+    }
+    class Parent extends Component {
+      static template = xml`<div><t t-set="x" t-value="1"/><Child><t t-out="x"/></Child><t t-set="x" t-value="2"/></div>`;
+      static components = { Child };
+    }
+    const mounted = mount(Parent, fixture);
+    await nextTick();
+    open!();
+    await mounted;
+    expect(fixture.innerHTML).toBe("<div><b>1</b></div>");
+  });
+
+  test("a slot of a template called without arguments keeps the values at the component when the caller sets them again", async () => {
+    let child: any;
+    class Child extends Component {
+      static template = xml`<b><t t-out="this.state.n"/>:<t t-call-slot="default"/></b>`;
+      state = proxy({ n: 0 });
+      setup() {
+        child = this;
+      }
+    }
+    const sub = xml`<Child><t t-out="x"/></Child>`;
+    class Parent extends Component {
+      static template = xml`<div><t t-set="x" t-value="1"/><t t-call="${sub}"/><t t-set="x" t-value="2"/></div>`;
+      static components = { Child };
+    }
+    await mount(Parent, fixture);
+    expect(fixture.innerHTML).toBe("<div><b>0:1</b></div>");
+    child.state.n = 1;
+    await nextTick();
+    expect(fixture.innerHTML).toBe("<div><b>1:1</b></div>");
+  });
+
+  test("a slot keeps reaching the body of the t-call it is written in", async () => {
+    let child: any;
+    class Child extends Component {
+      static template = xml`<b><t t-out="this.state.n"/>:<t t-call-slot="default"/></b>`;
+      state = proxy({ n: 0 });
+      setup() {
+        child = this;
+      }
+    }
+    const sub = xml`<Child><t t-out="0"/></Child>`;
+    class Parent extends Component {
+      static template = xml`<div><t t-call="${sub}"><i>zero</i></t></div>`;
+      static components = { Child };
+    }
+    await mount(Parent, fixture);
+    expect(fixture.innerHTML).toBe("<div><b>0:<i>zero</i></b></div>");
+    child.state.n = 1;
+    await nextTick();
+    expect(fixture.innerHTML).toBe("<div><b>1:<i>zero</i></b></div>");
   });
 });

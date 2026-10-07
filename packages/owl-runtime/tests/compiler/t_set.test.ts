@@ -213,7 +213,8 @@ describe("t-set", () => {
           <t t-out="v2"/>
         </div>`;
 
-    expect(renderToString(template)).toBe("<div><span>after</span></div>");
+    // the values at the t-set, as OWL 2 read them
+    expect(renderToString(template)).toBe("<div><span>before</span></div>");
   });
 
   test("t-set with t-value (falsy) and body", () => {
@@ -229,7 +230,8 @@ describe("t-set", () => {
           <t t-out="v2"/>
         </div>`;
 
-    expect(renderToString(template)).toBe("<div><span>after</span></div>");
+    // the values at the t-set, as OWL 2 read them
+    expect(renderToString(template)).toBe("<div><span>before</span></div>");
   });
 
   test("t-set with t-value (truthy) and body", () => {
@@ -336,7 +338,7 @@ describe("t-set", () => {
     );
   });
 
-  test("t-set after a dom element is executed before event handlers", async () => {
+  test("t-set after a dom element is executed, and a handler before it reads the value at the handler", async () => {
     let received: number | undefined;
     class Root extends Component {
       static template = xml`
@@ -350,7 +352,7 @@ describe("t-set", () => {
 
     await mount(Root, fixture);
     fixture.querySelector("button")!.click();
-    expect(received).toBe(2);
+    expect(received).toBe(1);
   });
 
   test("template made only of t-set renders nothing", () => {

@@ -204,10 +204,39 @@ This is done via the `t-set` directive, which takes the name of the variable to 
    will render the `<li>`. Read where a string is needed (an attribute, an
    interpolation, a property), the body is its HTML, a text as it is: taken
    when the render that reads it runs, so that the attribute follows what
-   the body reads.
+   the body reads. The variables it reads have the values they had at its
+   `t-set`.
 
-The `t-set` directive acts like a regular variable in most programming language.
-It is lexically scoped (inner nodes are sub scopes), can be shadowed, ...
+Where a variable is visible, as Odoo's QWeb does it:
+
+- A `t-set` writes the scope it is in. A `t-if` and an element open no scope:
+  a variable set inside one is visible after it.
+- A `t-foreach` item is a scope: a variable set in it stays in it. A
+  variable `t-set` earlier in the same template outside the loop is the
+  exception: the loop writes that one, and the following items and what
+  follows the loop see the value.
+- A component's template, a template called with `t-call`, a slot's content
+  and a `t-set` body each start a scope: a variable they set stays in them.
+  A called template sees the caller's variables, a slot's content those of
+  the template it is written in.
+
+What is read later sees the values at its place in the template, as if read
+there: an event handler, a slot's content (rendered by the child, also on its
+own when its state changes), a called template's slots, a `t-set` body. A
+`t-set` after it, or a later loop item writing a variable of an enclosing
+scope, does not change what it reads:
+
+```xml
+<t t-set="total" t-value="0"/>
+<t t-foreach="this.lines" t-as="line" t-key="line.id">
+    <button t-on-click="() => this.show(total)">running total</button>
+    <t t-set="total" t-value="total + line.amount"/>
+</t>
+<t t-out="total"/>
+```
+
+Each button shows the total before its line, and the last `t-out` the whole
+total.
 
 A body holding components renders them anew at each `t-out` of it, each output
 (and each loop item around it) with its own components. A body passed as a prop
@@ -435,9 +464,9 @@ variables (note: `$as` will be replaced with the name passed to `t-as`):
   available
 
 These extra variables provided and all new variables created into the `t-foreach`
-are only available in the scope of the `t-foreach`. If the variable exists outside
-the context of the `t-foreach`, the value is copied at the end of the foreach
-into the global context.
+are only available in the scope of the `t-foreach`. A variable `t-set` earlier
+in the same template outside the loop is written by the loop itself: the next
+items, and what follows the loop, see the value.
 
 ```xml
 <t t-set="existing_variable" t-value="false"/>

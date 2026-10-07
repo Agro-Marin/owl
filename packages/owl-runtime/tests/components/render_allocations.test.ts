@@ -464,7 +464,7 @@ describe("contexts made under a loop item", () => {
     expect(lines.filter((line) => /\["r"\] = ctx\d*\["r"\]/.test(line)).length).toBe(2);
   });
 
-  test("a loop item a t-set writes is inherited from: a later write is seen", async () => {
+  test("a loop item a t-set writes is inherited from: a later write is seen by what reads it then", async () => {
     const seen: any[] = [];
     class Parent extends Component {
       static template = xml`
@@ -473,16 +473,18 @@ describe("contexts made under a loop item", () => {
           <t t-foreach="[1, 2, 3]" t-as="b" t-key="b"><t t-set="n" t-value="n + b"/><i t-out="n"/></t>
           <t t-foreach="[1]" t-as="c" t-key="c"><button t-on-click="() => this.seen.push(late + n)"/></t>
           <t t-set="late" t-value="'L'"/>
+          <t t-foreach="[1]" t-as="d" t-key="d"><u t-out="late + n"/></t>
           <b t-out="n"/>
         </t>`;
       seen = seen;
     }
     await mount(Parent, fixture);
     expect(fixture.innerHTML).toBe(
-      "<i>1</i><i>3</i><i>6</i><button></button><b>6</b><i>1</i><i>3</i><i>6</i><button></button><b>6</b>"
+      "<i>1</i><i>3</i><i>6</i><button></button><u>L6</u><b>6</b><i>1</i><i>3</i><i>6</i><button></button><u>L6</u><b>6</b>"
     );
+    // the handler reads the values at it: `late` is set after it
     fixture.querySelector("button")!.click();
-    expect(seen).toEqual(["L6"]);
+    expect(seen).toEqual([NaN]);
   });
 
   test("a template assigning a variable in an expression inherits from its loop items", async () => {

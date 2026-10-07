@@ -109,18 +109,18 @@ exports[`misc > global 1`] = `
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { prepareList, safeOutput, zero, callTemplate, withoutZero, zeroCtx, withKey, keyOf } = helpers;
+  let { prepareList, safeOutput, zero, callTemplate, withoutZero, zeroCtx, withKey, keyOf, callContext } = helpers;
   
   let block1 = createBlock(\`<div><block-child-0/><block-child-1/></div>\`);
   let block4 = createBlock(\`<span><block-child-0/></span>\`);
   
   function callBody1(ctx, node, key = "") {
     ctx = Object.create(ctx);
-    const ctx2 = Object.create(ctx);
+    const ctx2 = callContext(ctx);
     ctx2["foo"] = 'aaa';
     ctx2[zero] = null;
     const b8 = callTemplate(\`_callee-uses-foo\`, this, app, ctx2, node, key + \`\\u00022\`);
-    const b9 = callTemplate(\`_callee-uses-foo\`, this, app, ctx[zero] ? withoutZero(ctx) : ctx, node, key + \`\\u00023\`);
+    const b9 = callTemplate(\`_callee-uses-foo\`, this, app, callContext(ctx), node, key + \`\\u00023\`);
     ctx["foo"] = 'bbb';
     const b10 = callTemplate(\`_callee-uses-foo\`, this, app, ctx[zero] ? withoutZero(ctx) : ctx, node, key + \`\\u00024\`);
     return multi([b8, b9, b10]);

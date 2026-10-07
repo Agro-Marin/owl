@@ -745,6 +745,35 @@ function withoutZero(ctx: any): any {
   return callCtx;
 }
 
+/**
+ * A copy of the context `ctx` as it is now, for a slot or a t-call body: a
+ * t-set of the template that gave it may write it before they render (see
+ * the compiler's resolveCaptures). A flat copy: put under a new object, a
+ * context made in this render (a loop item's) would become a prototype, which
+ * V8 makes at a cost of about 1 KB and 1.5 µs.
+ */
+function slotContext(ctx: any): any {
+  const result: any = {};
+  for (const key in ctx) {
+    result[key] = ctx[key];
+  }
+  if (ctx[zero] !== undefined) {
+    result[zero] = ctx[zero];
+    result[zeroCtx] = ctx[zeroCtx];
+  }
+  return result;
+}
+
+/** The same copy, for a called template: without the 0 of `ctx`. */
+function callContext(ctx: any): any {
+  const result: any = {};
+  for (const key in ctx) {
+    result[key] = ctx[key];
+  }
+  result[zero] = null;
+  return result;
+}
+
 function callTemplate(
   subTemplate: string,
   owner: any,
@@ -777,6 +806,8 @@ export const helpers = {
   zero,
   zeroCtx,
   withoutZero,
+  slotContext,
+  callContext,
   callSlot,
   withKey,
   keyOf,

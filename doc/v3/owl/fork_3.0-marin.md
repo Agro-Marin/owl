@@ -263,6 +263,20 @@ true })` creates an effect owned by nothing. When a computed and an effect
 
 ### Templates
 
+- **What is read later sees the values at its place**: an event handler, a
+  slot's content, a called template's context and a `t-set` body read the
+  variables as they were where the template gives them, as OWL 2 did
+  (upstream OWL 3 read them when the event fires, or when the child renders
+  its slot on its own: a later `t-set`, or a later loop item writing a
+  variable of an enclosing scope, showed through). The compiler copies the
+  context there only when a later `t-set` of the same template can write a
+  variable that code reads (a called template's reads are not known: any);
+  else it is kept as it is. In Odoo's 3494 templates, 131 places in 51
+  templates are copied. A `t-set` body reads its variables at its `t-set`
+  (upstream: at its output), as QWeb in Python does.
+- **Scoping as QWeb's**, documented as it works: a `t-if` or an element opens
+  no scope; a loop item does, and writes a variable `t-set` earlier outside
+  it in the same template.
 - **A `t-out` showing one `t-set` body, then another** (the variable set again
   in a branch) replaces the content: upstream patched one body's blocks with
   the other's, which crashed when one was a list, and else kept showing the

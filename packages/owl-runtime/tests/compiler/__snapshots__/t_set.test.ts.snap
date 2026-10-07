@@ -676,10 +676,11 @@ exports[`t-set > set from empty body 1`] = `
 }"
 `;
 
-exports[`t-set > t-set after a dom element is executed before event handlers 1`] = `
+exports[`t-set > t-set after a dom element is executed, and a handler before it reads the value at the handler 1`] = `
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { slotContext } = helpers;
   const hdlr_fn1 = (ctx)=>ctx['this'].logValue(ctx['val']);
   
   const block1_handlers = [hdlr_fn1];
@@ -688,7 +689,8 @@ exports[`t-set > t-set after a dom element is executed before event handlers 1`]
   return function template(ctx, node, key = "") {
     ctx = Object.create(ctx);
     ctx["val"] = 1;
-    const b1 = block1([ctx], null, block1_handlers);
+    const hctx1 = slotContext(ctx);
+    const b1 = block1([hctx1], null, block1_handlers);
     ctx["val"] = 2;
     return b1;
   }
@@ -718,7 +720,7 @@ exports[`t-set > t-set body is evaluated immediately 1`] = `
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { LazyValue, safeOutput } = helpers;
+  let { LazyValue, safeOutput, slotContext } = helpers;
   
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   let block2 = createBlock(\`<span><block-child-0/></span>\`);
@@ -731,7 +733,7 @@ exports[`t-set > t-set body is evaluated immediately 1`] = `
   return function template(ctx, node, key = "") {
     ctx = Object.create(ctx);
     ctx["v1"] = 'before';
-    ctx["v2"] = new LazyValue(value1, ctx, this, node, key + \`\\u00022\`);
+    ctx["v2"] = new LazyValue(value1, slotContext(ctx), this, node, key + \`\\u00022\`);
     ctx["v1"] = 'after';
     const b4 = safeOutput(ctx['v2'], node, key, "\\u00023");
     return block1([], [b4]);
@@ -1057,7 +1059,7 @@ exports[`t-set > t-set with t-value (falsy) and body 1`] = `
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { LazyValue, safeOutput, withDefault } = helpers;
+  let { LazyValue, safeOutput, withDefault, slotContext } = helpers;
   
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   let block2 = createBlock(\`<span><block-child-0/></span>\`);
@@ -1071,7 +1073,7 @@ exports[`t-set > t-set with t-value (falsy) and body 1`] = `
     ctx = Object.create(ctx);
     ctx["v3"] = false;
     ctx["v1"] = 'before';
-    ctx["v2"] = withDefault(ctx['v3'], new LazyValue(value1, ctx, this, node, key + \`\\u00022\`));
+    ctx["v2"] = withDefault(ctx['v3'], new LazyValue(value1, slotContext(ctx), this, node, key + \`\\u00022\`));
     ctx["v1"] = 'after';
     ctx["v3"] = true;
     const b4 = safeOutput(ctx['v2'], node, key, "\\u00023");
@@ -1084,7 +1086,7 @@ exports[`t-set > t-set with t-value (truthy) and body 1`] = `
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { LazyValue, safeOutput, withDefault } = helpers;
+  let { LazyValue, safeOutput, withDefault, slotContext } = helpers;
   
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   let block2 = createBlock(\`<span><block-child-0/></span>\`);
@@ -1098,7 +1100,7 @@ exports[`t-set > t-set with t-value (truthy) and body 1`] = `
     ctx = Object.create(ctx);
     ctx["v3"] = 'Truthy';
     ctx["v1"] = 'before';
-    ctx["v2"] = withDefault(ctx['v3'], new LazyValue(value1, ctx, this, node, key + \`\\u00022\`));
+    ctx["v2"] = withDefault(ctx['v3'], new LazyValue(value1, slotContext(ctx), this, node, key + \`\\u00022\`));
     ctx["v1"] = 'after';
     ctx["v3"] = false;
     const b4 = safeOutput(ctx['v2'], node, key, "\\u00023");
