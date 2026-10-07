@@ -2,7 +2,7 @@ import { minimizeKey } from "../../../../utils";
 import { StorePlugin } from "../../../store/store";
 import { ComponentsPlugin } from "../../../store/components_plugin";
 
-const { Component, plugin, props, types: t } = owl;
+import { Component, plugin, props, types as t } from "@odoo/owl";
 
 export class Event extends Component {
   static template = "devtools.Event";

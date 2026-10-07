@@ -22,9 +22,7 @@
   },
   "type": "module",
   "sideEffects": [
-    "./dist/owl.compiler.*",
-    "./dist/*.iife.js",
-    "./dist/*.iife.min.js"
+    "./dist/owl.compiler.*"
   ],
   "files": [
     "dist"

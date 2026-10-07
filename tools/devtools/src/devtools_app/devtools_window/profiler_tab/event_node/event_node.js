@@ -3,7 +3,7 @@ import { StorePlugin } from "../../../store/store";
 import { ComponentsPlugin } from "../../../store/components_plugin";
 import { ProfilerPlugin } from "../../../store/profiler_plugin";
 
-const { Component, plugin, props, types: t } = owl;
+import { Component, plugin, props, types as t } from "@odoo/owl";
 
 export class EventNode extends Component {
   static template = "devtools.EventNode";

@@ -1,4 +1,4 @@
-const { Plugin, signal, proxy, toRaw, plugin } = owl;
+import { Plugin, signal, proxy, toRaw, plugin } from "@odoo/owl";
 import { browserInstance } from "../../utils";
 import { StorePlugin, evalFunctionInWindow } from "./store";
 

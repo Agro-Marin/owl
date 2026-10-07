@@ -1,4 +1,4 @@
-const { Component, plugin } = owl;
+import { Component, plugin } from "@odoo/owl";
 import { ProfilerPlugin } from "../../store/profiler_plugin";
 import { Event } from "./event/event";
 import { EventNode } from "./event_node/event_node";

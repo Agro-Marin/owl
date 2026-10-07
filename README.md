@@ -101,8 +101,9 @@ Or download directly: [latest release](https://github.com/odoo/owl/releases/late
 Owl is an ES module package, with no CommonJS build: `import` it, or on Node
 `require()` it (Node loads the ES module, the same instance `import` gets).
 Its entries are `@odoo/owl` (runtime and compiler), `@odoo/owl/runtime` (no
-compiler, for precompiled templates) and `@odoo/owl/compiler`; the `.iife.js`
-files of a release are scripts defining a global `owl`. Importing an entry has
+compiler, for precompiled templates) and `@odoo/owl/compiler`, each one ES
+module file (a page loads it with `<script type="module">`; there is no script
+defining a global `owl`). Importing an entry has
 no side effect but the compiler module's (it registers itself), so a bundler
 keeps only what is used. The builds target the latest browsers and Node
 only: Chrome 154, Firefox 157, Safari 27 and Node 26

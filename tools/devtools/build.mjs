@@ -12,12 +12,11 @@ const isChrome = browser === "chrome";
 const DEVTOOLS_SRC = "tools/devtools/src";
 const DEVTOOLS_DIST = "dist/devtools";
 
-// ---- Step 1: Pre-build (build owl, copy iife, compile templates) ----
+// ---- Step 1: Pre-build (build owl, compile templates) ----
 
 if (isProduction) {
   execSync("npm run build", { stdio: "inherit" });
 }
-cpSync("packages/owl/dist/owl.iife.js", "tools/devtools/assets/owl.js");
 execSync("npm run compile_templates -- tools/devtools/src -o tools/devtools/assets/templates.js", {
   stdio: "inherit",
 });
@@ -55,6 +54,9 @@ await Promise.all(
       format: "esm",
       minify: isProduction,
       plugins: [stringImportPlugin],
+      // the panel and popup apps bundle the ES build they import (the page
+      // script inspects the page's own owl and imports none)
+      alias: { "@odoo/owl": "./packages/owl/dist/owl.es.js" },
     });
   })
 );

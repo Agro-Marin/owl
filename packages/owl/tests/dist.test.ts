@@ -60,18 +60,9 @@ test("importing the compiler module for its effects keeps its registration", asy
   expect(code).toMatch(/\bCodeGenerator\b/);
 });
 
-test("the build makes ES modules and IIFE scripts, no CommonJS", () => {
+test("the build makes ES modules only: no IIFE script, no CommonJS", () => {
   const files = readdirSync(join(PACKAGE, "dist")).filter((name) => name.endsWith("js"));
-  expect(files.sort()).toEqual([
-    "owl.compiler.es.js",
-    "owl.compiler.iife.js",
-    "owl.es.js",
-    "owl.iife.js",
-    "owl.iife.min.js",
-    "owl.runtime.es.js",
-    "owl.runtime.iife.js",
-    "owl.runtime.iife.min.js",
-  ]);
+  expect(files.sort()).toEqual(["owl.compiler.es.js", "owl.es.js", "owl.runtime.es.js"]);
 });
 
 describe("require()", () => {

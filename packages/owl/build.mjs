@@ -7,17 +7,10 @@ import { join, relative, resolve } from "path";
 
 const pkg = JSON.parse(readFileSync("./package.json", "utf-8"));
 
-const IIFE_FILENAME = "dist/owl.iife.js";
 const ES_FILENAME = "dist/owl.es.js";
 
 if (pkg.main !== ES_FILENAME) {
   throw new Error("package.json has been modified. Build script should be updated accordingly");
-}
-
-function addSuffix(filename, suffix) {
-  const parts = filename.split(".");
-  parts.splice(parts.length - 1, 0, suffix);
-  return parts.join(".");
 }
 
 const define = {
@@ -53,17 +46,11 @@ const bundledCompilerPlugin = {
 
 async function buildVariant(entry, suffix) {
   const esm = suffix ? variantName(ES_FILENAME, suffix) : ES_FILENAME;
-  const iife = suffix ? variantName(IIFE_FILENAME, suffix) : IIFE_FILENAME;
-  const iifeMin = addSuffix(iife, "min");
 
   const plugins = suffix ? [] : [bundledCompilerPlugin];
   const common = { entryPoints: [entry], bundle: true, define, target: TARGET, alias, plugins };
 
-  await Promise.all([
-    esbuild.build({ ...common, outfile: esm, format: "esm" }),
-    esbuild.build({ ...common, outfile: iife, format: "iife", globalName: "owl" }),
-    esbuild.build({ ...common, outfile: iifeMin, format: "iife", globalName: "owl", minify: true }),
-  ]);
+  await esbuild.build({ ...common, outfile: esm, format: "esm" });
 }
 
 // the only sources the compiler module may bundle: the compiler, and the
@@ -75,7 +62,7 @@ const COMPILER_INPUTS = [
   /^packages\/owl-runtime\/src\/(version|build_info)\.ts$/,
 ];
 
-// dist/owl.compiler.es.js (and .iife.js): the compiler for a page whose owl is
+// dist/owl.compiler.es.js: the compiler for a page whose owl is
 // the runtime build. It imports nothing: it registers itself under a global key
 // the runtime reads, and the runtime checks that it is of its own build. On
 // Node, require() loads it as it loads every entry: an ES module.
@@ -90,7 +77,6 @@ async function buildCompilerModule() {
   };
   const results = await Promise.all([
     esbuild.build({ ...common, format: "esm", outfile: "dist/owl.compiler.es.js" }),
-    esbuild.build({ ...common, format: "iife", outfile: "dist/owl.compiler.iife.js" }),
   ]);
   for (const input of results.flatMap((result) => Object.keys(result.metafile.inputs))) {
     const path = relative("../..", resolve(input));

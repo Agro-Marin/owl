@@ -3,7 +3,16 @@ import { StorePlugin } from "../../../store/store";
 import { ComponentsPlugin } from "../../../store/components_plugin";
 import { HighlightText } from "./highlight_text/highlight_text";
 
-const { Component, signal, proxy, useEffect, onMounted, plugin, props, types: t } = owl;
+import {
+  Component,
+  signal,
+  proxy,
+  useEffect,
+  onMounted,
+  plugin,
+  props,
+  types as t,
+} from "@odoo/owl";
 
 export class TreeElement extends Component {
   static template = "devtools.TreeElement";

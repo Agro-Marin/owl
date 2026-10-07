@@ -1,6 +1,6 @@
 import { templates } from "../../assets/templates.js";
 import { getOwlStatus } from "../utils";
-const { Component, signal, onWillStart, mount, App } = owl;
+import { Component, signal, onWillStart, mount, App } from "@odoo/owl";
 
 class PopUpApp extends Component {
   static template = "popup.PopUpApp";

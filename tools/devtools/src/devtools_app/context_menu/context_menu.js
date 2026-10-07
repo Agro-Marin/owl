@@ -1,6 +1,6 @@
 import { StorePlugin } from "../store/store";
 
-const { Component, useEffect, signal, plugin, props, types: t } = owl;
+import { Component, useEffect, signal, plugin, props, types as t } from "@odoo/owl";
 
 export class ContextMenu extends Component {
   static template = "devtools.ContextMenu";

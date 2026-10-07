@@ -1,6 +1,6 @@
 import { StorePlugin } from "../../../store/store";
 
-const { Component, plugin } = owl;
+import { Component, plugin } from "@odoo/owl";
 
 export class EventSearchBar extends Component {
   static template = "devtools.EventSearchBar";

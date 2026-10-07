@@ -1,4 +1,4 @@
-const { Component, onWillDestroy, useListener, plugin } = owl;
+import { Component, onWillDestroy, useListener, plugin } from "@odoo/owl";
 import { TreeElement } from "./tree_element/tree_element";
 import { DetailsWindow } from "./details_window/details_window";
 import { ComponentSearchBar } from "./component_search_bar/component_search_bar";

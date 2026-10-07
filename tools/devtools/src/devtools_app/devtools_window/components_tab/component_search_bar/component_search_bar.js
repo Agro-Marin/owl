@@ -1,6 +1,6 @@
 import { ComponentsPlugin } from "../../../store/components_plugin";
 
-const { Component, plugin } = owl;
+import { Component, plugin } from "@odoo/owl";
 
 export class ComponentSearchBar extends Component {
   static template = "devtools.ComponentSearchBar";

@@ -1,4 +1,4 @@
-const { Component, plugin } = owl;
+import { Component, plugin } from "@odoo/owl";
 import { StorePlugin } from "../../../store/store";
 import { ComponentsPlugin } from "../../../store/components_plugin";
 import { ObjectTreeElement } from "./object_tree_element/object_tree_element";

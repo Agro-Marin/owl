@@ -1,4 +1,4 @@
-const { Plugin, signal, proxy, plugin } = owl;
+import { Plugin, signal, proxy, plugin } from "@odoo/owl";
 import { IS_FIREFOX, getActiveTabURL, browserInstance } from "../../utils";
 import globalHook from "../../page_scripts/owl_devtools_global_hook";
 import { ComponentsPlugin } from "./components_plugin";

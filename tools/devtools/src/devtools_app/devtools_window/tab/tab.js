@@ -1,6 +1,6 @@
 import { StorePlugin } from "../../store/store";
 
-const { Component, plugin, props, types: t } = owl;
+import { Component, plugin, props, types as t } from "@odoo/owl";
 
 export class Tab extends Component {
   static template = "devtools.Tab";

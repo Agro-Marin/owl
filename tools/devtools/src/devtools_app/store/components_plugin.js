@@ -1,4 +1,4 @@
-const { Plugin, signal, proxy, toRaw, plugin } = owl;
+import { Plugin, signal, proxy, toRaw, plugin } from "@odoo/owl";
 import { fuzzySearch, IS_FIREFOX, browserInstance } from "../../utils";
 import { StorePlugin, evalFunctionInWindow, evalInWindow } from "./store";
 

@@ -1,4 +1,4 @@
-const { Component, props, types: t } = owl;
+import { Component, props, types as t } from "@odoo/owl";
 
 export class HighlightText extends Component {
   static template = "utils.HighlightText";
