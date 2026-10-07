@@ -36,6 +36,26 @@ function tracking() {
 }
 
 describe("component keys", () => {
+  test("a dynamic slot name evaluating to undefined renders the default content (Odoo's AutoComplete optionSlot)", async () => {
+    class List extends Component {
+      static template = xml`
+        <ul><t t-foreach="this.props.sources" t-as="source" t-key="source_index">
+          <li><t t-call-slot="{{ source.optionSlot }}" label="source.label"><i t-out="source.label"/></t></li>
+        </t></ul>`;
+      props = props();
+    }
+    class Parent extends Component {
+      static template = xml`
+        <List sources="this.sources">
+          <t t-set-slot="custom" t-slot-scope="s"><b t-out="s.label"/></t>
+        </List>`;
+      static components = { List };
+      sources = [{ label: "plain" }, { label: "fancy", optionSlot: "custom" }];
+    }
+    await mount(Parent, fixture);
+    expect(fixture.innerHTML).toBe("<ul><li><i>plain</i></li><li><b>fancy</b></li></ul>");
+  });
+
   test("nested loops whose string keys hold the separator of their site ids", async () => {
     const { Item, destroyed } = tracking();
     // the keys a__b then c, and a then b__c, spelled one key __1__a__b__c

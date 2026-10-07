@@ -115,7 +115,10 @@ function callSlot(
 const MARK = "\u0002";
 const MARK2 = MARK + MARK;
 
-function escapeKey(name: string): string {
+// a slot or template name, which a dynamic one may not be: `{{ x.slot }}`
+// with no slot gives undefined, and slots[undefined] is slots["undefined"]
+function escapeKey(value: unknown): string {
+  const name = String(value);
   return name.includes(MARK) ? name.replaceAll(MARK, MARK2) : name;
 }
 
