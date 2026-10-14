@@ -43,11 +43,11 @@ export function usePlugin<T extends PluginConstructor>(pluginType: T): PluginIns
 /** @deprecated alias for {@link usePlugin} */
 export const plugin = usePlugin;
 
-export function useConfig<T = any>(key: string): T;
+export function useConfig<T = unknown>(key: string): T;
 export function useConfig<T>(key: string, type: WithDefault<T>): T;
 export function useConfig<T>(key: string, type: Optional<T>): T | undefined;
 export function useConfig<T>(key: string, type: T): StripBrands<T>;
-export function useConfig(key: string, type?: any): any {
+export function useConfig(key: string, type?: unknown): unknown {
   const scope = useScope();
   if (!(scope instanceof PluginManager)) {
     throw new OwlError("Expected to be in a plugin scope");

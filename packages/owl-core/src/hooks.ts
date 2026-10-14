@@ -2,7 +2,7 @@ import { computed } from "./computed";
 import { untrack } from "./computations";
 import { effect } from "./effect";
 import { onWillDestroy } from "./lifecycle_hooks";
-import { useScope } from "./scope";
+import { useScope, type ScopeApp } from "./scope";
 import { Signal } from "./signal";
 import { shallowEqual } from "./utils";
 
@@ -165,6 +165,6 @@ function makeListener(handler: EventListener): EventListener {
 // useApp
 // -----------------------------------------------------------------------------
 
-export function useApp(): any {
-  return useScope().app;
+export function useApp<TApp extends ScopeApp = ScopeApp>(): TApp {
+  return useScope().app as TApp;
 }

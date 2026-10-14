@@ -63,11 +63,11 @@ export class Plugin {
 
 interface PluginManagerOptions {
   parent?: PluginManager | null;
-  config?: Record<string, any>;
+  config?: object;
 }
 
 export class PluginManager<TApp extends ScopeApp = ScopeApp> extends Scope<TApp> {
-  config: Record<string, any>;
+  config: Record<string, unknown>;
   plugins: Record<string, Plugin>;
   parent: PluginManager | null;
 

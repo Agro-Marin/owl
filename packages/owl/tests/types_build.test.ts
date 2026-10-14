@@ -23,7 +23,7 @@ test("declarations build with this Node even inside npm exec", () => {
   expect(readFileSync(resolve(cwd, "dist/types/compiler.d.ts"), "utf8")).toContain("compile");
 }, 60000);
 
-test("a consumer outside the checkout gets complete standard Map and WeakMap types", () => {
+test("a consumer outside the checkout gets complete collection and hook types", () => {
   const packageRoot = resolve(__dirname, "..");
   const consumerRoot = mkdtempSync(resolve(tmpdir(), "owl-type-consumer-"));
   try {
@@ -39,8 +39,8 @@ test("a consumer outside the checkout gets complete standard Map and WeakMap typ
     writeFileSync(
       resolve(consumerRoot, "consumer.ts"),
       `
-      import { signal, Registry, Resource } from "@odoo/owl";
-      import { signal as runtimeSignal } from "@odoo/owl/runtime";
+      import { App, signal, Registry, Resource, useApp, useConfig, config, providePlugins, t } from "@odoo/owl";
+      import { signal as runtimeSignal, useApp as runtimeApp, useConfig as runtimeConfig } from "@odoo/owl/runtime";
       import { compile } from "@odoo/owl/compiler";
       const map = signal.Map(new Map<string, number>())();
       map.set("a", 1).get("a");
@@ -59,8 +59,39 @@ test("a consumer outside the checkout gets complete standard Map and WeakMap typ
       other.set("x", 1); other.values().toArray();
       new Registry<number>().add("a", 1).get("a");
       new Resource<string>().add("a").items();
+      class CustomApp extends App {
+        lookup(id: string): number { return id.length; }
+      }
+      const app = useApp();
+      const defaultRuntimeApp: App = runtimeApp();
+      const custom: CustomApp = useApp<CustomApp>();
+      const customRuntime: CustomApp = runtimeApp<CustomApp>();
+      custom.lookup("id"); customRuntime.lookup("id");
+      // @ts-expect-error the published default must remain App, not any
+      app.lookup("id");
+      // @ts-expect-error custom runtime hosts must extend App
+      useApp<{ dev: boolean }>();
+      // @ts-expect-error the runtime entry has the same App constraint
+      runtimeApp<{ dev: boolean }>();
+      const unchecked = useConfig("value");
+      // @ts-expect-error unchecked configuration is unknown
+      unchecked.toFixed();
+      // @ts-expect-error deprecated aliases preserve the checked type surface
+      config("value").toFixed();
+      // @ts-expect-error the runtime entry preserves unknown config reads
+      runtimeConfig("value").toFixed();
+      // @ts-expect-error the manager exposes unknown dynamic values
+      app.pluginManager.config.value.toFixed();
+      const explicit: number = useConfig<number>("value");
+      const required: number = useConfig("value", t.number());
+      const optional: number | undefined = useConfig("value", t.number().optional());
+      const defaulted: number = useConfig("value", t.number().optional(1));
+      interface NamedConfig { count: number; lookup(id: string): number; }
+      const named: NamedConfig = { count: 1, lookup: (id) => id.length };
+      new App({ config: named });
+      providePlugins([], named);
       compile("<p/>");
-      void entries;
+      void [entries, defaultRuntimeApp, explicit, required, optional, defaulted];
     `
     );
     writeFileSync(

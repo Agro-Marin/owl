@@ -13,7 +13,7 @@ export { useConfig, config, usePlugin, plugin, type PluginInstance } from "@odoo
 
 export function providePlugins(
   pluginConstructors: PluginConstructor[] | Resource<PluginConstructor>,
-  config?: Record<string, any>
+  config?: object
 ) {
   const node = getComponentScope();
 

@@ -1,6 +1,6 @@
 // Compile-time checks for hook signatures. This file is only typechecked
 // (npm run test:types); it is not executed.
-import { signal, useOnChange } from "../src";
+import { App, signal, useApp, useConfig, config, useOnChange, providePlugins } from "../src";
 
 type Eq<A, B> = [A] extends [B] ? ([B] extends [A] ? true : false) : false;
 declare function assertEq<A, B>(...args: Eq<A, B> extends true ? [] : [never]): void;
@@ -70,3 +70,39 @@ useOnChange(
   // @ts-expect-error unknown option
   { initial: false }
 );
+
+const app = useApp();
+assertEq<typeof app, App>();
+// @ts-expect-error runtime App has no arbitrary dynamic methods
+app.missingMethod();
+
+class CustomApp extends App {
+  lookup(id: string): number {
+    return id.length;
+  }
+}
+const customApp = useApp<CustomApp>();
+assertEq<typeof customApp, CustomApp>();
+// @ts-expect-error the runtime hook requires a complete App contract
+useApp<{ dev: boolean }>();
+
+const unchecked = useConfig("unchecked");
+// @ts-expect-error configuration without a schema or explicit type is unknown
+unchecked.toFixed();
+const aliasUnchecked = config("unchecked");
+// @ts-expect-error the deprecated alias must not erase the unknown return type
+aliasUnchecked.toFixed();
+
+interface NamedConfig {
+  timeout: number;
+  lookup: (id: string) => number;
+}
+const namedConfig: NamedConfig = { timeout: 1, lookup: (id) => id.length };
+new App({ config: namedConfig });
+providePlugins([], namedConfig);
+// @ts-expect-error app configuration must be an object
+new App({ config: 1 });
+// @ts-expect-error provider configuration must be an object
+providePlugins([], "config");
+
+void customApp;

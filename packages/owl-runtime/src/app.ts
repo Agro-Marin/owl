@@ -50,7 +50,7 @@ interface SubRootConfig<P> extends RootConfig<P> {
 export interface AppConfig extends TemplateSetConfig {
   name?: string;
   plugins?: PluginConstructor[] | Resource<PluginConstructor>;
-  config?: Record<string, any>;
+  config?: object;
   test?: boolean;
 }
 

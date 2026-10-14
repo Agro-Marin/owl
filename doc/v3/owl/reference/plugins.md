@@ -217,6 +217,12 @@ the type validator (second argument) is used to check the value. A default
 value can be declared in the type with
 [`.optional(value)`](types_validation.md#optionalvalue).
 
+In TypeScript, `useConfig("key")` returns `unknown`: narrow the value before
+using it, or pass a schema to infer its type. `useConfig<MyType>("key")` declares
+the expected type without validating the value. This also applies to the
+deprecated `config` alias. Config inputs accept objects with named interfaces;
+they do not require a string index signature.
+
 Providing config at app level:
 
 ```js
