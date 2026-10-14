@@ -3,4 +3,4 @@ import { useApp as useCoreApp } from "@odoo/owl-core";
 
 export { useEffect, useListener, useOnChange } from "@odoo/owl-core";
 
-export const useApp: <TApp extends App = App>() => TApp = useCoreApp;
+export const useApp = useCoreApp as <TApp extends App = App>() => NoInfer<TApp>;

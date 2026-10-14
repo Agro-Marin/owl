@@ -220,8 +220,13 @@ value can be declared in the type with
 In TypeScript, `useConfig("key")` returns `unknown`: narrow the value before
 using it, or pass a schema to infer its type. `useConfig<MyType>("key")` declares
 the expected type without validating the value. This also applies to the
-deprecated `config` alias. Config inputs accept objects with named interfaces;
-they do not require a string index signature.
+deprecated `config` alias. Calls without a schema or type argument keep `unknown`
+when assigned to annotated variables, returned from annotated functions, or
+passed as arguments. Assigning the overloaded hook itself to a typed function
+variable can bypass this checking: TypeScript erases generic parameters when
+comparing overloaded signatures. Treat such a wrapper as a caller assertion.
+Config inputs accept objects with named interfaces; they do not require a
+string index signature.
 
 Providing config at app level:
 

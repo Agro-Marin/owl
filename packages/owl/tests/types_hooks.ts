@@ -85,6 +85,14 @@ const customApp = useApp<CustomApp>();
 assertEq<typeof customApp, CustomApp>();
 // @ts-expect-error the runtime hook requires a complete App contract
 useApp<{ dev: boolean }>();
+// @ts-expect-error a contextual assignment cannot implicitly narrow App
+const contextualApp: CustomApp = useApp();
+// @ts-expect-error a function signature cannot implicitly narrow App
+const customAppReader: () => CustomApp = useApp;
+declare function acceptCustomApp(app: CustomApp): void;
+// @ts-expect-error an argument context cannot implicitly narrow App
+acceptCustomApp(useApp());
+const explicitAppReader: () => CustomApp = useApp<CustomApp>;
 
 const unchecked = useConfig("unchecked");
 // @ts-expect-error configuration without a schema or explicit type is unknown
@@ -92,6 +100,10 @@ unchecked.toFixed();
 const aliasUnchecked = config("unchecked");
 // @ts-expect-error the deprecated alias must not erase the unknown return type
 aliasUnchecked.toFixed();
+// @ts-expect-error contextual assignment cannot type unchecked configuration
+const contextualConfig: number = useConfig("unchecked");
+// @ts-expect-error an alias cannot infer config types from assignments
+const contextualAliasConfig: number = config("unchecked");
 
 interface NamedConfig {
   timeout: number;
@@ -105,4 +117,11 @@ new App({ config: 1 });
 // @ts-expect-error provider configuration must be an object
 providePlugins([], "config");
 
-void customApp;
+void [
+  customApp,
+  contextualApp,
+  customAppReader,
+  explicitAppReader,
+  contextualConfig,
+  contextualAliasConfig,
+];

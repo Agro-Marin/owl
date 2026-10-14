@@ -165,6 +165,6 @@ function makeListener(handler: EventListener): EventListener {
 // useApp
 // -----------------------------------------------------------------------------
 
-export function useApp<TApp extends ScopeApp = ScopeApp>(): TApp {
+export function useApp<TApp extends ScopeApp = ScopeApp>(): NoInfer<TApp> {
   return useScope().app as TApp;
 }

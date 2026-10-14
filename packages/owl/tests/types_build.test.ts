@@ -67,6 +67,13 @@ test("a consumer outside the checkout gets complete collection and hook types", 
       const custom: CustomApp = useApp<CustomApp>();
       const customRuntime: CustomApp = runtimeApp<CustomApp>();
       custom.lookup("id"); customRuntime.lookup("id");
+      // @ts-expect-error contextual assignment cannot implicitly narrow App
+      const contextualApp: CustomApp = useApp();
+      // @ts-expect-error the runtime entry must also block implicit narrowing
+      const contextualRuntimeApp: CustomApp = runtimeApp();
+      // @ts-expect-error a function signature cannot implicitly narrow App
+      const customAppReader: () => CustomApp = useApp;
+      const explicitAppReader: () => CustomApp = useApp<CustomApp>;
       // @ts-expect-error the published default must remain App, not any
       app.lookup("id");
       // @ts-expect-error custom runtime hosts must extend App
@@ -74,6 +81,20 @@ test("a consumer outside the checkout gets complete collection and hook types", 
       // @ts-expect-error the runtime entry has the same App constraint
       runtimeApp<{ dev: boolean }>();
       const unchecked = useConfig("value");
+      // @ts-expect-error contextual assignment cannot type unchecked config
+      const contextualConfig: number = useConfig("value");
+      // @ts-expect-error aliases cannot infer config types from assignments
+      const contextualAlias: number = config("value");
+      // @ts-expect-error the runtime entry cannot infer unchecked config types
+      const contextualRuntimeConfig: number = runtimeConfig("value");
+      const explicitConfigReader: (key: string) => number = useConfig<number>;
+      function acceptNumber(value: number): void { void value; }
+      // @ts-expect-error argument context cannot type unchecked configuration
+      acceptNumber(useConfig("value"));
+      const returnContext = (): number => {
+        // @ts-expect-error return context cannot type unchecked configuration
+        return useConfig("value");
+      };
       // @ts-expect-error unchecked configuration is unknown
       unchecked.toFixed();
       // @ts-expect-error deprecated aliases preserve the checked type surface
@@ -86,12 +107,20 @@ test("a consumer outside the checkout gets complete collection and hook types", 
       const required: number = useConfig("value", t.number());
       const optional: number | undefined = useConfig("value", t.number().optional());
       const defaulted: number = useConfig("value", t.number().optional(1));
+      const explicitOptional: number | undefined = useConfig<number>("value", t.number().optional());
+      const explicitDefaulted: number = useConfig<number>("value", t.number().optional(1));
+      // @ts-expect-error an explicit value type must not discard optionality
+      const wrongExplicitOptional: number = useConfig<number>("value", t.number().optional());
       interface NamedConfig { count: number; lookup(id: string): number; }
       const named: NamedConfig = { count: 1, lookup: (id) => id.length };
       new App({ config: named });
       providePlugins([], named);
       compile("<p/>");
-      void [entries, defaultRuntimeApp, explicit, required, optional, defaulted];
+      void [entries, defaultRuntimeApp, explicit, required, optional, defaulted,
+        contextualApp, contextualRuntimeApp, customAppReader, explicitAppReader,
+        contextualConfig, contextualAlias, contextualRuntimeConfig,
+        explicitConfigReader, returnContext, explicitOptional, explicitDefaulted,
+        wrongExplicitOptional];
     `
     );
     writeFileSync(

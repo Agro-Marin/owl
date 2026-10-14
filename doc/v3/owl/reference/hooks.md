@@ -234,6 +234,8 @@ setup() {
 In TypeScript, the runtime hook returns `App`. For an application subclass,
 `useApp<MyApp>()` exposes that subclass's methods. The type argument describes
 the caller's application; it does not check or change the active app at runtime.
+Without a type argument, hook calls keep the default type even in annotated
+assignments and function arguments.
 The hook exported by `@odoo/owl-core` returns the minimal `ScopeApp` contract
 by default and accepts a custom host type extending that contract.
 
