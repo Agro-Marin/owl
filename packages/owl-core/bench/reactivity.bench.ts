@@ -1,5 +1,7 @@
-import { bench, describe } from "vitest";
+import { afterAll, bench, describe } from "vitest";
+import * as owl from "../src";
 import { computed, effect, signal } from "../src";
+import { workloads } from "./workloads";
 
 // Reactivity microbenchmark suite. Run with `npm run bench`.
 //
@@ -132,4 +134,12 @@ describe("effect re-run via signal write", () => {
     sCleanup.set(sCleanup() + 1);
     await flushMicrotasks();
   });
+});
+
+describe("tracked reads, collections and selectors (128 iterations per sample)", () => {
+  for (const [name, create] of Object.entries(workloads)) {
+    const workload = create(owl);
+    afterAll(() => workload.dispose());
+    bench(name, () => workload.run(128));
+  }
 });

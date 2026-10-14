@@ -474,6 +474,30 @@ test("scope cleanup cannot restart a selector through another source", () => {
   }
 });
 
+test.each(["object", "symbol"])(
+  "a selector releases its previous %s selection after its reader stops",
+  async (kind) => {
+    let key: WeakKey | null = kind === "object" ? {} : Symbol("previous selection");
+    const reference = new WeakRef(key);
+    const value = signal<unknown>(key);
+    const selected = selector(value);
+    const stop = immediateEffect(() => selected(key));
+    stop();
+    key = null;
+    value.set("current");
+    for (let i = 0; i < 5; i++) {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      gc();
+    }
+    console.debug("[owl:selector-review] previous selection lifetime", {
+      kind,
+      collected: reference.deref() === undefined,
+    });
+    expect(selected("current")).toBe(true);
+    expect(reference.deref()).toBeUndefined();
+  }
+);
+
 describe.each(["object", "symbol"])("disposed selector %s key lifetime", (kind) => {
   test.each([false, true])(
     "keys are released even when owned cleanup throws=%s",

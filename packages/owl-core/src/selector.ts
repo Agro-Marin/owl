@@ -9,7 +9,6 @@ import {
   isObserving,
   onReadAtom,
   onWriteAtom,
-  untrack,
   updateComputation,
 } from "./computations";
 import { debug, debugLog } from "./debug";
@@ -20,6 +19,12 @@ const NEGATIVE_ZERO = Symbol("selector negative zero");
 
 function atomKey<K>(key: K): K | typeof NEGATIVE_ZERO {
   return Object.is(key, -0) ? NEGATIVE_ZERO : key;
+}
+
+const enum Publication {
+  NONE,
+  PAIR,
+  ALL,
 }
 
 export interface SelectorOptions {
@@ -53,10 +58,12 @@ export function selector<K>(source: () => K, options: SelectorOptions = {}): (ke
   // what the source threw: every key rethrows it until the source recovers
   let failure: { error: unknown } | null = null;
   let disposed = false;
-  let pendingKeys: Iterable<K | typeof NEGATIVE_ZERO> | null = null;
+  let pending = Publication.NONE;
+  let previousKey: K | undefined;
   const computation = createComputation(
     () => {
-      pendingKeys = null;
+      pending = Publication.NONE;
+      previousKey = undefined;
       if (disposed) return;
       const previous = current;
       const previousFailure = failure;
@@ -75,9 +82,10 @@ export function selector<K>(source: () => K, options: SelectorOptions = {}): (ke
         (failure && !Object.is(previousFailure?.error, failure.error))
       ) {
         // Failed, recovered or threw a different value: every answer changed.
-        pendingKeys = atoms.keys();
+        pending = Publication.ALL;
       } else if (!failure && !Object.is(previous, current)) {
-        pendingKeys = [previous, current];
+        previousKey = previous;
+        pending = Publication.PAIR;
       }
     },
     false,
@@ -86,12 +94,10 @@ export function selector<K>(source: () => K, options: SelectorOptions = {}): (ke
     options.name || (debug.computed && source.name) || "selector"
   );
   computation.onUpdated = () => {
-    const keys = pendingKeys;
-    pendingKeys = null;
     if (started) checks++;
     let completed = false;
     try {
-      if (keys) notify(keys);
+      if (pending) batch(notify);
       completed = true;
     } finally {
       try {
@@ -133,23 +139,29 @@ export function selector<K>(source: () => K, options: SelectorOptions = {}): (ke
     }
   }
 
-  // one batch: an immediate reader runs once, after every key is notified,
-  // and one that throws does not keep the others from being notified
-  function notify(keys: Iterable<K | typeof NEGATIVE_ZERO>) {
-    untrack(() =>
-      batch(() => {
-        for (const key of keys) {
-          const storedKey = atomKey(key);
-          const atom = atoms.get(storedKey);
-          if (atom !== undefined) {
-            onWriteAtom(atom);
-            if (!hasObservers(atom)) {
-              atoms.delete(storedKey);
-            }
-          }
-        }
-      })
-    );
+  // onUpdated already runs untracked and unowned. One batch publishes both
+  // answers before immediate readers run, including a reader that throws.
+  function notify() {
+    const all = pending === Publication.ALL;
+    const previous = previousKey as K;
+    const next = current;
+    pending = Publication.NONE;
+    previousKey = undefined;
+    if (all) {
+      for (const key of atoms.keys()) notifyKey(key);
+    } else {
+      notifyKey(previous);
+      notifyKey(next);
+    }
+  }
+
+  function notifyKey(key: K | typeof NEGATIVE_ZERO) {
+    const storedKey = atomKey(key);
+    const atom = atoms.get(storedKey);
+    if (atom !== undefined) {
+      onWriteAtom(atom);
+      if (!hasObservers(atom)) atoms.delete(storedKey);
+    }
   }
 
   // keys read once and never again would keep their atoms: drop the
@@ -218,7 +230,7 @@ export function selector<K>(source: () => K, options: SelectorOptions = {}): (ke
       if (failure) throw failure.error;
       return Object.is(current, key);
     }
-    update();
+    if (!started || computation.state !== ComputationState.EXECUTED) update();
     if (failure) {
       throw failure.error;
     }
