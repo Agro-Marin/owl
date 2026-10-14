@@ -146,6 +146,27 @@ export const workloads: Record<string, (owl: Owl) => Workload> = {
     const value = owl.proxy({ value: 1 });
     return reads(owl, () => value.value, true, 1);
   },
+  proxy_tracked_cached_object_reads: (owl) => {
+    const value = owl.proxy({ record: { value: 1 } });
+    return reads(owl, () => value.record.value, true, 2);
+  },
+  proxy_tracked_stored_proxy_reads: (owl) => {
+    const record = owl.proxy({ value: 1 });
+    const value = owl.proxy({ record });
+    return reads(owl, () => value.record.value, true, 2);
+  },
+  proxy_tracked_foreign_proxy_reads: (owl) => {
+    const raw = new Proxy(
+      { value: 1 },
+      { get: (target, key, receiver) => Reflect.get(target, key, receiver) }
+    );
+    const value = owl.proxy({ record: owl.proxy(raw) });
+    return reads(owl, () => value.record.value, true, 2);
+  },
+  map_tracked_stored_proxy_reads: (owl) => {
+    const value = owl.proxy(new Map([["row", owl.proxy({ value: 1 })]]));
+    return reads(owl, () => value.get("row")!.value, true, 2);
+  },
   map_tracked_get_reads: (owl) => {
     const value = owl.proxy(new Map([["row", 1]]));
     return reads(owl, () => value.get("row")!, true, 1);

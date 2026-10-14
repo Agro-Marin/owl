@@ -115,7 +115,7 @@ export class App extends TemplateSet {
   name: string;
   scheduler = new Scheduler();
   roots: Set<Root<any>> = new Set();
-  pluginManager: PluginManager;
+  pluginManager: PluginManager<this>;
   destroyed = false;
 
   constructor(config: AppConfig = {}) {

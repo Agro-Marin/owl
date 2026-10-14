@@ -17,6 +17,7 @@ import {
   status,
   types as t,
   useListener,
+  useApp,
   xml,
 } from "../src";
 import {
@@ -1536,10 +1537,10 @@ describe("plugin start failures and lookups", () => {
   });
 
   test("mount() rejects with an AbortError when its app dies while plugins start", async () => {
-    let manager!: PluginManager;
+    let app!: App;
     class Fetching extends Plugin {
       setup() {
-        manager = this.__owl__;
+        app = useApp();
         onWillStart(
           ({ abortSignal }) =>
             new Promise((_, reject) =>
@@ -1553,7 +1554,7 @@ describe("plugin start failures and lookups", () => {
     }
     const fixture = makeTestFixture();
     const mounted = mount(Root, fixture, { plugins: [Fetching] });
-    manager.app.destroy();
+    app.destroy();
     await expect(mounted).rejects.toMatchObject({ name: "AbortError" });
     expect(fixture.innerHTML).toBe("");
   });

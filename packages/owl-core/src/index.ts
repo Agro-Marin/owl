@@ -8,7 +8,15 @@ export { STATUS } from "./status";
 export { batched } from "./batched";
 
 // Scope / lifetime
-export { Scope, scopeStack, getScope, useScope, isAbortError, makeAbortError } from "./scope";
+export {
+  Scope,
+  scopeStack,
+  getScope,
+  useScope,
+  isAbortError,
+  makeAbortError,
+  type ScopeApp,
+} from "./scope";
 
 // Reactivity: proxy
 export { proxy, observe, markRaw, toRaw, readArrayItems } from "./proxy";

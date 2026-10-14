@@ -61,7 +61,7 @@ function reactiveValue(value: any, shallow: boolean): any {
   if (reactive ? isMarkedRaw(value) : !canBeMadeReactive(value)) {
     return value;
   }
-  return reactive ?? proxifyTarget(value, false);
+  return reactive ?? proxifyCheckedTarget(value, false);
 }
 
 const skipped = new WeakSet<Target>();
@@ -377,6 +377,12 @@ export function proxifyTarget<T extends Target>(target: T, shallow: boolean): T 
   if (!canBeMadeReactive(target)) {
     throw new OwlError(`Cannot make the given value reactive`);
   }
+  return proxifyCheckedTarget(target, shallow);
+}
+
+// reactiveValue has already checked eligibility. Rechecking would both repeat
+// the work and run a value's Symbol.toStringTag getter a second time.
+function proxifyCheckedTarget<T extends Target>(target: T, shallow: boolean): T {
   const raw = targets.get(target);
   if (raw) {
     // a proxy of the other flavor is unwrapped: proxy() of a collection

@@ -41,7 +41,10 @@ type HookKind =
 // register few hooks. Frozen, so a write that bypasses addHook fails loudly.
 const NO_HOOKS: LifecycleHook[] = /* @__PURE__ */ Object.freeze([]) as any;
 
-export class ComponentNode extends Scope implements VNode<ComponentNode> {
+export class ComponentNode extends Scope<App> implements VNode<ComponentNode> {
+  // A node rendering a slot of another app may change its app. Core scopes
+  // expose a readonly host so widening a manager cannot replace its host with
+  // an object that lacks the original host's methods.
   declare app: App;
   fiber: Fiber | null = null;
   component!: Component;

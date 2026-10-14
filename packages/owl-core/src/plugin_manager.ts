@@ -2,7 +2,7 @@ import { debug, debugLog } from "./debug";
 import { effect } from "./effect";
 import { OwlError } from "./owl_error";
 import { Resource } from "./resource";
-import { isAbortError, Scope, scopeStack } from "./scope";
+import { isAbortError, Scope, scopeStack, type ScopeApp } from "./scope";
 import { STATUS } from "./status";
 import { untrack } from "./computations";
 
@@ -66,7 +66,7 @@ interface PluginManagerOptions {
   config?: Record<string, any>;
 }
 
-export class PluginManager extends Scope {
+export class PluginManager<TApp extends ScopeApp = ScopeApp> extends Scope<TApp> {
   config: Record<string, any>;
   plugins: Record<string, Plugin>;
   parent: PluginManager | null;
@@ -87,7 +87,7 @@ export class PluginManager extends Scope {
   // own plugin ids in start order, so a failed setup can unregister what it started
   private startedIds: string[] = [];
 
-  constructor(app: any, options: PluginManagerOptions = {}) {
+  constructor(app: TApp, options: PluginManagerOptions = {}) {
     super(app);
     const parent = options.parent ?? null;
     this.parent = parent;

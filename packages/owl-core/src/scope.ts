@@ -25,8 +25,8 @@ import type { PluginManager } from "./plugin_manager";
 // `ComponentNode` and `PluginManager`, each of which extends Scope directly
 // (rather than composing a separate scope object).
 //
-// `app` is typed as `any` because the concrete App type lives in owl-runtime;
-// subclasses in owl-runtime narrow the field to their App type.
+// Core knows only the app fields it reads. Runtime subclasses narrow `app`
+// to their concrete App type without making core depend on owl-runtime.
 //
 // The AbortController/signal and destroy-callback list are created lazily so
 // that scopes which never use them pay nothing beyond a null pointer.
@@ -39,6 +39,14 @@ export const scopeStack = setupStack as Scope[];
 
 export type ScopeMark = [willStart: number, destroyCbs: number, computations: number];
 const EMPTY_SCOPE_MARK = [0, 0, 0] as const;
+
+export interface ScopeApp {
+  dev?: boolean;
+  // Optional during bootstrap: App constructs its manager before assigning
+  // this field. PluginManager and ComponentNode both set their scope's manager
+  // before running any setup code.
+  pluginManager?: PluginManager;
+}
 
 function runReversed(cbs: Array<() => void>, reportError: (e: unknown) => void): void {
   for (let i = cbs.length - 1; i >= 0; i--) {
@@ -64,8 +72,8 @@ export function useScope(): Scope {
   return scope;
 }
 
-export abstract class Scope {
-  app: any;
+export abstract class Scope<TApp extends ScopeApp = ScopeApp> {
+  readonly app: TApp;
   pluginManager: PluginManager;
   status: StatusValue = STATUS.NEW;
   computations: ComputationAtom[] = [];
@@ -77,9 +85,9 @@ export abstract class Scope {
   private _destroyCbs: Array<() => void> | null = null;
   private _finalizing = false;
 
-  constructor(app: any) {
+  constructor(app: TApp) {
     this.app = app;
-    this.pluginManager = app.pluginManager;
+    this.pluginManager = app.pluginManager!;
   }
 
   /**
