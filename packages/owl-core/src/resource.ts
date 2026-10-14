@@ -1,5 +1,5 @@
 import { computed } from "./computed";
-import { untrack, type ReadonlyReactiveValue } from "./computations";
+import { batch, untrack, type ReadonlyReactiveValue } from "./computations";
 import { signal } from "./signal";
 import { useScope } from "./scope";
 import { type StripBrands } from "./types";
@@ -15,8 +15,7 @@ export interface ResourceAddOptions {
 }
 
 // T is the validation type; items carry the value type it describes.
-type Item<T> = StripBrands<T>;
-type Entry<T> = [sequence: number, item: Item<T>];
+type Entry<T> = [sequence: number, item: StripBrands<T>];
 
 export class Resource<T> {
   private _items = signal.Array<Entry<T>>([]);
@@ -28,31 +27,31 @@ export class Resource<T> {
     this._validation = options.validation;
   }
 
-  items: ReadonlyReactiveValue<Item<T>[]> = computed(
+  items: ReadonlyReactiveValue<StripBrands<T>[]> = computed(
     () => {
       return [...this._items()].sort((el1, el2) => el1[0] - el2[0]).map((elem) => elem[1]);
     },
     { detached: true }
   );
 
-  add(item: Item<T>, options: ResourceAddOptions = {}): Resource<T> {
+  add(item: StripBrands<T>, options: ResourceAddOptions = {}): Resource<T> {
     this._add(item, options);
     return this;
   }
 
-  private _add(item: Item<T>, options: ResourceAddOptions): Entry<T> {
-    if (this._validation) {
-      const info = this._name ? ` (resource '${this._name}')` : "";
-      assertType(item, this._validation, `Resource item does not match the type${info}`);
-    }
-    const entry: Entry<T> = [options.sequence ?? 50, item];
-    untrack(() => {
+  private _add(item: StripBrands<T>, options: ResourceAddOptions): Entry<T> {
+    return untrack(() => {
+      if (this._validation) {
+        const info = this._name ? ` (resource '${this._name}')` : "";
+        assertType(item, this._validation, `Resource item does not match the type${info}`);
+      }
+      const entry: Entry<T> = [options.sequence ?? 50, item];
       this._items().push(entry);
+      return entry;
     });
-    return entry;
   }
 
-  delete(item: Item<T>): Resource<T> {
+  delete(item: StripBrands<T>): Resource<T> {
     this._remove((entry) => entry[1] === item);
     return this;
   }
@@ -70,14 +69,18 @@ export class Resource<T> {
     this._items.set([]);
   }
 
-  has(item: Item<T>): boolean {
+  has(item: StripBrands<T>): boolean {
     return this._items().some(([s, value]) => value === item);
   }
 
-  use(item: Item<T>, options: ResourceAddOptions = {}): Resource<T> {
+  use(item: StripBrands<T>, options: ResourceAddOptions = {}): Resource<T> {
     const scope = useScope();
-    const entry = this._add(item, options);
-    scope.onDestroy(() => this._remove((e) => e === entry));
+    // Lifetime registration must finish before immediate readers can throw
+    // or destroy the scope in response to the newly published entry.
+    batch(() => {
+      const entry = this._add(item, options);
+      scope.onDestroy(() => this._remove((e) => e === entry));
+    });
     return this;
   }
 }

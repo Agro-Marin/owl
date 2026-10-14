@@ -26,16 +26,50 @@ async function collectGarbage() {
 }
 
 describe("memory", () => {
-  test("a reactive WeakMap read by an effect does not keep its keys alive", async () => {
-    const map = proxy(new WeakMap<object, number>());
-    let key: object | null = {};
-    const ref = new WeakRef(key);
-    map.set(key, 1);
-    const dispose = effect(() => map.get(key!));
-    dispose();
-    key = null;
-    await collectGarbage();
-    expect(ref.deref()).toBeUndefined();
+  let traces: string[];
+  beforeEach(() => {
+    traces = [];
+    setDebugSink((channel, message) => traces.push(`${channel}: ${message}`));
+    setDebug(["reactivity", "effect"]);
+  });
+  afterEach((context) => {
+    if (context.task.result?.state === "fail") console.debug("[owl:weak-key-lifetime]", traces);
+    setDebug(false);
+    setDebugSink(null);
+  });
+
+  describe.each(["native", "proxy"] as const)("%s WeakMap", (view) => {
+    test.each(["get", "has", "getOrInsert", "getOrInsertComputed"] as const)(
+      "%s does not keep object or symbol keys alive",
+      async (method) => {
+        for (const kind of ["object", "symbol"] as const) {
+          const raw = new WeakMap<WeakKey, number>();
+          const map = view === "proxy" ? proxy(raw) : raw;
+          let key: WeakKey | null = kind === "symbol" ? Symbol("weak key") : {};
+          const ref = new WeakRef(key);
+          map.set(key, 1);
+          const dispose = effect(() => {
+            if (method === "get") return map.get(key!);
+            if (method === "has") return map.has(key!);
+            if (method === "getOrInsert") return map.getOrInsert(key!, 2);
+            return map.getOrInsertComputed(key!, () => 2);
+          });
+          dispose();
+          key = null;
+          await collectGarbage();
+          // Keep the map alive across collection; losing the map too would
+          // let even a strongly retained key disappear and mask the leak.
+          expect(map.has(Symbol("absent"))).toBe(false);
+          console.debug("[owl:weak-key-lifetime]", {
+            view,
+            method,
+            kind,
+            collected: ref.deref() === undefined,
+          });
+          expect(ref.deref()).toBeUndefined();
+        }
+      }
+    );
   });
 
   test("a reactive Map does not keep the object keys it deleted alive", async () => {

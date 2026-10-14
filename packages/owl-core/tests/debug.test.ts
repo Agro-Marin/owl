@@ -15,8 +15,10 @@ import {
 import { TestScope, waitScheduler } from "./helpers";
 
 let lines: string[] = [];
+const initialDebugFlags = Object.values(debug);
 
 beforeEach(() => {
+  setDebug(false);
   lines = [];
   setDebugSink((channel: DebugChannel, message: string) => lines.push(`${channel}: ${message}`));
 });
@@ -27,6 +29,7 @@ afterEach(() => {
 });
 
 test("the debug flags are one per channel, all off until setDebug, and take no other key", () => {
+  expect(initialDebugFlags.every((on) => on === false)).toBe(true);
   expect(Object.keys(debug)).toEqual([...DEBUG_CHANNELS]);
   expect(Object.values(debug).every((on) => on === false)).toBe(true);
   expect(Object.isSealed(debug)).toBe(true);

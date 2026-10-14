@@ -19,6 +19,8 @@ import { shallowEqual } from "./utils";
  * cleanup before each re-run and on disposal.
  */
 export function useEffect(fn: Parameters<typeof effect>[0]): void {
+  // Check ownership before starting work whose disposer the caller never gets.
+  useScope();
   onWillDestroy(effect(fn));
 }
 
@@ -115,6 +117,7 @@ export function useListener(
   handler: EventListener,
   eventParams?: AddEventListenerOptions
 ): void {
+  useScope();
   if (typeof target === "function") {
     // this is a ref
     useEffect(() => {

@@ -586,32 +586,42 @@ describe("props validation", () => {
     ).rejects.toThrow("Invalid component props (SubComp)");
   });
 
-  test.skip("props: extra props cause an error", async () => {
+  test("an array prop schema accepts extra props without exposing them", async () => {
     class SubComp extends Component {
       static template = xml``;
       props = props(["message"]);
     }
 
-    await expect(
-      mount(SubComp, fixture, {
-        dev: true,
-        props: { message: 1, flag: true } as any,
-      })
-    ).rejects.toThrow(expect.anything());
+    const comp = await mount(SubComp, fixture, {
+      test: true,
+      props: { message: 1, flag: true } as any,
+    });
+    try {
+      expect(comp.props.message).toBe(1);
+      expect(Object.keys(comp.props)).toEqual(["message"]);
+      expect("flag" in comp.props).toBe(false);
+    } finally {
+      comp.__owl__.app.destroy();
+    }
   });
 
-  test.skip("props: extra props cause an error, part 2", async () => {
+  test("a typed prop schema accepts extra props without exposing them", async () => {
     class SubComp extends Component {
       static template = xml``;
       props = props({ message: t.any() });
     }
 
-    await expect(
-      mount(SubComp, fixture, {
-        dev: true,
-        props: { message: 1, flag: true } as any,
-      })
-    ).rejects.toThrow(expect.anything());
+    const comp = await mount(SubComp, fixture, {
+      test: true,
+      props: { message: 1, flag: true } as any,
+    });
+    try {
+      expect(comp.props.message).toBe(1);
+      expect(Object.keys(comp.props)).toEqual(["message"]);
+      expect("flag" in comp.props).toBe(false);
+    } finally {
+      comp.__owl__.app.destroy();
+    }
   });
 
   test("props: optional prop do not cause an error", async () => {
@@ -667,8 +677,7 @@ describe("props validation", () => {
     expect(error!.message).toMatch("Invalid component props (SubComp)");
   });
 
-  test.skip("props are validated whenever component is updated", async () => {
-    // fixme
+  test("props are validated whenever component is updated", async () => {
     let error: Error;
     class SubComp extends Component {
       static template = xml`<div><t t-out="this.props.p"/></div>`;

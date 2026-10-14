@@ -1,11 +1,14 @@
 import * as esbuild from "esbuild";
-import { execSync } from "child_process";
+import { execFileSync } from "child_process";
+import { createRequire } from "node:module";
+import { debuglog } from "node:util";
 import { buildHash } from "./build_hash.mjs";
 import { TARGET } from "./build_target.mjs";
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync } from "fs";
 import { join, relative, resolve } from "path";
 
 const pkg = JSON.parse(readFileSync("./package.json", "utf-8"));
+const log = debuglog("owl-build");
 
 const ES_FILENAME = "dist/owl.es.js";
 
@@ -100,14 +103,31 @@ function checkExportedFiles() {
 
 function buildTypes() {
   mkdirSync("dist/types", { recursive: true });
-  execSync(
-    "npx dts-bundle-generator --project tsconfig.types.json -o dist/types/owl.d.ts src/index.ts --no-banner",
-    { stdio: "inherit" }
+  // Use the installed CLI and this process's Node. Nested npx calls inherit
+  // npm exec flags (notably npm_config_call) and can fail before running it.
+  const cli = createRequire(import.meta.url).resolve(
+    "dts-bundle-generator/dist/bin/dts-bundle-generator.js"
   );
-  execSync(
-    "npx dts-bundle-generator --project tsconfig.types.json -o dist/types/compiler.d.ts src/compiler.ts --no-banner",
-    { stdio: "inherit" }
-  );
+  for (const [name, entry] of [
+    ["owl", "index"],
+    ["compiler", "compiler"],
+  ]) {
+    log("types %s using %s", name, process.execPath);
+    execFileSync(
+      process.execPath,
+      [
+        cli,
+        "--project",
+        "tsconfig.types.json",
+        "-o",
+        `dist/types/${name}.d.ts`,
+        `src/${entry}.ts`,
+        "--no-banner",
+        "--inline-declare-global",
+      ],
+      { stdio: "inherit" }
+    );
+  }
 }
 
 const target = process.argv[2];

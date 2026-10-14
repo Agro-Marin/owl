@@ -13,13 +13,10 @@ async function flushMicrotasks() {
   await Promise.resolve();
 }
 
-describe("signal read inside an effect", () => {
+describe("signal read outside a computation", () => {
   const s = signal(0);
-  // Keep an active effect so reads from `s` propagate through the tracking
-  // path; without it `onReadAtom` short-circuits on the early return.
-  effect(() => {
-    s();
-  });
+  // An effect subscribing to s does not make later reads tracked. Only a
+  // read during a computation's run exercises dependency tracking.
   bench("signal()", () => {
     s();
   });

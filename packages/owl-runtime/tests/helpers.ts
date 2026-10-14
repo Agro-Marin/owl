@@ -1,8 +1,6 @@
 import { type Mock } from "vitest";
 
-export function getConsoleOutput(): string[] {
-  return (globalThis as any).__owl_console_output.splice(0);
-}
+export { getConsoleOutput } from "../../../tools/testing/console";
 import { diff } from "@vitest/utils/diff";
 import {
   blockDom,

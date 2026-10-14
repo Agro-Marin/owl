@@ -13,7 +13,7 @@ import {
   Resource,
   useListener,
 } from "../../src";
-import { logStep, makeTestFixture, nextAppError, nextTick, snapshotEverything } from "../helpers";
+import { logStep, makeTestFixture, nextTick, snapshotEverything } from "../helpers";
 
 snapshotEverything();
 let fixture: HTMLElement;
@@ -146,27 +146,42 @@ describe("refs", () => {
     expect(comp!.ref()).not.toBeNull();
   });
 
-  test.skip("throws if there are 2 same refs at the same time", async () => {
+  test.each(["signal", "setter"])("a shared %s ref follows the last binding", async (kind) => {
+    const value = signal<HTMLElement | null>(null);
     class Test extends Component {
       static template = xml`
-        <div t-ref="this.ref"/>
-        <span t-ref="this.ref"/>`;
-
-      state = proxy({ value: true });
-      ref = signal<HTMLElement | null>(null);
+        <div t-if="this.div()" t-ref="this.ref"/>
+        <span t-if="this.span()" t-ref="this.ref"/>`;
+      div = signal(true);
+      span = signal(true);
+      ref = kind === "signal" ? value : { set: value.set };
     }
 
-    const app = new App({ test: true });
-    const root = app.createRoot(Test);
-    const errorProm = nextAppError(app);
-    const mountProm = expect(root.mount(fixture)).rejects.toThrow(
-      'Cannot set the same ref more than once in the same component, ref "coucou" was set multiple times in Test'
-    );
-    const error = await errorProm;
-    expect(error.message).toContain(
-      'Cannot set the same ref more than once in the same component, ref "coucou" was set multiple times in Test'
-    );
-    await mountProm;
+    const test = await mount(Test, fixture);
+    try {
+      const span = fixture.querySelector("span");
+      expect(value()).toBe(span);
+      test.div.set(false);
+      await nextTick();
+      expect(value()).toBe(span);
+
+      test.div.set(true);
+      await nextTick();
+      expect(value()).toBe(fixture.querySelector("div"));
+      test.div.set(false);
+      await nextTick();
+      expect(fixture.querySelector("span")).toBe(span);
+      expect(value()).toBeNull();
+
+      test.span.set(false);
+      await nextTick();
+      test.span.set(true);
+      await nextTick();
+      expect(value()).toBe(fixture.querySelector("span"));
+    } finally {
+      test.__owl__.app.destroy();
+    }
+    expect(value()).toBeNull();
   });
 
   test("refs and recursive templates", async () => {

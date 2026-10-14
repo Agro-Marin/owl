@@ -30,17 +30,11 @@ import { validateTarget } from "./utils";
 
 // reimplement dev mode stuff see last change in 0f7a8289a6fb8387c3c1af41c6664b2a8448758f
 
-type ComponentInstance<C extends ComponentConstructor> = C extends new (...args: any) => infer T
-  ? T
-  : never;
-
 interface RootConfig<P> {
   props?: P;
 }
 
-// Internal-only options threaded into createRoot by Portal/Suspense sub-roots.
-// Not part of the public RootConfig — passed via `as any` at those call sites
-// and read through a cast inside createRoot.
+// Internal-only options threaded into createRoot by createSubRoot.
 interface SubRootConfig<P> extends RootConfig<P> {
   // overrides the root node's plugin manager so ancestor `providePlugins`
   // contributions are visible in the subtree. Defaults to app.pluginManager.
@@ -79,7 +73,7 @@ declare global {
 import type { MountTarget } from "./blockdom";
 
 interface Root<T extends ComponentConstructor> {
-  promise: Promise<ComponentInstance<T>>;
+  promise: Promise<InstanceType<T>>;
   // true once the render phase has finished. Read synchronously right after
   // prepare() to detect a fully-synchronous subtree (Suspense's no-flash fast
   // path). false while the render is still pending or not yet started.
@@ -97,7 +91,7 @@ interface Root<T extends ComponentConstructor> {
   // onMounted hooks. If prepare() was not called, mount() prepares first.
   // On a destroyed root this does nothing and the returned promise stays
   // pending: the mount was cancelled, not completed.
-  mount(target: MountTarget, options?: MountOptions): Promise<ComponentInstance<T>>;
+  mount(target: MountTarget, options?: MountOptions): Promise<InstanceType<T>>;
   destroy(): void;
 }
 
@@ -125,21 +119,40 @@ export class App extends TemplateSet {
   destroyed = false;
 
   constructor(config: AppConfig = {}) {
-    super(config.test ? { ...config, dev: true } : config);
+    const isTest = config.test;
+    super(isTest ? { ...config, dev: true } : config);
     this.name = config.name || "";
+    // Read configuration before registration: an accessor throwing gives
+    // its caller no app to remove from the registry.
+    const plugins = config.plugins;
+    const pluginConfig = config.config;
     if (!apps.size) {
       exposeToDevtools();
     }
     apps.add(this);
-    this.pluginManager = new PluginManager(this, { config: config.config });
-    if (config.plugins) {
-      startPlugins(this.pluginManager, config.plugins);
+    this.pluginManager = new PluginManager(this, { config: pluginConfig });
+    if (plugins) {
+      try {
+        startPlugins(this.pluginManager, plugins);
+      } catch (error) {
+        // The caller gets no app when construction fails. Earlier plugins
+        // may already own effects/listeners, and the devtools registry holds
+        // the app: release all of it while preserving the startup error.
+        try {
+          // Derived fields have not been initialized yet. Construction
+          // failure must not dispatch to a subclass's destroy override.
+          App.prototype.destroy.call(this);
+        } catch {
+          // Report the startup error rather than an error from its cleanup.
+        }
+        throw error;
+      }
     } else {
       // No plugins provided: nothing to await, mark as MOUNTED so mount()
       // takes the sync fast path.
       this.pluginManager.status = STATUS.MOUNTED;
     }
-    if (this.dev && !config.test && !hasBeenLogged) {
+    if (this.dev && !isTest && !hasBeenLogged) {
       console.info(`Owl is running in 'dev' mode.`);
       hasBeenLogged = true;
     }
@@ -147,7 +160,7 @@ export class App extends TemplateSet {
 
   createRoot<T extends ComponentConstructor>(
     Root: T,
-    config: RootConfig<GetProps<ComponentInstance<T>>> = {}
+    config: RootConfig<GetProps<InstanceType<T>>> = {}
   ): Root<T> {
     if (this.destroyed) {
       throw new OwlError("Cannot create a root in a destroyed app");
@@ -155,18 +168,15 @@ export class App extends TemplateSet {
     if (debug.lifecycle) {
       debugLog("lifecycle", `create root ${Root.name}${this.name ? ` in app ${this.name}` : ""}`);
     }
-    const props = config.props || ({} as any);
-    const { promise, resolve, reject } = Promise.withResolvers<any>();
+    const props = config.props || {};
+    const { promise, resolve, reject } = Promise.withResolvers<InstanceType<T>>();
     let node: ComponentNode;
     let error: any = null;
     // Sub-roots (Portal/Suspense) thread their host's scope and error routing
     // in through internal config, applied before the render phase begins.
-    const subConfig = config as SubRootConfig<any>;
+    const subConfig = config as SubRootConfig<GetProps<InstanceType<T>>>;
     try {
-      node = new ComponentNode(Root, props, this, null, null);
-      if (subConfig.pluginManager) {
-        node.pluginManager = subConfig.pluginManager;
-      }
+      node = new ComponentNode(Root, props, this, null, null, subConfig.pluginManager);
       if (subConfig.onError) {
         nodeErrorHandlers.getOrInsertComputed(node, () => []).unshift(subConfig.onError);
       }
@@ -222,7 +232,7 @@ export class App extends TemplateSet {
       // root.mounted. Without this ordering the callback would never fire for
       // the commit-after-prepare sequence.
       node.addHook("mounted", () => {
-        resolve(node.component);
+        resolve(node.component as InstanceType<T>);
         if (rejectMount) {
           const handlers = nodeErrorHandlers.get(node)!;
           handlers.splice(handlers.indexOf(rejectMount), 1);
@@ -230,10 +240,10 @@ export class App extends TemplateSet {
       });
 
       this.scheduler.addFiber(fiber);
-      if (this.pluginManager.status < STATUS.MOUNTED) {
+      if (node.pluginManager.status < STATUS.MOUNTED) {
         // Plugins have pending onWillStart callbacks — await them before the
         // root renders, so plugin state is populated during first render.
-        node.willStart.unshift(() => this.pluginManager.ready);
+        node.willStart.unshift(() => node.pluginManager.ready);
       }
       try {
         node.start(fiber);
@@ -243,7 +253,7 @@ export class App extends TemplateSet {
       return preparedPromise;
     };
 
-    const mount = (target: MountTarget, options?: MountOptions): Promise<ComponentInstance<T>> => {
+    const mount = (target: MountTarget, options?: MountOptions): Promise<InstanceType<T>> => {
       if (destroyed) {
         // Inert: no target validation, no dom insertion. Committing here would
         // insert a finalized subtree into the document and flip it back to
@@ -287,11 +297,13 @@ export class App extends TemplateSet {
         if (subConfig.host && node) {
           hostedSubRoots.get(subConfig.host)?.delete(node);
         }
-        node?.destroy();
-        // The scheduler drops fibers whose node is destroyed, so complete()
-        // (and with it onPrepared) will never run. Resolve here instead, so
-        // `await root.prepare()` does not hang forever.
-        resolvePrepared?.();
+        try {
+          node?.destroy();
+        } finally {
+          // The scheduler drops destroyed fibers, so onPrepared cannot
+          // release awaiters, even when destruction itself throws.
+          resolvePrepared?.();
+        }
       },
     };
     this.roots.add(root);
@@ -313,7 +325,11 @@ export class App extends TemplateSet {
         failure ||= { error };
       }
     }
-    this.pluginManager.destroy();
+    try {
+      this.pluginManager.destroy();
+    } catch (error) {
+      failure ||= { error };
+    }
     this.scheduler.tasks.clear();
     Scheduler.active.delete(this.scheduler);
     this.scheduler.delayedRenders = [];
@@ -329,11 +345,19 @@ export class App extends TemplateSet {
   }
 }
 
+export function createSubRoot<T extends ComponentConstructor>(
+  app: App,
+  Root: T,
+  config: SubRootConfig<GetProps<InstanceType<T>>>
+): Root<T> {
+  return app.createRoot(Root, config);
+}
+
 export async function mount<T extends ComponentConstructor>(
   C: T,
   target: MountTarget,
-  config: AppConfig & RootConfig<GetProps<ComponentInstance<T>>> & MountOptions = {}
-): Promise<ComponentInstance<T>> {
+  config: AppConfig & RootConfig<GetProps<InstanceType<T>>> & MountOptions = {}
+): Promise<InstanceType<T>> {
   const app = new App(config);
   try {
     if (app.pluginManager.status < STATUS.MOUNTED) {
@@ -346,7 +370,7 @@ export async function mount<T extends ComponentConstructor>(
       }
     }
     const root = app.createRoot(C, config);
-    return (await root.mount(target, config)) as any;
+    return await root.mount(target, config);
   } catch (error) {
     // the caller has no handle on this app: a failed mount must not leave it
     // registered, nor its root alive

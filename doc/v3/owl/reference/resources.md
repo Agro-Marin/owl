@@ -55,6 +55,10 @@ when read via `items()`, items of equal sequence in the order they were added. T
 the middle so callers can insert items before or after the default without
 having to renumber existing ones.
 
+Insertion does not subscribe its caller to signals read by validation or option
+getters. Read signals before calling `add()` or `use()` when they should control
+the caller's computation.
+
 ### `use(item, options?)`
 
 Like `add()`, but the item is automatically removed when the current
@@ -70,9 +74,13 @@ class ClockComponent extends Component {
 }
 ```
 
-`use()` throws `OwlError("No active context")` when called outside of a
+`use()` throws `OwlError("No active scope")` when called outside of a
 component `setup()` or a plugin `setup()`. Use `add()` for entries that
 should live for the whole app.
+
+Lifetime cleanup is registered before immediate subscribers are notified.
+A subscriber throwing during insertion does not prevent owner destruction or
+failed plugin setup from removing the entry.
 
 ## Removing items
 

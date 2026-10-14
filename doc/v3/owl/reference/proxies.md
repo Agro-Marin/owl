@@ -19,6 +19,33 @@ A proxy is one of the four reactive primitives. See [Reactivity](reactivity.md)
 for how it relates to [signals](signals.md),
 [computed values](computed_values.md), and [effects](effects.md).
 
+## Collections
+
+`Map.set()`, `WeakMap.set()` and `Set.add()` return the reactive collection,
+so chained calls keep notifying readers. A single `set`, `add`, `delete` or
+`clear` batches its notifications: an immediate effect reading both the size
+and an entry runs once, after the mutation. A reader throwing does not prevent
+the other readers from being notified.
+
+`Map` and `WeakMap` support `getOrInsert(key, value)` and
+`getOrInsertComputed(key, callback)`. These methods subscribe to the returned
+entry and notify readers when inserting. Deep proxies store the raw value
+and return its reactive proxy; collection signals keep values as supplied.
+Native upsert methods use the collection's internal entries even when a
+subclass overrides `has` or `get`.
+
+Tracking a `WeakMap` entry does not keep an object or unregistered symbol key
+alive after its observer is disposed. Registered symbols remain invalid keys
+for insertion, as on a native `WeakMap`; reading one returns `undefined`, and
+`has` returns `false`.
+
+```js
+const cache = proxy(new Map());
+const item = cache.getOrInsertComputed("record", () => ({ count: 0 }));
+item.count++; // reactive, like cache.get("record").count++
+cache.set("a", 1).set("b", 2); // both writes notify
+```
+
 ## Using proxy in components
 
 ```js
@@ -57,6 +84,9 @@ const state = proxy({ items: [raw] });
 
 state.items[0] === raw; // true — not proxified
 ```
+
+Marking a target raw does not revoke an existing proxy. Collection mutators
+read through that proxy still return it and notify its subscribers.
 
 **Caveat:** mutations to marked-raw objects will **not** trigger updates. Only
 use `markRaw` when you know the object won't change, or when profiling reveals
@@ -116,6 +146,9 @@ view.count; // read again: observed again
   through the view again are observed. A callback that reads the view stays
   subscribed to what it read.
 - Objects read through the view are views too, with the same callback.
+- Collection iterators return live views of their members, including arrays.
+  `entries()` returns a plain pair containing those views. Iterator helpers
+  such as `.map()` and `.toArray()` observe each consumed item too.
 - Reads through the view still subscribe the computation they happen in (a
   render, an effect), as a plain proxy read does.
 - An array method that changes the length (`push`, `pop`, `shift`, `unshift`,

@@ -18,6 +18,7 @@ let fixture: HTMLElement;
 let lines: string[] = [];
 
 beforeEach(() => {
+  setDebug(false);
   fixture = makeTestFixture();
   lines = [];
   setDebugSink((channel: DebugChannel, message: string) => {

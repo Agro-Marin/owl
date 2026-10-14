@@ -129,11 +129,15 @@ function isMarkedRaw(target: Target): boolean {
   return false;
 }
 
-// A non-configurable, non-writable data property must be handed out as it is
-// (a Proxy invariant): it cannot be swapped for its proxy, or a view.
+// Proxy invariants: a locked data property must be handed out as stored,
+// and a non-configurable accessor without a getter must yield undefined.
 function isLocked(target: Target, key: PropertyKey): boolean {
   const desc = Reflect.getOwnPropertyDescriptor(target, key);
-  return desc !== undefined && desc.configurable === false && desc.writable === false;
+  return (
+    desc !== undefined &&
+    desc.configurable === false &&
+    ("value" in desc ? desc.writable === false : desc.get === undefined)
+  );
 }
 
 // The TypeError an engine throws when a getter, setter or method reaches a
@@ -191,13 +195,13 @@ export function toRaw<T extends Target, U extends Reactive<T>>(value: U | T): T 
   return (targets.get(value) as T | undefined) ?? (value as T);
 }
 
-// The atoms of the keys of each target. An object key (of a Map, Set or
-// WeakMap) is held weakly, in a table of its own: its atom must not keep a
-// deleted key, or any key of a WeakMap, alive. Property keys, the common case,
+// The atoms of the keys of each target. A weakly holdable key (an object or
+// unregistered symbol) is held weakly: its atom must not keep a deleted key,
+// or any key of a WeakMap, alive. String property keys, the common case,
 // are one WeakMap lookup and one Map lookup away.
 interface KeyAtoms {
   keys: WeakMap<Target, Map<PropertyKey, Atom>>;
-  objectKeys: WeakMap<Target, WeakMap<object, Atom>>;
+  weakKeys: WeakMap<Target, WeakMap<WeakKey, Atom>>;
 }
 
 interface AtomTable {
@@ -207,18 +211,24 @@ interface AtomTable {
 }
 
 // a key's value, read by a get
-const itemAtoms: KeyAtoms = { keys: new WeakMap(), objectKeys: new WeakMap() };
+const itemAtoms: KeyAtoms = { keys: new WeakMap(), weakKeys: new WeakMap() };
 // a key's presence, read by `in` / has(): notified when the key appears or
 // disappears, not when its value changes
-const presenceAtoms: KeyAtoms = { keys: new WeakMap(), objectKeys: new WeakMap() };
+const presenceAtoms: KeyAtoms = { keys: new WeakMap(), weakKeys: new WeakMap() };
 const allAtoms = [itemAtoms, presenceAtoms];
 
-function isObjectKey(key: unknown): key is object {
-  return (typeof key === "object" && key !== null) || typeof key === "function";
+function isWeakKey(key: unknown): key is WeakKey {
+  return (
+    (typeof key === "object" && key !== null) || typeof key === "function" || isWeakSymbol(key)
+  );
+}
+
+function isWeakSymbol(key: unknown): key is symbol {
+  return typeof key === "symbol" && Symbol.keyFor(key) === undefined;
 }
 
 function tablesOf(atoms: KeyAtoms, key: unknown): WeakMap<Target, AtomTable> {
-  return isObjectKey(key) ? atoms.objectKeys : atoms.keys;
+  return isWeakKey(key) ? atoms.weakKeys : atoms.keys;
 }
 
 // the table of the atoms of `target`'s keys of the kind of `key`, made on first use
@@ -226,7 +236,7 @@ function keyTable(target: Target, key: unknown, atoms: KeyAtoms): AtomTable {
   const tables = tablesOf(atoms, key);
   let table = tables.get(target);
   if (table === undefined) {
-    tables.set(target, (table = isObjectKey(key) ? new WeakMap() : new Map()));
+    tables.set(target, (table = isWeakKey(key) ? new WeakMap() : new Map()));
   }
   return table;
 }
@@ -473,6 +483,9 @@ export function observe<T extends Target>(target: T, callback: () => void): T {
           const result = wrap(value);
           return result !== value && isLocked(raw, key) ? value : result;
         }
+        if (isLocked(raw, key)) {
+          return value;
+        }
         if (!methodKeys?.has(key) && !viewReaders.has(value)) {
           return value;
         }
@@ -489,7 +502,9 @@ export function observe<T extends Target>(target: T, callback: () => void): T {
                   }
                 : (...args: any[]) => {
                     const result = read(() => value.apply(r, args));
-                    return isIterator(result) ? observedIterator(result) : wrap(result);
+                    const entries =
+                      key === "entries" || (key === Symbol.iterator && raw instanceof Map);
+                    return isIterator(result) ? observedIterator(result, entries) : wrap(result);
                   })
           );
         }
@@ -518,20 +533,24 @@ export function observe<T extends Target>(target: T, callback: () => void): T {
   }
   // a collection's iterator reads its entries as it advances: each step is
   // read through the view, not only the call that created the iterator
-  function observedIterator(iterator: Iterator<any>): IterableIterator<any> {
-    return {
-      next() {
+  function* observedIterator(iterator: Iterator<any>, entries: boolean): IterableIterator<any> {
+    let done = false;
+    try {
+      while (true) {
         const step = read(() => iterator.next());
         if (step.done) {
-          return step;
+          done = true;
+          return step.value;
         }
-        const value = Array.isArray(step.value) ? step.value.map(wrap) : wrap(step.value);
-        return { done: false, value };
-      },
-      [Symbol.iterator]() {
-        return this;
-      },
-    };
+        // Only entries yield fresh pairs. An array yielded by keys/values is
+        // the member itself: keep its identity and observe reads through it.
+        yield entries ? step.value.map(wrap) : wrap(step.value);
+      }
+    } finally {
+      if (!done) {
+        read(() => iterator.return?.());
+      }
+    }
   }
   return view(proxy(target));
 }
@@ -547,17 +566,19 @@ function isIterator(value: any): value is Iterator<any> {
 
 /**
  * The handler of a regular object or array proxy. One per proxy: the traps
- * find the atoms of its target's keys through `keyAtoms` (looked up once)
- * instead of a WeakMap lookup per read.
+ * cache the strong and weak property-key tables separately, avoiding a
+ * WeakMap lookup per read without mixing their accepted key types.
  */
 class BasicHandler implements ProxyHandler<any> {
   shallow: boolean;
   // the value atoms of the target's keys
   keyAtoms: AtomTable | undefined;
+  weakKeyAtoms: AtomTable | undefined;
 
   constructor(shallow: boolean) {
     this.shallow = shallow;
     this.keyAtoms = undefined;
+    this.weakKeyAtoms = undefined;
   }
 
   // what the atoms of the target's own properties are keyed by: the target,
@@ -573,7 +594,10 @@ class BasicHandler implements ProxyHandler<any> {
       if (debug.reactivity) {
         debugRead(target, key, itemAtoms);
       }
-      onReadAtom(atomOf((this.keyAtoms ??= keyTable(this.host(target), key, itemAtoms)), key));
+      const table = isWeakSymbol(key)
+        ? (this.weakKeyAtoms ??= keyTable(this.host(target), key, itemAtoms))
+        : (this.keyAtoms ??= keyTable(this.host(target), key, itemAtoms));
+      onReadAtom(atomOf(table, key));
     }
     let value;
     try {
@@ -582,7 +606,8 @@ class BasicHandler implements ProxyHandler<any> {
       throw privateMemberError(error, target, key);
     }
     if (typeof value === "function") {
-      return replacedMethods.get(value) ?? value;
+      const result = replacedMethods.get(value) ?? value;
+      return result !== value && isLocked(target, key) ? value : result;
     }
     const result = reactiveValue(value, this.shallow);
     return result !== value && isLocked(target, key) ? value : result;
@@ -856,6 +881,9 @@ function makeMethod(key: PropertyKey, target: any, shallow: boolean): Function {
         onReadTargetKey(target, item);
         return reactiveValue(target.get(item), shallow);
       };
+    case "getOrInsert":
+    case "getOrInsertComputed":
+      return makeGetOrInsert(key, target, shallow);
     case "add":
     case "set":
     case "delete":
@@ -979,30 +1007,107 @@ function makeSetOperation(name: string, target: Set<any>) {
  */
 function delegateAndNotify(setterName: "set" | "add" | "delete", target: any, shallow: boolean) {
   const readsValue = setterName === "set" || (setterName === "delete" && !(target instanceof Set));
-  return (key: any, value: any) => {
-    key = toRaw(key);
-    const hadKey = target.has(key);
-    const before = readsValue && hadKey ? target.get(key) : undefined;
-    // a shallow collection hands its values back as stored: keep the proxy
-    const ret = target[setterName](key, shallow ? value : toRaw(value));
-    const hasKey = setterName !== "delete";
-    if (hadKey !== hasKey) {
-      onWriteKeyPresence(target, key);
-    }
-    const after = readsValue && hasKey ? target.get(key) : undefined;
-    if (readsValue ? !Object.is(before, after) : hadKey !== hasKey) {
-      onWriteTargetKey(target, key);
-    }
-    if (!hasKey) {
-      releaseKey(target, key);
-    }
-    return ret;
-  };
+  const prototype =
+    target instanceof Map
+      ? Map.prototype
+      : target instanceof Set
+        ? Set.prototype
+        : WeakMap.prototype;
+  const has = prototype.has;
+  const get = readsValue ? (prototype as Map<any, any>).get : undefined;
+  const nativeMethod =
+    setterName === "delete"
+      ? prototype.delete
+      : setterName === "add"
+        ? Set.prototype.add
+        : (prototype as Map<any, any>).set;
+  // The proxy already exists when its method is first read. Keep it rather
+  // than resolving it on every mutation, or changing the return to the raw
+  // target if somebody marks that target raw later.
+  const collection = (shallow ? shallowProxies : deepProxies).get(target)!;
+  return (key: any, value: any) =>
+    batch(() => {
+      key = toRaw(key);
+      const hadKey = has.call(target, key);
+      const before = get && hadKey ? get.call(target, key) : undefined;
+      // a shallow collection hands its values back as stored: keep the proxy
+      let ret;
+      let method;
+      let completed = false;
+      try {
+        method = target[setterName];
+        ret = Reflect.apply(method, target, [key, shallow ? value : toRaw(value)]);
+        completed = true;
+      } finally {
+        // An override can change the key before throwing, or return without
+        // changing it. Notify actual storage changes in either case.
+        // Only a successful intrinsic guarantees this postcondition. Avoid
+        // another lookup on that common path; inspect overrides and failures.
+        const hasKey =
+          completed && method === nativeMethod ? setterName !== "delete" : has.call(target, key);
+        if (hadKey !== hasKey) {
+          onWriteKeyPresence(target, key);
+        }
+        const after = get && hasKey ? get.call(target, key) : undefined;
+        if (readsValue ? !Object.is(before, after) : hadKey !== hasKey) {
+          onWriteTargetKey(target, key);
+        }
+        if (!hasKey) {
+          releaseKey(target, key);
+        }
+      }
+      // Native set/add return the collection. Returning its raw target would
+      // let the next chained call bypass every read/write notification.
+      return ret === target ? collection : ret;
+    });
+}
+
+// The upsert methods both read an entry and may write it. Delegate validation
+// and callback semantics to the native method, normalize deep values as set()
+// does, and notify all readers in one batch before returning the reactive value.
+function makeGetOrInsert(
+  method: "getOrInsert" | "getOrInsertComputed",
+  target: any,
+  shallow: boolean
+) {
+  // Native upsert uses internal entries, independently of a subclass's
+  // has/get overrides. Bookkeeping must read those same entries.
+  const prototype = target instanceof Map ? Map.prototype : WeakMap.prototype;
+  const has = prototype.has;
+  const get = prototype.get;
+  return (key: any, value: any) =>
+    batch(() => {
+      key = toRaw(key);
+      const hadKey = has.call(target, key);
+      const before = hadKey ? get.call(target, key) : undefined;
+      const argument =
+        method === "getOrInsert"
+          ? shallow
+            ? value
+            : toRaw(value)
+          : !shallow && typeof value === "function"
+            ? (key: any) => toRaw(value(key))
+            : value;
+      let result;
+      try {
+        result = target[method](key, argument);
+      } finally {
+        const hasKey = has.call(target, key);
+        if (hadKey !== hasKey) {
+          onWriteKeyPresence(target, key);
+        }
+        if (!Object.is(before, get.call(target, key))) {
+          onWriteTargetKey(target, key);
+        }
+        onReadTargetKey(target, key);
+      }
+      return reactiveValue(result, shallow);
+    });
 }
 
 // The atoms of a collection's keys may exist
 function hasKeyAtoms(target: Target): boolean {
-  return allAtoms.some((atoms) => atoms.keys.has(target) || atoms.objectKeys.has(target));
+  return allAtoms.some((atoms) => atoms.keys.has(target) || atoms.weakKeys.has(target));
 }
 
 /**
@@ -1010,18 +1115,62 @@ function hasKeyAtoms(target: Target): boolean {
  * each key that had atoms. An empty collection notifies nothing.
  */
 function makeClearNotifier(target: Map<any, any> | Set<any>) {
+  const prototype = target instanceof Map ? Map.prototype : Set.prototype;
+  const size = Object.getOwnPropertyDescriptor(prototype, "size")!.get!;
+  const keysOf = prototype.keys;
+  const isMap = target instanceof Map;
+  const snapshot = () =>
+    new Map<any, any>(
+      isMap
+        ? Map.prototype.entries.call(target)
+        : Array.from(Set.prototype.values.call(target), (key) => [key, key])
+    );
   return () => {
-    if (target.size === 0) {
-      return;
+    const clear = target.clear;
+    if (clear !== prototype.clear) {
+      // An override may retain entries, update values or reorder keys. Read
+      // actual internal entries, without invoking overridden readers.
+      if (!hasKeyAtoms(target)) return Reflect.apply(clear, target, []);
+      const before = snapshot();
+      return batch(() => {
+        try {
+          return Reflect.apply(clear, target, []);
+        } finally {
+          const after = snapshot();
+          const keys = new Set([...before.keys(), ...after.keys()]);
+          const oldKeys = [...before.keys()];
+          const newKeys = [...after.keys()];
+          if (
+            oldKeys.length !== newKeys.length ||
+            oldKeys.some((key, i) => !Object.is(key, newKeys[i]))
+          ) {
+            onWriteTargetKey(target, KEYCHANGES);
+          }
+          for (const key of keys) {
+            const hadKey = before.has(key);
+            const hasKey = after.has(key);
+            if (hadKey !== hasKey) onWriteTargetKey(target, key, presenceAtoms);
+            if (isMap ? !Object.is(before.get(key), after.get(key)) : hadKey !== hasKey) {
+              onWriteTargetKey(target, key);
+            }
+            if (!hasKey) releaseKey(target, key);
+          }
+        }
+      });
     }
-    const keys = hasKeyAtoms(target) ? [...target.keys()] : [];
-    target.clear();
-    onWriteTargetKey(target, KEYCHANGES);
-    for (const key of keys) {
-      onWriteTargetKey(target, key, presenceAtoms);
-      onWriteTargetKey(target, key);
-      releaseKey(target, key);
-    }
+    const nonempty = size.call(target) !== 0;
+    const keys = nonempty && hasKeyAtoms(target) ? [...keysOf.call(target)] : [];
+    // Notify every atom before immediate readers run: one mutation is one
+    // update, and a reader throwing must not leave the other readers stale.
+    batch(() => {
+      Reflect.apply(clear, target, []);
+      if (nonempty) onWriteTargetKey(target, KEYCHANGES);
+      for (const key of keys) {
+        onWriteTargetKey(target, key, presenceAtoms);
+        onWriteTargetKey(target, key);
+        releaseKey(target, key);
+      }
+    });
   };
 }
 
@@ -1035,7 +1184,14 @@ const setLikeMethods: PropertyKey[] = [
   "entries",
   Symbol.iterator,
 ];
-const weakMapMethods = new Set<PropertyKey>(["has", "get", "set", "delete"]);
+const weakMapMethods = new Set<PropertyKey>([
+  "has",
+  "get",
+  "set",
+  "delete",
+  "getOrInsert",
+  "getOrInsertComputed",
+]);
 // the ES2025 Set methods, which every engine owl targets has
 const setOperations = [
   "difference",
@@ -1093,6 +1249,9 @@ class CollectionHandler extends BasicHandler {
   }
 
   get(target: any, key: PropertyKey, receiver: any): any {
+    if (Object.hasOwn(target, key) && isLocked(target, key)) {
+      return super.get(target, key, receiver);
+    }
     if (this.methodKeys.has(key)) {
       const methods = (this.methods ??= new Map());
       let method = methods.get(key);

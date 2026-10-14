@@ -30,6 +30,18 @@ Here is a more detailed explanation on how to compile xml files into a js file:
    target folder, find all xml files, get all templates, compile them, and
    generate a `templates.js` file (`-o <path>` to name it).
 
+Compilation rejects malformed XML, invalid templates and duplicate template
+names. The CLI exits with status 1 and preserves an existing output when
+compilation fails. The destination is opened only after compilation succeeds;
+existing file permissions and output links are preserved. Overlapping paths and symlink aliases compile each XML
+file once; directory symlink cycles are skipped. Files are compiled in sorted
+canonical path order.
+
+`NODE_DEBUG=owl-compile npm run compile_templates -- <paths>` logs file
+discovery, compilation, errors and output writes. The internal
+`compileTemplates(paths)` API rejects an `AggregateError` containing the
+parse/compile failures with their file names and original causes.
+
 The generated `templates.js` exports a single `templates` object, whose keys
 are template names and whose values are precompiled template functions. It
 can be passed directly to the `App` (or `mount`) `templates` config:

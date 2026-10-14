@@ -41,6 +41,9 @@ differently from upstream.
   any a target lacks. The toolchain requires Node >=26 (`.node-version`),
   runs the compiler's TypeScript sources directly for the standalone
   precompiler, and the internal workspace packages are private.
+- The standalone precompiler rejects partial output and duplicate names,
+  preserves an existing artifact on compilation errors, and stages successful
+  output before replacing it. `NODE_DEBUG=owl-compile` traces the operation.
 - In the full build, `TemplateSet.compiler = undefined` restores its bundled
   compiler.
 
@@ -125,6 +128,11 @@ true })` creates an effect owned by nothing. When a computed and an effect
   while a key is read.
 - **`asyncComputed.currentPromise()`** also waits for a re-run a dependency
   change or `refresh()` queued; `dispose()` sets `loading()` to false.
+- **An `asyncComputed` fetcher throwing synchronously** still leaves its run's
+  abort cleanup attached, so disposal or a re-run cancels work it started.
+- **Scope destruction and rollback** run cleanup without subscribing or
+  assigning effect ownership to their caller. Rollback drains destroy
+  callbacks registered during cleanup, preserving earlier registrations.
 - **`batched`** calls its callback with the latest call's arguments.
 
 ### Proxies, validation, plugins, registries
@@ -142,6 +150,13 @@ true })` creates an effect owned by nothing. When a computed and an effect
   `undefined`, as on a Map). A set operation (`union`, `intersection`, …) on a
   proxy checks its argument as the native method does and returns a plain Set
   of the members as its own set holds them, the target's first.
+- **Collection mutations are one batch**: immediate readers run once after a
+  `set`, `add`, `delete` or `clear`, even when they read several affected keys.
+  A throwing reader leaves the other keys' readers notified. `set` and `add`
+  return the reactive collection, so chained calls stay reactive.
+- **`Map` and `WeakMap` upsert methods** (`getOrInsert`,
+  `getOrInsertComputed`) read and notify their entry through the proxy,
+  keeping the same raw/deep and shallow value rules as `get` and `set`.
 - **A shallow proxy** (`signal.Array`, `signal.Object`) keeps a proxy written
   into it, as shallow Maps and Sets did.
 - **`obj.hasOwnProperty(k)` through a proxy subscribes to the presence of
@@ -165,7 +180,8 @@ true })` creates an effect owned by nothing. When a computed and an effect
   `Array` is searched through its proxy, as for `t-foreach`.
 - **Through an `observe()` view**, `forEach` hands out views; a `push` or
   `splice` reads the length through the view and calls its callback, as OWL 2's
-  `reactive([], callback)` did.
+  `reactive([], callback)` did. Collection iterators preserve array members'
+  identity, yield live views, and support iterator helpers.
 - **A constructor in a type schema** (`{ a: String }`) throws instead of
   accepting everything; a `customValidator` of an optional type is optional,
   with that type's default.
@@ -173,6 +189,8 @@ true })` creates an effect owned by nothing. When a computed and an effect
   throws "Circular plugin dependency" instead of overflowing the stack; plugins
   asking for each other in `setup()` each get the other (logged on the `plugin`
   channel). A synchronous start failure leaves no later batch pending.
+- **An App whose constructor fails while starting plugins** destroys earlier
+  plugins and unregisters itself, since its caller gets no App to destroy.
 - **A forced `registry.use()`** restores the entry it overwrote when it ends.
 
 ### Components and rendering
@@ -343,7 +361,28 @@ snapshot of the committed children; `App.version` + `__info__.hash` scope the te
    is refused. Odoo's `web/tests/test_esm_pipeline.py` checks the compiler
    module's shape (it imports nothing since the compiler registers itself).
 
+The compilation checks destroy each temporary App, including failed ones.
+The first exits with a failure status for compilation errors, the inheritance
+comparison for regressions or malformed XML. Both print their excluded input
+counts: unavailable contexts and JSDOM-only errors in the raw scan; unresolved
+primary templates, absent extension targets and JSDOM-only comparisons in the
+inheritance scan. These compilation checks measure compiler acceptance;
+rendering and application behavior are covered by the HOOT comparison.
+`OWL_DEBUG=template,scope,lifecycle` enables debug logs. Declaration builds use
+the installed generator with the same Node as the build;
+`NODE_DEBUG=owl-build` logs its invocations. Published declarations include
+global Map and WeakMap upsert augmentations, verified by compiling a consumer
+outside the checkout without its ambient types.
+
 ## Test suites beyond upstream's
+
+`npm run verify` runs package tests, type checks, lint, formatting, tooling
+tests and the devtools/documentation builds. Package tests share the strict
+console check and retain the last 100 debug events on failure. Set
+`OWL_DEBUG=reactivity,effect,scope,lifecycle` to enable traces throughout a
+suite. Tests of the logging defaults explicitly control their channels.
+`--reporter=default` shows trace totals even when Vitest would select its
+agent reporter, which hides passing-test console output.
 
 - `owl-runtime/tests/compiler/template_fuzz.test.ts` also mounts random
   templates as components (slots, `t-call`, `t-on` with `.stop`/`.prevent`/

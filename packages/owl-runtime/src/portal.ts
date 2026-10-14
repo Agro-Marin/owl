@@ -1,4 +1,5 @@
 import { Signal } from "@odoo/owl-core";
+import { createSubRoot } from "./app";
 import { Component } from "./component";
 import { useEffect } from "./hooks";
 import { onMounted, onWillDestroy } from "./lifecycle_hooks";
@@ -53,7 +54,7 @@ export class Portal extends Component {
 
     const mountInto = (target: HTMLElement, position?: "first-child") => {
       tearDown();
-      root = app.createRoot(PortalContent, {
+      root = createSubRoot(app, PortalContent, {
         props: {
           get slots() {
             return portalProps.slots;
@@ -72,7 +73,7 @@ export class Portal extends Component {
         // the portaled content yield to in-flight ancestor renders (e.g. a
         // t-if about to remove this Portal).
         host: portalNode,
-      } as any);
+      });
 
       mountedTarget = target;
       committed = false;
@@ -87,7 +88,7 @@ export class Portal extends Component {
 
     const commit = (position?: "first-child") => {
       committed = true;
-      root!.mount(mountedTarget!, { position, allowDetached: true } as any);
+      root!.mount(mountedTarget!, { position, allowDetached: true });
     };
 
     useEffect(() => {

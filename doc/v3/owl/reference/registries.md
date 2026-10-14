@@ -64,6 +64,11 @@ were first added (a `force` re-add keeps its place). The expected range is `1`â€
 in the middle so callers can insert entries before or after the default without
 having to renumber existing ones.
 
+Insertion does not subscribe its caller to signals read by validation or option
+getters. Read signals before calling an insertion method when they should control
+the caller's computation. A key registered during option or validation evaluation
+still requires `force` to overwrite.
+
 ### `addById(item, options?)`
 
 Shorthand for values that already carry an `id` property â€” uses `item.id`
@@ -80,6 +85,8 @@ actions.get("save"); // same reference as save
 
 Throws if `item.id` is missing or empty.
 
+Key selection captures `item.id` once before insertion.
+
 ### `use(key, value, options?)`
 
 Like `add()`, but the entry is automatically removed when the current
@@ -93,7 +100,7 @@ class ActionBarComponent extends Component {
 }
 ```
 
-`use()` throws `OwlError("No active context")` when called outside of a
+`use()` throws `OwlError("No active scope")` when called outside of a
 component `setup()` or a plugin `setup()`.
 
 Like `add()`, `use()` throws if the key is already registered. Pass
@@ -103,6 +110,11 @@ override by another owner is never clobbered by a stale cleanup. An entry
 `use()` overwrote with `force` is put back when it ends, with its sequence and
 place: overrides stack, and ending one restores the nearest one still in use
 (or the permanent entry under them all).
+
+Restoration records the entry actually replaced after validation and option
+evaluation. Its lifetime cleanup is registered before immediate subscribers are
+notified, so a subscriber throwing cannot prevent owner destruction or failed
+plugin setup from releasing the override.
 
 ### `useById(item, options?)`
 

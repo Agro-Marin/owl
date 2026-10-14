@@ -110,6 +110,9 @@ export interface Atom<T = any> {
 
 export interface ComputationAtom<T = any> extends Atom<T> {
   compute: () => T;
+  // After computing or checking unchanged sources, with tracking/state
+  // restored. Per-key producers can publish or release unused work. Unowned.
+  onUpdated?: () => void;
   isDerived: boolean;
   // its sources, in the order its last run read them
   deps: Link | undefined;
@@ -250,6 +253,7 @@ export function createComputation(
     subsTail: undefined,
     activeLink: undefined,
     compute,
+    onUpdated: undefined,
     isDerived,
     deps: undefined,
     depsTail: undefined,
@@ -694,6 +698,7 @@ export function updateComputation(computation: ComputationAtom) {
     if (computation.state !== ComputationState.STALE) {
       computation.state = ComputationState.EXECUTED;
       computation.forward = false;
+      callOnUpdated(computation);
       return;
     }
   }
@@ -732,6 +737,7 @@ export function updateComputation(computation: ComputationAtom) {
       endInvalidatedRun(computation);
     }
   }
+  callOnUpdated(computation, releaseFailure);
   if (releaseFailure) {
     if (computation.isDerived) {
       // Reported, not thrown: the reader is not to blame, and one that pulls
@@ -741,6 +747,24 @@ export function updateComputation(computation: ComputationAtom) {
       // after the run: the computation is up to date and subscribed
       throw releaseFailure.error;
     }
+  }
+}
+
+function callOnUpdated(computation: ComputationAtom, releaseFailure?: { error: unknown } | null) {
+  const callback = computation.onUpdated;
+  if (!callback) return;
+  try {
+    runUnowned(callback);
+  } catch (error) {
+    if (debug.error) {
+      debugLog("error", `${computation.name} notification failed`, error);
+    }
+    if (releaseFailure) {
+      // Preserve a notification failure and report the separate failure
+      // from the previous run's cleanup, as for a compute failure.
+      Promise.reject(releaseFailure.error);
+    }
+    throw error;
   }
 }
 
@@ -1037,15 +1061,17 @@ export function untrack<T>(fn: (...args: any[]) => T): T {
 }
 
 /**
- * Runs `fn(arg)` untracked, and with no owner for the effects it creates.
+ * Runs `fn()` or `fn(arg)` untracked, and with no owner for the effects it creates.
  */
-export function runUnowned<A, T>(fn: (arg: A) => T, arg: A): T {
+export function runUnowned<T>(fn: () => T): T;
+export function runUnowned<A, T>(fn: (arg: A) => T, arg: A): T;
+export function runUnowned<A, T>(fn: (arg: A) => T, arg?: A): T {
   const previousComputation = currentComputation;
   const previousObserver = currentObserver;
   const previousOwner = currentOwner;
   currentComputation = currentObserver = currentOwner = undefined;
   try {
-    return fn(arg);
+    return arguments.length === 1 ? (fn as () => T)() : fn(arg as A);
   } finally {
     currentComputation = previousComputation;
     currentObserver = previousObserver;

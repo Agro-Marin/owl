@@ -148,14 +148,23 @@ components (or read the selector in a computation of their own): a list that
 reads `isSelected(row.id)` for every row in its own template depends on every
 key, and renders as a whole.
 
-Keys are compared with `Object.is`. A read outside any computation answers
+Keys are compared with `Object.is`, including distinct `+0` and `-0` keys and
+equal `NaN` keys. A read outside any computation answers
 without subscribing; inside a `batch`, it already sees a source change made
 earlier in the batch. A source that throws makes every key throw that error;
-its readers run again once the source recovers. A selector follows its source
-only while a computation reads one of its keys, and stops once none does. Like
+its readers run again when the thrown value changes or the source recovers.
+Rethrowing the same value keeps their current answer. For writes outside a
+surrounding batch, immediate readers can choose a fallback selection that reaches
+its readers before the original write returns. Unread keys are swept at an
+amortized constant cost per source check. Once none is read, the selector releases
+its source within at most as many subsequent checks as it has retained keys,
+even if the source keeps returning the same value or failure. Cleanup that writes
+the source's inputs does not restart the unused selector. Like
 `computed`, a selector is disposed with the scope it is created in (pass
-`{ detached: true }` to keep it), after which it keeps its last answer and
-tracks nothing.
+`{ detached: true }` to keep it), after which it keeps its last answer, including
+a failure, and tracks nothing. A source that destroys its own scope cannot
+replace that frozen answer with a later result. Scope disposal releases the key
+table even when cleanup of a source-owned effect throws.
 
 ## Async Computed Values
 
@@ -188,6 +197,13 @@ user.dispose(); // tear down (auto-called when the surrounding scope dies)
 user.currentPromise(); // promise that resolves once no run is in flight
 ```
 
+Disposal releases current waiters even when an owned effect's cleanup throws.
+The cleanup error still propagates to the caller of `dispose()`.
+
+Non-`Error` rejections are wrapped with the original value as their `cause`,
+even if their name getter or string conversion throws. Inspecting a rejection
+does not subscribe the fetcher to signals read by those getters.
+
 The `abortSignal` argument follows the same convention as
 [`onWillStart`](scope.md#async-cancellation): it fires when the run is
 superseded (deps changed, or `refresh()` called), when the surrounding
@@ -195,6 +211,8 @@ superseded (deps changed, or `refresh()` called), when the surrounding
 created the `asyncComputed` runs again or is disposed (see
 [nested effects](effects.md#nested-effects)). Any `fetch` keyed to it is cancelled
 automatically; the resulting `AbortError` is silently dropped.
+The run keeps its cancellation cleanup even when the fetcher throws
+synchronously after starting work with the signal.
 
 While a fetch is in flight, the previous resolved value remains visible via
 `user()` — branch on `user.loading()` if you want a different visual.
@@ -209,7 +227,9 @@ yourself.
 flight: if a run is currently running, or about to start (a dependency
 changed, or `refresh()` was called, in the current tick), it resolves once that
 run — or any run that supersedes it — settles, otherwise it resolves
-immediately. It never
+immediately. A refresh requested by a value, error or loading observer is also
+awaited; when requested during the fetcher's synchronous run, it starts after
+that run returns. Disposal cancels such a deferred refresh. It never
 rejects; a fetcher error is reported through `error()`, not by rejecting.
 
 This pairs naturally with [`onWillStart`](scope.md) to hold the first render

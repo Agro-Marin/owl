@@ -1,5 +1,5 @@
 import { computed } from "./computed";
-import { untrack, type ReadonlyReactiveValue } from "./computations";
+import { batch, untrack, type ReadonlyReactiveValue } from "./computations";
 import { OwlError } from "./owl_error";
 import { signal } from "./signal";
 import { ResourceAddOptions } from "./resource";
@@ -17,8 +17,7 @@ interface RegistryAddOptions extends ResourceAddOptions {
 }
 
 // T is the validation type; entries carry the value type it describes.
-type Item<T> = StripBrands<T>;
-type Entry<T> = [sequence: number, value: Item<T>, order: number];
+type Entry<T> = [sequence: number, value: StripBrands<T>, order: number];
 
 export class Registry<T> {
   private _map = signal.Object<Record<string, Entry<T>>>(Object.create(null));
@@ -35,9 +34,9 @@ export class Registry<T> {
     this._validation = options.validation;
   }
 
-  entries: ReadonlyReactiveValue<[string, Item<T>][]> = computed(
+  entries: ReadonlyReactiveValue<[string, StripBrands<T>][]> = computed(
     () => {
-      const entries: [string, Item<T>][] = Object.entries(this._map())
+      const entries: [string, StripBrands<T>][] = Object.entries(this._map())
         .sort((el1, el2) => el1[1][0] - el2[1][0] || el1[1][2] - el2[1][2])
         .map(([str, elem]) => [str, elem[1]]);
       return entries;
@@ -45,48 +44,71 @@ export class Registry<T> {
     { detached: true }
   );
 
-  items: ReadonlyReactiveValue<Item<T>[]> = computed(() => this.entries().map((e) => e[1]), {
+  items: ReadonlyReactiveValue<StripBrands<T>[]> = computed(() => this.entries().map((e) => e[1]), {
     detached: true,
   });
 
-  addById<U extends { id: string } & Item<T>>(
+  addById<U extends { id: string } & StripBrands<T>>(
     item: U,
     options: RegistryAddOptions = {}
   ): Registry<T> {
-    if (!item.id) {
-      throw new OwlError(`Item should have an id key (registry '${this._name}')`);
-    }
-    return this.add(item.id, item, options);
+    return this.add(this._getId(item), item, options);
   }
 
-  add(key: string, value: Item<T>, options: RegistryAddOptions = {}): Registry<T> {
+  add(key: string, value: StripBrands<T>, options: RegistryAddOptions = {}): Registry<T> {
     this._add(key, value, options);
     return this;
   }
 
-  private _add(key: string, value: Item<T>, options: RegistryAddOptions): Entry<T> {
-    if (!options.force && untrack(() => key in this._map())) {
+  private _getId(item: { id: string }): string {
+    return untrack(() => {
+      const id = item.id;
+      if (!id) {
+        throw new OwlError(`Item should have an id key (registry '${this._name}')`);
+      }
+      return id;
+    });
+  }
+
+  private _assertCanAdd(key: string, force: boolean | undefined): void {
+    if (!force && key in this._map()) {
       throw new OwlError(
         `Key "${key}" is already registered (registry '${this._name}'). Use { force: true } to overwrite.`
       );
     }
-    if (this._validation) {
-      assertType(
-        value,
-        this._validation,
-        `Registry entry does not match the type (registry '${this._name}', key: '${key}')`
-      );
-    }
+  }
+
+  private _add(
+    key: string,
+    value: StripBrands<T>,
+    options: RegistryAddOptions,
+    register?: (entry: Entry<T>, previous: Entry<T> | undefined) => void
+  ): Entry<T> {
     return untrack(() => {
+      const force = options.force;
+      this._assertCanAdd(key, force);
+      if (this._validation) {
+        assertType(
+          value,
+          this._validation,
+          `Registry entry does not match the type (registry '${this._name}', key: '${key}')`
+        );
+      }
+      // Validators and option accessors can change or clear this registry.
+      // Finish them before selecting storage and recording what is replaced.
+      const sequence = options.sequence ?? 50;
+      this._assertCanAdd(key, force);
       const map = this._map();
-      const order = key in map ? map[key][2] : this._order++;
-      const entry: Entry<T> = [options.sequence ?? 50, value, order];
+      const previous = map[key];
+      const order = previous ? previous[2] : this._order++;
+      const entry: Entry<T> = [sequence, value, order];
       map[key] = entry;
+      register?.(entry, previous);
       return entry;
     });
   }
 
-  get(key: string, defaultValue?: Item<T>): Item<T> {
+  get(key: string, defaultValue?: StripBrands<T>): StripBrands<T> {
     const hasKey = key in this._map();
     if (!hasKey && arguments.length < 2) {
       throw new OwlError(`Cannot find key "${key}" (registry '${this._name}')`);
@@ -109,41 +131,41 @@ export class Registry<T> {
     return key in this._map();
   }
 
-  use(key: string, value: Item<T>, options: RegistryAddOptions = {}): Registry<T> {
+  use(key: string, value: StripBrands<T>, options: RegistryAddOptions = {}): Registry<T> {
     const scope = useScope();
-    const previous = untrack(() => this._map()[key]);
-    const entry = this._add(key, value, options);
-    if (previous) {
-      this._overwritten.set(entry, previous);
-    }
-    scope.onDestroy(() => {
-      this._ended.add(entry);
-      untrack(() => {
-        const map = this._map();
-        if (map[key] !== entry) {
-          return;
+    // Publish only once restoration metadata and lifetime cleanup exist.
+    batch(() => {
+      this._add(key, value, options, (entry, previous) => {
+        if (previous) {
+          this._overwritten.set(entry, previous);
         }
-        let restored = this._overwritten.get(entry);
-        while (restored && this._ended.has(restored)) {
-          restored = this._overwritten.get(restored);
-        }
-        if (restored) {
-          map[key] = restored;
-        } else {
-          delete map[key];
-        }
+        scope.onDestroy(() => {
+          this._ended.add(entry);
+          untrack(() => {
+            const map = this._map();
+            if (map[key] !== entry) {
+              return;
+            }
+            let restored = this._overwritten.get(entry);
+            while (restored && this._ended.has(restored)) {
+              restored = this._overwritten.get(restored);
+            }
+            if (restored) {
+              map[key] = restored;
+            } else {
+              delete map[key];
+            }
+          });
+        });
       });
     });
     return this;
   }
 
-  useById<U extends { id: string } & Item<T>>(
+  useById<U extends { id: string } & StripBrands<T>>(
     item: U,
     options: RegistryAddOptions = {}
   ): Registry<T> {
-    if (!item.id) {
-      throw new OwlError(`Item should have an id key (registry '${this._name}')`);
-    }
-    return this.use(item.id, item, options);
+    return this.use(this._getId(item), item, options);
   }
 }

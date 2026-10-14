@@ -1,47 +1,12 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`default props > a default prop cannot be defined on a mandatory prop 1`] = `
+exports[`props validation > a typed prop schema accepts extra props without exposing them 1`] = `
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { createComponent } = helpers;
-  const comp1 = createComponent(app, \`Child\`, true, false, false, []);
   
   return function template(ctx, node, key = "") {
-    const props1 = {};
-    return comp1(props1, key + \`__1\`, node, this, null);
-  }
-}"
-`;
-
-exports[`default props > default values are also set whenever component is updated 1`] = `
-"function anonymous(app, bdom, helpers
-) {
-  let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { createComponent } = helpers;
-  const comp1 = createComponent(app, \`SubComp\`, true, false, false, ["p"]);
-  
-  let block1 = createBlock(\`<div><block-child-0/></div>\`);
-  
-  return function template(ctx, node, key = "") {
-    const props1 = {p: ctx['this'].state.p};
-    const b2 = comp1(props1, key + \`__1\`, node, this, null);
-    return block1([], [b2]);
-  }
-}"
-`;
-
-exports[`default props > default values are also set whenever component is updated 2`] = `
-"function anonymous(app, bdom, helpers
-) {
-  let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { safeOutput } = helpers;
-  
-  let block1 = createBlock(\`<div><block-child-0/></div>\`);
-  
-  return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].props.p);
-    return block1([], [b2]);
+    return text(\`\`);
   }
 }"
 `;
@@ -96,6 +61,17 @@ exports[`props validation > additional props are allowed (object) 2`] = `
   
   return function template(ctx, node, key = "") {
     return block1();
+  }
+}"
+`;
+
+exports[`props validation > an array prop schema accepts extra props without exposing them 1`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  
+  return function template(ctx, node, key = "") {
+    return text(\`\`);
   }
 }"
 `;
@@ -851,6 +827,38 @@ exports[`props validation > props are validated in dev mode (code snapshot) 2`] 
 }"
 `;
 
+exports[`props validation > props are validated whenever component is updated 1`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { createComponent } = helpers;
+  const comp1 = createComponent(app, \`SubComp\`, true, false, false, ["p"]);
+  
+  let block1 = createBlock(\`<div><block-child-0/></div>\`);
+  
+  return function template(ctx, node, key = "") {
+    const props1 = {p: ctx['this'].state.p};
+    const b2 = comp1(props1, key + \`\\u00021\`, node, this, null);
+    return block1([], [b2]);
+  }
+}"
+`;
+
+exports[`props validation > props are validated whenever component is updated 2`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { safeOutput } = helpers;
+  
+  let block1 = createBlock(\`<div><block-child-0/></div>\`);
+  
+  return function template(ctx, node, key = "") {
+    const b2 = safeOutput(ctx['this'].props.p, node, key, "\\u00021");
+    return block1([], [b2]);
+  }
+}"
+`;
+
 exports[`props validation > props with type array, and no element 1`] = `
 "function anonymous(app, bdom, helpers
 ) {
@@ -886,17 +894,6 @@ exports[`props validation > props: list of strings 1`] = `
     const props1 = {};
     const b2 = comp1(props1, key + \`\\u00021\`, node, this, null);
     return block1([], [b2]);
-  }
-}"
-`;
-
-exports[`props validation > props: list of strings with optional props 1`] = `
-"function anonymous(app, bdom, helpers
-) {
-  let { text, createBlock, list, multi, html, toggler } = bdom;
-  
-  return function template(ctx, node, key = "") {
-    return text(\`\`);
   }
 }"
 `;
@@ -1551,36 +1548,6 @@ exports[`schema defaults > schema defaults work next to optional props 1`] = `
     const b2 = safeOutput(ctx['this'].props.p, node, key, "\\u00021");
     const b3 = safeOutput(ctx['this'].props.q, node, key, "\\u00022");
     return block1([], [b2, b3]);
-  }
-}"
-`;
-
-exports[`schema defaults > schema defaults work with the '?' suffix 1`] = `
-"function anonymous(app, bdom, helpers
-) {
-  let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { safeOutput } = helpers;
-  
-  let block1 = createBlock(\`<div><block-child-0/></div>\`);
-  
-  return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].props.p);
-    return block1([], [b2]);
-  }
-}"
-`;
-
-exports[`schema defaults > the defaults argument takes precedence over schema defaults 1`] = `
-"function anonymous(app, bdom, helpers
-) {
-  let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { safeOutput } = helpers;
-  
-  let block1 = createBlock(\`<div><block-child-0/></div>\`);
-  
-  return function template(ctx, node, key = "") {
-    const b2 = safeOutput(ctx['this'].props.p);
-    return block1([], [b2]);
   }
 }"
 `;

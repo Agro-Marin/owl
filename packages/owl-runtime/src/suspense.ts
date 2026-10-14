@@ -1,4 +1,5 @@
 import { signal } from "@odoo/owl-core";
+import { createSubRoot } from "./app";
 import { multi, type BDom, type MountTarget, type VNode } from "./blockdom";
 import { Component } from "./component";
 import type { ComponentNode } from "./component_node";
@@ -98,7 +99,7 @@ export class Suspense extends Component {
     // A sub-root renders the default slot independently of the enclosing
     // MountFiber — its willStart fires in parallel with the outer tree.
     const suspenseProps = this.props;
-    const root = suspenseNode.app.createRoot(SuspenseHost, {
+    const root = createSubRoot(suspenseNode.app, SuspenseHost, {
       props: {
         get slots() {
           return suspenseProps.slots;
@@ -117,7 +118,7 @@ export class Suspense extends Component {
       // the default slot yield to in-flight ancestor renders (e.g. a t-if
       // about to remove this Suspense).
       host: suspenseNode,
-    } as any);
+    });
 
     // Kick off the render phase now — descendants' onWillStart fires in
     // parallel with the outer tree's mount, no target needed yet.

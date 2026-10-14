@@ -65,6 +65,10 @@ component's first render) until all plugin async initialization resolves. See
 
 ### `useEffect`
 
+Reactive hooks require an active component or plugin scope. Outside a scope,
+`useEffect`, `useOnChange` and `useListener` throw before starting an effect,
+evaluating dependencies or attaching a listener.
+
 The `useEffect` hook creates an [effect](effects.md) that is
 automatically cleaned up when the component is destroyed. It is equivalent to:
 

@@ -46,6 +46,8 @@ runtime — but TypeScript would infer it as `Signal<null>`, so prefer
 ## Multiple References with Resources
 
 When `t-ref` is used inside a loop, a single signal can only hold one element.
+If several elements bind the same signal, the most recently bound element wins.
+Removing that element clears the signal; it does not restore an earlier binding.
 For this case, `t-ref` also accepts a [Resource](resources.md):
 it will automatically add elements to the resource when they are mounted and
 remove them when they are unmounted.

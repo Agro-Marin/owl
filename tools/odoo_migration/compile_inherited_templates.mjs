@@ -47,6 +47,10 @@ const { applyInheritance } = await import(
 );
 const newOwl = await import(process.env.OWL + "/packages/owl/dist/owl.es.js");
 const oldOwl = await import(process.env.OLD);
+if (process.env.OWL_DEBUG) {
+  newOwl.setDebug(process.env.OWL_DEBUG);
+  oldOwl.setDebug?.(process.env.OWL_DEBUG);
+}
 
 const config = {
   test: true,
@@ -76,6 +80,7 @@ function dependsOf(moduleDir) {
 }
 const inputFiles = await templateFiles();
 const moduleDirs = new Map();
+let xmlFailures = 0;
 for (const file of inputFiles) {
   const dir = moduleOf(file);
   if (dir) {
@@ -102,6 +107,8 @@ inputFiles.sort((a, b) => rankOf(a) - rankOf(b) || (a < b ? -1 : a > b ? 1 : 0))
 for (const file of inputFiles) {
   const doc = new DOMParser().parseFromString(fs.readFileSync(file, "utf8"), "text/xml");
   if (doc.getElementsByTagName("parsererror").length) {
+    console.log("XMLPARSE", file);
+    xmlFailures++;
     continue;
   }
   for (const t of doc.querySelectorAll("[t-name], [t-inherit]")) {
@@ -166,30 +173,38 @@ function resolve(name, chain = new Set()) {
 }
 
 function compiles(owl, name, el) {
+  let app;
   try {
-    const app = new owl.App(config);
+    app = new owl.App(config);
     app.addTemplate(name, el.outerHTML);
     app.getTemplate(name);
     return null;
   } catch (e) {
     return String(e.message || e).split("\n")[0];
+  } finally {
+    app?.destroy();
   }
 }
 
 const JSDOM_ONLY = /Invalid attribute localName|Failed to serialize XML/;
 let total = 0;
 let bothFail = 0;
+let unresolvedPrimary = 0;
+let jsdomOnly = 0;
 const regressions = [];
 const fixedByNew = [];
 for (const name of [...base.keys(), ...primary.keys()]) {
   const el = resolve(name);
   if (!el) {
+    unresolvedPrimary++;
+    if (process.env.UNAPPLIED) console.log("UNRESOLVED", name);
     continue;
   }
   total++;
   const fresh = compiles(newOwl, name, el);
   const stale = compiles(oldOwl, name, el);
   if (fresh && JSDOM_ONLY.test(fresh)) {
+    jsdomOnly++;
     continue;
   }
   if (fresh && !stale) {
@@ -217,6 +232,16 @@ console.log(
     `${regressions.length} rejected only by the new build, ${fixedByNew.length} only by the old, ` +
     `${bothFail} by both; ${unapplied.length} extensions not applied (in module dependency order)`
 );
+const absentExtensionTargets = [...extensions.keys()].filter(
+  (name) => !base.has(name) && !primary.has(name)
+);
+console.log(
+  `coverage: ${xmlFailures} XML parse failures, ${unresolvedPrimary} unresolved primary templates, ` +
+    `${absentExtensionTargets.length} extension targets absent, ${jsdomOnly} JSDOM-only comparisons skipped`
+);
+if (regressions.length || xmlFailures) {
+  process.exitCode = 1;
+}
 
 // FREE_NAMES=1: a component's own template reads a context name nothing in it
 // sets — not `this.x`, not a t-set, t-as, slot scope or arrow parameter — so
@@ -259,13 +284,16 @@ if (process.env.FREE_NAMES) {
       continue;
     }
     let code;
+    let app;
     try {
-      const app = new newOwl.App(config);
+      app = new newOwl.App(config);
       app.addTemplate(name, el.outerHTML);
       app.getTemplate(name);
       code = String(app.templates[name]);
     } catch {
       continue;
+    } finally {
+      app?.destroy();
     }
     const reads = new Set([...code.matchAll(/ctx\['([\w$]+)'\]/g)].map((m) => m[1]));
     const sets = new Set([...code.matchAll(/ctx\[["`']([\w$]+)["`']\]\s*=/g)].map((m) => m[1]));

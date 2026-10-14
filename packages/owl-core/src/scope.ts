@@ -4,6 +4,7 @@ import {
   ComputationAtom,
   disposeComputation,
   hasObservers,
+  runUnowned,
   scopeStack as setupStack,
 } from "./computations";
 import { STATUS, StatusValue } from "./status";
@@ -37,11 +38,14 @@ import type { PluginManager } from "./plugin_manager";
 export const scopeStack = setupStack as Scope[];
 
 export type ScopeMark = [willStart: number, destroyCbs: number, computations: number];
+const EMPTY_SCOPE_MARK = [0, 0, 0] as const;
 
 function runReversed(cbs: Array<() => void>, reportError: (e: unknown) => void): void {
   for (let i = cbs.length - 1; i >= 0; i--) {
     try {
-      cbs[i]();
+      // Destruction is not a read of whoever requested it. Cleanup also must
+      // not create child effects owned by that caller's computation.
+      runUnowned(cbs[i]);
     } catch (e) {
       reportError(e);
     }
@@ -167,7 +171,7 @@ export abstract class Scope {
    */
   onDestroy(cb: () => void): void {
     if (this.status >= STATUS.DESTROYED) {
-      cb();
+      runUnowned(cb);
       return;
     }
     (this._destroyCbs ??= []).push(cb);
@@ -194,16 +198,13 @@ export abstract class Scope {
       );
     }
     try {
-      this._controller?.abort();
-      let cbs;
-      while ((cbs = this._destroyCbs)) {
-        this._destroyCbs = null;
-        runReversed(cbs, reportError);
+      if (this._controller) {
+        runUnowned(() => this._controller!.abort());
       }
     } finally {
       // a reportError that rethrows still leaves the scope destroyed
       try {
-        disposeUnobserved(this.computations.splice(0), reportError);
+        this.release(EMPTY_SCOPE_MARK, reportError);
       } finally {
         this.status = STATUS.DESTROYED;
       }
@@ -229,11 +230,46 @@ export abstract class Scope {
         `${scopeName(this)}: rollback to ${mark[0]} willStart, ${mark[1]} destroy callback(s), ${mark[2]} computation(s)`
       );
     }
+    this.release(mark, reportError);
+  }
+
+  // Both callback cleanup and computation disposal can register more of
+  // either. Drain them together until the scope reaches its mark again.
+  private release(mark: Readonly<ScopeMark>, reportError: (e: unknown) => void): void {
     this.willStart.length = mark[0];
-    if (this._destroyCbs) {
-      runReversed(this._destroyCbs.splice(mark[1]), reportError);
+    if ((this._destroyCbs?.length ?? 0) <= mark[1] && this.computations.length <= mark[2]) {
+      return;
     }
-    disposeUnobserved(this.computations.splice(mark[2]), reportError);
+    let failed = false;
+    let failure: unknown;
+    const report = (error: unknown) => {
+      try {
+        runUnowned(reportError, error);
+      } catch (error) {
+        if (!failed) {
+          failed = true;
+          failure = error;
+        }
+      }
+    };
+    do {
+      while (this._destroyCbs && this._destroyCbs.length > mark[1]) {
+        let callbacks = this._destroyCbs;
+        if (mark[1]) {
+          callbacks = callbacks.splice(mark[1]);
+        } else {
+          this._destroyCbs = null;
+        }
+        runReversed(callbacks, report);
+      }
+      if (this.computations.length > mark[2]) {
+        disposeUnobserved(this.computations.splice(mark[2]), report);
+      }
+    } while ((this._destroyCbs?.length ?? 0) > mark[1] || this.computations.length > mark[2]);
+    this.willStart.length = mark[0];
+    if (failed) {
+      throw failure;
+    }
   }
 
   /**
@@ -280,7 +316,13 @@ export function getScope(): Scope | null {
 }
 
 export function isAbortError(e: unknown): boolean {
-  return typeof e === "object" && e !== null && (e as { name?: string }).name === "AbortError";
+  try {
+    return typeof e === "object" && e !== null && (e as { name?: string }).name === "AbortError";
+  } catch {
+    // An unknown rejection can have a throwing name accessor or be a proxy.
+    // Failure to inspect it does not make it an abort or replace the rejection.
+    return false;
+  }
 }
 
 export function makeAbortError(cause?: unknown): Error {

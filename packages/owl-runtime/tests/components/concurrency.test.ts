@@ -4098,8 +4098,7 @@ test("delayed render does not go through when t-component value changed", async 
   `);
 });
 
-test.skip("delayed render is not cancelled by upcoming render", async () => {
-  // TODO: unskip
+test("delayed render is not cancelled by upcoming render", async () => {
   let b: any;
 
   class B extends Component {
@@ -4130,12 +4129,8 @@ test.skip("delayed render is not cancelled by upcoming render", async () => {
     [
       "A:setup",
       "A:willStart",
-      "A:willRender",
       "B:setup",
       "B:willStart",
-      "A:rendered",
-      "B:willRender",
-      "B:rendered",
       "B:mounted",
       "A:mounted",
     ]
@@ -4155,11 +4150,7 @@ test.skip("delayed render is not cancelled by upcoming render", async () => {
   b.props.state.groups.push(1);
   expect(steps.splice(0)).toMatchInlineSnapshot(`
     [
-      "A:willRender",
       "B:willUpdateProps",
-      "A:rendered",
-      "B:willRender",
-      "B:rendered",
     ]
   `);
   await nextTick();
@@ -4167,11 +4158,6 @@ test.skip("delayed render is not cancelled by upcoming render", async () => {
   expect(fixture.innerHTML).toBe("2black");
   expect(steps.splice(0)).toMatchInlineSnapshot(`
     [
-      "A:willRender",
-      "B:willUpdateProps",
-      "A:rendered",
-      "B:willRender",
-      "B:rendered",
       "A:willPatch",
       "B:willPatch",
       "B:patched",

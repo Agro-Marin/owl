@@ -544,8 +544,7 @@ describe("Reactivity", () => {
     expect(state).toEqual({ a: 1 });
   });
 
-  //todo
-  test.skip("delete property from observed object 2", async () => {
+  test("a deleted child no longer notifies a parent's key observer", async () => {
     const spy = vi.fn();
     const obj = { a: { b: 1 } };
     const state = createProxy(obj.a);
@@ -554,14 +553,15 @@ describe("Reactivity", () => {
     expect(state2.a).toBe(state);
     expectSpy(spy, 1, [["a"]]);
 
-    Object.keys(state2);
     delete state2.a;
     await waitScheduler();
     expectSpy(spy, 2, [[]]);
 
     state.new = 2;
     await waitScheduler();
-    expectSpy(spy, 3, [["new"]]);
+    expectSpy(spy, 2, [[]]);
+    expect(Object.keys(state)).toEqual(["b", "new"]);
+    expect(Object.keys(state2)).toEqual([]);
   });
 
   test("set element in observed array", async () => {
@@ -2246,7 +2246,7 @@ describe("Reactivity: proxy", () => {
     expect(steps).toEqual(["parent", "child", "child"]);
   });
 
-  test.skip("several nodes on different level use same context", async () => {
+  test("several nodes at different levels react only to the shared keys they read", async () => {
     const testContext = createProxy({ a: 123, b: 456 });
     const steps: Set<string> = new Set();
 
@@ -2260,7 +2260,7 @@ describe("Reactivity: proxy", () => {
      */
 
     class L3A extends Component {
-      static template = xml`<t t-set="noop" t-value="this.notify()"/><div><t t-out="contextObj.a"/> <t t-out="contextObj.b"/></div>`;
+      static template = xml`<t t-set="noop" t-value="this.notify()"/><div><t t-out="this.contextObj.a"/> <t t-out="this.contextObj.b"/></div>`;
       contextObj = proxy(testContext);
       notify() {
         steps.add("L3A");
@@ -2268,7 +2268,7 @@ describe("Reactivity: proxy", () => {
     }
 
     class L2B extends Component {
-      static template = xml`<t t-set="noop" t-value="this.notify()"/><div><t t-out="contextObj.b"/></div>`;
+      static template = xml`<t t-set="noop" t-value="this.notify()"/><div><t t-out="this.contextObj.b"/></div>`;
       contextObj = proxy(testContext);
       notify() {
         steps.add("L2B");
@@ -2276,7 +2276,7 @@ describe("Reactivity: proxy", () => {
     }
 
     class L2A extends Component {
-      static template = xml`<t t-set="noop" t-value="this.notify()"/><div><t t-out="contextObj.a"/><L3A /></div>`;
+      static template = xml`<t t-set="noop" t-value="this.notify()"/><div><t t-out="this.contextObj.a"/><L3A /></div>`;
       static components = { L3A };
       contextObj = proxy(testContext);
       notify() {
@@ -2295,43 +2295,32 @@ describe("Reactivity: proxy", () => {
 
     await mount(L1A, fixture);
     expect(fixture.innerHTML).toBe("<div><div>123<div>123 456</div></div><div>456</div></div>");
-    expect([...steps]).toEqual(["L1A", "L2A", "L2B", "L3A"]);
+    expect(steps).toEqual(new Set(["L1A", "L2A", "L2B", "L3A"]));
     steps.clear();
 
     testContext.a = 321;
-    await nextMicroTick();
-    await nextMicroTick();
-    expect([...steps]).toEqual(["L2A"]);
     await nextTick();
-    expect([...steps]).toEqual(["L2A", "L3A"]);
+    expect(steps).toEqual(new Set(["L2A", "L3A"]));
     expect(fixture.innerHTML).toBe("<div><div>321<div>321 456</div></div><div>456</div></div>");
     steps.clear();
 
     testContext.b = 654;
-    await nextMicroTick();
-    await nextMicroTick();
-    expect([...steps]).toEqual(["L2B", "L3A"]);
     await nextTick();
-    expect([...steps]).toEqual(["L2B", "L3A"]);
+    expect(steps).toEqual(new Set(["L2B", "L3A"]));
     expect(fixture.innerHTML).toBe("<div><div>321<div>321 654</div></div><div>654</div></div>");
     steps.clear();
 
     testContext.a = 777;
     testContext.b = 777;
-    await nextMicroTick();
-    await nextMicroTick();
-    expect([...steps]).toEqual(["L2A", "L2B"]);
     await nextTick();
-    expect([...steps]).toEqual(["L2A", "L2B", "L3A"]);
+    expect(steps).toEqual(new Set(["L2A", "L2B", "L3A"]));
     expect(fixture.innerHTML).toBe("<div><div>777<div>777 777</div></div><div>777</div></div>");
     steps.clear();
 
     testContext.c = 444;
-    await nextMicroTick();
-    await nextMicroTick();
-    expect([...steps]).toEqual(["L1A"]);
     await nextTick();
-    expect([...steps]).toEqual(["L1A", "L2A", "L2B", "L3A"]);
+    expect(steps.size).toBe(0);
+    expect(fixture.innerHTML).toBe("<div><div>777<div>777 777</div></div><div>777</div></div>");
   });
 
   test("destroyed component is inactive", async () => {
@@ -2496,31 +2485,12 @@ describe("Reactivity: proxy", () => {
     steps.clear();
   });
 
-  test.skip("concurrent renderings", async () => {
-    /**
-     * Note: this test is interesting, but sadly just an incomplete attempt at
-     * protecting users against themselves.  With the context API, it is not
-     * possible for the framework to protect completely against crashes.  Maybe
-     * like in this case, when a component is in a simple hierarchy where all
-     * renderings come from the context changes, but in a real case, where some
-     * code can trigger a rendering independently, it is insufficient.
-     *
-     * The main problem is that the sub component depends on some external state,
-     * which may be modified, and then incompatible with the component actual
-     * state (for example, if the sub component has an id key related to some
-     * object that has been removed from the context).
-     *
-     * For now, sadly, the only solution is that components that depends on external
-     * state should guarantee their own integrity themselves. Then maybe this
-     * could be solved at the level of a state management solution that has a
-     * more advanced API, to let components determine if they should be updated
-     * or not (so, something slightly more advanced that the useStore hook).
-     */
+  test("a local render waits for an ancestor's pending shared-state props", async () => {
     const testContext = createProxy({ x: { n: 1 }, key: "x" });
     const def = makeDeferred();
     let stateC: any;
     class ComponentC extends Component {
-      static template = xml`<span><t t-out="context[this.props.key].n"/><t t-out="state.x"/></span>`;
+      static template = xml`<span><t t-out="this.context[this.props.key].n"/><t t-out="this.state.x"/></span>`;
       props = props();
       context = proxy(testContext);
       state = proxy({ x: "a" });
@@ -2538,7 +2508,7 @@ describe("Reactivity: proxy", () => {
     }
     class ComponentA extends Component {
       static components = { ComponentB };
-      static template = xml`<div><ComponentB key="context.key"/></div>`;
+      static template = xml`<div><ComponentB key="this.context.key"/></div>`;
       context = proxy(testContext);
     }
 

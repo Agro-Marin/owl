@@ -1,4 +1,12 @@
-import { computed, effect, isAbortError, signal } from "../src";
+import {
+  computed,
+  effect,
+  immediateEffect,
+  isAbortError,
+  setDebug,
+  setDebugSink,
+  signal,
+} from "../src";
 import { TestScope, waitScheduler } from "./helpers";
 
 function rethrow(e: unknown) {
@@ -112,5 +120,72 @@ describe("Scope.finalize with a reporter that rethrows", () => {
     expect(() => scope.finalize(rethrow)).toThrow("boom");
     expect(scope.isDestroyed()).toBe(true);
     expect(() => scope.run(() => 1)).toThrow("Cannot run a callback in a destroyed scope");
+  });
+});
+
+describe("scope cleanup isolation", () => {
+  let lines: string[];
+  beforeEach(() => {
+    lines = [];
+    setDebugSink((channel, message) => lines.push(`${channel}: ${message}`));
+    setDebug(["scope", "effect", "reactivity"]);
+  });
+  afterEach((context) => {
+    if (context.task.result?.state === "fail") {
+      console.debug("[owl:scope-cleanup-test]", lines);
+    }
+    setDebug(false);
+    setDebugSink(null);
+  });
+
+  test.each(["finalize", "rollback", "late onDestroy"] as const)(
+    "%s callbacks do not subscribe the computation requesting cleanup",
+    (action) => {
+      const scope = new TestScope({});
+      const mark = scope.mark();
+      const value = signal(0);
+      scope.onDestroy(() => {
+        value();
+      });
+      if (action === "late onDestroy") {
+        scope.finalize(rethrow);
+      }
+      let runs = 0;
+      const stop = immediateEffect(() => {
+        runs++;
+        if (action === "finalize") {
+          scope.finalize(rethrow);
+        } else if (action === "rollback") {
+          scope.rollback(mark, rethrow);
+        } else {
+          scope.onDestroy(() => {
+            value();
+          });
+        }
+      });
+      try {
+        value.set(1);
+        expect(runs).toBe(1);
+        expect(lines).toContain("reactivity: write, 0 observer(s)");
+      } finally {
+        stop();
+        scope.finalize(rethrow);
+      }
+    }
+  );
+
+  test("rollback releases callbacks registered during cleanup, preserving earlier callbacks", () => {
+    const scope = new TestScope({});
+    const steps: string[] = [];
+    scope.onDestroy(() => steps.push("kept"));
+    const mark = scope.mark();
+    scope.onDestroy(() => {
+      steps.push("undone");
+      scope.onDestroy(() => steps.push("late"));
+    });
+    scope.rollback(mark, rethrow);
+    expect(steps.splice(0)).toEqual(["undone", "late"]);
+    scope.finalize(rethrow);
+    expect(steps).toEqual(["kept"]);
   });
 });

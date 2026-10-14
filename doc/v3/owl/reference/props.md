@@ -78,6 +78,8 @@ A schema describing the expected props. It can be:
 
 Props are validated in [dev mode](app.md#configuration) whenever the component
 is created or updated. See [Props validation](#props-validation) for details.
+Extra props are accepted by these schemas. A schema-backed view exposes only
+its declared keys; call `useProps()` without a schema to read every supplied prop.
 
 ```js
 useProps(); // no schema

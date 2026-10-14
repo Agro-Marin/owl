@@ -9,13 +9,18 @@ import {
   isObserving,
   onReadAtom,
   onWriteAtom,
-  releaseOwned,
-  removeSources,
   untrack,
   updateComputation,
 } from "./computations";
 import { debug, debugLog } from "./debug";
 import { getScope } from "./scope";
+
+// Map merges signed zero; selector answers use Object.is and distinguish it.
+const NEGATIVE_ZERO = Symbol("selector negative zero");
+
+function atomKey<K>(key: K): K | typeof NEGATIVE_ZERO {
+  return Object.is(key, -0) ? NEGATIVE_ZERO : key;
+}
 
 export interface SelectorOptions {
   /**
@@ -37,47 +42,42 @@ export interface SelectorOptions {
  */
 export function selector<K>(source: () => K, options: SelectorOptions = {}): (key: K) => boolean {
   // the atom of each key a computation read, created on that read
-  const atoms = new Map<K, Atom>();
+  const atoms = new Map<K | typeof NEGATIVE_ZERO, Atom>();
   let swept = 0;
-  // source changes since the last sweep: sweeping every as many changes as
+  // source checks since the last sweep: sweeping every as many checks as
   // there are keys finds the keys nobody reads any more, at O(1) a change
-  let changes = 0;
+  let checks = 0;
   let current: K;
   // whether the computation follows the source: it does while a key is read
   let started = false;
   // what the source threw: every key rethrows it until the source recovers
   let failure: { error: unknown } | null = null;
   let disposed = false;
+  let pendingKeys: Iterable<K | typeof NEGATIVE_ZERO> | null = null;
   const computation = createComputation(
     () => {
+      pendingKeys = null;
+      if (disposed) return;
       const previous = current;
+      const previousFailure = failure;
       const answered = started && !failure;
-      try {
-        current = source();
-        failure = null;
-      } catch (error) {
-        if (debug.computed) {
-          debugLog(
-            "computed",
-            `${computation.name}: its source failed, every key rethrows it`,
-            error
-          );
-        }
-        failure = { error };
+      readSource();
+      if (disposed) {
+        // The source may destroy its own scope, then read or create more work.
+        // Release that late work without changing the frozen answer.
+        release();
+        return;
       }
       if (!started) {
         started = true;
-      } else if (answered !== !failure) {
-        // failed or recovered: every key's answer changed
-        notify(atoms.keys());
+      } else if (
+        answered !== !failure ||
+        (failure && !Object.is(previousFailure?.error, failure.error))
+      ) {
+        // Failed, recovered or threw a different value: every answer changed.
+        pendingKeys = atoms.keys();
       } else if (!failure && !Object.is(previous, current)) {
-        notify([previous, current]);
-        if (++changes >= atoms.size) {
-          sweep();
-        }
-      }
-      if (atoms.size === 0) {
-        release();
+        pendingKeys = [previous, current];
       }
     },
     false,
@@ -85,18 +85,66 @@ export function selector<K>(source: () => K, options: SelectorOptions = {}): (ke
     true,
     options.name || (debug.computed && source.name) || "selector"
   );
+  computation.onUpdated = () => {
+    const keys = pendingKeys;
+    pendingKeys = null;
+    if (started) checks++;
+    let completed = false;
+    try {
+      if (keys) notify(keys);
+      completed = true;
+    } finally {
+      try {
+        // Notification removes unread keys and can dispose more readers.
+        if (checks && checks >= atoms.size) sweep();
+        if (atoms.size === 0 && started) release();
+      } catch (error) {
+        if (completed) throw error;
+        // Preserve a notification failure while still releasing source work.
+        Promise.reject(error);
+      }
+    }
+  };
+
+  function readSource() {
+    try {
+      const next = source();
+      if (!disposed) {
+        current = next;
+        failure = null;
+      } else if (debug.computed) {
+        debugLog("computed", `${computation.name}: result after destroy dropped`);
+      }
+    } catch (error) {
+      if (disposed) {
+        if (debug.computed) {
+          debugLog("computed", `${computation.name}: failure after destroy dropped`, error);
+        }
+        return;
+      }
+      if (debug.computed) {
+        debugLog(
+          "computed",
+          `${computation.name}: its source failed, every key rethrows it`,
+          error
+        );
+      }
+      failure = { error };
+    }
+  }
 
   // one batch: an immediate reader runs once, after every key is notified,
   // and one that throws does not keep the others from being notified
-  function notify(keys: Iterable<K>) {
+  function notify(keys: Iterable<K | typeof NEGATIVE_ZERO>) {
     untrack(() =>
       batch(() => {
         for (const key of keys) {
-          const atom = atoms.get(key);
+          const storedKey = atomKey(key);
+          const atom = atoms.get(storedKey);
           if (atom !== undefined) {
             onWriteAtom(atom);
             if (!hasObservers(atom)) {
-              atoms.delete(key);
+              atoms.delete(storedKey);
             }
           }
         }
@@ -114,7 +162,7 @@ export function selector<K>(source: () => K, options: SelectorOptions = {}): (ke
       }
     });
     swept = atoms.size;
-    changes = 0;
+    checks = 0;
     if (debug.computed) {
       debugLog(
         "computed",
@@ -129,14 +177,10 @@ export function selector<K>(source: () => K, options: SelectorOptions = {}): (ke
       debugLog("computed", `${computation.name}: no key is read, stops following its source`);
     }
     started = false;
-    failure = null;
-    // the effects the source created go with the run that created them
-    const releaseFailure =
-      computation.owned !== null ? releaseOwned(computation, "stops following its source") : null;
-    removeSources(computation);
-    if (releaseFailure) {
-      throw releaseFailure.error;
-    }
+    // Unsubscribe before source-owned cleanup can write its inputs. A
+    // derived source's cleanup can also write another dependency: defer
+    // those immediate runs until disposal marks this computation done.
+    batch(() => disposeComputation(computation));
   }
 
   function update() {
@@ -152,23 +196,26 @@ export function selector<K>(source: () => K, options: SelectorOptions = {}): (ke
 
   function isSelected(key: K): boolean {
     if (disposed) {
+      if (failure) throw failure.error;
       return Object.is(current, key);
     }
     if (isObserving()) {
-      let atom = atoms.get(key);
+      const storedKey = atomKey(key);
+      let atom = atoms.get(storedKey);
       if (atom === undefined) {
         if (atoms.size >= 2 * swept + 16) {
           sweep();
         }
         atom = createAtom(undefined, "key");
-        atoms.set(key, atom);
+        atoms.set(storedKey, atom);
       }
       // subscribed before the source is asked: a reader it fails for runs
       // again once it recovers
       onReadAtom(atom);
     } else if (!started) {
       // nothing follows the source: ask it
-      current = source();
+      readSource();
+      if (failure) throw failure.error;
       return Object.is(current, key);
     }
     update();
@@ -181,8 +228,12 @@ export function selector<K>(source: () => K, options: SelectorOptions = {}): (ke
   if (!options.detached) {
     getScope()?.onDestroy(() => {
       disposed = true;
-      disposeComputation(computation);
-      atoms.clear();
+      try {
+        batch(() => disposeComputation(computation));
+      } finally {
+        // A failing owned cleanup must not leave the key table retained.
+        atoms.clear();
+      }
     });
   }
   return isSelected;

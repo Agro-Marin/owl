@@ -7,6 +7,7 @@ import {
   disposeComputation,
   getCurrentComputation,
   OwlError,
+  PluginManager,
   Scope,
   scopeStack,
   setComputation,
@@ -41,6 +42,7 @@ type HookKind =
 const NO_HOOKS: LifecycleHook[] = /* @__PURE__ */ Object.freeze([]) as any;
 
 export class ComponentNode extends Scope implements VNode<ComponentNode> {
+  declare app: App;
   fiber: Fiber | null = null;
   component!: Component;
   bdom: BDom | null = null;
@@ -88,12 +90,13 @@ export class ComponentNode extends Scope implements VNode<ComponentNode> {
     props: Record<string, any>,
     app: App,
     parent: ComponentNode | null,
-    parentKey: string | null
+    parentKey: string | null,
+    pluginManager?: PluginManager
   ) {
     super(app);
     this.parent = parent;
     this.parentKey = parentKey;
-    this.pluginManager = parent ? parent.pluginManager : app.pluginManager;
+    this.pluginManager = pluginManager ?? (parent ? parent.pluginManager : app.pluginManager);
     this.componentName = C.name;
     this.signalComputation = createComputation(
       () => this.render(false),

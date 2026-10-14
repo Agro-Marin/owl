@@ -75,6 +75,12 @@ The `scope.isDestroyed()` method answers the question "is this scope dead?" —
 it returns `true` once all cleanup (destroy callbacks, computation disposal)
 has run.
 
+Destroy callbacks and abort listeners run without reactive tracking or effect
+ownership from the computation requesting destruction. Reading state during
+cleanup therefore does not subscribe that caller. A rollback also releases
+destroy callbacks registered by the callbacks it is undoing, while preserving
+registrations made before its mark.
+
 The `status()` helper function (which takes a `Component` or `Plugin` instance
 directly) is a more convenient frontend for reading a scope's status:
 
@@ -277,6 +283,10 @@ scope.onDestroy(() => {
 Errors thrown from an `onDestroy` callback are routed to the component's error
 handler (for `ComponentScope`) or logged (for `PluginScope`); they don't
 interrupt the destruction of sibling callbacks or the scope itself.
+Error reporting runs without tracking or effect ownership too. If the reporter
+throws, remaining callbacks and computations are released before the first
+reporting error is rethrown. Cleanup registered while disposing those
+computations is drained in the same destruction or rollback.
 
 ## API Summary
 

@@ -235,10 +235,15 @@ describe("t-out", () => {
     expect(fixture.innerHTML).toBe("<span>&lt;li&gt;yep&lt;/li&gt;</span>");
   });
 
-  test.skip("t-out block", () => {
+  test("t-out stringifies and escapes a raw block", () => {
     const block = createBlock("<div>block</div>");
     const template = `<span t-out="bdom"/>`;
-    expect(renderToString(template, { bdom: block() })).toBe("<span><div>block</div></span>");
+    const node = renderToBdom(template, { bdom: block() });
+    mount(node, fixture);
+    expect(fixture.innerHTML).toBe("<span>&lt;div&gt;block&lt;/div&gt;</span>");
+    expect(fixture.querySelector("span")!.children.length).toBe(0);
+    patch(node, renderToBdom(template, { bdom: markup("<div>block</div>") }));
+    expect(fixture.innerHTML).toBe("<span><div>block</div></span>");
   });
 
   test("t-out bdom", () => {
