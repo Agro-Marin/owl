@@ -97,8 +97,6 @@ test("slot content is not re-rendered when the guard removing it flips", async (
   root.open.set(false);
   await nextTick();
   expect(target.textContent).toBe("");
-  // The slot must never have been evaluated with the guard value that
-  // removed it: the sub-root render has to yield to the ancestor's.
   expect(seen).toEqual([true]);
   app.destroy();
 });
@@ -185,9 +183,6 @@ test("ref signal: waits for target to appear, then mounts", async () => {
   await nextTick();
   await nextTick();
 
-  // Target is the in-tree <div class="here"> bound by t-ref. Once the parent
-  // mounts, the ref fills in, the Portal's effect re-fires, and the content
-  // commits inside that div.
   const here = fixture.querySelector(".here")!;
   expect(here.innerHTML).toContain(`<span class="payload">deferred</span>`);
   app.destroy();
@@ -441,7 +436,6 @@ test("waits for descendant onWillStart before mounting", async () => {
   const app = new App();
   await app.createRoot(Root).mount(fixture);
   await nextTick();
-  // Outer mount completed, but the portal's content is still loading.
   expect(target.innerHTML).toBe("");
 
   rpc.resolve("ready");
@@ -721,7 +715,6 @@ test("content rendered with its host mounts after the onMounted of that render",
 test("a deep render renders the components of its content again", async () => {
   const target = makeOutside("portal-target-deep");
   target.dataset.testPortal = "1";
-  // not reactive: only a deep render shows a change
   const data = { label: "a" };
   class Label extends Component {
     static template = xml`<b t-out="this.data.label"/>`;

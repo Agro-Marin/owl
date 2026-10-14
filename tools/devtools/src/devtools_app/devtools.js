@@ -2,12 +2,10 @@ import { IS_FIREFOX, browserInstance } from "../utils";
 
 let created = false;
 
-// Try to load the owl panel each 1000 ms in case it (re)appears on the page later on
 const checkInterval = setInterval(createPanelsIfOwl, 1000);
 
 createPanelsIfOwl();
 
-// Create the owl devtools panel if owl on the page is available at a sufficient version
 function createPanelsIfOwl() {
   if (created) {
     clearInterval(checkInterval);

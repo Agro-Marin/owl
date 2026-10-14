@@ -1,9 +1,5 @@
 import { compileExpr } from "../src/inline_expressions";
 
-// Random expressions, each written twice: in template syntax (word operators
-// allowed) and as the plain JavaScript it means. The compiled template form,
-// evaluated against a context, must give what JavaScript gives for the plain
-// form with the same variables in scope.
 
 function prng(seed: number) {
   let s = seed;

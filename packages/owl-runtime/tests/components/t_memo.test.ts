@@ -34,7 +34,6 @@ describe("t-memo", () => {
     }
     const list = await mount(List, fixture);
     expect(rowsText()).toEqual(["a/x", "b/y"]);
-    // not a dependency: the item is not rendered again
     list.state.rows[0].note = "changed";
     list.state.selected = 1;
     await nextTick();
@@ -86,7 +85,6 @@ describe("t-memo", () => {
   });
 
   test("nested memoized lists keep the items of each outer item apart", async () => {
-    // same key and same dependencies in both groups: only the site tells them apart
     class Groups extends Component {
       static template = xml`
         <p t-out="this.state.title"/>
@@ -134,7 +132,6 @@ describe("t-memo", () => {
     list.state.value = 1;
     list.state.rows[0].label = "first";
     await nextTick();
-    // the first render waits for its child: nothing applied yet
     expect(rowsText()).toEqual(["r1", "r2"]);
     list.state.rows.push({ id: 3, label: "r3" });
     list.state.rows[1].label = "second";
@@ -219,12 +216,10 @@ describe("t-memo", () => {
     const list = await mount(List, fixture);
     steps.splice(0);
     const cells = () => [...fixture.querySelectorAll("b")].map((b) => b.textContent);
-    // `extra` changes, but is not a dependency: the cells are neither updated nor dropped
     list.state.title = "t2";
     await nextTick();
     expect(cells()).toEqual(["r1/0", "r2/0"]);
     expect(steps.splice(0)).toEqual([]);
-    // a cell's own state still renders it
     const firstCell: any = [...(list as any).__owl__.childMap.values()][0];
     firstCell.component.state.clicks++;
     await nextTick();
@@ -321,7 +316,6 @@ describe("t-memo", () => {
     list.state.value = 1;
     list.state.rows.push({ id: 2, label: "b" });
     await nextTick();
-    // the pass waits for Slow: b's cell exists, not mounted
     list.state.rows.push({ id: 3, label: "c" });
     await nextTick();
     def.resolve();

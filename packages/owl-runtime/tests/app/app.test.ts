@@ -114,7 +114,6 @@ describe("app", () => {
       ]
     `);
 
-    // rerender to force the instantiation of a new B component (destroying the first)
     render(comp);
     await nextMicroTick();
     expect(steps.splice(0)).toMatchInlineSnapshot(`
@@ -210,14 +209,11 @@ describe("app", () => {
     const app = new App({ templates });
     await app.createRoot(SomeComponent).mount(fixture);
     expect(fixture.querySelector(".hello")).toBeDefined();
-    // Only the "hello" template is used, so the "world" template is not yet loaded
     expect(Object.keys(app.templates)).toEqual(["hello"]);
     expect(Object.keys(app.rawTemplates)).toEqual(["hello", "world"]);
   });
 
   test("can load precompiled templates from an object name-fn", async () => {
-    // simulates the output of the `compile_templates` script, which produces
-    // a `Record<string, TemplateFunction>` to be passed to the `App` config.
     const templates = {
       hello: compile(`<div class="hello">hello</div>`),
       world: compile(`<div>world</div>`),

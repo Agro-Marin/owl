@@ -2,14 +2,9 @@ import { createBlock, createCatcher, list, mount, multi, patch, remove } from ".
 import { setDebug, setDebugSink } from "@odoo/owl-core";
 import { makeTestFixture } from "./helpers";
 
-//------------------------------------------------------------------------------
-// Setup and helpers
-//------------------------------------------------------------------------------
 
 let fixture: HTMLElement;
 
-// a handler's code is static, given with its block or catcher: this one runs
-// the function a render gives as its context
 const run = (ctx: any, ev: Event) => ctx(ev);
 
 beforeEach(() => {
@@ -53,7 +48,6 @@ test("do not catch events outside of itself", async () => {
 });
 
 describe("synthetic events follow native propagation", () => {
-  // a block type given its handlers at each call, as compiled code does
   const withHandlers = (str: string, handlers: any[]) => {
     const type = createBlock(str, handlers);
     return (data: any[]) => type(data, null, handlers);
@@ -121,7 +115,6 @@ describe("synthetic events follow native propagation", () => {
       expect(Object.hasOwn(ev, "stopImmediatePropagation")).toBe(false);
       expect(ev.stopImmediatePropagation).toBe(Event.prototype.stopImmediatePropagation);
     }
-    // shadowed while the handlers run, never stacked on the previous dispatch
     expect(seen).toEqual([true, true, true]);
   });
 
@@ -477,7 +470,6 @@ describe("removing the catchers of a parent releases their listeners", () => {
       patch(tree, host([], [list([])]));
       patch(tree, host([], [list([1, 2, 3].map(item))]));
     }
-    // one listener for the three catchers of the site
     expect(live.size).toBe(1);
     patch(tree, host([], [list([])]));
     expect(div.innerHTML).toBe("");
@@ -532,7 +524,6 @@ describe("catchers of one site sharing a parent", () => {
     const innerSite = createCatcher({ click: 0 }, [run]);
     const outer = (name: string, content: any) => outerSite(content, log(calls, name));
     const inner = (name: string) => innerSite(span([name]), log(calls, name));
-    // the first catcher on the parent holds no inner one: its site listens first
     const tree = multi([
       outer("o1", span(["a1"])),
       outer("o2", multi([span(["a2"]), inner("i2")])),
@@ -554,7 +545,6 @@ describe("catchers of one site sharing a parent", () => {
     const innerSite = createCatcher({ click: 0 }, [run]);
     const outer = (name: string, content: any) => outerSite(content, name);
     const inner = (name: string) => innerSite(span([name]), log(calls, name));
-    // the first catcher on the parent holds no inner one: its keys listen first
     const tree = multi([
       outer("o1", span(["a1"])),
       outer("o2", multi([span(["a2"]), inner("i2")])),
@@ -576,8 +566,6 @@ describe("catchers of one site sharing a parent", () => {
     click("outer");
     expect(calls).toEqual(["outer"]);
 
-    // a slot of the outer child filled by a render of its own (a component
-    // re-rendering alone), not by a patch of the outer catcher
     calls.length = 0;
     content.patch(multi([span(["outer"]), inner("inner"), inner("late")]) as any, false);
     click("late");
@@ -591,8 +579,6 @@ describe("catchers of one site sharing a parent", () => {
     const outer = (slot: any) => catcher(multi([span(["outer"]), slot]), log(calls, "outer"));
     const tree = outer(undefined);
     mount(tree, fixture);
-    // the outer catcher, mounted by no update of its parent, looks for its own
-    // enclosing catcher at its first dispatch
     click("outer");
     calls.length = 0;
     setDebugSink((_channel, message) => {

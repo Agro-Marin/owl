@@ -10,9 +10,6 @@ function targets(value: unknown): string[] {
 }
 
 describe("the package's exports", () => {
-  // owl keeps module state (scheduler, reactive graph, debug flags): a CommonJS
-  // twin of an entry would be a second owl in a process that both requires and
-  // imports it. Node's require() loads the ES modules themselves.
   test("every entry is an ES module, for import and require alike", () => {
     expect(pkg.type).toBe("module");
     expect(pkg.main).toBe("dist/owl.es.js");
@@ -49,8 +46,6 @@ describe("the workspace", () => {
     expect(Number(process.versions.node.split(".")[0])).toBeGreaterThanOrEqual(26);
   });
 
-  // their code is bundled into @odoo/owl from its sources: published, they
-  // would be packages of raw TypeScript
   test("only @odoo/owl is published", () => {
     expect(PACKAGES.filter((path) => !read(path).private)).toEqual(["packages/owl/package.json"]);
   });

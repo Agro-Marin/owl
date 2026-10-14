@@ -65,7 +65,7 @@ test("sequence", async () => {
   const resource = new Resource<string>({ name: "r" });
 
   resource.add("a", { sequence: 10 });
-  resource.add("b"); // default = 50
+  resource.add("b");
   resource.add("c", { sequence: 14 });
   resource.add("d", { sequence: 100 });
 

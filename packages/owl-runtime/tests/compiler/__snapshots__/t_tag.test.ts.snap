@@ -1,4 +1,3 @@
-// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`qweb t-tag > a hyphenated default tag is replaced whole 1`] = `
 "function anonymous(app, bdom, helpers

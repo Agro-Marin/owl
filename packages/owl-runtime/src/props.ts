@@ -20,15 +20,9 @@ import { types } from "./types";
 
 export declare const isProps: unique symbol;
 
-// The brand stores the defaulted key names: those keys are required for the
-// component reading the props (the default fills them), but may be omitted by
-// the parent providing them. The props type itself is the flat reader view,
-// so editors display it expanded.
 export type Props<T extends {}> = T & { [isProps]: never };
 export type PropsWithDefaults<T extends {}, DK extends PropertyKey> = T & { [isProps]: DK };
 
-// Recovers the parent view from the branded reader view: keys with a default
-// become optional again.
 type GetPropsWithOptionals<T> = T extends { [isProps]: infer DK extends PropertyKey }
   ? Omit<T, typeof isProps | (DK & keyof T)> & Partial<Pick<T, DK & keyof T>>
   : never;
@@ -51,8 +45,6 @@ export interface PropsFunction {
   static: typeof staticProp;
 }
 
-// bumped each time a view of the node declares defaults: a schema-less view's
-// key set includes the defaulted keys, whenever they were declared
 const defaultsVersions = new WeakMap<object, number>();
 
 function makeProps(type?: any): Props<{}> {
@@ -64,9 +56,6 @@ function makeProps(type?: any): Props<{}> {
   }
   const { app, componentName } = node;
 
-  // defaults declared in the schema (.optional(value)). Factories are resolved once
-  // per component instance, so the value identity is stable across prop
-  // updates of that instance.
   let defaults: Record<string, any> | null = null;
   if (!Array.isArray(type)) {
     for (const key in type) {
@@ -115,26 +104,15 @@ function makeProps(type?: any): Props<{}> {
       assertType(np, validation, `Invalid component props (${componentName})`);
     });
   }
-  // read-only like the schema-less view: a new key throws, not only a declared one
   return markRaw(Object.preventExtensions(result));
 }
 
-// A schema's key list, computed once per schema object: a component class
-// passes the same one for each of its instances.
 const schemaKeyLists = new WeakMap<object, string[]>();
 
 function schemaKeys(type: object): string[] {
   return schemaKeyLists.getOrInsertComputed(type, Object.keys);
 }
 
-// A typed view is a plain object with one accessor per schema key. The
-// accessors are shared by every view (one per key name), so the views of a
-// component class share their hidden class instead of each being a dictionary;
-// an accessor finds its view's state in a private field, which no reflection
-// reaches, and no proxy either: a view is already observable, so like the
-// schema-less one it is marked raw, and a proxy of its component hands it out
-// as it is rather than wrapping it. A key gets its atom on its first tracked read: a key read only in
-// setup, untracked, never gets one.
 class TypedProps {
   node: ComponentNode;
   defaults: Record<string, any> | null;
@@ -145,8 +123,6 @@ class TypedProps {
     this.defaults = defaults;
   }
 
-  // a missing prop resolves to this view's default, else to the default another
-  // view of the component declared
   resolve(key: string) {
     const value = this.node.props[key];
     if (value === undefined) {
@@ -190,8 +166,6 @@ function writeAtoms(atoms: Record<string, Atom>, view: { resolve(key: string): a
   }
 }
 
-// `return target` makes `new StateStamp(target, state)` add the private field
-// to `target` itself
 class ObjectReturner {
   constructor(target: object) {
     return target;
@@ -206,8 +180,6 @@ class StateStamp extends ObjectReturner {
     this.#state = state;
   }
 
-  // the state of `view`, or of the view it inherits from (a read through
-  // `Object.create(props)`)
   static of(view: object | null): TypedProps | undefined {
     while (view !== null && typeof view === "object") {
       if (#state in view) {
@@ -247,16 +219,10 @@ function getKeys(node: ComponentNode): string[] {
   return keys;
 }
 
-// The per-key atoms of a view, in an object whose prototype chain is one
-// empty null-prototype object: no inherited key, yet unlike Object.create(null)
-// V8 keeps it in fast mode, and the views of a component class, reading the
-// same keys, share its shape.
-const AtomTable = /* @__PURE__ */ tableClass<Atom>(Object.create(null));
+const AtomTable =   tableClass<Atom>(Object.create(null));
 
-// The schema views, built like an AtomTable: no inherited key, fast mode. Their
-// shared prototype is frozen: nothing can add a key every view would inherit.
-const PropsTable = /* @__PURE__ */ tableClass<any>(
-  /* @__PURE__ */ Object.freeze(Object.create(null))
+const PropsTable =   tableClass<any>(
+    Object.freeze(Object.create(null))
 );
 
 function tableClass<T>(prototype: object): new () => Record<string, T> {
@@ -265,15 +231,6 @@ function tableClass<T>(prototype: object): new () => Record<string, T> {
   return Table;
 }
 
-// A schema-less view has no fixed key set: a key gets its atom on its first
-// tracked read, present or not, so a reader of a key that appears or disappears
-// is notified; an untracked read has nobody to notify and creates none. An atom
-// holds the value its readers saw and is written like a signal with the
-// default equality, without a signal's closures.
-// The key set itself is read behind a version signal and cached until the props
-// or the declared defaults change; both are built on the first read of the key
-// set, which most components never make. The view is the proxy's target, and
-// every trap answers for it, so its fields are never observable.
 class PropsView {
   node: ComponentNode;
   atoms = new AtomTable();
@@ -311,7 +268,6 @@ class PropsView {
     return atom.value;
   }
 
-  // the key set as a reader sees it: subscribes to its changes
   currentKeys(): string[] {
     (this.keySet ||= signal(this.keysVersion))();
     return this.refreshKeys();
@@ -334,7 +290,6 @@ class PropsView {
 
   update() {
     writeAtoms(this.atoms, this);
-    // nobody read the key set yet: there is no one to notify
     if (!this.keySet) {
       return;
     }
@@ -367,9 +322,8 @@ const viewHandler: ProxyHandler<PropsView> = {
   deleteProperty: () => false,
 };
 
-export const useProps = /* @__PURE__ */ Object.assign(makeProps, {
+export const useProps =   Object.assign(makeProps, {
   static: staticProp,
 }) as PropsFunction;
 
-/** @deprecated alias for {@link useProps} */
 export const props = useProps;

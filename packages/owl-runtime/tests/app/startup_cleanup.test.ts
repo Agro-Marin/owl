@@ -19,8 +19,6 @@ let lines: string[];
 function cleanupNewApps(previous: Set<App>) {
   for (const app of App.apps) {
     if (!previous.has(app)) {
-      // Failed configuration can leave the old implementation registered
-      // before its manager exists. Keep fail-before checks isolated too.
       if (app.pluginManager) App.prototype.destroy.call(app);
       else App.apps.delete(app);
     }

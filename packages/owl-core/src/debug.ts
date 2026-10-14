@@ -1,22 +1,3 @@
-// -----------------------------------------------------------------------------
-// Debug logging
-// -----------------------------------------------------------------------------
-//
-// Opt-in, per channel. A call site reads one boolean before it builds anything:
-//
-//   if (debug.fiber) debugLog("fiber", "render", node.componentName);
-//
-// so a disabled channel costs a property read. Enable from code or a console:
-//
-//   setDebug(true);                        // every channel
-//   setDebug(["fiber", "scheduler"]);      // some
-//   setDebug("fiber,error");               // same, as a string
-//   setDebug(false);                       // none
-//
-// Lines go to console.debug as `[owl:<channel>] <message>`, followed by the
-// details as live objects; setDebugSink replaces the destination (a test that
-// asserts on them, a ring buffer).
-// -----------------------------------------------------------------------------
 
 export const DEBUG_CHANNELS = [
   "reactivity",
@@ -36,7 +17,7 @@ export type DebugChannel = (typeof DEBUG_CHANNELS)[number];
 
 export type DebugSink = (channel: DebugChannel, message: string, details: unknown[]) => void;
 
-export const debug: Record<DebugChannel, boolean> = /* @__PURE__ */ makeDebugFlags();
+export const debug: Record<DebugChannel, boolean> =   makeDebugFlags();
 
 function makeDebugFlags(): Record<DebugChannel, boolean> {
   return Object.seal(Object.fromEntries(DEBUG_CHANNELS.map((channel) => [channel, false]))) as any;
@@ -76,7 +57,6 @@ export function setDebugSink(newSink: DebugSink | null): void {
   sink = newSink || consoleSink;
 }
 
-// A timestamp for a duration in a log line, where performance may be missing.
 export function debugNow(): number {
   return typeof performance === "undefined" ? Date.now() : performance.now();
 }

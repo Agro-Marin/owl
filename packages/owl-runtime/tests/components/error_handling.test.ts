@@ -190,9 +190,6 @@ describe("basics", () => {
     const gp = await mount(GrandParent, fixture);
     gp.state.flag = true;
 
-    // Can't use nextAppError here: it monkey-patches _handleError which
-    // breaks the throw-through cascade we're testing. Instead, let the sync
-    // re-render error reject the render promise directly.
     let error: any;
     try {
       await render(gp);
@@ -200,8 +197,6 @@ describe("basics", () => {
       error = e;
     }
     expect(error!.message).toMatch(/Cannot read propert/);
-    // As the throw unwinds through Parent and GrandParent renders, their
-    // handleError frames must not wrap the error that is already propagating.
     expect(error!.cause).toBeUndefined();
   });
 
@@ -220,10 +215,6 @@ describe("basics", () => {
     expect(getCurrentComputation()).toBeUndefined();
 
     parent.state.flag = true;
-    // The re-render of Child throws and, with no error boundary installed,
-    // handleError → app._handleError re-throws. Fiber.render() must still
-    // restore currentComputation; otherwise it stays pinned to Child's dead
-    // signalComputation and every subsequent atom read attaches to it.
     let error: any;
     try {
       await render(parent);
@@ -235,11 +226,6 @@ describe("basics", () => {
   });
 
   test("currentComputation does not leak when a willStart promise rejects after await", async () => {
-    // awaitWillStart captures the parent's signalComputation as `prev` before
-    // running willStart. If the willStart promise rejects post-await, the
-    // catch must NOT restore currentComputation to `prev` — by then we are in
-    // a fresh microtask and `prev` is stale; pinning currentComputation to it
-    // leaks the parent signalComputation forever.
     class Child extends Component {
       static template = xml`<div/>`;
       setup() {
@@ -294,8 +280,6 @@ describe("basics", () => {
   });
 
   test("display a nice error if the root component template fails to compile", async () => {
-    // This is a special case: mount throws synchronously and we don't have any
-    // node which can handle the error, hence the different structure of this test
     class Comp extends Component {
       static template = xml`<div t-att-class="a b">test</div>`;
     }
@@ -445,7 +429,6 @@ describe("errors and promises", () => {
   });
 
   test("a rendering error will reject the mount promise", async () => {
-    // we do not catch error in willPatch anymore
     class Root extends Component {
       static template = xml`<div><t t-out="this.will.crash"/></div>`;
     }
@@ -574,7 +557,6 @@ describe("errors and promises", () => {
   });
 
   test("a rendering error in a sub component will reject the mount promise", async () => {
-    // we do not catch error in willPatch anymore
     class Child extends Component {
       static template = xml`<div><t t-out="this.will.crash"/></div>`;
     }
@@ -1060,7 +1042,6 @@ describe("can catch errors", () => {
       static template = xml`<div>Some text</div>`;
       setup() {
         onWillStart(async () => {
-          // we wait a little bit to be in a different stack frame
           await nextTick();
           throw new Error("NOOOOO");
         });
@@ -1936,7 +1917,6 @@ describe("can catch errors", () => {
     const root = await mount(Root, fixture);
     expect(fixture.innerHTML).toBe("R");
 
-    // standard mounting process
     expect(steps.splice(0)).toMatchInlineSnapshot(`
       [
         "Root:setup",
@@ -1949,7 +1929,6 @@ describe("can catch errors", () => {
     await nextTick();
 
     expect(fixture.innerHTML).toBe("Rparentabcboom");
-    // rerender, root creates sub components, it crashes, tries to recover
     expect(steps.splice(0)).toMatchInlineSnapshot(`
       [
         "Parent:setup",
@@ -2007,7 +1986,7 @@ describe("errors in onWillUpdateProps", () => {
     }
 
     const parent = await mount(Parent, fixture, { test: true });
-    parent.state.val = 1; // triggers child re-render → onWillUpdateProps throws
+    parent.state.val = 1;
     render(parent);
     await nextTick();
     expect(error).toBeDefined();
@@ -2278,7 +2257,6 @@ describe("errors in a pending render pass", () => {
     const children = Object.values(parent.__owl__.children);
     const a = children.find((n) => n.component instanceof A)!;
     const b = children.find((n) => n.component instanceof B)!;
-    // a component a slot of another app renders here
     a.app = new App();
     parent.state.value = 2;
     await nextTick();

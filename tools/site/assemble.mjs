@@ -1,9 +1,5 @@
 #!/usr/bin/env node
 
-/**
- * Assembles the full site into _site/ for local testing or CI deployment.
- * Mirrors what the GitHub Actions pages.yml workflow does.
- */
 
 import { cpSync, mkdirSync, rmSync } from "fs";
 import { dirname, resolve } from "path";
@@ -13,30 +9,24 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = resolve(__dirname, "../..");
 const out = resolve(root, "dist/website");
 
-// Clean
 rmSync(out, { recursive: true, force: true });
 mkdirSync(resolve(out, "playground"), { recursive: true });
 
-// Landing page
 cpSync(resolve(__dirname, "index.html"), resolve(out, "index.html"));
 cpSync(resolve(__dirname, "counter.js"), resolve(out, "counter.js"));
 cpSync(resolve(__dirname, "main.css"), resolve(out, "main.css"));
 
-// OWL build
 cpSync(resolve(root, "packages/owl/dist/owl.es.js"), resolve(out, "owl.js"));
 cpSync(resolve(root, "packages/owl/dist/types/owl.d.ts"), resolve(out, "owl.d.ts"));
 
-// Playground
 cpSync(resolve(root, "tools/playground/static"), resolve(out, "playground"), { recursive: true });
 cpSync(resolve(root, "tools/playground/dist/playground.js"), resolve(out, "playground/playground.js"));
 cpSync(resolve(root, "tools/playground/libs"), resolve(out, "playground/libs"), { recursive: true });
 cpSync(resolve(root, "tools/playground/samples"), resolve(out, "playground/samples"), { recursive: true });
 cpSync(resolve(root, "tools/playground/dist/grammars"), resolve(out, "playground/grammars"), { recursive: true });
 
-// Documentation (VitePress) — v3 (current)
 cpSync(resolve(root, "doc/.vitepress/dist"), resolve(out, "documentation"), { recursive: true });
 
-// Documentation (VitePress) — v2 (archived)
 cpSync(resolve(root, "doc/v2/.vitepress/dist"), resolve(out, "documentation/v2"), {
   recursive: true,
 });

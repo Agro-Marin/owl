@@ -1,4 +1,3 @@
-/* GENERIC STUFF  ****************************************/
 html,
 body {
   height: 100%;
@@ -24,7 +23,6 @@ body {
   margin: 5px;
 }
 
-/* APPLICATION ROOT ****************************************/
 .playground {
   display: grid;
   height: 100%;
@@ -33,7 +31,6 @@ body {
   grid-template-rows: auto 1fr;
 }
 
-/* NAVBAR ****************************************/
 .navbar {
   grid-column: 1 / -1;
   background-color: #1e293b;
@@ -198,7 +195,6 @@ body {
   color: #e6edf3;
 }
 
-/* LEFT PANE (sidebar + editor) ****************************************/
 .left-pane {
   display: flex;
   overflow: hidden;
@@ -214,7 +210,6 @@ body {
   overflow: hidden;
 }
 
-/* SIDEBAR ****************************************/
 .sidebar {
   flex: 0 0 auto;
   background: #1e293b;
@@ -277,7 +272,6 @@ body {
   color: #e6edf3;
 }
 
-/* EXPLORER TREE ****************************************/
 .explorer-tree {
   display: flex;
   flex-direction: column;
@@ -399,7 +393,6 @@ body {
   transform: translate(-50%, -50%) rotate(-45deg);
 }
 
-/* FILE LIST ****************************************/
 .project-files {
   display: flex;
   flex-direction: column;
@@ -508,7 +501,6 @@ body {
   transform: translateX(-50%);
 }
 
-/* FOLDER STYLES ****************************************/
 .folder-entry {
   display: flex;
   flex-direction: column;
@@ -583,7 +575,6 @@ body {
   font-style: italic;
 }
 
-/* EDITOR AREA ****************************************/
 .editor-area {
   flex: 1 1 0%;
   display: flex;
@@ -781,7 +772,6 @@ body {
   border-top: 1px solid #0f172a;
 }
 
-/* MARKDOWN TOGGLE BUTTON ****************************************/
 .markdown-toggle-btn {
   display: inline-flex;
   align-items: center;
@@ -854,7 +844,6 @@ body {
   background: currentColor;
 }
 
-/* MARKDOWN PREVIEW ****************************************/
 .markdown-preview {
   flex: 1 1 0%;
   overflow: auto;
@@ -1084,7 +1073,6 @@ body {
   background: #fff;
 }
 
-/* PROJECT MANAGER DIALOG ****************************************/
 .project-manager-dialog {
   min-width: 400px;
 }
@@ -1208,7 +1196,6 @@ body {
   justify-content: center;
 }
 
-/* SEPARATOR ****************************************/
 .separator {
   background-color: #0f172a;
 }
@@ -1223,7 +1210,6 @@ body {
   width: 2px;
 }
 
-/* RIGHT PANE ****************************************/
 .right-pane {
   background-color: #f8f9fa;
   overflow: hidden;
@@ -1255,7 +1241,6 @@ body {
   min-height: 0;
 }
 
-/* CONTENT TOOLBAR ****************************************/
 .content-toolbar {
   display: flex;
   align-items: stretch;
@@ -1344,7 +1329,6 @@ body {
   display: none;
 }
 
-/* RESOURCES TAB ****************************************/
 .content-toolbar-right {
   margin-left: auto;
   display: flex;
@@ -1443,7 +1427,6 @@ body {
   line-height: 14px;
 }
 
-/* CONSOLE PANE ****************************************/
 .console-pane {
   flex: 0 0 150px;
   background: #f5f5f5;
@@ -1516,7 +1499,6 @@ body {
   color: #c41a16;
 }
 
-/* WELCOME ****************************************/
 .right-pane .welcome {
   display: flex;
   flex-direction: column;
@@ -1531,7 +1513,6 @@ body {
   position: relative;
 }
 
-/* ---- owl icon ---- */
 .welcome-icon {
   width: 72px;
   height: 72px;
@@ -1565,7 +1546,6 @@ body {
   pointer-events: none;
 }
 
-/* ---- header ---- */
 .welcome-header {
   text-align: center;
   margin-bottom: 32px;
@@ -1599,7 +1579,6 @@ body {
   line-height: 1.5;
 }
 
-/* ---- feature pills ---- */
 .welcome-features {
   display: inline;
 }
@@ -1610,7 +1589,6 @@ body {
   font-weight: 700;
 }
 
-/* ---- divider ---- */
 .welcome-divider {
   width: 40px;
   height: 1px;
@@ -1619,7 +1597,6 @@ body {
   animation: welcomeFadeIn 0.7s 0.28s cubic-bezier(0.23, 1, 0.32, 1) both;
 }
 
-/* ---- tutorial cards ---- */
 .welcome-tutorials {
   display: flex;
   gap: 12px;
@@ -1681,7 +1658,6 @@ body {
   color: #7a7a8c;
 }
 
-/* ---- link ---- */
 .welcome-link {
   font-family: "DM Mono", monospace;
   font-size: 12.5px;
@@ -1725,7 +1701,6 @@ body {
   animation: welcomeFadeIn 0.7s 0.5s cubic-bezier(0.23, 1, 0.32, 1) both;
 }
 
-/* ---- keyboard shortcut hint ---- */
 .welcome-shortcut {
   font-family: "DM Sans", sans-serif;
   font-size: 12px;
@@ -1745,7 +1720,6 @@ body {
   color: #6c6a7a;
 }
 
-/* RESTORE PROMPT ****************************************/
 .restore-prompt {
   margin-top: 20px;
   padding: 14px 20px;
@@ -1788,7 +1762,6 @@ body {
   background: #3d5f8f;
 }
 
-/* SETTINGS DIALOG ****************************************/
 .settings-overlay {
   position: fixed;
   inset: 0;
@@ -1869,7 +1842,6 @@ body {
   text-align: right;
 }
 
-/* NEW PROJECT DIALOG ****************************************/
 .dialog-row {
   display: flex;
   align-items: center;
@@ -2008,7 +1980,6 @@ body {
   margin-top: 8px;
 }
 
-/* FLASH EFFECT ****************************************/
 .flash {
   background-position: center;
   transition: background 0.5s;
@@ -2020,7 +1991,6 @@ body {
   transition: background 0s;
 }
 
-/* CONTEXT MENU ****************************************/
 .context-menu-overlay {
   position: fixed;
   inset: 0;
@@ -2076,7 +2046,6 @@ body {
   margin: 4px 8px;
 }
 
-/* PROJECT MANAGER ****************************************/
 .project-manager {
   flex: 1 1 0%;
   display: flex;
@@ -2344,7 +2313,6 @@ body {
   margin: 8px 0;
 }
 
-/* TUTORIAL BAR ****************************************/
 .tutorial-bar {
   display: flex;
   align-items: center;
@@ -2437,9 +2405,7 @@ body {
   pointer-events: none;
 }
 
-/* LIGHT MODE OVERRIDES ****************************************/
 
-/* Sidebar */
 .light-mode .sidebar {
   background: #f5f6f7;
   border-right-color: #e0e0e8;
@@ -2466,7 +2432,6 @@ body {
   color: #1a1a2e;
 }
 
-/* Explorer tree */
 .light-mode .explorer-tree .project-row {
   color: #6e7681;
 }
@@ -2517,7 +2482,6 @@ body {
   background: #d0d0d8;
 }
 
-/* Folder */
 .light-mode .folder-row {
   color: #3d3d4e;
 }
@@ -2531,7 +2495,6 @@ body {
   color: #9a9aac;
 }
 
-/* Editor area */
 .light-mode .editor-area {
   background: #ffffff;
 }
@@ -2571,7 +2534,6 @@ body {
   background: rgba(0, 0, 0, 0.05);
 }
 
-/* CodeMirror light overrides */
 .light-mode .cm-editor {
   background: #ffffff;
   color: #3d3d4e;
@@ -2604,7 +2566,6 @@ body {
   color: #1a1a2e;
 }
 
-/* Markdown preview */
 .light-mode .markdown-preview {
   background: #ffffff;
   color: #3d3d4e;
@@ -2726,12 +2687,10 @@ body {
   background: #f5f6f7;
 }
 
-/* Separator */
 .light-mode .separator {
   background-color: #d0d0d8;
 }
 
-/* Settings dialog / all dialogs */
 .light-mode .settings-dialog {
   background: #ffffff;
   border-color: #d0d0d8;
@@ -2787,7 +2746,6 @@ body {
   color: #3d3d4e;
 }
 
-/* Context menu */
 .light-mode .context-menu {
   background: #ffffff;
   border-color: #d0d0d8;
@@ -2807,7 +2765,6 @@ body {
   background: #d0d0d8;
 }
 
-/* Project manager */
 .light-mode .project-manager {
   background: #f0f1f3;
 }
@@ -2892,7 +2849,6 @@ body {
   color: #9a9aac;
 }
 
-/* Tutorial cards (project manager) */
 .light-mode .tutorial-card {
   background: #ffffff;
   border-color: #d0d0d8;
@@ -2915,7 +2871,6 @@ body {
   color: #6e7681;
 }
 
-/* Card & dialog buttons */
 .light-mode .card-btn {
   color: #3d3d4e;
   background: #e0e0e8;
@@ -2931,7 +2886,6 @@ body {
   color: #9a9aac;
 }
 
-/* Tutorial bar */
 .light-mode .tutorial-bar {
   background: #f5f6f7;
   border-bottom-color: #d0d0d8;
@@ -2959,12 +2913,10 @@ body {
   color: #1a1a2e;
 }
 
-/* Flash effect */
 .light-mode .flash:active {
   background-color: #d0d0d8;
 }
 
-/* Theme toggle */
 .theme-toggle-label {
   display: inline-flex;
   align-items: center;
@@ -2977,7 +2929,6 @@ body {
   margin-top: 12px;
 }
 
-/* SITE NAVIGATION LINKS ****************************************/
 .navbar-site-link {
   color: #cbd5e1;
   text-decoration: none;

@@ -38,7 +38,6 @@ describe("effect", () => {
 
   test("a key first read outside any computation is observed by the effect that reads it later", async () => {
     const state = proxy<{ a: number; b?: number }>({ a: 1 });
-    // unobserved reads: a value, a presence, the key list
     expect(state.a).toBe(1);
     expect("b" in state).toBe(false);
     expect(Object.keys(state)).toEqual(["a"]);
@@ -96,15 +95,6 @@ describe("effect", () => {
   });
 
   test("an effect that throws during flush runs once per change, and again after recovering", async () => {
-    // `uppercase` throws once `list` is empty. The throw is cached by the
-    // computed and rethrown to its reader: the effect body runs, reads it and
-    // throws. It is not re-run on a follow-up microtask (the old queue bug), but
-    // it stays subscribed to what it read, so it runs again when `list` changes.
-    //
-    // The throw propagates through batched()'s .then() chain as an unhandled
-    // rejection. We use a named error class so vitest.config.ts'
-    // `onUnhandledError` callback can filter just this error rather than
-    // silencing every unhandled error in the suite.
     class IntentionalTestError extends Error {
       override name = "IntentionalTestError";
     }
@@ -176,12 +166,6 @@ describe("effect", () => {
   });
 
   test("eager source walk short-circuits once we know we have to re-run", async () => {
-    // The effect has both lastValue (a guard) and uppercase (only read when
-    // the guard passes) as sources. When list goes to [], lastValue is
-    // recomputed first and propagates STALE to the effect; the walk stops
-    // there instead of forcing uppercase — which would crash on undefined.
-    // The body then re-runs, sees the guard is false, and never touches
-    // uppercase.
     const list = signal(["a"]);
     let lastValueRuns = 0;
     let uppercaseRuns = 0;
@@ -209,8 +193,6 @@ describe("effect", () => {
     await waitScheduler();
     expect(effectRuns).toBe(2);
     expect(lastValueRuns).toBe(2);
-    // uppercase was NOT eagerly probed; the walk short-circuited after
-    // lastValue's change marked the effect STALE.
     expect(uppercaseRuns).toBe(1);
   });
 
@@ -238,9 +220,6 @@ describe("effect", () => {
   });
 
   test("a computed recomputed by a run invalidates a source that run read: it forwards the next write", async () => {
-    // c was disposed while d still read it: d stays up to date, c goes stale
-    // and stops following s. The effect reads d, then c untracked, whose
-    // recompute (s changed meanwhile) invalidates d after the effect read it.
     const s = signal(1);
     const t = signal(0);
     const c = computed(() => s());
@@ -256,7 +235,6 @@ describe("effect", () => {
     t.set(1);
     await waitScheduler();
     expect(seen).toEqual([11, 12]);
-    // d, left out of date by that run, forwards the next write to it
     s.set(3);
     await waitScheduler();
     expect(seen).toEqual([11, 12, 33]);
@@ -275,7 +253,6 @@ describe("effect", () => {
       });
       s.set(true);
       expect([s(), runs]).toEqual([false, 2]);
-      // the value it read when it ran: nothing changed for it
       s.set(true);
       expect([s(), runs]).toEqual([true, 2]);
       s.set(false);
@@ -418,9 +395,7 @@ describe("effect", () => {
 
       other.set(1);
       await waitScheduler();
-      // the memoized effect survived the recompute
       expectSpy(spy, 2, { args: [1] });
-      // and is not a dependent of the computed: the reader did not re-run
       expectSpy(reader, 2, { args: [1] });
       memo!();
     });
@@ -442,7 +417,6 @@ describe("effect", () => {
       spy.mockClear();
       other.set(1);
       await waitScheduler();
-      // three recomputes, one live effect: the last one's
       expect(spy).toHaveBeenCalledTimes(1);
     });
 
@@ -464,30 +438,22 @@ describe("effect", () => {
 
   describe("unsubscribe", () => {
     test("B re-running unsubscribes nested A, which prevents C from re-running", async () => {
-      // Three effects shaped like a component render pipeline:
-      //   A (compute) — nested inside B (sort) — nested inside C (template render)
-      //   When B re-runs, unsubscribeEffect(B) iterates B.observers and removes A's
-      //   sources. If A is not recreated by B's second run (e.g. guarded creation),
-      //   A is silently dead — later source changes no longer propagate to C.
-      const source = signal(1); // raw data A reads
-      const sortKey = signal("asc"); // what B reads
-      const result = signal(0); // A writes, C reads (simulates the chain)
+      const source = signal(1);
+      const sortKey = signal("asc");
+      const result = signal(0);
 
       const spyA = vi.fn();
       const spyC = vi.fn();
 
-      // C: template render effect
       effect(() => {
         spyC(result());
       });
 
-      // B: sort effect, creates A only on its first run
       let aCreated = false;
       effect(() => {
         sortKey();
         if (!aCreated) {
           aCreated = true;
-          // A: compute effect, nested child of B
           effect(() => {
             const v = source();
             spyA(v);
@@ -500,29 +466,21 @@ describe("effect", () => {
       expectSpy(spyA, 1, { args: [1] });
       expectSpy(spyC, 2, { args: [10] });
 
-      // Source changes: A re-runs, propagates to C
       source.set(2);
       await waitScheduler();
       expectSpy(spyA, 2, { args: [2] });
       expectSpy(spyC, 3, { args: [20] });
 
-      // Sort key changes: B re-runs. unsubscribeEffect(B) silently kills A.
       sortKey.set("desc");
       await waitScheduler();
-      // A is not recreated (the guard blocks it).
 
-      // Source changes again — but A is no longer subscribed to `source`.
       source.set(3);
       await waitScheduler();
-      // A did not re-run, so `result` stays stale and C never re-renders.
       expectSpy(spyA, 2, { args: [2] });
       expectSpy(spyC, 3, { args: [20] });
     });
 
     test("creating A with { detached: true } escapes B's ownership", async () => {
-      // Same shape as the previous test, but A is created detached: B does not
-      // own it, so B re-running does not dispose A. (untrack does not do it:
-      // it stops the tracking, not the ownership.)
       const source = signal(1);
       const sortKey = signal("asc");
       const result = signal(0);
@@ -559,30 +517,23 @@ describe("effect", () => {
       expectSpy(spyA, 2, { args: [2] });
       expectSpy(spyC, 3, { args: [20] });
 
-      // B re-runs — but A is not its child anymore, so A survives.
       sortKey.set("desc");
       await waitScheduler();
 
       source.set(3);
       await waitScheduler();
-      // A is still alive and subscribed to `source`.
       expectSpy(spyA, 3, { args: [3] });
       expectSpy(spyC, 4, { args: [30] });
     });
 
     test("disposing a parent effect removes child effect's sources", async () => {
-      // If effect A is created inside effect B, A is a child of B (A is in B.observers).
-      // Disposing B then calls unsubscribeEffect(B), which iterates B.observers and
-      // calls removeSources(A). So A is silently unsubscribed from all its atoms.
       const a = signal(1);
       const b = signal(10);
       const spyA = vi.fn();
       const cleanupA = vi.fn();
 
       const disposeB = effect(() => {
-        // B depends on signal a
         a();
-        // A is created as a child of B and tracks signal b independently
         effect(() => {
           spyA(b());
           return cleanupA;
@@ -591,12 +542,9 @@ describe("effect", () => {
       expectSpy(spyA, 1, { args: [10] });
       expect(cleanupA).toHaveBeenCalledTimes(0);
 
-      // Dispose B. Since A is a child of B (A ∈ B.observers),
-      // unsubscribeEffect(B) cascades: removeSources(A) is called and A's cleanup runs.
       disposeB();
       expect(cleanupA).toHaveBeenCalledTimes(1);
 
-      // A has been silently unsubscribed from signal b.
       b.set(20);
       await waitScheduler();
       expectSpy(spyA, 1, { args: [10] });
@@ -734,16 +682,9 @@ describe("effect", () => {
     });
 
     test("dispose called inside another effect: cleanup's atom reads do not leak to outer", async () => {
-      // The dispose function returned by effect() clears currentComputation
-      // around unsubscribeEffect. If a user cleanup function reads a signal
-      // while dispose is invoked from inside another effect, that read must
-      // NOT attach as a source of the surrounding effect — otherwise the
-      // outer effect would re-run whenever the disposed effect's cleanup
-      // happened to touch unrelated state.
       const cleanupSignal = signal(0);
       let cleanupRuns = 0;
 
-      // Inner effect with a cleanup function that reads cleanupSignal.
       const dispose = effect(() => {
         return () => {
           cleanupSignal();
@@ -752,7 +693,6 @@ describe("effect", () => {
       });
       expect(cleanupRuns).toBe(0);
 
-      // Outer effect disposes the inner once on its first run.
       let outerRuns = 0;
       let outerDisposed = false;
       effect(() => {
@@ -765,8 +705,6 @@ describe("effect", () => {
       expect(outerRuns).toBe(1);
       expect(cleanupRuns).toBe(1);
 
-      // If the cleanup's read had leaked, this signal change would re-run
-      // the outer effect. With the save/restore in place, it must not.
       cleanupSignal.set(1);
       await waitScheduler();
       expect(outerRuns).toBe(1);
@@ -828,7 +766,6 @@ describe("effect", () => {
         try {
           dispose();
         } catch {
-          // reported, the outer effect carries on
         }
         spy(later());
       });
@@ -885,12 +822,10 @@ describe("effects created by a scoped computed", () => {
     dep.set(1);
     await waitScheduler();
     expect(runs).toBe(1);
-    // still observed: the computed outlives its scope, and its effect with it
     scope.finalize(() => {});
     dep.set(2);
     await waitScheduler();
     expect(runs).toBe(2);
-    // its last observer gone, it is disposed, its effect with it
     disposeReader();
     dep.set(3);
     await waitScheduler();

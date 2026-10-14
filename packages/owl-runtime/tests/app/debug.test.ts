@@ -22,7 +22,6 @@ beforeEach(() => {
   fixture = makeTestFixture();
   lines = [];
   setDebugSink((channel: DebugChannel, message: string) => {
-    // the first App of the file exposes owl to the devtools (module_effects.test.ts)
     if (!message.startsWith("window.__OWL_DEVTOOLS__")) {
       lines.push(`${channel}: ${message.replace(/[\d.]+ ms/, "_ ms")}`);
     }
@@ -59,7 +58,6 @@ test("lifecycle, fiber and scheduler channels trace a mount and an update", asyn
     "fiber: render Parent in _ ms, 0 left in Parent's pass",
     "scheduler: frame, 1 task(s)",
     "fiber: mount Parent",
-    // the root's own onMounted, and the one resolving mount()'s promise
     "lifecycle: mounted Parent: 2 hook(s)",
   ]);
   lines.length = 0;
@@ -89,8 +87,6 @@ test("the scheduler channel says a frame waits for a pass whose renders are pend
   }
   const app = new App();
   setDebug(["scheduler"]);
-  // one scheduler: the frame the fast root's pass asks for finds the slow
-  // root's pass still waiting for its onWillStart
   const slow = app.createRoot(Slow).mount(fixture);
   await app.createRoot(Fast).mount(fixture);
   expect(lines).toContain("scheduler: wait Slow: 1 render(s) pending");
@@ -139,6 +135,5 @@ test("the template channel traces a compilation", async () => {
   await mount(Tpl, fixture);
   expect(lines.length).toBe(2);
   expect(lines[0]).toMatch(/^template: __template__\d+: compiled in _ ms, \d+ chars$/);
-  // the template's functions, made after, make the type of its block string
   expect(lines[1]).toBe("template: block type made: 0 handlers, <p>compiled</p>");
 });

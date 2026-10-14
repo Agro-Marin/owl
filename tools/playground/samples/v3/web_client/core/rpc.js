@@ -20,7 +20,6 @@ export async function rpc(route, params) {
   }
 }
 
-// Mock Data
 const MOCK_MENUS = [
   { id: 12, title: "Discuss", action_id: "discuss" },
   { id: 24, title: "Tasks", action_id: 32 },

@@ -2,9 +2,6 @@ import { mount, patch } from "../../src/blockdom";
 import { makeTestFixture, renderToBdom, renderToString, snapshotEverything } from "../helpers";
 
 snapshotEverything();
-// -----------------------------------------------------------------------------
-// attributes
-// -----------------------------------------------------------------------------
 
 describe("attributes", () => {
   test("static attributes", () => {
@@ -241,7 +238,6 @@ describe("attributes", () => {
   });
 
   test("from object variables set previously", () => {
-    // Note: standard qweb does not allow this...
     const template = `
       <div>
         <t t-set="o" t-value="{a:'b'}"/>
@@ -313,11 +309,9 @@ describe("attributes", () => {
     const template = `<div class="static" t-att-class="{a: b, c: d, e: f}"/>`;
     const result = renderToString(template, { b: true, d: false, f: true });
     expect(result).toBe(`<div class="static a e"></div>`);
-    // leading and trailing space in the key
     expect(renderToString(`<div t-att-class="{' a ': value}" />`, { value: true })).toBe(
       '<div class="a"></div>'
     );
-    // whitespace only key
     expect(renderToString(`<div t-att-class="{' ': value}" />`, { value: true })).toBe(
       "<div></div>"
     );
@@ -330,7 +324,6 @@ describe("attributes", () => {
     expect(renderToString(`<div t-att-class="{['a b c']: value}" />`, { value: true })).toBe(
       '<div class="a b c"></div>'
     );
-    // multiple spaces between classes
     expect(renderToString(`<div t-att-class="{'a  b  c': value}" />`, { value: true })).toBe(
       '<div class="a b c"></div>'
     );
@@ -346,7 +339,6 @@ describe("attributes", () => {
   });
 
   test("changing a class with t-att-class", () => {
-    // render input with initial value
     const template = `<div t-att-class="v"/>`;
     const bnode1 = renderToBdom(template, { v: "zucchini" });
     const fixture = makeTestFixture();
@@ -360,12 +352,10 @@ describe("attributes", () => {
 
     const bnode3 = renderToBdom(template, { v: "" });
     patch(bnode1, bnode3);
-    // not sure about this. maybe we want to remove the attribute?
     expect(fixture.innerHTML).toBe('<div class=""></div>');
   });
 
   test("changing a class with t-att-class (preexisting class", () => {
-    // render input with initial value
     const template = `<div class="hoy" t-att-class="v"/>`;
     const bnode1 = renderToBdom(template, { v: "zucchini" });
     const fixture = makeTestFixture();
@@ -379,12 +369,10 @@ describe("attributes", () => {
 
     const bnode3 = renderToBdom(template, { v: "" });
     patch(bnode1, bnode3);
-    // not sure about this. maybe we want to remove the attribute?
     expect(fixture.innerHTML).toBe('<div class="hoy"></div>');
   });
 
   test("updating classes (with obj notation)", () => {
-    // render input with initial value
     const template = `<div class="hoy" t-att-class="{'a b': condition}"/>`;
     const bnode1 = renderToBdom(template, { condition: true });
     const fixture = makeTestFixture();
@@ -398,7 +386,6 @@ describe("attributes", () => {
 
     const bnode3 = renderToBdom(template, { condition: true });
     patch(bnode1, bnode3);
-    // not sure about this. maybe we want to remove the attribute?
     expect(fixture.innerHTML).toBe('<div class="hoy a b"></div>');
   });
 

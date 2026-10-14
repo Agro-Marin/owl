@@ -29,15 +29,10 @@ import {
 const NO_OP = () => {};
 const XMLNS_URI = "http://www.w3.org/2000/xmlns/";
 
-// toString mounts into a detached element, children included: nothing it
-// builds may reach a ref
 let stringifying = 0;
 
-// A property location (t-model's) is set when its value changes, as an
-// attribute is.
 function makePropSetter(name: string): Setter<HTMLElement> {
   return function setProp(this: HTMLElement, value: any) {
-    // support 0, fallback to empty string for other falsy values
     const prop = value === 0 ? 0 : value ? value.valueOf() : "";
     if (name === "value" || (this as any)[name] !== prop) {
       (this as any)[name] = prop;
@@ -45,16 +40,9 @@ function makePropSetter(name: string): Setter<HTMLElement> {
   };
 }
 
-// A synced property location (t-att-value, t-att-checked, ...) is set on every
-// patch, its value changed or not, so that a value the user changed is set
-// back. A flag is read first and written only when it differs (a reflected one
-// such as disabled writes its attribute even when unchanged); a value is always
-// written: its getter can read the same while the element shows something else
-// (a number input holding a partial "1e" reads "")
 function makeSyncedPropSetter(name: string): Setter<HTMLElement> {
   if (name === "value") {
     return function setValue(this: HTMLElement, value: any) {
-      // support 0, fallback to empty string for other falsy values
       (this as HTMLInputElement).value = value === 0 ? 0 : value || "";
     };
   }
@@ -68,48 +56,18 @@ function makeSyncedPropSetter(name: string): Setter<HTMLElement> {
   };
 }
 
-// -----------------------------------------------------------------------------
-// Main compiler code
-// -----------------------------------------------------------------------------
 
 type Handlers = readonly (HandlerFn | null)[];
 
-// a block with handlers is given their code at each call, as its third argument
 type BlockType = (
   data?: any[],
   children?: (VNode | undefined)[] | null,
   handlers?: Handlers
 ) => VNode;
 
-// The block type of each block string, the value itself: a template's
-// functions are made once per App, and the common call, a string seen
-// before and no handlers to check, reads nothing else
 const types: { [key: string]: BlockType } = Object.create(null);
-// the number of handlers of each block string
 const handlerCounts: { [key: string]: number } = Object.create(null);
 
-/**
- * Compiling blocks is a multi-step process:
- *
- * 1. build an IntermediateTree from the HTML element. This intermediate tree
- *    is a binary tree structure that encode dynamic info sub nodes, and the
- *    path required to reach them
- * 2. process the tree to build a block context, which is an object that aggregate
- *    all dynamic info in a list, and also, all ref indexes.
- * 3. process the context to build appropriate builder/setter functions
- * 4. make a dynamic block class, which will efficiently collect references and
- *    create/update dynamic locations/children
- *
- * The block class and its type are made once per block string. The code of
- * its handlers (block-handler-N, in the order of N) is static: each call of
- * the type gives it (`type(data, children, handlers)`), and each block
- * carries it; the data holds the handlers' contexts.
- *
- * @param str
- * @param handlers the code of each handler, null for an empty one: checked
- *   here, against the string's handlers, so that a call can give them as they are
- * @returns the block type of the string, that can build concrete blocks
- */
 export function createBlock(str: string, handlers?: Handlers): BlockType {
   const type = types[str];
   if (type !== undefined && handlers === undefined) {
@@ -138,7 +96,6 @@ function makeBlockType(str: string, handlers: Handlers | undefined): BlockType {
       );
     }
     for (const fn of handlers) {
-      // an empty handler (`t-on-click.stop=""`) is null
       if (fn !== null && typeof fn !== "function") {
         throw new OwlError(`Invalid handler (expected a function, received: '${fn}')`);
       }
@@ -154,7 +111,6 @@ interface ParsedBlock {
 }
 
 function parseBlock(str: string): ParsedBlock {
-  // step 0: prepare html base element
   const doc = new DOMParser().parseFromString(`<t>${str}</t>`, "text/xml");
   const error = doc.getElementsByTagName("parsererror")[0];
   if (error) {
@@ -162,13 +118,10 @@ function parseBlock(str: string): ParsedBlock {
   }
   const node = doc.firstChild!.firstChild!;
 
-  // step 1: prepare intermediate tree
   const tree = buildTree(node);
 
-  // step 2: prepare block context
   const context = buildContext(tree);
 
-  // step 3: build the block class
   return {
     Block: buildBlock(tree.el as HTMLElement, context, str),
     hasChildren: context.children.length > 0,
@@ -176,9 +129,6 @@ function parseBlock(str: string): ParsedBlock {
   };
 }
 
-// -----------------------------------------------------------------------------
-// building a intermediate tree
-// -----------------------------------------------------------------------------
 
 interface DynamicInfo {
   idx: number;
@@ -192,11 +142,8 @@ interface DynamicInfo {
     | "attributes"
     | "property"
     | "ref";
-  // a property set on every patch
   sync?: boolean;
-  // a handler argument: the index of its handler
   handler?: number;
-  // the parent holds nothing else: the child needs no anchor
   withoutAnchor?: boolean;
   name?: string;
   event?: string;
@@ -223,7 +170,6 @@ function buildTree(
 ): IntermediateTree {
   switch (node.nodeType) {
     case Node.ELEMENT_NODE: {
-      // HTMLElement
       let currentNS = domParentTree && domParentTree.currentNS;
       const tagName = (node as Element).tagName;
       let el: Node | undefined = undefined;
@@ -249,11 +195,6 @@ function buildTree(
       }
       if (el instanceof Element) {
         if (!domParentTree) {
-          // some html elements may have side effects when setting their attributes.
-          // For example, setting the src attribute of an <img/> will trigger a
-          // request to get the corresponding image. This is something that we
-          // don't want at compile time. We avoid that by putting the content of
-          // the block in a <template/> element
           const fragment = document.createElement("template").content;
           fragment.appendChild(el);
         }
@@ -405,9 +346,6 @@ function parentTree(tree: IntermediateTree): IntermediateTree | null {
   return parent;
 }
 
-// -----------------------------------------------------------------------------
-// Building a block context
-// -----------------------------------------------------------------------------
 
 interface RefCollector {
   idx: number;
@@ -424,10 +362,7 @@ interface Location {
   refIdx: number;
   setData: Setter;
   updateData: Updater;
-  // applied after the other locations and the children: a value property
-  // needs the attributes bounding it (min, max) and the options of a select
   late?: boolean;
-  // applied on every patch, its value changed or not
   sync?: boolean;
 }
 
@@ -440,24 +375,19 @@ interface Child {
   afterRefIdx?: number;
 }
 
-// a handler is set up on mount with its block as its owner; it reads its
-// context (and argument) in its block's data, which a patch replaces
 interface Handler {
   refIdx: number;
   event: string;
-  // data index of its context
   idx: number;
 }
 
 interface BlockCtx {
   refN: number;
   collectors: RefCollector[];
-  // sorted by data index once built
   locations: IndexedLocation[];
   children: Child[];
   cbRefs: number[];
   handlers: Handler[];
-  // handler data index -> data index of its argument
   handlerArgs: { [idx: number]: number };
 }
 
@@ -482,7 +412,6 @@ function buildContext(tree: IntermediateTree, ctx?: BlockCtx, fromIdx?: number):
     const firstChild = tree.firstChild ? tree.firstChild.refN : 0;
     const nextSibling = tree.nextSibling ? tree.nextSibling.refN : 0;
 
-    //node
     if (isRef) {
       for (let info of tree.info) {
         info.refIdx = initialIdx!;
@@ -492,14 +421,12 @@ function buildContext(tree: IntermediateTree, ctx?: BlockCtx, fromIdx?: number):
       fromIdx!++;
     }
 
-    // right
     if (nextSibling) {
       const idx = fromIdx! + firstChild;
       ctx.collectors.push({ idx, prevIdx: initialIdx, isFirstChild: false });
       buildContext(tree.nextSibling!, ctx, idx);
     }
 
-    // left
     if (firstChild) {
       ctx.collectors.push({ idx: fromIdx!, prevIdx: initialIdx, isFirstChild: true });
       buildContext(tree.firstChild!, ctx, fromIdx!);
@@ -522,10 +449,8 @@ function updateCtx(ctx: BlockCtx, tree: IntermediateTree) {
         break;
       case "child":
         if (info.withoutAnchor) {
-          // tree is the parentnode here
           ctx.children[info.idx] = { parentRefIdx: info.refIdx! };
         } else {
-          // tree is the anchor text node
           ctx.children[info.idx] = {
             parentRefIdx: parentTree(tree)!.refIdx!,
             afterRefIdx: info.refIdx!,
@@ -584,8 +509,6 @@ function updateCtx(ctx: BlockCtx, tree: IntermediateTree) {
         });
         break;
       }
-      // a handler and its argument read their data at dispatch: their
-      // locations do nothing
       case "handler": {
         ctx.handlers.push({ idx: info.idx, refIdx: info.refIdx!, event: info.event! });
         ctx.locations.push({
@@ -619,9 +542,6 @@ function updateCtx(ctx: BlockCtx, tree: IntermediateTree) {
     }
   }
 }
-// -----------------------------------------------------------------------------
-// building the concrete block class
-// -----------------------------------------------------------------------------
 
 function buildBlock(template: HTMLElement, ctx: BlockCtx, str: string): BlockClass {
   let B = createBlockClass(template, ctx, str);
@@ -648,13 +568,9 @@ function createBlockClass(template: HTMLElement, ctx: BlockCtx, str: string): Bl
   const childN = children.length;
   const isDynamic = refN > 0;
 
-  // Flatten locations into parallel arrays (hot path optimization)
   const locRefIdxs: number[] = locations.map((l) => l.refIdx);
   const locSetters: Setter[] = locations.map((l) => l.setData);
   const locUpdaters: Updater[] = locations.map((l) => l.updateData);
-  // the handlers, in the order of their data index: the code of the n-th is
-  // the n-th of its block's handlers. They are collected in the order the
-  // tree is walked, which a child block among them breaks.
   ctx.handlers.sort((a, b) => a.idx - b.idx);
   const handlerN = ctx.handlers.length;
   const handlerRefIdxs: number[] = ctx.handlers.map((h) => h.refIdx);
@@ -662,39 +578,29 @@ function createBlockClass(template: HTMLElement, ctx: BlockCtx, str: string): Bl
     (h, n) =>
       createEventHandler(h.event, { fn: n, ctx: h.idx, arg: ctx.handlerArgs[h.idx] ?? -1 }).setup
   );
-  // synced locations run on every patch
   const locSync: boolean[] = locations.map((l) => !!l.sync);
-  // a block with late or synced locations applies the others first, by index
   const lateLocs: number[] = [];
   const earlyLocs: number[] = [];
   locations.forEach((l, i) => (l.late ? lateLocs : earlyLocs).push(i));
   const lateN = lateLocs.length;
   const indexed = lateN > 0 || locSync.includes(true);
 
-  // Bitpack collectors into uint32 array
-  // Layout: bits 0-14: idx, bits 15-29: prevIdx, bit 30: isFirstChild
   const GETTERS = [nodeGetNextSibling, nodeGetFirstChild];
   const colN = collectors.length;
   const colPacked: number[] = collectors.map(
     (c) => (c.idx & 0x7fff) | ((c.prevIdx & 0x7fff) << 15) | ((c.isFirstChild ? 1 : 0) << 30)
   );
 
-  // Bitpack children locations into uint32 array
-  // Layout: bits 0-14: parentRefIdx, bits 16-30: afterRefIdx
   const childInfos: number[] = children.map(
     (c) => (c.parentRefIdx & 0x7fff) | (((c.afterRefIdx ?? 0) & 0x7fff) << 16)
   );
 
-  // read when the class is built, not once for all with the other DOM methods
-  // (dom.ts): a test environment patches Element.prototype.remove to fire the
-  // events a browser dispatches from inside a removal (refs.test.ts)
   const elementRemove = Element.prototype.remove;
 
   class Block implements HandlerOwner {
     el: HTMLElement | undefined;
     parentEl?: HTMLElement | undefined;
     data: any[] | undefined;
-    // only a block with handlers holds them
     declare handlers: Handlers;
     children?: (VNode | undefined)[];
     refs: Node[] | undefined;
@@ -747,7 +653,6 @@ function createBlockClass(template: HTMLElement, ctx: BlockCtx, str: string): Bl
   if (isDynamic) {
     Block.prototype.mount = function mount(parent: HTMLElement, afterNode: Node | null) {
       const el = nodeCloneNode.call(template, true);
-      // collecting references
       const refs: Node[] = new Array(refN);
       this.refs = refs;
       refs[0] = el;
@@ -756,7 +661,6 @@ function createBlockClass(template: HTMLElement, ctx: BlockCtx, str: string): Bl
         refs[packed & 0x7fff] = GETTERS[(packed >> 30) & 1].call(refs[(packed >> 15) & 0x7fff])!;
       }
 
-      // applying data to all update points
       const data = this.data!;
       if (lateN) {
         for (const i of earlyLocs) {
@@ -768,8 +672,6 @@ function createBlockClass(template: HTMLElement, ctx: BlockCtx, str: string): Bl
         }
       }
       if (handlerN) {
-        // the type takes the handlers at each call: a call without them
-        // fails here, not at the first event
         const handlers = this.handlers;
         if (handlers?.length !== handlerN) {
           throw new OwlError(
@@ -781,7 +683,6 @@ function createBlockClass(template: HTMLElement, ctx: BlockCtx, str: string): Bl
         }
       }
 
-      // preparing all children (off-DOM, before inserting el into the live document)
       if (childN) {
         const children = this.children;
         for (let i = 0; i < childN; i++) {
@@ -817,7 +718,6 @@ function createBlockClass(template: HTMLElement, ctx: BlockCtx, str: string): Bl
         return;
       }
       const refs = this.refs!;
-      // update texts/attributes/
       const data1 = this.data!;
       const data2 = other.data!;
       if (indexed) {
@@ -842,7 +742,6 @@ function createBlockClass(template: HTMLElement, ctx: BlockCtx, str: string): Bl
         this.handlers = other.handlers;
       }
 
-      // update children
       if (childN) {
         let children1 = this.children;
         const children2 = other.children;
@@ -878,12 +777,6 @@ function createBlockClass(template: HTMLElement, ctx: BlockCtx, str: string): Bl
     };
 
     Block.prototype.remove = function remove() {
-      // Detach first, unbind the refs after. The removal is where the browser
-      // hands control back to user code: chrome dispatches `change` and `blur`
-      // synchronously from inside remove() on a focused input whose value is not
-      // committed yet, and both a t-on handler and a useListener one run there.
-      // Unbinding first would leave them reading a null ref while their element
-      // is still in the document.
       elementRemove.call(this.el);
 
       if (cbRefs.length) {

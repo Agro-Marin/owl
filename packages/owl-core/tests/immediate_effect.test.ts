@@ -67,12 +67,8 @@ describe("immediateEffect", () => {
     const spy = vi.fn();
     immediateEffect(() => spy(isPositive(), b()));
     expectSpy(spy, 1, { args: [true, 10] });
-    // Write reaching the effect through the computed: must not leave the
-    // effect parked in the batched queue...
     a.set(-1);
     expectSpy(spy, 2, { args: [false, 10] });
-    // ...nor with a non-EXECUTED state that would make onWriteAtom skip
-    // scheduling this later direct write in the same task.
     b.set(20);
     expectSpy(spy, 3, { args: [false, 20] });
   });
@@ -303,7 +299,6 @@ describe("owner of an effect", () => {
     log.length = 0;
     a.set(1);
     b.set(1);
-    // the immediate child runs inside the write; its deferred parent does not
     expect(log).toEqual(["child a=1"]);
     await waitScheduler();
     expect(log).toEqual(["child a=1", "parent a=1 b=1", "child a=1"]);
@@ -349,7 +344,6 @@ describe("owner chain", () => {
           log.push(`child ga=${ga} a=${a()}`);
         });
       });
-      // read after the subtree exists: the child is notified first
       a();
     });
     log.length = 0;

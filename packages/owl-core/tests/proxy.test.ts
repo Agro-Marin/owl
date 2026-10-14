@@ -57,8 +57,6 @@ describe("memory", () => {
           dispose();
           key = null;
           await collectGarbage();
-          // Keep the map alive across collection; losing the map too would
-          // let even a strongly retained key disappear and mask the leak.
           expect(map.has(Symbol("absent"))).toBe(false);
           console.debug("[owl:weak-key-lifetime]", {
             view,
@@ -346,7 +344,6 @@ describe("proxy invariants: a locked property is handed out as it is", () => {
   });
 });
 
-// the keys a write notified, from the reactivity debug channel
 function notifiedKeys(fn: () => void): string[] {
   const keys: string[] = [];
   setDebugSink((_channel, message) => {
@@ -502,9 +499,6 @@ describe("writes", () => {
   });
 
   test("a write to an object behind its own proxy reaches its set trap with the reactive proxy as receiver, and notifies once", async () => {
-    // Odoo mail's records: a class instance behind a Proxy whose set trap
-    // tells a write through the reactive proxy from an internal one by its
-    // receiver; an internal write notifies on its own, through the proxy
     class Message {
       body = "";
     }
@@ -537,8 +531,6 @@ describe("writes", () => {
   });
 
   test("Object.defineProperty through a proxy defines on the target and notifies nothing (Odoo web_studio's activeNode)", async () => {
-    // web_studio defines a label getter on a proxied field inside a computed:
-    // notifying would re-run what read the field
     const field = proxy({ name: "a", label: "A" } as any);
     const labels: string[] = [];
     effect(() => {
@@ -717,7 +709,6 @@ describe("collections", () => {
     const deep: any = proxy(new Set([a, b, c]));
     const shallow: any = signal.Set(new Set([proxy(d), proxy(c), proxy(b)]))();
     const plain = new Set([c, b]);
-    // a member's id, starred when it is a proxy
     const ids = (result: any) =>
       typeof result === "boolean"
         ? result

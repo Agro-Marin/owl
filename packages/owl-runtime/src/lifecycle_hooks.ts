@@ -1,9 +1,6 @@
 import { ComponentNode, getComponentScope } from "./component_node";
 import { nodeErrorHandlers } from "./rendering/error_handling";
 
-// -----------------------------------------------------------------------------
-//  hooks
-// -----------------------------------------------------------------------------
 
 export { onWillDestroy, onWillStart } from "@odoo/owl-core";
 
@@ -11,8 +8,6 @@ export function onWillUpdateProps(
   fn: (nextProps: any, scope: ComponentNode) => Promise<void> | void | any
 ) {
   const scope = getComponentScope();
-  // decorate prepends scope as the first arg, but onWillUpdateProps's public
-  // signature is (nextProps, scope) — swap back.
   function swapped(this: any, s: ComponentNode, nextProps: any) {
     return fn.call(this, nextProps, s);
   }

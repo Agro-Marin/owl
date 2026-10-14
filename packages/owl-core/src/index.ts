@@ -1,13 +1,9 @@
-// Errors
 export { OwlError } from "./owl_error";
 
-// Status constants
 export { STATUS } from "./status";
 
-// Utilities
 export { batched } from "./batched";
 
-// Scope / lifetime
 export {
   Scope,
   scopeStack,
@@ -18,10 +14,8 @@ export {
   type ScopeApp,
 } from "./scope";
 
-// Reactivity: proxy
 export { proxy, observe, markRaw, toRaw, readArrayItems } from "./proxy";
 
-// Reactivity: computations (core tracking primitives)
 export {
   batch,
   untrack,
@@ -48,19 +42,14 @@ export {
   type Link,
 } from "./computations";
 
-// Reactivity: signal
 export { signal, type Signal } from "./signal";
 
-// Reactivity: computed
 export { computed } from "./computed";
 
-// Reactivity: selector
 export { selector, type SelectorOptions } from "./selector";
 
-// Reactivity: effect
 export { effect, immediateEffect, type EffectOptions } from "./effect";
 
-// Debug logging
 export {
   debug,
   debugLog,
@@ -72,7 +61,6 @@ export {
   type DebugSink,
 } from "./debug";
 
-// Reactivity: asyncComputed
 export {
   asyncComputed,
   type AsyncComputed,
@@ -80,7 +68,6 @@ export {
   type AsyncComputedOptions,
 } from "./async_computed";
 
-// Validation
 export {
   assertType,
   validateType,
@@ -88,7 +75,6 @@ export {
   type ValidationIssue,
 } from "./validation";
 
-// Type validators (`t` is the documented short alias of `types`)
 export {
   types,
   types as t,
@@ -110,26 +96,19 @@ export {
   type Type,
   type UnionToIntersection,
   type WithDefault,
-  // Phantom brand symbols carried by the public `Type`/`Optional`/`WithDefault`
-  // types. Exported (type-only) so downstream projects can name them when
-  // emitting declaration files, mirroring `isProps` (see owl#1958).
   type hasDefault,
   type isOptional,
   type typeBrand,
 } from "./types";
 
-// Registry / Resource
 export { Registry } from "./registry";
 export { Resource, type ResourceAddOptions } from "./resource";
 
 export { EventModifier, eventModifierMask } from "./event_modifiers";
 
-// Plugin system
 export { Plugin, PluginManager, startPlugins, type PluginConstructor } from "./plugin_manager";
 
-// Hooks
 export {
-  // not a hook, used by the runtime's `mainEventHandler`
   setCurrentEvent,
   useApp,
   useEffect,

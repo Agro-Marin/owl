@@ -1,36 +1,8 @@
 import { OwlError } from "@odoo/owl-core";
 
-/**
- * Owl QWeb Expression Parser
- *
- * Owl needs in various contexts to be able to understand the structure of a
- * string representing a javascript expression.  The usual goal is to be able
- * to rewrite some variables.  For example, if a template has
- *
- *  ```xml
- *  <t t-if="computeSomething({val: state.val})">...</t>
- * ```
- *
- * this needs to be translated in something like this:
- *
- * ```js
- *   if (context["computeSomething"]({val: context["state"].val})) { ... }
- * ```
- *
- * This file contains the implementation of an extremely naive tokenizer/parser
- * and evaluator for javascript expressions.  The supported grammar is basically
- * only expressive enough to understand the shape of objects, of arrays, and
- * various operators.
- */
 
-//------------------------------------------------------------------------------
-// Misc types, constants and helpers
-//------------------------------------------------------------------------------
 
-// the names an expression reads as JavaScript's own, never from the
-// context: keywords, and the standard globals a template may call (Vue's
-// template allow-list) — a template writing `String(x)` means the global
-const RESERVED_WORDS = /* @__PURE__ */ wordSet(
+const RESERVED_WORDS =   wordSet(
   "true,false,NaN,null,undefined,debugger,console,window,in,instanceof,new,function,return,eval,void,__globals__," +
     "Math,RegExp,Array,Object,Date,Number,Boolean,String,Symbol,BigInt,Map,Set,JSON,Intl,Error," +
     "Infinity,isFinite,isNaN,parseFloat,parseInt,decodeURI,decodeURIComponent,encodeURI,encodeURIComponent"
@@ -40,14 +12,12 @@ function wordSet(words: string): Set<string> {
   return new Set(words.split(","));
 }
 
-// the keywords that start a statement an arrow's block body cannot hold: it
-// takes declarations, expressions and return only
-const STATEMENT_KEYWORDS = /* @__PURE__ */ wordSet(
+const STATEMENT_KEYWORDS =   wordSet(
   "break,case,catch,class,const,continue,default,do,else,enum,export,extends,finally,for,if," +
     "import,super,switch,throw,try,var,while,with,yield"
 );
 
-const WORD_REPLACEMENT: { [key: string]: string } = /* @__PURE__ */ Object.assign(
+const WORD_REPLACEMENT: { [key: string]: string } =   Object.assign(
   Object.create(null),
   {
     and: "&&",
@@ -59,9 +29,6 @@ const WORD_REPLACEMENT: { [key: string]: string } = /* @__PURE__ */ Object.assig
   }
 );
 
-//------------------------------------------------------------------------------
-// Tokenizer
-//------------------------------------------------------------------------------
 type TKind =
   | "LEFT_BRACE"
   | "RIGHT_BRACE"
@@ -84,12 +51,10 @@ interface Token {
   replace?: Function;
   isLocal?: boolean;
   templateVars?: string[];
-  // `async` before an arrow, `await` in an async arrow's body, `const`, `let`
-  // or `var` in an arrow's block body
   isKeyword?: boolean;
 }
 
-const STATIC_TOKEN_MAP: { [key: string]: TKind } = /* @__PURE__ */ Object.assign(
+const STATIC_TOKEN_MAP: { [key: string]: TKind } =   Object.assign(
   Object.create(null),
   {
     "{": "LEFT_BRACE",
@@ -103,10 +68,8 @@ const STATIC_TOKEN_MAP: { [key: string]: TKind } = /* @__PURE__ */ Object.assign
   }
 );
 
-// the space after a word operator is relevant: the formatted expression keeps
-// one after it
 const OPERATORS =
-  /* @__PURE__ */ "...,.,===,==,++,+,!==,!=,!,||,&&,>=,>,<=,<,??=,??,?.,?,--,-,*,/,%,typeof ,delete ,=>,=,;,in ,new ,|,&,^,~".split(
+    "...,.,===,==,++,+,!==,!=,!,||,&&,>=,>,<=,<,??=,??,?.,?,--,-,*,/,%,typeof ,delete ,=>,=,;,in ,new ,|,&,^,~".split(
     ","
   );
 
@@ -155,10 +118,6 @@ let tokenizeString: Tokenizer = function (expr) {
   return { type: "VALUE", value: s };
 };
 
-/**
- * Returns the index of the backtick that closes the template literal opened at
- * `start`, past the interpolations, which may hold template literals themselves.
- */
 function findTemplateEnd(str: string, start: number): number {
   for (let i = start + 1; i < str.length; i++) {
     if (str[i] === "\\") {
@@ -190,11 +149,8 @@ function replaceInterpolations(template: string, replacer: (expr: string) => str
   return result;
 }
 
-// the characters after which a / starts a regular expression, not a division
 const REGEXP_PREFIX_RE = /[(,=:[!&|?{};+\-*%<>~^]/;
-// the words after which the tokenizer reads a / as a regular expression: the
-// keywords an operand follows and the word operators
-const REGEXP_PREFIX_WORDS = /* @__PURE__ */ regexpPrefixWords();
+const REGEXP_PREFIX_WORDS =   regexpPrefixWords();
 
 function regexpPrefixWords(): Set<string> {
   return new Set([
@@ -208,12 +164,6 @@ function regexpPrefixWords(): Set<string> {
   ]);
 }
 
-/**
- * Whether a / after the code character at `previous` (-1: none) starts a
- * regular expression, as the tokenizer decides it: after an operator or an
- * opening, but not after a ++ or a --, and after a keyword or word operator
- * that is not a property name.
- */
 function startsRegExp(str: string, previous: number): boolean {
   if (previous < 0) {
     return true;
@@ -239,14 +189,8 @@ function startsRegExp(str: string, previous: number): boolean {
   return str[before] !== ".";
 }
 
-/**
- * Returns the index of the } that closes the code starting at `start`, past
- * the strings, template literals, regular expressions and comments in it.
- */
 function findClosingBrace(str: string, start: number): number {
   let depth = 0;
-  // the index of the last character of code, for a / to tell a division from
-  // a regexp
   let previous = -1;
   for (let i = start; i < str.length; i++) {
     const char = str[i];
@@ -278,10 +222,6 @@ function findClosingBrace(str: string, start: number): number {
   throw new OwlError("Invalid expression");
 }
 
-/**
- * Returns the index of the / that closes the regular expression opened at
- * `start`, past its escapes and character classes.
- */
 function regExpEnd(str: string, start: number): number {
   let inClass = false;
   let i = start + 1;
@@ -301,10 +241,6 @@ function regExpEnd(str: string, start: number): number {
   return i;
 }
 
-/**
- * Returns the index past the comment (`/* *\/` or `//` up to the line end)
- * that starts at `start`.
- */
 function commentEnd(str: string, start: number): number {
   if (str[start + 1] === "*") {
     const end = str.indexOf("*/", start + 2);
@@ -336,7 +272,6 @@ let tokenizeSymbol: Tokenizer = function (expr, previous) {
     return false;
   }
   const s = match[0];
-  // a word operator in key position ({gt: 1}, {and}) is a key
   const isKey =
     (previous?.type === "LEFT_BRACE" || previous?.type === "COMMA") &&
     OBJECT_KEY_END_RE.test(expr.slice(s.length));
@@ -355,12 +290,8 @@ const OPERAND_PREFIXES = new Set<TKind>([
   "COLON",
 ]);
 
-// the keywords an operand follows: `void /x/` is a regular expression, but
-// `a.void / 2` a division
 const OPERAND_KEYWORDS = new Set(["void", "return"]);
 
-// a / where an operand is expected starts a regular expression literal; after
-// a ++ or a --, which a regular expression cannot follow, it is a division
 const tokenizeRegExp: Tokenizer = function (expr, previous, beforePrevious) {
   const afterKeyword =
     previous?.type === "SYMBOL" &&
@@ -396,7 +327,6 @@ const tokenizeProperty: Tokenizer = function (expr) {
 const tokenizeOperator: Tokenizer = function (expr) {
   for (let op of OPERATORS) {
     if (op === "?." && /\d/.test(expr[2])) {
-      // a?.5:1 is a ternary
       continue;
     }
     if (op.endsWith(" ")) {
@@ -422,19 +352,8 @@ const TOKENIZERS = [
   tokenizeSymbol,
   tokenizeStatic,
 ];
-const PROPERTY_TOKENIZERS = /* @__PURE__ */ [tokenizeProperty].concat(TOKENIZERS);
+const PROPERTY_TOKENIZERS =   [tokenizeProperty].concat(TOKENIZERS);
 
-/**
- * Convert a javascript expression (as a string) into a list of tokens. For
- * example: `tokenize("1 + b")` will return:
- * ```js
- *  [
- *   {type: "VALUE", value: "1"},
- *   {type: "OPERATOR", value: "+"},
- *   {type: "SYMBOL", value: "b"}
- * ]
- * ```
- */
 export function tokenize(expr: string): Token[] {
   const result: Token[] = [];
   let token: boolean | Token = true;
@@ -463,7 +382,7 @@ export function tokenize(expr: string): Token[] {
       }
     }
   } catch (e) {
-    error = e; // Silence all errors and throw a generic error below
+    error = e;
   }
   if (current.length || error) {
     throw new OwlError(`Tokenizer error: could not tokenize \`${expr}\``);
@@ -471,41 +390,12 @@ export function tokenize(expr: string): Token[] {
   return result;
 }
 
-//------------------------------------------------------------------------------
-// Expression "evaluator"
-//------------------------------------------------------------------------------
 
 const isLeftSeparator = (token: Token) =>
   token && (token.type === "LEFT_BRACE" || token.type === "COMMA");
 const isRightSeparator = (token: Token) =>
   token && (token.type === "RIGHT_BRACE" || token.type === "COMMA");
 
-/**
- * This is the main function exported by this file. This is the code that will
- * process an expression (given as a string) and returns another expression with
- * proper lookups in the context.
- *
- * Usually, this kind of code would be very simple to do if we had an AST (so,
- * if we had a javascript parser), since then, we would only need to find the
- * variables and replace them.  However, a parser is more complicated, and there
- * are no standard builtin parser API.
- *
- * Since this method is applied to simple javasript expressions, and the work to
- * be done is actually quite simple, we actually can get away with not using a
- * parser, which helps with the code size.
- *
- * Here is the heuristic used by this method to determine if a token is a
- * variable:
- * - by default, all symbols are considered a variable
- * - unless the previous token is a dot (in that case, this is a property: `a.b`)
- * - or if the previous token is a left brace or a comma, and the next token is
- *   a colon (in that case, this is an object key: `{a: b}`)
- *
- * Some specific code is also required to support arrow functions. If we detect
- * the arrow operator, then we add the current (or some previous tokens) token to
- * the list of variables so it does not get replaced by a lookup in the context
- */
-// Leading spaces are trimmed during tokenization, so they need to be added back for some values
 const paddedValues = new Map([
   ["in ", " in "],
   ["instanceof", " instanceof "],
@@ -516,9 +406,6 @@ function render(tokens: Token[]): string {
   let code = "";
   for (const t of tokens) {
     const value = t.isKeyword ? t.value + " " : paddedValues.get(t.value) || t.value;
-    // tokens are joined without spaces: `a + +b` must not read as `a++b`, nor
-    // `n + ++m` as `n++ + m`
-    // nor `return x` as `returnx`
     const last = code[code.length - 1];
     if (
       ((last === "+" || last === "-") && value[0] === last) ||
@@ -535,18 +422,12 @@ interface ProcessedExpr {
   expr: string;
   freeVariables: string[] | null;
   variables: string[];
-  // the parts of an expression that is a whole arrow function
   arrow: { isAsync: boolean; params: string; body: string } | null;
 }
 
 const LEFT_GROUPS = new Set<TKind>(["LEFT_BRACE", "LEFT_BRACKET", "LEFT_PAREN"]);
 const RIGHT_GROUPS = new Set<TKind>(["RIGHT_BRACE", "RIGHT_BRACKET", "RIGHT_PAREN"]);
 
-/**
- * Turns the parameters of the parenthesized arrow parameter list that ends at
- * `end` into locals, default values and computed keys aside, and returns the
- * index of its "(".
- */
 function bindArrowParams(tokens: Token[], end: number, scope: Set<string>): number {
   let depth = 0;
   let start = end;
@@ -559,7 +440,6 @@ function bindArrowParams(tokens: Token[], end: number, scope: Set<string>): numb
     }
   }
   bindPattern(tokens, start, scope);
-  // a default value or a computed key may read an earlier parameter
   for (let k = start + 1; k < end; k++) {
     const t = tokens[k];
     if (t.type === "SYMBOL" && t.varName && scope.has(t.varName)) {
@@ -572,10 +452,6 @@ function bindArrowParams(tokens: Token[], end: number, scope: Set<string>): numb
 
 const DECLARATION_KEYWORDS = new Set(["const", "let", "var"]);
 
-/**
- * Turns the names the declarations of the arrow block body opened at `start`
- * bind into locals, wherever they are in it, and marks their keywords.
- */
 function bindBlockDeclarations(tokens: Token[], start: number, scope: Set<string>) {
   let depth = 0;
   for (let k = start + 1; k < tokens.length && depth >= 0; k++) {
@@ -598,10 +474,6 @@ function bindBlockDeclarations(tokens: Token[], start: number, scope: Set<string
   }
 }
 
-/**
- * Adds the names bound by the declarators starting at `start` (`a = 1, {b, c:
- * d = 2} = e, [f]`) to `scope`, and returns the index of their last token.
- */
 function bindDeclarators(tokens: Token[], start: number, scope: Set<string>): number {
   let depth = 0;
   let inValue = false;
@@ -633,12 +505,6 @@ function bindDeclarators(tokens: Token[], start: number, scope: Set<string>): nu
   return k;
 }
 
-/**
- * Adds the names bound by the destructuring pattern (or the parameter list)
- * opened at `start` to `scope`, default values and computed keys aside, and
- * returns the index of its closing token. Its tokens may be compiled already,
- * as a parameter list's are: a name is then the token's `varName`.
- */
 function bindPattern(tokens: Token[], start: number, scope: Set<string>): number {
   const levels: { inExpr: boolean; base: boolean; isObject: boolean }[] = [];
   let k = start;
@@ -646,7 +512,6 @@ function bindPattern(tokens: Token[], start: number, scope: Set<string>): number
     const t = tokens[k];
     const level = levels[levels.length - 1];
     if (LEFT_GROUPS.has(t.type)) {
-      // a "[" in key position of an object pattern is a computed key
       const prev = tokens[k - 1]?.type;
       const inExpr =
         !!level &&
@@ -674,10 +539,6 @@ function bindPattern(tokens: Token[], start: number, scope: Set<string>): number
   return k;
 }
 
-/**
- * Whether the `async` at `i` starts an arrow function: `async x =>` or
- * `async (...) =>`. Anywhere else it is a name.
- */
 function isAsyncArrow(tokens: Token[], i: number): boolean {
   const prev = tokens[i - 1];
   if (prev?.type === "OPERATOR" && (prev.value === "." || prev.value === "?.")) {
@@ -715,21 +576,14 @@ function collectVariables(tokens: Token[], start: number): string[] {
   return [...vars];
 }
 
-/**
- * Processes a javascript expression: compiles variable lookups and detects
- * top-level arrow functions with their free variables, all in a single pass.
- */
 export function processExpr(
   expr: string,
   seededLocals?: Set<string>,
   inAsyncArrow: boolean = false
 ): ProcessedExpr {
-  // scope entries carry the stack depth at which they were created
   const scopeStack: { vars: Set<string>; depth: number; ternaries: number; isAsync?: boolean }[] =
     [];
 
-  // Seed outer locals
-  // depth: -Infinity so this scope never gets popped
   if (seededLocals?.size || inAsyncArrow) {
     scopeStack.push({
       vars: seededLocals || new Set(),
@@ -741,7 +595,6 @@ export function processExpr(
 
   const tokens = tokenize(expr);
   let i = 0;
-  // the open groups: "(", "[", "{", and "BLOCK" for the "{" of an arrow's block body
   const stack: (TKind | "BLOCK")[] = [];
   let topLevelArrowIndex = -1;
   let topLevelParams: [number, number] | null = null;
@@ -781,7 +634,6 @@ export function processExpr(
       case "RIGHT_BRACKET":
       case "RIGHT_PAREN":
         stack.pop();
-        // Pop arrow scopes whose body has ended (stack dropped below creation depth)
         while (scopeStack.length > 0 && stack.length < scopeStack[scopeStack.length - 1].depth) {
           scopeStack.pop();
         }
@@ -804,7 +656,6 @@ export function processExpr(
       }
       case "OPERATOR":
         if (token.value === ";") {
-          // a statement ends the concise arrows of the block body it is in
           while (innermostScopeAtDepth()) {
             scopeStack.pop();
           }
@@ -827,8 +678,6 @@ export function processExpr(
     let isVar = token.type === "SYMBOL" && !token.isKeyword && !RESERVED_WORDS.has(token.value);
     if (isVar) {
       if (prevToken) {
-        // normalize missing tokens: {a} should be equivalent to {a:a}, and the
-        // pattern {a = 1} to {a:a = 1}
         if (
           groupType === "LEFT_BRACE" &&
           isLeftSeparator(prevToken) &&
@@ -850,8 +699,6 @@ export function processExpr(
           }
         }
       }
-      // a context name may be any string, a keyword included: only where a
-      // statement starts, in an arrow's block body, is a keyword one
       const startsStatement =
         groupType === "BLOCK" &&
         (prevToken.type === "LEFT_BRACE" ||
@@ -887,9 +734,6 @@ export function processExpr(
         paramStart = bindArrowParams(tokens, i, newScope);
         params = [paramStart + 1, i];
       } else {
-        // Single param without parens (e => ...): token.value is still the
-        // raw identifier here, before the isVar block below transforms it.
-        // The isVar block will then see isLocal=true and prefix with _.
         newScope.add(token.value);
       }
       const isAsync = !!tokens[paramStart - 1]?.isKeyword;
@@ -897,7 +741,6 @@ export function processExpr(
         topLevelArrowIndex = i + 1;
         topLevelParams = params;
       }
-      // record current stack depth so we know when this scope expires
       scopeStack.push({ vars: newScope, depth: stack.length, ternaries: 0, isAsync });
     }
 
@@ -938,11 +781,6 @@ export function compileExpr(expr: string): string {
   return processExpr(expr).expr;
 }
 
-/**
- * The `{{ expr }}` and `#{ expr }` interpolations of `s`, each ending at the
- * brace that closes it: an expression may hold braces and strings with "}}".
- * An interpolation that is not closed is text.
- */
 function findInterpolations(s: string): { start: number; end: number; expr: string }[] {
   const result = [];
   for (let i = 0; i < s.length; i++) {
@@ -970,9 +808,6 @@ export function isInterpolated(s: string): boolean {
   return findInterpolations(s).length > 0;
 }
 
-/**
- * Escapes a string so that it reads as itself inside a template literal.
- */
 export function escapeTemplateString(str: string): string {
   return str.replace(/\\/g, "\\\\").replace(/`/g, "\\`").replace(/\$\{/g, "\\${");
 }

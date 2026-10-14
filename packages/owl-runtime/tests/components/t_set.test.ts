@@ -9,9 +9,6 @@ beforeEach(() => {
   fixture = makeTestFixture();
 });
 
-// -----------------------------------------------------------------------------
-// t-set
-// -----------------------------------------------------------------------------
 
 describe("t-set", () => {
   test("t-set outside modified in t-if", async () => {
@@ -47,8 +44,6 @@ describe("t-set", () => {
   });
 
   test("t-set in t-if", async () => {
-    // Weird that code block within 'if' leaks outside of it
-    // Python does the same
     class Comp extends Component {
       static template = xml`
         <div>

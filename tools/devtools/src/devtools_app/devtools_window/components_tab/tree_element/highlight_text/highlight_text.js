@@ -13,7 +13,6 @@ export class HighlightText extends Component {
       : [this.props.originalText];
   }
 
-  // Logic to split the text to highlight it according to a fuzzy search pattern
   splitFuzzySearch(text, search) {
     if (!search || search.length === 0) {
       return [text];

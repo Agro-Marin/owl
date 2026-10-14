@@ -1,4 +1,3 @@
-// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`a t-set body in an attribute is its string at render > a single interpolation, a property and a prop read by a child 1`] = `
 "function anonymous(app, bdom, helpers

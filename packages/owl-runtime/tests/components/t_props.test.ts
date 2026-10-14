@@ -87,7 +87,7 @@ describe("t-props", () => {
   });
 
   test("t-props with props", async () => {
-    expect.assertions(3); // 2 comes from snapshots
+    expect.assertions(3);
 
     class Child extends Component {
       static template = xml`<div />`;

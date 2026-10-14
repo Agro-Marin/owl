@@ -1,23 +1,9 @@
-// This example is slightly more complex than usual. We demonstrate
-// here a way to manage sub windows in Owl, declaratively. This is still just a
-// demonstration. Managing windows can be as complex as we want.  For example,
-// we could implement the following features:
-// - resizing windows
-// - minimizing windows
-// - configuration options for windows to make a window non resizeable
-// - minimal width/height
-// - better heuristic for initial window position
-// - ...
 import { Component, useState, mount, useRef, reactive, useEnv, onMounted } from "@odoo/owl";
 
-// -----------------------------------------------------------------------------
-// Window manager code
-// -----------------------------------------------------------------------------
 
 class WindowManager {
-  // contains all components with metadata
   static Windows = {};
-  windows = {}; // mapping id => info
+  windows = {};
   nextId = 1;
 
   add(type) {
@@ -60,9 +46,6 @@ function useWindowService() {
   return useState(env.windowService);
 }
 
-// -----------------------------------------------------------------------------
-// Generic Window Component
-// -----------------------------------------------------------------------------
 
 class Window extends Component {
   static template = "Window";
@@ -122,9 +105,6 @@ class Window extends Component {
   }
 }
 
-// -----------------------------------------------------------------------------
-// Two concrete Window type implementations
-// -----------------------------------------------------------------------------
 
 class HelloWorld extends Component {
   static template = "HelloWorld";
@@ -147,13 +127,9 @@ class Counter extends Component {
   }
 }
 
-// register window components
 WindowManager.Windows.Hello = HelloWorld;
 WindowManager.Windows.Counter = Counter;
 
-// -----------------------------------------------------------------------------
-// Window Container
-// -----------------------------------------------------------------------------
 
 class WindowContainer extends Component {
   static template = "WindowContainer";
@@ -164,9 +140,6 @@ class WindowContainer extends Component {
   }
 }
 
-// -----------------------------------------------------------------------------
-// Root Component
-// -----------------------------------------------------------------------------
 
 class Root extends Component {
   static template = "Root";
@@ -181,9 +154,6 @@ class Root extends Component {
   }
 }
 
-// -----------------------------------------------------------------------------
-// Setup
-// -----------------------------------------------------------------------------
 
 const env = {
   windowService: createWindowService(),

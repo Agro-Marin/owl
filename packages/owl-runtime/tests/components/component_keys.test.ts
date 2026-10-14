@@ -10,11 +10,6 @@ import {
 } from "../../src";
 import { makeTestFixture, nextTick, render } from "../helpers";
 
-// A child component's key in its parent's children is the path to its site:
-// site ids, loop keys, t-keys, slot and template names. Two paths that spell
-// one key make two children share a node: the second replaces the first in
-// the parent's children, and the first stays in the DOM untracked (no deep
-// render, no destroy).
 
 let fixture: HTMLElement;
 
@@ -58,7 +53,6 @@ describe("component keys", () => {
 
   test("nested loops whose string keys hold the separator of their site ids", async () => {
     const { Item, destroyed } = tracking();
-    // the keys a__b then c, and a then b__c, spelled one key __1__a__b__c
     class Parent extends Component {
       static template = xml`<div><t t-foreach="['a__b', 'a']" t-as="o" t-key="o"><t t-foreach="o === 'a' ? ['b__c'] : ['c']" t-as="i" t-key="i"><Item/></t></t></div>`;
       static components = { Item };
@@ -86,8 +80,6 @@ describe("component keys", () => {
 
   test("a t-key holding the separator of site ids, beside a loop", async () => {
     const { Item, destroyed } = tracking();
-    // t-key x__2 on the site __1, and t-key x on the site __2 in a loop over
-    // 1, spelled one key x__2__1
     class Parent extends Component {
       static template = xml`<div><Item t-key="'x__2'"/><t t-foreach="['1']" t-as="i" t-key="i"><Item t-key="'x'"/></t></div>`;
       static components = { Item };
@@ -109,7 +101,6 @@ describe("component keys", () => {
     }
     const parent = await mount(Parent, fixture);
     expect(Object.keys(parent.__owl__.children)).toHaveLength(6);
-    // a new array of the same items is the same key
     (parent as any).keys = (parent as any).keys.map((k: unknown[]) => [...k]);
     render(parent);
     await nextTick();
@@ -149,7 +140,6 @@ describe("component keys", () => {
     }
     const parent = await mount(Parent, fixture);
     const show: any = Object.values(parent.__owl__.children)[0].component;
-    // the body's Item is Show's: Show renders it alone, and drops it
     render(show);
     await nextTick();
     expect(fixture.innerHTML).toBe("<div><span><b>1</b></span></div>");
@@ -208,8 +198,6 @@ describe("component keys", () => {
       static components = { Item };
       props = props();
     }
-    // the slot's Other takes the second site id of the parent's template, the
-    // default content's Item the second of Child's
     class Middle extends Component {
       static template = xml`<Child slots="this.on ? this.props.slots : {}"/>`;
       static components = { Child };
@@ -244,11 +232,6 @@ describe("component keys", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// property test: random templates with adversarial loop keys, slots called in
-// loops, dynamic t-calls with bodies, t-set bodies output in loops and by
-// other components
-// ---------------------------------------------------------------------------
 
 function prng(seed: number) {
   let s = seed;
@@ -264,11 +247,6 @@ const FN = () => 0;
 const SYM = Symbol("s");
 const REG = Symbol.for("a\u0002:b");
 
-// keys that spell one another once joined without an exact encoding: the
-// separators of every encoding owl used (__, \u0002 and its tags), numbers
-// that spell site ids, and values of other types with the same string form.
-// For each separator S, the outer key a then the inner b S c, and the outer
-// a S b then the inner c, join as one string
 const SEPARATORS = ["__", "\u0002", "\u0002:", "\u0002\u0002", ":", "\u00021"];
 const FAMILY: unknown[] = [
   "a",
@@ -317,8 +295,6 @@ const OTHERS: unknown[] = [
   SYM,
   REG,
 ];
-// arrays are made anew each render: a new array of the same items is the
-// same key
 const ARRAYS: (() => unknown[])[] = [
   () => [1, 2],
   () => ["1,2"],
@@ -345,7 +321,6 @@ function hash(text: string): number {
   return h + 1;
 }
 
-// distinct pool entries, mostly from the family, in random order
 function pickKeys(random: () => number, max: number): number[] {
   const count = Math.floor(random() * (max + 1));
   const result: number[] = [];
@@ -379,8 +354,6 @@ interface KTemplates {
   subs: Map<string, KNode[]>;
 }
 
-// the names of the templates a dynamic t-call picks from: they hold the
-// separators too
 const SUB_NAMES = ["sub", "sub__1", "s\u0002tub", "sub\u0002"];
 
 function generate(random: () => number): KTemplates {
@@ -504,8 +477,6 @@ function makeKeyApp(world: KWorld, templates: KTemplates) {
     coll(id: number, path: number[]) {
       const random = prng(hash(`${world.seed}|${id}|${path.join(",")}|${world.epoch}`));
       const keys = pickKeys(random, 3);
-      // half the time, the keys that join with the enclosing loop's into the
-      // string another pair of keys joins into
       if (random() < 0.5) {
         const sep = 10 + 2 * Math.floor(random() * SEPARATORS.length);
         const outer = path.length ? FAMILY[path[path.length - 1]] : null;
@@ -623,7 +594,6 @@ async function runKeys(seed: number, stats: KStats): Promise<string | null> {
       problems.push(...keyProblems(world, root).map((p) => `epoch ${epoch}: ${p}`));
     }
     if (!problems.length) {
-      // a deep render reaches every child
       const before = new Map(world.renders);
       component.__owl__.render(true);
       await settleApp(app);
@@ -664,7 +634,6 @@ test(
       }
     }
     expect(failures).toEqual([]);
-    // not vacuous: the templates hold components
     expect(stats.leaves).toBeGreaterThan(KEY_SEEDS * 4);
   },
   Math.max(120000, KEY_SEEDS * 400)

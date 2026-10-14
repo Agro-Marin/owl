@@ -5,8 +5,8 @@ import sys
 
 sys.path.insert(0, str(pathlib.Path(__file__).parent))
 
-import upstream_owl3_migration as up  # noqa: E402
-from lxml import etree  # noqa: E402
+import upstream_owl3_migration as up
+from lxml import etree
 
 DYNAMIC_CALL = re.compile(r"\{\{")
 DYNAMIC_EXPR = re.compile(r"\{\{\s*(.*?)\s*\}\}")

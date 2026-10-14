@@ -163,11 +163,10 @@ test("components can start plugins", async () => {
     declare b: PluginInstance<typeof PluginB>;
 
     setup() {
-      this.a = plugin(PluginA); // PluginA is already started, we can get it
-      // PluginB is not started yet so we'll crash if we try to get it (tested in a previous test)
+      this.a = plugin(PluginA);
 
       providePlugins([PluginB]);
-      this.b = plugin(PluginB); // PluginB is now started, we can get it
+      this.b = plugin(PluginB);
     }
   }
 
@@ -388,7 +387,6 @@ test("components, plugins, useEffect", async () => {
       useEffect(() => {
         derived.set(value());
       });
-      // this triggers the bug
       value();
     }
   }
@@ -467,7 +465,6 @@ test("usePlugin returns the scoped view when the plugin defines one", async () =
   expect(comp!.orm).not.toBe(rawOrm);
   expect(comp!.orm.unscoped).toBe(rawOrm);
   expect(Object.getPrototypeOf(comp!.orm)).toBe(rawOrm);
-  // one view per usePlugin call
   expect(comp!.orm2).not.toBe(comp!.orm);
   expect(await comp!.orm.read(3)).toBe("record 3");
   app.destroy();
@@ -543,7 +540,6 @@ test("providePlugins respects plugin sequence", async () => {
   const app = new App();
   const mounted = app.createRoot(Parent).mount(fixture);
   await nextTick();
-  // Feature's setup waits for Foundation, which delays the component render
   expect(steps.splice(0)).toEqual([]);
   expect(fixture.innerHTML).toBe("");
 

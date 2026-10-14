@@ -1,13 +1,3 @@
-// The generator of the template fuzz tests (template_fuzz.test.ts,
-// template_fuzz_interactive.test.ts) and its reference: random templates over
-// the core directives, rendered by owl and by a small reference renderer that applies the documented semantics: the DOM owl builds
-// must serialize to the reference's HTML. The interactive templates add
-// components, slots, t-call, t-set, Portal, Suspense, t-on handlers (native and
-// synthetic, passive or not), t-model and bound properties, mounted in the
-// document or in a shadow root: each event is dispatched on every element and
-// the handlers that ran (and where) must be the ones the reference's
-// propagation model runs, and each form control must hold what the reference
-// says after renders and user edits.
 
 export function prng(seed: number) {
   let s = seed;
@@ -18,22 +8,17 @@ export function prng(seed: number) {
 }
 
 export type Scope = Record<string, unknown>;
-// a t-on: key is the event with its modifiers; the handler logs its id, and
-// the value of an expression (a loop variable, a t-set value) when it has one
 export interface Handler {
   key: string;
   id: string;
   local: string | null;
-  // `this.logger(...)`, evaluated at dispatch, rather than an arrow
   call: boolean;
 }
 export type ModelKind = "text" | "check" | "radio" | "select";
 export interface Model {
   kind: ModelKind;
   mods: string[];
-  // t-model.proxy on a proxy's key, or t-model on a function with a set method
   proxy: boolean;
-  // t-model.proxy on `<row>.v`, a loop variable over this.rows
   row: string | null;
 }
 export interface Elem {
@@ -44,21 +29,14 @@ export interface Elem {
   attf: [string, string][];
   children: TNode[];
   on: Handler[];
-  // t-att-value, t-att-checked, t-att-disabled: properties
   bound: [string, string][];
   model: Model | null;
-  // written with t-tag (its block type is made per tag)
   dynTag?: boolean;
-  // a class string, its words separated by any whitespace: static, dynamic
-  // (t-att-class, or through t-att's object when viaAtt) or both
   cls?: { statics: string | null; expr: string; viaAtt: boolean };
 }
-// a component or a t-call template: one per use
 export interface Def {
   name: string;
   body: TNode[];
-  // a component used through a relay, which hands it the slots it receives
-  // held in proxied state: as they are (1) or copied (2)
   relay?: 0 | 1 | 2;
 }
 export type TNode =
@@ -68,26 +46,16 @@ export type TNode =
   | { kind: "if"; branches: [string, TNode[]][]; otherwise: TNode[] | null }
   | { kind: "foreach"; list: string; as: string; key: string; children: TNode[] }
   | { kind: "comp"; def: Def; on: Handler[]; slot: TNode[] | null }
-  // dyn: a dynamic slot name ({{ expr }}), with default content: a name the
-  // component gives, one it does not, or undefined (Odoo's AutoComplete calls
-  // `{{ source.optionSlot }}`, undefined for a source without one)
   | { kind: "slot"; on: Handler[]; dyn?: string }
-  // args: the call's attributes, [name, expression]
   | { kind: "call"; def: Def; args: [string, string][] }
-  // t-set with t-value, or with a body
   | { kind: "set"; name: string; value: string | null; body: TNode[] | null }
-  // its content goes to an element outside the root, one per Portal and loop
-  // position (the index of each enclosing loop)
   | { kind: "portal"; target: number; indexes: string[]; on: Handler[]; content: TNode[] }
-  // a slow one starts its content with a Gate, whose onWillStart waits for the
-  // test to open it: its fallback shows until then
   | { kind: "suspense"; on: Handler[]; content: TNode[]; fallback: TNode[] | null; slow: boolean };
 
 export interface Generated {
   tree: TNode[];
   comps: Def[];
   calls: Def[];
-  // mounted in a shadow root, events dispatched composed or not
   shadow: boolean;
   composed: boolean;
 }
@@ -101,9 +69,6 @@ export const CONTEXT: Scope = {
   nothing: undefined,
   flag: true,
   cls: "  a \n b\tc  ",
-  // loop keys that join into one string in nested loops (a__b then c, a then
-  // b__c), or share a string form (1, "1"): what a component key that is not
-  // exact gives two components (the interactive templates loop over them)
   keys: ["a__b", "a", "b__c", "c", "a\u0002:b", "b\u0002:c", 1, "1"],
   rows: [
     { id: 1, v: "p" },
@@ -112,7 +77,6 @@ export const CONTEXT: Scope = {
   ],
 };
 
-// events no t-model listens to: a dispatch runs t-on handlers only
 export const EVENTS = ["keydown", "pointerdown", "mouseup", "focusin"];
 export const MODIFIERS: [string, number][] = [
   ["stop", 0.2],
@@ -130,7 +94,6 @@ export const MODEL_KEY: Record<ModelKind, string> = {
 };
 export const OPTIONS = ["x", "y", "z"];
 
-// a loop variable over this.rows
 export const isRow = (local: string) => local.startsWith("r");
 
 export interface Var {
@@ -141,31 +104,21 @@ export interface GenEnv {
   locals: string[];
   depth: number;
   inComp: boolean;
-  // rendered more than once for another reason than its loops (a slot, a
-  // t-set body, a component in a loop): no Portal, whose target is named by
-  // the loop indexes
   multi: boolean;
-  // in a t-set body: no component, control, slot, t-call, t-set
   inSet: boolean;
-  // the t-set variables in scope
   vars: Var[];
 }
 
 export function generator(random: () => number, interactive = false) {
   const pick = <T>(items: T[]): T => items[Math.floor(random() * items.length)];
-  // a component's template reads the values through `this`
   const g = (name: string) => (interactive ? `this.${name}` : name);
   let handlerId = 0;
-  // every third plain element of an interactive template is written with
-  // t-tag: a count, no draw, so that a seed generates the templates it did
   let plainElements = 0;
   let setId = 0;
   let sets = 0;
   let portals = 0;
   let suspenses = 0;
-  // every plain element but every fourth has classes: a count, no draw
   let classedElements = 0;
-  // every third slot call has a dynamic name: a count, no draw
   let slotCalls = 0;
   const dynSlot = () =>
     ++slotCalls % 3 ? undefined : DYN_SLOT_NAMES[(slotCalls / 3) % DYN_SLOT_NAMES.length];
@@ -221,8 +174,6 @@ export function generator(random: () => number, interactive = false) {
         [mods[j], mods[k]] = [mods[k], mods[j]];
       }
       const key = [pick(EVENTS), ...mods].join(".");
-      // a loop variable, its index or a t-set value: what a stale context
-      // would get wrong
       let local: string | null = null;
       if (values.length && random() < 0.5) {
         local = pick(values);
@@ -294,8 +245,6 @@ export function generator(random: () => number, interactive = false) {
     return el;
   }
   function component(env: GenEnv): TNode {
-    // the relay mode follows the component's number: no draw of its own, so
-    // that a seed generates the templates it generated before relays existed
     const relay = (comps.length % 3) as 0 | 1 | 2;
     const def: Def = { name: `C${comps.length + 1}`, body: [], relay };
     comps.push(def);
@@ -308,7 +257,6 @@ export function generator(random: () => number, interactive = false) {
       vars: [],
       multi: env.multi || env.locals.length > 0,
     });
-    // a slot may be called in a loop, or twice
     const slot = random() < 0.6 ? nodes({ ...env, depth, multi: true }) : null;
     if (slot && random() < 0.7) {
       def.body.splice(Math.floor(random() * (def.body.length + 1)), 0, {
@@ -325,10 +273,6 @@ export function generator(random: () => number, interactive = false) {
     let vars = env.vars;
     for (let i = 0; i < count; i++) {
       if (interactive && env.depth <= 3 && !env.inSet && random() < 0.1) {
-        // read by the nodes after it, and their descendants. Every third one
-        // sets again a variable of its kind in scope (a count, no draw): in a
-        // t-if or an element the nodes after them read it, in a loop the next
-        // items too, if the variable was set outside the loop in this template
         const inner = { ...env, vars, depth: env.depth + 1 };
         const body = random() < 0.4;
         const same = ++sets % 3 ? [] : vars.filter((v) => v.body === body);
@@ -343,8 +287,6 @@ export function generator(random: () => number, interactive = false) {
       }
       const n = node({ ...env, vars });
       if ((n.kind === "portal" || n.kind === "suspense") && random() < 0.6) {
-        // a value only the context holds, which the sub-root rendering the
-        // content reads from the slot of the latest render
         const name = `sv${++setId}`;
         const flags = env.locals.map((l) => `${l}_last ? 'L' : ${l}_first ? 'F' : 'M'`);
         const value = pick([`${g("a")} * 2`, `${g("s")}.length`, ...flags]);
@@ -367,10 +309,6 @@ export function generator(random: () => number, interactive = false) {
         const def: Def = { name: `call${calls.length + 1}`, body: [] };
         calls.push(def);
         def.body = nodes(inner);
-        // every other call has an attribute: in a loop it shadows the
-        // innermost loop variable (not a row, which a t-model may write), so
-        // that the call's context is made under the loop item, holding its
-        // own value of that name (no draw: a seed generates the templates it did)
         const last = [...env.locals].reverse().find((local) => !isRow(local));
         const args: [string, string][] =
           calls.length % 2 ? [] : last ? [[last, `${last} + '!'`]] : [["pz", "'lit'"]];
@@ -446,7 +384,6 @@ export function generator(random: () => number, interactive = false) {
       };
     }
     if (interactive && random() < 0.3) {
-      // proxies in a loop: a t-model.proxy on the loop variable writes to it
       const as = "r".repeat(depth + 1);
       const children = nodes({ ...inner, locals: [...env.locals, as] });
       return { kind: "foreach", list: g("rows"), as, key: `${as}.id`, children };
@@ -579,11 +516,6 @@ export function escapeAttr(value: string): string {
   return value.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
 }
 
-// ---------------------------------------------------------------------------
-// reference renderer: a tree of elements, each with the handlers it holds,
-// the catchers (t-on of a component or slot) enclosing it in its parent, and
-// the state its properties must show
-// ---------------------------------------------------------------------------
 
 export interface RHandler {
   event: string;
@@ -596,35 +528,24 @@ export interface VEl {
   children: VChild[];
   parent: VEl | null;
   on: RHandler[];
-  // the handlers of each catcher enclosing it, innermost first
   catchers: RHandler[][];
   props: [string, unknown][];
   model: Model | null;
-  // the row whose `v` a t-model.proxy on a row holds
   row: Scope | null;
 }
 export type VChild = VEl | string;
 export interface REnv {
-  // the slow Suspenses show their content, not their fallback
   loaded: boolean;
-  // the element each Portal renders its content in, by the key of its target
   portals: Map<string, VEl>;
 }
 export interface RCtx {
   self: unknown;
-  // the scope the code runs in: an object over the scopes it is in (a loop
-  // item over the scope of its loop), written in place by a t-set
   locals: Scope;
-  // the scope of each loop level of the function being rendered (0: its own)
   levels?: Scope[];
-  // the content a t-call-slot renders here, and where it was written
   slot: { nodes: TNode[]; ctx: RCtx } | null;
   env: REnv;
 }
 
-// a t-set body: rendered where t-out reads it, and its HTML where a string is
-// needed (text as it is, an element's markup escaped). Its variables have the
-// values they had at its t-set (ctx holds a copy of them)
 export class BodyValue {
   constructor(
     readonly body: TNode[],
@@ -706,11 +627,6 @@ export function adopt(el: VEl) {
   }
 }
 
-// a t-set is seen by the nodes after it in its list
-// The loop level each t-set of a function writes, as the compiler decides it:
-// its own, or the level of a t-set of the same name earlier in the function
-// at a lower level (a loop writes that variable of its enclosing scope). A
-// function with a t-set at its top level makes a scope of its own first.
 const writeLevels = new WeakMap<TNode, number>();
 const protects = new WeakMap<TNode[], boolean>();
 
@@ -749,8 +665,6 @@ function annotate(list: TNode[]): boolean {
         case "foreach":
           walk(n.children, level + 1);
           break;
-        // a component's, a slot's, a called template's, a Portal's or a
-        // Suspense's content is a function of its own
       }
     }
   };
@@ -759,7 +673,6 @@ function annotate(list: TNode[]): boolean {
   return protect;
 }
 
-// the values of a scope now, for what reads them later
 function copyOf(scope: Scope): Scope {
   const copy: Scope = {};
   for (const name in scope) {
@@ -768,7 +681,6 @@ function copyOf(scope: Scope): Scope {
   return copy;
 }
 
-// a function of its own (a template, a slot's content...) run in `base`
 export function renderTarget(list: TNode[], ctx: RCtx, base: Scope): VChild[] {
   const scope = annotate(list) ? Object.create(base) : base;
   return renderList(list, { ...ctx, locals: scope, levels: [scope] });
@@ -801,8 +713,6 @@ export function renderNode(n: TNode, ctx: RCtx): VChild[] {
       return value === undefined || value === null ? [] : [String(value)];
     }
     case "elem": {
-      // its attributes and handlers are read before its content runs (a t-set
-      // in it comes after them)
       const el = vel(n.tag, []);
       el.attrs = [...n.attrs];
       if (n.cls) {
@@ -830,7 +740,6 @@ export function renderNode(n: TNode, ctx: RCtx): VChild[] {
       for (const [k, expr] of n.bound) {
         const value = evaluate(expr, ctx);
         el.props.push([k, value]);
-        // the one bound property reflected as an attribute
         if (k === "disabled" && value) {
           el.attrs.push(["disabled", ""]);
         }
@@ -848,8 +757,6 @@ export function renderNode(n: TNode, ctx: RCtx): VChild[] {
       return n.otherwise ? renderList(n.otherwise, ctx) : [];
     }
     case "foreach": {
-      // an item is a scope over the loop's: a t-set writing the loop's
-      // scope, or an enclosing one, is seen by the next items
       const items = evaluate(n.list, ctx) as unknown[];
       return items.flatMap((item, i) => {
         const scope: Scope = Object.create(ctx.locals);
@@ -861,7 +768,6 @@ export function renderNode(n: TNode, ctx: RCtx): VChild[] {
       });
     }
     case "comp": {
-      // the slot's content reads the values at the component
       const inner: RCtx = {
         self: ctx.self,
         locals: {},
@@ -871,8 +777,6 @@ export function renderNode(n: TNode, ctx: RCtx): VChild[] {
       return withCatcher(renderTarget(n.def.body, inner, inner.locals), n.on, ctx);
     }
     case "slot": {
-      // a dynamic name other than "default" names no slot: the default
-      // content renders, as it does when the component gives no slot
       const named = !n.dyn || n.dyn === "'default'";
       const content =
         named && ctx.slot
@@ -883,7 +787,6 @@ export function renderNode(n: TNode, ctx: RCtx): VChild[] {
       return withCatcher(content, n.on, ctx);
     }
     case "call": {
-      // the called template reads the values at the call
       const locals = copyOf(ctx.locals);
       for (const [name, expr] of n.args) {
         locals[name] = evaluate(expr, ctx);
@@ -891,11 +794,8 @@ export function renderNode(n: TNode, ctx: RCtx): VChild[] {
       return renderTarget(n.def.body, ctx, locals);
     }
     case "set":
-      // handled by renderList
       return [];
     case "portal": {
-      // the content is elsewhere: a catcher on the Portal, or around it, holds
-      // nothing of it
       const key = [n.target, ...n.indexes.map((l) => ctx.locals[`${l}_index`])].join(":");
       const target = ctx.env.portals.getOrInsertComputed(key, () => vel("article", []));
       target.children.push(...renderTarget(n.content, ctx, copyOf(ctx.locals)));
@@ -921,7 +821,6 @@ export function renderRoot(list: TNode[], ctx: RCtx): VEl {
   return vel("div", renderTarget(list, ctx, ctx.locals));
 }
 
-// a class's words in any order: a patch adds and removes words
 function classWords(value: string): string {
   return value.split(/\s+/).filter(Boolean).sort().join(" ");
 }
@@ -951,8 +850,6 @@ export function render(list: TNode[], scope: Scope): string {
     .join("");
 }
 
-// the same names with other values: lists reordered, shrunk and grown, the
-// conditions flipped, an attribute value going undefined
 export const UPDATED: Scope = {
   a: 1,
   s: "plain",
@@ -970,21 +867,18 @@ export const UPDATED: Scope = {
   ],
 };
 
-// attribute order carries no meaning: an attribute set by a patch comes last
 export function canonical(html: string): string {
   const root = document.createElement("div");
   root.innerHTML = html;
   return [...root.childNodes].map(domString).join("");
 }
 
-// the DOM as built, not as an HTML parser would rebuild it (a <p> in a <p>)
 export function domString(node: ChildNode): string {
   if (node.nodeType === Node.TEXT_NODE) {
     return escapeText(node.textContent!);
   }
   const el = node as Element;
   const attrs = [...el.attributes]
-    // an empty class is no class: removing the last word leaves the attribute
     .filter((a) => a.name !== "class" || a.value.trim())
     .map((a) => {
       const value = a.name === "class" ? classWords(a.value) : a.value;

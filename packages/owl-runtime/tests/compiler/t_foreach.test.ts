@@ -9,9 +9,6 @@ import { mount, patch } from "../../src/blockdom";
 
 snapshotEverything();
 
-// -----------------------------------------------------------------------------
-// t-foreach
-// -----------------------------------------------------------------------------
 
 describe("t-foreach", () => {
   test("simple iteration", () => {

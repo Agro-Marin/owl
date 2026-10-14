@@ -9,8 +9,6 @@ import { STATUS } from "./status";
 import { ownTemplate } from "./template_set";
 import { types as t } from "./types";
 
-// Inner sub-root that simply renders the consumer's default slot. Module-level
-// so its template is compiled once and shared across all Portal instances.
 class PortalContent extends Component {
   static get template(): string {
     return ownTemplate(PortalContent, "PortalContent").xml`<t t-call-slot="default"/>`;
@@ -60,25 +58,13 @@ export class Portal extends Component {
             return portalProps.slots;
           },
         },
-        // Forward the plugin chain from this Portal (createRoot defaults
-        // sub-roots to the app-level plugin manager) so `providePlugins`
-        // contributions from ancestors are visible inside the portaled content.
         pluginManager: portalNode.pluginManager,
-        // Route errors from the portaled subtree back through Portal's parent
-        // chain so consumer `onError` handlers still catch them. Without this,
-        // sub-root errors would propagate to app._handleError and tear down
-        // the whole app.
         onError: forwardErrorToParent(portalNode),
-        // Let the scheduler see through the sub-root boundary, so renders of
-        // the portaled content yield to in-flight ancestor renders (e.g. a
-        // t-if about to remove this Portal).
         host: portalNode,
       });
 
       mountedTarget = target;
       committed = false;
-      // content found a target before its host is in the document (a pending
-      // render, possibly cancelled): it is rendered now, committed with it
       if (portalNode.status === STATUS.MOUNTED) {
         commit(position);
       } else {
@@ -100,12 +86,7 @@ export class Portal extends Component {
       return tearDown;
     });
 
-    // a selector often names an element the same render creates (a dialog's
-    // footer, a sibling's container): as t-portal did, it is looked up again
-    // once the Portal is in the document, and the content goes first, before
-    // what that render put there
     onMounted(() => {
-      // the target found during setup may belong to what this render replaced
       if (
         root &&
         mountedTarget &&

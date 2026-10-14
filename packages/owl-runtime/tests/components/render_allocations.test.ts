@@ -19,8 +19,6 @@ beforeEach(() => {
   fixture = makeTestFixture();
 });
 
-// the statements of the render functions of a compiled template: the lines
-// of `function name(ctx, node, key = "") { ... }`, the template's own included
 function renderFunctionLines(template: string): string[] {
   const code = compile(template).toString();
   const lines: string[] = [];
@@ -87,7 +85,6 @@ describe("what a render allocates", () => {
       `<ul><li t-foreach="this.items" t-as="item" t-key="item"><t t-call="sub"/></li></ul>`
     );
     expect(lines.filter((line) => line.includes("callTemplate(")).length).toBe(1);
-    // the loop item's own context is `Object.create(ctx1)`
     expect(lines.filter((line) => line.includes("Object.create(ctx)"))).toEqual([]);
   });
 
@@ -122,8 +119,6 @@ describe("what a render allocates", () => {
     const code = compile(
       `<div><button t-on-click="this.f"/><p t-on-click="this.g"><i/></p></div>`
     ).toString();
-    // the handlers of each block are listed once, the type is the string's,
-    // and each call gives the handlers
     expect(code).toContain("const block1_handlers = [hdlr_fn1, hdlr_fn2];");
     expect(code).toMatch(/let block1 = createBlock\(`[^`]*`, block1_handlers\);/);
     expect(code).toContain("return block1([ctx, ctx], null, block1_handlers);");
@@ -278,7 +273,6 @@ describe("the owner of slots, slot defaults and t-call bodies", () => {
     const sub = xml`<p><t t-out="0"/></p>`;
     const subWithSlot = xml`<Child><t t-out="0"/></Child>`;
     class Child extends Component {
-      // Leaf here is OtherLeaf: the default content renders Child's own
       static template = xml`<div><t t-call-slot="default"/><t t-call-slot="missing"><Leaf v="'child default'"/></t></div>`;
       static components = { Leaf: OtherLeaf };
     }
@@ -300,8 +294,6 @@ describe("the owner of slots, slot defaults and t-call bodies", () => {
   });
 
   test("a slot without a slot scope renders in the context it was written in", async () => {
-    // a write into its context (t-model.proxy on a bare name) is seen by the
-    // template that wrote the slot, as if the slot's content were inline there
     let child: any;
     class Child extends Component {
       static template = xml`<div><t t-call-slot="default"/></div>`;
@@ -365,10 +357,6 @@ describe("the owner of slots, slot defaults and t-call bodies", () => {
 });
 
 describe("slots reached through a proxy", () => {
-  // a component can hand the slots it received to a child through proxied
-  // state (`t-props` of a proxy holding them, a copy of them in a store): the
-  // slot still renders with the raw `this` and context of the template that
-  // wrote it, whose class may have private members no proxy can reach
   class Inner extends Component {
     static template = xml`<div><t t-call-slot="default"/><t t-call-slot="named" v="'scoped'"/></div>`;
   }
@@ -458,8 +446,6 @@ describe("contexts made under a loop item", () => {
     const made = lines.flatMap((line) =>
       [...line.matchAll(/Object\.create\((ctx\d*)\)/g)].map((m) => m[1])
     );
-    // the outer items are made under the template's context, and so is
-    // everything made under them
     expect(made).toEqual(["ctx1", "ctx1", "ctx1"]);
     expect(lines.filter((line) => /\["r"\] = ctx\d*\["r"\]/.test(line)).length).toBe(2);
   });
@@ -482,7 +468,6 @@ describe("contexts made under a loop item", () => {
     expect(fixture.innerHTML).toBe(
       "<i>1</i><i>3</i><i>6</i><button></button><u>L6</u><b>6</b><i>1</i><i>3</i><i>6</i><button></button><u>L6</u><b>6</b>"
     );
-    // the handler reads the values at it: `late` is set after it
     fixture.querySelector("button")!.click();
     expect(seen).toEqual([NaN]);
   });

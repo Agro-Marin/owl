@@ -316,7 +316,6 @@ describe("registry", () => {
       expect(() => manager.startPlugins([A])).toThrow(
         `Key "k" is already registered (registry 'shared'). Use { force: true } to overwrite.`
       );
-      // value untouched
       expect(shared.get("k")).toBe("permanent");
     });
 
@@ -334,7 +333,6 @@ describe("registry", () => {
       manager.startPlugins([A]);
       expect(shared.get("k")).toBe("from-A");
 
-      // on destroy, the entry it overwrote is back
       manager.destroy();
       expect(shared.get("k")).toBe("permanent");
     });
@@ -370,7 +368,6 @@ describe("registry", () => {
       expect(shared.get("k")).toBe("from-A");
       scopeA.finalize(() => {});
       expect(shared.get("k")).toBe("permanent");
-      // the restored entry keeps its sequence and place
       expect(shared.items()).toEqual(["permanent", "other"]);
 
       const scopeC = new TestScope({});
@@ -423,8 +420,6 @@ describe("registry", () => {
     });
 
     test("overwriting owner (with force) keeps the key after first owner is destroyed", () => {
-      // Guard semantics: when B overwrites A's key via { force: true },
-      // A's destroy must NOT delete B's entry.
       const shared = new Registry<string>();
 
       class A extends Plugin {
@@ -448,7 +443,6 @@ describe("registry", () => {
       expect(shared.get("k")).toBe("from-B");
 
       mA.destroy();
-      // A's cleanup sees k === "from-B" (not its own value) and leaves it alone.
       expect(shared.get("k")).toBe("from-B");
 
       mB.destroy();

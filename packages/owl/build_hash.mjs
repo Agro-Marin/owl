@@ -7,8 +7,6 @@ export const SOURCES = ["owl-core", "owl-compiler", "owl-runtime", "owl"].map(
   (p) => `packages/${p}/src`
 );
 
-// written by tools/release.mjs before it builds and commits: the version is
-// named next to the hash already (App.version), so it is not a change
 export const GENERATED = ["packages/owl-runtime/src/version.ts"];
 
 function digest(...parts) {
@@ -34,16 +32,6 @@ function sourceFiles(root, dir) {
     });
 }
 
-/**
- * The build's name: the commit, with a digest of the uncommitted changes to
- * the sources when there are any; outside a git checkout of `root`, a digest
- * of the sources. Odoo keys its persistent cache of compiled templates on it,
- * and the compiler module must be of the runtime's build: two builds of
- * different code must not share a name.
- *
- * @param {string} root the repository's root
- * @returns {string}
- */
 export function buildHash(root) {
   root = realpathSync(root);
   const git = (command) =>
@@ -52,7 +40,6 @@ export function buildHash(root) {
       .trim();
   let commit;
   try {
-    // a checkout of another repository around this one names none of its code
     if (realpathSync(git("rev-parse --show-toplevel")) !== root) {
       throw new Error("not the root of a checkout");
     }

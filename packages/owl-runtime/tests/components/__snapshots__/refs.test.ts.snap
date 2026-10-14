@@ -1,4 +1,3 @@
-// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`refs > a listener firing during the removal still sees its ref 1`] = `
 "function anonymous(app, bdom, helpers

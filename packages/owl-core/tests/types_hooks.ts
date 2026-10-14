@@ -7,9 +7,7 @@ declare function assertEq<A, B>(...args: Eq<A, B> extends true ? [] : [never]): 
 const app = useApp();
 assertEq<IsAny<typeof app>, false>();
 assertEq<typeof app, ScopeApp>();
-// @ts-expect-error core hosts do not guarantee runtime App methods
 app.createRoot(class {});
-// @ts-expect-error the host's development flag is boolean
 app.dev = "true";
 
 interface CustomHost extends ScopeApp {
@@ -17,35 +15,25 @@ interface CustomHost extends ScopeApp {
 }
 const customApp = useApp<CustomHost>();
 assertEq<ReturnType<typeof customApp.lookup>, number>();
-// @ts-expect-error a custom host must satisfy ScopeApp
 useApp<{ dev: string }>();
-// @ts-expect-error contextual assignment cannot invent custom host methods
 const contextualApp: CustomHost = useApp();
-// @ts-expect-error a function signature cannot implicitly select a custom host
 const customAppReader: () => CustomHost = useApp;
 declare function acceptCustomHost(host: CustomHost): void;
-// @ts-expect-error an argument context cannot invent custom host methods
 acceptCustomHost(useApp());
 const explicitAppReader: () => CustomHost = useApp<CustomHost>;
 
 const value = useConfig("value");
 assertEq<IsAny<typeof value>, false>();
 assertEq<typeof value, unknown>();
-// @ts-expect-error unchecked configuration must be narrowed before use
 value.toFixed();
 const aliasValue = config("value");
 assertEq<IsAny<typeof aliasValue>, false>();
-// @ts-expect-error the deprecated alias has the same unchecked return type
 aliasValue.toFixed();
-// @ts-expect-error contextual assignment cannot type unchecked configuration
 const contextualValue: number = useConfig("value");
-// @ts-expect-error the alias also requires explicit typing or a schema
 const contextualAliasValue: number = config("value");
 declare function acceptNumber(value: number): void;
-// @ts-expect-error an argument context cannot type unchecked configuration
 acceptNumber(useConfig("value"));
 const inferredReader = (): number => {
-  // @ts-expect-error a return annotation cannot type unchecked configuration
   return useConfig("value");
 };
 
@@ -73,9 +61,7 @@ const nested = useConfig("nested", t.object({ label: t.string(), count: t.number
 assertEq<typeof nested, { label: string; count?: number }>();
 acceptNumber(useConfig("value", t.number()));
 acceptNumber(useConfig("value", t.number().optional(1)));
-// @ts-expect-error schema inference must not discard possible undefined
 acceptNumber(useConfig("value", t.number().optional()));
-// @ts-expect-error context cannot override a string schema with number
 acceptNumber(useConfig("value", t.string()));
 
 interface NamedConfig {
@@ -87,10 +73,8 @@ const manager = new PluginManager({}, { config: namedConfig });
 const storedValue = manager.config.value;
 assertEq<IsAny<typeof storedValue>, false>();
 assertEq<typeof storedValue, unknown>();
-// @ts-expect-error the manager cannot assume the type of a dynamic config key
 storedValue.toFixed();
 manager.config.extra = new Date();
-// @ts-expect-error configuration is an object
 new PluginManager({}, { config: 1 });
 
 void [

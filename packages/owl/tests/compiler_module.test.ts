@@ -78,7 +78,6 @@ describe("the compiler module's registration", () => {
   test("a compiler set by hand is checked to be of the runtime's build", async () => {
     await import("../src/compiler");
     const own = registry()[BUILD];
-    // the compiler module of an older owl sets TemplateSet.compiler to this
     expect(() => {
       TemplateSet.compiler = { compile: own.compile, parseXML: own.parseXML };
     }).toThrow(

@@ -43,7 +43,6 @@ test("rows reading a selector render on a selection change only when their answe
   await nextTick();
   expect(selected()).toEqual(["r4"]);
   expect(renders.sort()).toEqual([2, 2, 4]);
-  // the list itself never rendered again
   expect(steps.splice(0)).toEqual([]);
   list.__owl__.app.destroy();
   steps.splice(0);

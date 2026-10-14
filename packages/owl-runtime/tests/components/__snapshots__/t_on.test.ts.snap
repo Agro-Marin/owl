@@ -1,4 +1,3 @@
-// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`t-on > a slot's t-on mounted by its component's own render runs, then the t-on on the component 1`] = `
 "function anonymous(app, bdom, helpers

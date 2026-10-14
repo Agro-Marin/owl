@@ -110,12 +110,10 @@ export class EventNode extends Component {
     }
   }
 
-  // Expand/fold the event node
   toggleDisplay() {
     this.props.event.toggled = !this.props.event.toggled;
   }
 
-  // Formatting for displaying the key of the component
   get minimizedKey() {
     return minimizeKey(this.props.event.key);
   }

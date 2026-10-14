@@ -21,20 +21,16 @@ const define = {
   __BUILD_HASH__: JSON.stringify(buildHash("../..")),
 };
 
-// every package from its sources: one copy of each in a bundle
 const alias = {
   "@odoo/owl-core": "../owl-core/src/index.ts",
   "@odoo/owl-compiler": "../owl-compiler/src/index.ts",
   "@odoo/owl-runtime": "../owl-runtime/src/index.ts",
 };
 
-// dist/owl.es.js -> dist/owl.<variant>.es.js
 function variantName(filename, variant) {
   return filename.replace(/^dist\/owl\./, `dist/owl.${variant}.`);
 }
 
-// the full build carries its compiler as owl-runtime's bundled compiler: a
-// value the TemplateSet reads, not a registration run on import
 const BUNDLED_COMPILER = resolve("src/bundled_compiler.ts");
 const bundledCompilerPlugin = {
   name: "bundled-compiler",
@@ -56,8 +52,6 @@ async function buildVariant(entry, suffix) {
   await esbuild.build({ ...common, outfile: esm, format: "esm" });
 }
 
-// the only sources the compiler module may bundle: the compiler, and the
-// stateless classes and constants it takes from owl-core and owl-runtime
 const COMPILER_INPUTS = [
   /^packages\/owl-compiler\/src\//,
   /^packages\/owl\/src\/compiler(_core)?\.ts$/,
@@ -65,10 +59,6 @@ const COMPILER_INPUTS = [
   /^packages\/owl-runtime\/src\/(version|build_info)\.ts$/,
 ];
 
-// dist/owl.compiler.es.js: the compiler for a page whose owl is
-// the runtime build. It imports nothing: it registers itself under a global key
-// the runtime reads, and the runtime checks that it is of its own build. On
-// Node, require() loads it as it loads every entry: an ES module.
 async function buildCompilerModule() {
   const common = {
     entryPoints: ["src/compiler.ts"],
@@ -89,7 +79,6 @@ async function buildCompilerModule() {
   }
 }
 
-// every file package.json exports, but the types (`build types`), is built
 function checkExportedFiles() {
   const targets = Object.values(pkg.exports).flatMap((target) =>
     typeof target === "string" ? [target] : Object.values(target)
@@ -103,8 +92,6 @@ function checkExportedFiles() {
 
 function buildTypes() {
   mkdirSync("dist/types", { recursive: true });
-  // Use the installed CLI and this process's Node. Nested npx calls inherit
-  // npm exec flags (notably npm_config_call) and can fail before running it.
   const cli = createRequire(import.meta.url).resolve(
     "dts-bundle-generator/dist/bin/dts-bundle-generator.js"
   );
@@ -137,7 +124,6 @@ switch (target) {
     buildTypes();
     break;
   default:
-    // a file an earlier build made and this one does not would still ship
     for (const file of existsSync("dist") ? readdirSync("dist", { withFileTypes: true }) : []) {
       if (file.isFile()) {
         rmSync(join("dist", file.name));

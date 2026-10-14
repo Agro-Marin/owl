@@ -27,7 +27,6 @@ export function nextMicroTick(): Promise<void> {
   return Promise.resolve();
 }
 
-// todo: investigate why two ticks are needed
 export async function waitScheduler() {
   await nextMicroTick();
   await nextMicroTick();
@@ -73,9 +72,6 @@ export function trim(str: string): string {
   return str.replace(/\s/g, "");
 }
 
-// -----------------------------------------------------------------------------
-// Helpers
-// -----------------------------------------------------------------------------
 
 let shouldSnapshot = false;
 let snapshottedTemplates: Set<string> = new Set();
@@ -92,8 +88,6 @@ export function renderToBdom(template: string, context: any = {}, node?: any): B
     } else {
       context.__owl__.component = context;
     }
-    // Compiled templates always run with a ComponentNode as `node`; at this
-    // blockdom level there is none, so stub the bits createRef needs.
     node = { trackRef() {}, trackRefElement() {} };
   }
   const fn = compile(template);
@@ -130,7 +124,6 @@ export function render(c: Component, deep: boolean = false) {
 
 export function snapshotEverything() {
   if (shouldSnapshot) {
-    // this function has already been called
     return;
   }
   const globalTemplateNames = new Set(Object.keys(globalTemplates));
@@ -291,7 +284,6 @@ export function nextAppError(app: any): Promise<Error> {
     resolve(error);
   };
 
-  // Also catch rejections from root mount promises
   for (const root of app.roots) {
     root.promise.catch((err: any) => {
       app._handleError = original;

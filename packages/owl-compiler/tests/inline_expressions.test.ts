@@ -246,15 +246,10 @@ describe("expression evaluation", () => {
   });
   test("processExpr: free variables detection", () => {
     const freeVars = (expr: string) => processExpr(expr).freeVariables;
-    // simple arrow
     expect(freeVars("x => this.doSomething(x, item)")).toEqual(["item"]);
-    // parenthesized single param
     expect(freeVars("(a) => this.doSomething(a, item)")).toEqual(["item"]);
-    // parenthesized multi params
     expect(freeVars("(a, b) => this.doSomething(a, b, item)")).toEqual(["item"]);
-    // no free vars
     expect(freeVars("(a) => a")).toEqual([]);
-    // not an arrow function
     expect(freeVars("this.doSomething(item)")).toBeNull();
   });
 
@@ -374,7 +369,6 @@ describe("expression evaluation", () => {
     ).toEqual([1, 1, { z: 2 }]);
     expect(run("(o) => { const [a, [b = y] = []] = o; return a + b }", [10])).toBe(12);
     expect(run("() => { const f = () => a; const a = 3; return f() }")).toBe(3);
-    // a statement ends the concise arrows before it
     expect(run("() => { const f = q => q; return q }")).toBe("Q");
     expect(compileExpr("() => ({const: 1, let: x})")).toBe("()=>({const:1,let:ctx['x']})");
   });

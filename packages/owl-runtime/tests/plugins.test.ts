@@ -374,7 +374,7 @@ describe("basic features", () => {
     const manager = new PluginManager(new App());
     expect(steps.splice(0)).toEqual([]);
 
-    manager.startPlugins([C]); // note that we only start plugin C
+    manager.startPlugins([C]);
     expect(steps.splice(0)).toEqual(["setup A", "setup B", "setup C"]);
     expect(manager.getPluginById<B>("b")!.a).toBe(a);
     expect(manager.getPluginById<C>("c")!.a).toBe(a);
@@ -537,8 +537,6 @@ describe("sub plugin managers", () => {
   });
 
   test("destroying parent plugin manager does not destroy sub managers", () => {
-    // The parent keeps no reference to its sub managers (it would retain
-    // destroyed ones forever): whoever creates a sub manager destroys it.
     const steps: string[] = [];
 
     class A extends Plugin {
@@ -614,8 +612,6 @@ describe("sub plugin managers", () => {
       expect(steps.splice(0)).toEqual(["setup P"]);
     }
 
-    // The app-level manager must not accumulate references to the destroyed
-    // sub managers (and through them, all their plugin instances).
     expect((app.pluginManager as any)._destroyCbs ?? []).toHaveLength(0);
     app.destroy();
     expect(steps.splice(0)).toEqual(["destroy P"]);
@@ -783,13 +779,11 @@ test("destroying a plugin with computed cleans up signal observers", () => {
   manager.startPlugins([A]);
   const a = manager.getPlugin(A)!;
 
-  // Evaluate the computed to establish subscriptions
   a.isSelected();
   expect(observersOf(selectedIdAtom).length).toBe(1);
 
   manager.destroy();
 
-  // After destruction, the computed should be cleaned up from selectedId's observers
   expect(observersOf(selectedIdAtom).length).toBe(0);
 });
 
@@ -826,10 +820,6 @@ describe("onWillStart in plugins", () => {
   });
 
   test("mount waits for a plugin that only starts in a later sequence batch", async () => {
-    // The root reads state from a plugin (OtherPlugin) that only starts after
-    // an async foundational plugin (DataPlugin, lower sequence). mount() must
-    // wait for every configured plugin before building the root, otherwise
-    // `plugin(OtherPlugin)` in the root's field initializer throws.
     const rpc = makeDeferred<void>();
 
     class DataPlugin extends Plugin {
@@ -933,7 +923,6 @@ describe("onWillStart in plugins", () => {
 
     app.destroy();
     expect(captured!.aborted).toBe(true);
-    // Let the pending willStart resolve to avoid leaking its promise.
     rpc.resolve(0);
   });
 
@@ -1040,7 +1029,6 @@ describe("plugin sequence", () => {
 
     const manager = new PluginManager(new App());
     manager.startPlugins([B, A]);
-    // no async init: both batches start synchronously, fast path preserved
     expect(steps).toEqual(["A", "B"]);
     expect(manager.status).toBe(STATUS.MOUNTED);
   });
@@ -1076,7 +1064,6 @@ describe("plugin sequence", () => {
 
     rpc.resolve("hello");
     await manager.ready;
-    // Feature's setup only ran once Foundation was fully loaded
     expect(steps.splice(0)).toEqual(["feature:setup (data=hello)"]);
     expect(manager.status).toBe(STATUS.MOUNTED);
     manager.destroy();
@@ -1254,7 +1241,6 @@ describe("plugin sequence", () => {
 
     plugins.add(B);
     await nextMicroTick();
-    // A's willStart is still pending: B must wait for it
     expect(steps.splice(0)).toEqual([]);
 
     rpc.resolve("done");
@@ -1621,7 +1607,6 @@ describe("plugin start failures and lookups", () => {
 
 describe("plugin start: cycles, failures, ids", () => {
   test("plugins asking for each other in their setups each get the other", () => {
-    // the devtools' store and components plugins hold each other this way
     class A extends Plugin {
       b: any = null;
       setup() {

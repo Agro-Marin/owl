@@ -1,12 +1,8 @@
-// import { mountBlock } from "../../src/blockdom/block";
 import { mount } from "../../src/blockdom";
 import { makeTestFixture, renderToBdom, renderToString, snapshotEverything } from "../helpers";
 
 snapshotEverything();
 
-// -----------------------------------------------------------------------------
-// t-if
-// -----------------------------------------------------------------------------
 
 describe("t-if", () => {
   test("t-else with a t-if renders as t-elif, as owl 1d588236 did", () => {
@@ -216,7 +212,6 @@ describe("t-if", () => {
   test("dynamic content after t-if with two children nodes", () => {
     const template = `<div><t t-if="condition"><p>1</p><p>2</p></t><t t-out="text"/></div>`;
 
-    // need to do it with bdom to go through the update path
     const bdom = renderToBdom(template, { condition: true, text: "owl" });
     const fixture = makeTestFixture();
     mount(bdom, fixture);
@@ -229,7 +224,6 @@ describe("t-if", () => {
   test("two t-ifs next to each other", () => {
     const template = `<div><span t-if="condition"><t t-out="text"/></span><t t-if="condition"><p>1</p><p>2</p></t></div>`;
 
-    // need to do it with bdom to go through the update path
     const bdom = renderToBdom(template, { condition: true, text: "owl" });
     const fixture = makeTestFixture();
     mount(bdom, fixture);

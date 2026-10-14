@@ -2,9 +2,6 @@ import { snapshotEverything, TestContext } from "../helpers";
 
 snapshotEverything();
 
-// -----------------------------------------------------------------------------
-// t-call
-// -----------------------------------------------------------------------------
 
 describe("t-call (template calling)", () => {
   test("basic caller", () => {
@@ -353,9 +350,6 @@ describe("t-call (template calling)", () => {
     context.addTemplate("callee2", callee2);
     context.addTemplate("caller", caller);
 
-    // With lazy body evaluation, t-set in the body no longer runs before the callee.
-    // The callee reads v from its own context; since it never calls t-out="0", the body
-    // (and thus the t-set) is never executed, so v is empty.
     const expected = `<div><div>callee2 </div></div>`;
     expect(context.renderToString("caller")).toBe(expected);
   });
@@ -603,14 +597,14 @@ describe("t-call (template calling)", () => {
     const context = new TestContext({ translateFn });
     context.addTemplate(
       "sub",
-      /* xml */ `<span title="title"><t t-out="title"/><t t-out="0"/></span>`
+        `<span title="title"><t t-out="title"/><t t-out="0"/></span>`
     );
     context.addTemplate(
       "main",
-      /* xml */ `<t t-call="sub" title="'title'" t-translation-context-title="pt" t-translation-context="fr">game</t>`
+        `<t t-call="sub" title="'title'" t-translation-context-title="pt" t-translation-context="fr">game</t>`
     );
 
-    expect(context.renderToString("main")).toBe(/* xml */ `<span title="title">titlejeu</span>`);
+    expect(context.renderToString("main")).toBe(  `<span title="title">titlejeu</span>`);
   });
 
   test("t-call and translation contexts, variation", () => {
@@ -625,13 +619,13 @@ describe("t-call (template calling)", () => {
     const context = new TestContext({ translateFn });
     context.addTemplate(
       "sub",
-      /* xml */ `<span title="title"><t t-out="title"/><t t-out="0"/></span>`
+        `<span title="title"><t t-out="title"/><t t-out="0"/></span>`
     );
     context.addTemplate(
       "main",
-      /* xml */ `<t t-call="sub" title.translate="title" t-translation-context-title.translate="pt" t-translation-context="fr">game</t>`
+        `<t t-call="sub" title.translate="title" t-translation-context-title.translate="pt" t-translation-context="fr">game</t>`
     );
 
-    expect(context.renderToString("main")).toBe(/* xml */ `<span title="title">titulojeu</span>`);
+    expect(context.renderToString("main")).toBe(  `<span title="title">titulojeu</span>`);
   });
 });

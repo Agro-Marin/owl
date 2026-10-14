@@ -1,14 +1,6 @@
 {
-  /**
-   ** Base TypeScript configuration shared across all packages.
-   ** Commented-out options have their default values.
-   **/
   "files": ["./types/target_lib.d.ts"],
   "compilerOptions": {
-                                                                // Main options
-    // what every target of the dist has (packages/owl/build_target.mjs): ES2025
-    // is ES2024 and the esnext libs below in TypeScript 5.9, plus the APIs
-    // types/target_lib.d.ts declares
     "target": "ES2024",
     "module": "es6",
     "lib": [
@@ -20,21 +12,16 @@
       "DOM",
       "DOM.Iterable"
     ],
-                                                                // Strict typechecking options
     "strict": true,
-                                                                // Additional checks
     "forceConsistentCasingInFileNames": true,
     "noUnusedLocals": true,
     "noUnusedParameters": false,
     "noImplicitReturns": true,
     "noFallthroughCasesInSwitch": true,
-                                                                // Module resolution options
     "moduleResolution": "node",
     "types": [
       "node"
     ],
-    // sibling packages are typed from their sources: their dist/types exist
-    // only after build:types
     "paths": {
       "@odoo/owl-core": ["./packages/owl-core/src/index"],
       "@odoo/owl-compiler": ["./packages/owl-compiler/src/index"],
@@ -42,7 +29,6 @@
     },
     "esModuleInterop": true,
     "resolveJsonModule": true,
-                                                                // Emit options
     "declaration": true
   }
 }

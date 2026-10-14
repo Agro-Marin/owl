@@ -18,7 +18,6 @@ import { Fiber, RootFiber } from "../../src/rendering/fibers";
 import { Scheduler } from "../../src/rendering/scheduler";
 import { makeTestFixture } from "../helpers";
 
-// read before any test of this file makes an App: what importing owl did
 const exposedOnImport = "__OWL_DEVTOOLS__" in window;
 const ownTemplatesOnImport = Object.keys(globalTemplates).filter((name) =>
   name.startsWith("__owl__")
@@ -54,7 +53,6 @@ describe("the devtools hook", () => {
   });
 
   test("a hook that watches the property before the first App sees it set then", () => {
-    // what tools/devtools' page hook does when it loads before owl
     let value: any;
     const seen: any[] = [];
     Object.defineProperty(window, "__OWL_DEVTOOLS__", {
@@ -120,8 +118,6 @@ test("blockdom's event handler is owl's from the start", () => {
 });
 
 test("the scheduler renders on the requestAnimationFrame of module evaluation", async () => {
-  // HOOT replaces window.requestAnimationFrame with its mocked clock after it
-  // imported owl; owl must keep rendering on the real frames
   const replaced = window.requestAnimationFrame;
   const mocked: FrameRequestCallback[] = [];
   window.requestAnimationFrame = (cb) => mocked.push(cb);

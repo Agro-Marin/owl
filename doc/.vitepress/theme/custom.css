@@ -1,4 +1,3 @@
-/* Static navbar — injected outside Vue's DOM via transformHtml */
 .site-nav {
   position: sticky;
   top: 0;
@@ -105,10 +104,8 @@
   background: rgba(255, 255, 255, 0.08);
 }
 
-/* Hide VitePress's navbar entirely — our static navbar replaces it */
 :root {
   --vp-nav-height: 44px;
-  /* Keep the sidebar aligned below the injected static navbar. */
   --vp-layout-top-height: 44px;
 }
 

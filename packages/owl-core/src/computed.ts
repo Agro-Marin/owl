@@ -16,23 +16,8 @@ import { getScope } from "./scope";
 
 interface ComputedOptions<TRead, TWrite = TRead> {
   set?(value: TWrite): void;
-  /**
-   * Custom equality used after a recompute to decide whether observers should
-   * be notified (see Equals). Useful when the getter builds a fresh object
-   * each time (e.g. a filtered array): with a structural equality such as
-   * `shallowEqual`, an equal result stops the propagation.
-   */
   equals?: Equals<TRead>;
-  /**
-   * Keep the computed alive past the scope it is created in: a value owned by
-   * a data object (not by a component) must not be disposed with the
-   * component that happened to create that object.
-   */
   detached?: boolean;
-  /**
-   * What debug logging calls it (default: the getter's name if the computed
-   * channel is on when it is created, else "computed").
-   */
   name?: string;
 }
 
@@ -55,13 +40,7 @@ export function computed<TRead, TWrite = TRead>(
   options: ComputedOptions<TRead, TWrite> = {}
 ): ReactiveValue<TRead, TWrite> {
   const equalsFn = toEqualsFn(options.equals);
-  // The first compute has no previous value to compare against (and nothing
-  // observes the computation until the first read returns): skip the equality
-  // check so a custom equals never receives the initial undefined.
   let hasValue = false;
-  // A throwing getter is a result like any other: kept until a source changes,
-  // rethrown to every reader, and subscribed to, so that a reader that caught
-  // it runs again once the getter recovers.
   let failure: { error: unknown } | null = null;
   const computation = createComputation(() => {
     let newValue: TRead | undefined;
@@ -72,8 +51,6 @@ export function computed<TRead, TWrite = TRead>(
         if (debug.computed) {
           debugLog("computed", `${computation.name} recomputed an equal value, readers kept`);
         }
-        // discard the equal result: readers keep a stable identity, like a
-        // signal write that compares equal
         return computation.value;
       }
     } catch (error) {
@@ -83,8 +60,6 @@ export function computed<TRead, TWrite = TRead>(
       newFailure = { error };
       newValue = undefined;
     }
-    // the result is in place before the readers hear of it: an immediate one
-    // reads it during the notification
     const notify = hasValue;
     hasValue = true;
     failure = newFailure;

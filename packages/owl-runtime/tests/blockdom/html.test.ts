@@ -2,9 +2,6 @@ import { markup } from "@odoo/owl-core";
 import { html, mount, patch, text } from "../../src/blockdom";
 import { makeTestFixture } from "./helpers";
 
-//------------------------------------------------------------------------------
-// Setup and helpers
-//------------------------------------------------------------------------------
 
 let fixture: HTMLElement;
 
@@ -16,9 +13,6 @@ afterEach(() => {
   fixture.remove();
 });
 
-//------------------------------------------------------------------------------
-// Tests
-//------------------------------------------------------------------------------
 
 describe("html block", () => {
   test("can be mounted and patched", async () => {
@@ -37,8 +31,6 @@ describe("html block", () => {
 
   test("html vnode can represent <tr>", () => {
     const fixture = document.createElement("table");
-    // const block = createBlock('<table><block-child-0/></table>');
-    // const tree = block([], [html(`<tr><td>tomato</td></tr>`)]);
     const tree = html(`<tr><td>tomato</td></tr>`);
     mount(tree, fixture);
     expect(fixture.innerHTML).toBe("<tr><td>tomato</td></tr>");

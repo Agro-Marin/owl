@@ -9,9 +9,6 @@ import {
   nodeSetTextContent,
 } from "./dom";
 
-// -----------------------------------------------------------------------------
-// List Node
-// -----------------------------------------------------------------------------
 
 class VList {
   children: VNode[];
@@ -94,17 +91,14 @@ class VList {
     let mapping: Map<any, number> | undefined = undefined;
 
     while (startIdx1 <= endIdx1 && startIdx2 <= endIdx2) {
-      // -------------------------------------------------------------------
       if (startVn1 === null) {
         startVn1 = ch1[++startIdx1];
         continue;
       }
-      // -------------------------------------------------------------------
       if (endVn1 === null) {
         endVn1 = ch1[--endIdx1];
         continue;
       }
-      // -------------------------------------------------------------------
       let startKey1 = startVn1.key;
       let startKey2 = startVn2.key;
       if (startKey1 === startKey2) {
@@ -114,7 +108,6 @@ class VList {
         startVn2 = ch2[++startIdx2];
         continue;
       }
-      // -------------------------------------------------------------------
       let endKey1 = endVn1.key;
       let endKey2 = endVn2.key;
       if (endKey1 === endKey2) {
@@ -124,9 +117,7 @@ class VList {
         endVn2 = ch2[--endIdx2];
         continue;
       }
-      // -------------------------------------------------------------------
       if (startKey1 === endKey2) {
-        // bnode moved right
         cPatch.call(startVn1, endVn2, withBeforeRemove);
         ch2[endIdx2] = startVn1;
         const nextChild = ch2[endIdx2 + 1];
@@ -135,9 +126,7 @@ class VList {
         endVn2 = ch2[--endIdx2];
         continue;
       }
-      // -------------------------------------------------------------------
       if (endKey1 === startKey2) {
-        // bnode moved left
         cPatch.call(endVn1, startVn2, withBeforeRemove);
         ch2[startIdx2] = endVn1;
         const nextChild = ch1[startIdx1];
@@ -146,11 +135,8 @@ class VList {
         startVn2 = ch2[++startIdx2];
         continue;
       }
-      // -------------------------------------------------------------------
       mapping = mapping || createMapping(ch1, startIdx1, endIdx1);
       let idxInOld = mapping.get(startKey2);
-      // with repeated keys, the mapped child may already be taken: moved by
-      // the mapping (null) or matched at an end of the range since
       if (
         idxInOld === undefined ||
         idxInOld < startIdx1 ||
@@ -165,13 +151,11 @@ class VList {
         ch2[startIdx2] = elmToMove;
         ch1[idxInOld] = null as any;
         if (elmToMove === startVn1) {
-          // only a NaN key misses the start match and is found by the map
           startVn1 = ch1[++startIdx1];
         }
       }
       startVn2 = ch2[++startIdx2];
     }
-    // ---------------------------------------------------------------------
     if (startIdx1 <= endIdx1 || startIdx2 <= endIdx2) {
       if (startIdx1 > endIdx1) {
         const nextChild = ch2[endIdx2 + 1];
@@ -217,11 +201,6 @@ class VList {
 
   firstNode(): Node | undefined {
     const child = this.children[0];
-    // An empty list still occupies a position in the DOM: its anchor. Callers
-    // use firstNode to locate a block (toggler key swaps, sibling mounts,
-    // moves), so hiding the anchor would lose the position — e.g. a t-key
-    // change on a component rendering an empty t-foreach used to crash here.
-    // VMulti does the same with its slot anchors.
     return child ? child.firstNode() : this.anchor;
   }
 
@@ -234,18 +213,6 @@ export function list(children: VNode[]): VNode<VList> {
   return new VList(children);
 }
 
-/**
- * Removes every item of a list (and its anchor, `withAnchor`), running each
- * item's beforeRemove first when asked. When the items, one node each, and
- * the anchor are all their parent holds, the parent is emptied at once
- * (textContent), and each item's remove() then finds its node detached: it
- * still unbinds its refs. Otherwise (an item of several nodes, or a node
- * someone else put before, after or among them: a Portal's content, a
- * widget's DOM) the items are removed one by one, which leaves what they do
- * not own in place. Ownership is checked again after the beforeRemove hooks,
- * which may change the DOM. (Deleting the items' range alone, with a Range,
- * costs Chromium as much as removing them one by one.)
- */
 function removeItems(
   items: VNode[],
   anchor: Node,
@@ -286,9 +253,6 @@ function removeItems(
   }
 }
 
-// Whether the items, in order and one node each, then the anchor, are every
-// child of `parent`. An item of several nodes breaks the sequence at its
-// second node, a node someone else put there at itself.
 function ownsParent(items: VNode[], parent: Node, anchor: Node): boolean {
   const firstNode = items[0].firstNode;
   let node: Node | null = nodeGetFirstChild.call(parent);

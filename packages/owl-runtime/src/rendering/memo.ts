@@ -3,16 +3,11 @@ import type { VNode } from "../blockdom";
 import type { ComponentNode } from "../component_node";
 import { STATUS } from "../status";
 
-// What a memoized item rendered besides its vnode: the keys of its child
-// components and the memo sites of the lists inside it, carried on a hit.
 export interface MemoContent {
   children: string[];
   sites: string[];
 }
 
-// A t-memo item: its dependencies when it last ran, where its vnode is — a
-// slot of that render's list, which the list patch fills with the mounted
-// vnode once the render is applied — and its content, when it has some.
 export interface MemoEntry {
   deps: unknown[];
   vnodes: VNode[];
@@ -21,7 +16,6 @@ export interface MemoEntry {
 }
 export type MemoSite = Map<unknown, MemoEntry>;
 
-// the content of the memoized item being rendered, if any
 let collected: MemoContent | null = null;
 
 export function memoPrevious(node: ComponentNode, site: string): MemoSite | undefined {
@@ -35,12 +29,6 @@ export function memoKeep(node: ComponentNode, site: string, entries: MemoSite) {
   }
 }
 
-/**
- * The previous entry of `key`, when its dependencies are `deps`, the render is
- * not deep, and the child components it rendered are still the mounted
- * children of `node`, with nothing pending: those are carried into the render
- * in progress, unrendered.
- */
 export function memoHit(
   previous: MemoSite | undefined,
   key: unknown,
@@ -51,7 +39,6 @@ export function memoHit(
     throw new OwlError(`t-memo expects an array of dependencies, got ${typeof deps}`);
   }
   const entry = previous?.get(key);
-  // a deep render renders every child again, a memoized item's included
   if (entry === undefined || node.fiber!.deep) {
     return undefined;
   }
@@ -96,15 +83,12 @@ export function memoHit(
   return entry;
 }
 
-// Starts collecting the content of a memoized item: returns the collection of
-// the item around it, if any, for memoEnd to restore.
 export function memoBegin(): MemoContent | null {
   const outer = collected;
   collected = { children: [], sites: [] };
   return outer;
 }
 
-// The content the item rendered; it belongs to the item around it too.
 export function memoEnd(outer: MemoContent | null): MemoContent {
   const content = collected!;
   collected = outer;
@@ -121,9 +105,6 @@ export function memoCollectChild(key: string) {
   }
 }
 
-// A component's render collects for its own items only: a child rendered
-// from inside a memoized item of its parent suspends the parent's collection,
-// and gets it back whether its render returns or throws.
 export function memoSuspend(): MemoContent | null {
   const outer = collected;
   collected = null;

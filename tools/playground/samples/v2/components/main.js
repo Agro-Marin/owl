@@ -1,4 +1,3 @@
-// In this example, we show how components can be defined and created.
 import { Component, useState, mount } from "@odoo/owl";
 
 class Greeter extends Component {
@@ -13,7 +12,6 @@ class Greeter extends Component {
     }
 }
 
-// Main root component
 class Root extends Component {
     static components = { Greeter };
     static template = "Root"

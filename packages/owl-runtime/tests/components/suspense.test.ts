@@ -74,8 +74,6 @@ test("sync subtree shows content with no fallback flash", async () => {
 
   const app = new App();
   await app.createRoot(Root).mount(fixture);
-  // The sub-root finished its render phase synchronously during Suspense's
-  // setup, so the first render skips the fallback entirely.
   expect(fixture.innerHTML).toContain("<span>sync</span>");
   expect(fixture.innerHTML).not.toContain("loading...");
   await nextTick();
@@ -133,7 +131,6 @@ test("nested Suspense: each shows its own fallback", async () => {
   outerRpc.resolve("o");
   await nextTick();
   await nextTick();
-  // Outer is now committed; inner Suspense shows its own fallback.
   expect(fixture.innerHTML).toContain("inner-loading");
   expect(fixture.innerHTML).toContain('class="outer"');
 
@@ -173,13 +170,12 @@ test("unmount during pending aborts descendant willStart", async () => {
   const app = new App();
   await app.createRoot(Root).mount(fixture);
   await nextTick();
-  // AsyncChild willStart has been kicked off; signal exists and is alive.
   expect(capturedSignal).toBeDefined();
   expect(capturedSignal!.aborted).toBe(false);
 
   app.destroy();
   expect(capturedSignal!.aborted).toBe(true);
-  rpc.resolve("late"); // let the pending promise settle
+  rpc.resolve("late");
 });
 
 test("error in descendant willStart propagates to outer onError", async () => {
@@ -260,7 +256,6 @@ test("multiple sibling async descendants share the fallback", async () => {
   r1.resolve("a");
   await nextTick();
   await nextTick();
-  // Only one resolved — fallback still shown (RootFiber counter > 0).
   expect(fixture.innerHTML).toContain("loading...");
 
   r2.resolve("b");
@@ -313,20 +308,16 @@ test("descendant willStart runs in parallel with async sibling", async () => {
   const app = new App();
   app.createRoot(Root).mount(fixture);
 
-  // Both willStarts kicked off in parallel, before anything mounted.
   await nextTick();
   expect(order).toContain("sibling:start");
   expect(order).toContain("descendant:start");
 
-  // Descendant resolves first; nothing visible yet because Root hasn't mounted.
   descendantRpc.resolve("d");
   await nextTick();
   await nextTick();
   expect(fixture.innerHTML).toBe("");
   expect(order).toContain("descendant:end");
 
-  // Sibling resolves — Root mounts, Suspense shows content (descendant already
-  // ready), fallback is not observed after mount.
   siblingRpc.resolve("s");
   await nextTick();
   await nextTick();
@@ -553,7 +544,6 @@ test("an error nobody handles under Suspense destroys the app, reported as not h
 });
 
 test("a deep render renders the components of its content again", async () => {
-  // not reactive: only a deep render shows a change
   const data = { label: "a" };
   class Label extends Component {
     static template = xml`<b t-out="this.data.label"/>`;

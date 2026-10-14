@@ -1,13 +1,5 @@
-// This example is an implementation of the TodoList application, from the
-// www.todomvc.com project.  This is a non trivial application with some
-// interesting user interactions. It uses the local storage for persistence.
-//
-// In this implementation, we use the owl reactivity mechanism.
 import { Component, useState, mount, useRef, reactive, useEnv, useEffect } from "@odoo/owl";
 
-//------------------------------------------------------------------------------
-// Constants, helpers
-//------------------------------------------------------------------------------
 const ENTER_KEY = 13;
 const ESC_KEY = 27;
 
@@ -21,9 +13,6 @@ function useStore() {
     return useState(env.store);
 }
 
-//------------------------------------------------------------------------------
-// Task store
-//------------------------------------------------------------------------------
 class TaskList {
     constructor(tasks) {
         this.tasks = tasks || [];
@@ -85,9 +74,6 @@ function createTaskStore() {
     return taskStore;
 }
   
-//------------------------------------------------------------------------------
-// Todo
-//------------------------------------------------------------------------------
 class Todo extends Component {
     static template = "Todo";
     
@@ -119,9 +105,6 @@ class Todo extends Component {
     }
 }
 
-//------------------------------------------------------------------------------
-// TodoList
-//------------------------------------------------------------------------------
 class TodoList extends Component {
     static template = "TodoList";
     static components = { Todo };
@@ -171,8 +154,5 @@ class TodoList extends Component {
     }
 }
 
-//------------------------------------------------------------------------------
-// App Initialization
-//------------------------------------------------------------------------------
 const env = { store: createTaskStore() };
 mount(TodoList, document.body, { env, templates: TEMPLATES, dev: true });

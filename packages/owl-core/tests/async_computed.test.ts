@@ -68,7 +68,7 @@ describe("asyncComputed", () => {
       return parity();
     });
     await waitScheduler();
-    n.set(3); // parity is still 1: the effect is checked, and does not run
+    n.set(3);
     let settled = false;
     data.currentPromise().then(() => (settled = true));
     await waitScheduler();

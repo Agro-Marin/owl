@@ -1,4 +1,3 @@
-// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`changing an attribute with t-att- 1`] = `
 "function anonymous(app, bdom, helpers

@@ -1,10 +1,3 @@
-// We show here how slots can be used to create generic components.
-// In this example, the Card component is basically only a container. It is not
-// aware of its content. It just knows where it should be (with t-slot).
-// The parent component define the content with t-set-slot.
-//
-// Note that the t-on-click event, defined in the Root template, is executed in
-// the context of the Root component, even though it is inside the Card component
 import { Component, useState, mount } from "@odoo/owl";
 
 class Card extends Component {
@@ -31,7 +24,6 @@ class Counter extends Component {
   }
 }
 
-// Main root component
 class Root extends Component {
   static template = "Root"
   static components = { Card, Counter };
@@ -45,5 +37,4 @@ class Root extends Component {
   }
 }
 
-// Application setup
 mount(Root, document.body, { templates: TEMPLATES, dev: true});

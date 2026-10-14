@@ -1,15 +1,3 @@
-// Shared static navbar for the documentation builds (v3 and v2).
-// Injected outside Vue's DOM via transformHtml.
-//
-// Every <a> here sets target="_self". VitePress's SPA router intercepts
-// anchor clicks during the capture phase and routes in-app. We need full
-// page navigations here because: (1) links like /owl/ and /owl/playground/
-// live outside the VitePress base and can't be resolved by its router;
-// (2) the redirect pages at /owl/documentation/ and /owl/documentation/v3/
-// rely on inline <script> tags in <head> that only execute on a fresh HTML
-// parse, not on SPA route changes. VitePress skips anchors with a
-// target attribute (see vitepress/dist/client/app/router.js), so target="_self"
-// cleanly opts out of SPA hijacking while keeping default same-tab behavior.
 
 export function buildNavbar({ docsVersion }) {
   const v3Selected = docsVersion === "3" ? "selected" : "";

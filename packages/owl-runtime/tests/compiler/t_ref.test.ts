@@ -5,9 +5,6 @@ import { computed, signal } from "../../src";
 
 snapshotEverything();
 
-// -----------------------------------------------------------------------------
-// t-ref
-// -----------------------------------------------------------------------------
 
 describe("t-ref", () => {
   test("can get a ref on a node", () => {
@@ -47,18 +44,15 @@ describe("t-ref", () => {
 
     const name = signal<any>(null);
 
-    // false
     const bdom = renderToBdom(template, { condition: false, name });
     expect(name()).toBe(null);
     mount(bdom, document.createElement("div"));
     expect(name()).toBe(null);
 
-    // true now
     const bdom2 = renderToBdom(template, { condition: true, name });
     bdom.patch(bdom2, true);
     expect(name().tagName).toBe("SPAN");
 
-    // false again
     const bdom3 = renderToBdom(template, { condition: false, name });
     bdom.patch(bdom3, true);
     expect(name()).toBe(null);
@@ -79,18 +73,15 @@ describe("t-ref", () => {
     };
     const refValues = computed(() => [refs.name(), refs.p()]);
 
-    // false
     const bdom = renderToBdom(template, { condition: false, refs });
     expect(refValues()).toEqual([null, null]);
     mount(bdom, document.createElement("div"));
     expect(refValues()).toEqual([null, expect.anything()]);
 
-    // true now
     const bdom2 = renderToBdom(template, { condition: true, refs });
     bdom.patch(bdom2, true);
     expect(refValues()).toEqual([expect.anything(), expect.anything()]);
 
-    // false again
     const bdom3 = renderToBdom(template, { condition: false, refs });
     bdom.patch(bdom3, true);
     expect(refValues()).toEqual([null, expect.anything()]);
@@ -105,7 +96,6 @@ describe("t-ref", () => {
     app.addTemplate("sub", sub);
 
     const name = signal<any>(null);
-    // `node` would be a ComponentNode in real rendering; stub what createRef needs
     const bdom = app.getTemplate("main").call(null, { name }, { trackRef() {} });
     mount(bdom, document.createElement("div"));
 

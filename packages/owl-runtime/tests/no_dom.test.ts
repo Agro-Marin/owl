@@ -1,9 +1,4 @@
-// @vitest-environment node
 
-// This suite runs in a Node environment (no `document`/`window`). It guards
-// the contract that owl can be imported and its non-rendering APIs used
-// without a DOM, so the base reactivity and type-validation primitives work
-// server-side. See https://github.com/odoo/owl/issues/1952.
 
 import { describe, expect, test } from "vitest";
 import { App, computed, effect, proxy, signal, types as t, validateType } from "../src/index";

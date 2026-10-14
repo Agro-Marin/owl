@@ -623,7 +623,6 @@ test("arrow function props re-render when captured variable changes", async () =
   fixture.querySelector("button")?.click();
   await nextTick();
   expect(fixture.innerHTML).toBe("<button>1V</button><button>2V</button>");
-  // elem changed (replaced object), so the child with that elem re-renders
   expect(steps.splice(0)).toMatchInlineSnapshot(`
    [
      "Todo:willUpdateProps",
@@ -703,10 +702,6 @@ test("a schema-less view resolves the defaults the component declared", async ()
 });
 
 test("default props don't cause spurious updates with t-props", async () => {
-  // Regression test: when a parent re-renders with `t-props`, the child's
-  // arePropsDifferent walks every key in node.props. If defaults were stored
-  // there at the previous update, subsequent renders saw a ghost diff on the
-  // default keys and re-ran the child every time.
   const updates: number[] = [];
   class Child extends Component {
     static template = xml`<t t-out="this.props.b"/>`;
@@ -739,12 +734,10 @@ test("default props don't cause spurious updates with t-props", async () => {
 
   await mount(Parent, fixture);
 
-  // First click: b changes 1 -> 2 → child should update once.
   fixture.querySelector("div")!.click();
   await nextTick();
   expect(updates).toEqual([1]);
 
-  // Subsequent clicks: only v changes; b is stable, child must NOT update.
   fixture.querySelector("div")!.click();
   await nextTick();
   expect(updates).toEqual([1]);
@@ -1012,13 +1005,11 @@ describe("reactive props (issue #1908)", () => {
     expect(observed).toEqual([1]);
     expect(fixture.innerHTML).toBe("<div><span>1</span></div>");
 
-    // mutate the captured proxy in place
     root.obj().val = 2;
     await nextTick();
     expect(observed).toEqual([1, 2]);
     expect(fixture.innerHTML).toBe("<div><span>2</span></div>");
 
-    // swap the whole value (the case that used to update the template but not the effect)
     root.obj.set(proxy({ val: 3 }));
     await nextTick();
     expect(observed).toEqual([1, 2, 3]);
@@ -1461,8 +1452,6 @@ describe("a props view read through a proxy", () => {
 });
 
 describe("a component held in reactive state reads its props through a getter", () => {
-  // a component kept in reactive state (an action's owner, say) is read back
-  // as a proxy: its getters then run with the proxy as `this`
   test("of a schema view", async () => {
     let child: any;
     class Child extends Component {

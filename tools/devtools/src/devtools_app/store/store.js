@@ -4,10 +4,7 @@ import globalHook from "../../page_scripts/owl_devtools_global_hook";
 import { ComponentsPlugin } from "./components_plugin";
 import { ProfilerPlugin } from "./profiler_plugin";
 
-// Core plugin: initialization, port listener, settings, frame management,
-// context menu, tab navigation, and shared UI state.
 export class StorePlugin extends Plugin {
-  // --- Primitive state ---
   devtoolsId = signal(0);
   contextMenu = signal(null);
   page = signal("ComponentsTab");
@@ -17,13 +14,11 @@ export class StorePlugin extends Plugin {
   extensionContextStatus = signal(true);
   splitPosition = signal(window.innerWidth > window.innerHeight ? 45 : 60);
 
-  // --- Settings ---
   expandByDefault = signal(true);
   toggleOnSelected = signal(false);
   darkMode = signal(false);
   componentsToggleBlacklist = signal.Set(new Set());
 
-  // --- Non-reactive ---
   isFirefox = IS_FIREFOX;
 
   setup() {
@@ -33,9 +28,6 @@ export class StorePlugin extends Plugin {
     this._setupPortListener();
   }
 
-  // -------------------------------------------------------------------------
-  // Tab / context menu
-  // -------------------------------------------------------------------------
 
   switchTab(componentName) {
     this.page.set(componentName);
@@ -50,27 +42,19 @@ export class StorePlugin extends Plugin {
     });
   }
 
-  // -------------------------------------------------------------------------
-  // Shared tree utility
-  // -------------------------------------------------------------------------
 
-  // Fold the immediate children of a tree element (works for both component and event trees)
   foldDirectChildren(element) {
     for (const child of element.children) {
       child.toggled = false;
     }
   }
 
-  // -------------------------------------------------------------------------
-  // Frames
-  // -------------------------------------------------------------------------
 
   async updateIFrameList() {
     this.frameUrls.set(["top"]);
     if (this.activeFrame() !== "top") {
       this.selectFrame("top");
     }
-    // Firefox doesn't support per-frame eval, so iframe detection is not possible
     if (IS_FIREFOX) {
       return;
     }
@@ -116,9 +100,6 @@ export class StorePlugin extends Plugin {
     );
   }
 
-  // -------------------------------------------------------------------------
-  // Settings / UI
-  // -------------------------------------------------------------------------
 
   toggleDarkMode() {
     this.darkMode.set(!this.darkMode());
@@ -143,9 +124,6 @@ export class StorePlugin extends Plugin {
     }
   }
 
-  // -------------------------------------------------------------------------
-  // Initialization (private)
-  // -------------------------------------------------------------------------
 
   async _resetData() {
     await this._loadSettings();
@@ -193,7 +171,6 @@ export class StorePlugin extends Plugin {
       }
     }, 500);
 
-    // Refresh observed variables values every 200 ms
     setInterval(async () => {
       if (this.owlStatus()) {
         const result = await evalFunctionInWindow(
@@ -211,7 +188,6 @@ export class StorePlugin extends Plugin {
     browserInstance.runtime.onConnect.addListener((port) => {
       if (port.name === "OwlDevtoolsPort_" + this.devtoolsId()) {
         port.onMessage.addListener(async (msg) => {
-          // Reload the tree after checking if the scripts are loaded when this message is received
           if (msg.type === "Reload") {
             this.owlStatus.set(
               await evalInWindow("window.__OWL__DEVTOOLS_GLOBAL_HOOK__ !== undefined;")
@@ -221,23 +197,16 @@ export class StorePlugin extends Plugin {
               await this._resetData();
             }
           }
-          // Received when a frame has been delayed when loading the scripts due to owl being lazy loaded
           if (msg.type === "FrameReady") {
             this.updateIFrameList();
             this.owlStatus.set(true);
-            // Only reset data when inspecting an iframe: when on the top frame,
-            // a new iframe becoming ready is a background event and should not
-            // discard the profiler data the user has already recorded.
             if (this.activeFrame() !== "top") {
               await this._resetData();
             }
           }
-          // We need to reload the components tree when the set of apps in the page is modified
           if (msg.type === "RefreshApps") {
             this._components.loadComponentsTree(true);
           }
-          // When message of type Complete is received, overwrite the component tree with the new one from page.
-          // A Complete message is sent everytime a root render is triggered on the page.
           if (msg.type === "Complete") {
             if (msg.origin.frame !== this.activeFrame()) {
               return;
@@ -245,8 +214,6 @@ export class StorePlugin extends Plugin {
             if (!(Array.isArray(msg.data) && msg.data.every((val) => typeof val === "string"))) {
               return;
             }
-            // This determines which components will have a short highlight effect in the tree
-            // to indicate they have been rendered
             this._components.renderPaths.add(JSON.stringify(msg.data));
             if (!rootRendersTimeout) {
               this._components.loadComponentsTree(true);
@@ -258,16 +225,12 @@ export class StorePlugin extends Plugin {
               this._components.loadComponentsTree(true);
             }, 100);
           }
-          // Highlight the hovered component in the tree without loading its details,
-          // keeping the SelectElement handler fast during rapid mouseover events.
           if (msg.type === "SelectElement") {
             if (!(Array.isArray(msg.data) && msg.data.every((val) => typeof val === "string"))) {
               return;
             }
             this._components.hoverSelectComponent(msg.data);
           }
-          // Stop the DOM element selector tool upon receiving the StopSelector message.
-          // Now that the user has clicked, load full details for the last hovered component.
           if (msg.type === "StopSelector") {
             this._components.activeSelector.set(false);
             const lastPath = this._components.lastHoveredPath;
@@ -276,12 +239,9 @@ export class StorePlugin extends Plugin {
               this._components.selectComponent(lastPath, false);
             }
           }
-          // Logic for recording an event when the event message is received
           if (msg.type === "Event") {
             this._profiler._loadEvents(msg.data);
           }
-          // If we know a new iframe has been added to the page, load scripts into it and update the
-          // frames list if it has been directly loaded.
           if (msg.type === "NewIFrame") {
             const isLoaded = await loadScripts(msg.data);
             if (isLoaded) {
@@ -320,9 +280,6 @@ export class StorePlugin extends Plugin {
   }
 }
 
-// -------------------------------------------------------------------------
-// Standalone helper functions (exported for use by sub-plugins)
-// -------------------------------------------------------------------------
 
 export function evalFunctionInWindow(fn, args = [], frameUrl = "top") {
   const stringifiedArgs = [...args].map((arg) => JSON.stringify(arg));
@@ -331,7 +288,6 @@ export function evalFunctionInWindow(fn, args = [], frameUrl = "top") {
 }
 
 export function evalInWindow(code, frameUrl = "top") {
-  // Firefox does not support the frameURL option in devtools.inspectedWindow.eval
   if (IS_FIREFOX && frameUrl !== "top") {
     return Promise.resolve(undefined);
   }

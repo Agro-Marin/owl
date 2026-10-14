@@ -84,7 +84,6 @@ describe("selector", () => {
     selected.set(2);
     await waitScheduler();
     expect(rows.runs).toEqual({ 1: 1, 2: 1 });
-    // the last answer stays, nothing is tracked any more
     expect(attached(1)).toBe(true);
     expect(detached(2)).toBe(true);
     rows.stop();
@@ -115,7 +114,6 @@ describe("selector", () => {
     rows.stop();
     setDebug(false);
     setDebugSink(null);
-    // 1000 keys were read, at most 50 of them by a live computation at a time
     expect(kept.length).toBeGreaterThan(0);
     expect(Math.max(...kept)).toBeLessThanOrEqual(50);
   });
@@ -177,7 +175,6 @@ describe("selector", () => {
   test("a selector disposed while its run is queued skips that run and does not follow its source again", () => {
     const selected = signal("a");
     const manager = new PluginManager({});
-    // subscribed first: its run comes before the selector's
     immediateEffect(() => {
       if (selected() === "b") {
         manager.destroy();
@@ -196,7 +193,6 @@ describe("selector", () => {
     const rows = rowsReading(isSelected as any, ["a"] as any);
     const callsBefore = sourceCalls;
     selected.set("b");
-    // the dispose left it done: the queued run is skipped, not run on a dead selector
     expect(sourceCalls).toBe(callsBefore);
     expect(observersOf((selected as any)[atomSymbol]).map((c) => c.name)).toEqual([
       "immediateEffect",
@@ -215,7 +211,6 @@ describe("selector", () => {
     selected.set(3);
     await waitScheduler();
     expect(observersOf(sourceAtom)).toEqual([]);
-    // read again, it follows the source again
     expect(isSelected(3)).toBe(true);
     const again = rowsReading(isSelected, [3, 4]);
     await waitScheduler();

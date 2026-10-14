@@ -1,8 +1,6 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
-    // dts-bundle-generator uses its entry files rather than tsconfig.files;
-    // target library declarations must be in compilerOptions as well.
     "types": ["node", "../../types/target_lib"],
     "baseUrl": ".",
     "paths": {

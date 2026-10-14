@@ -1,11 +1,5 @@
 import { Component, signal, computed, mount, useEffect, proxy } from "@odoo/owl";
 
-// Two-way binding via `t-model` on inputs, selects, checkboxes, radios.
-// Both `t-model="this.color"` controls stay in sync.
-// `computed` derives values from signals; `computed` with a `set` makes
-// a derived value writable (here: `doubleAmount` writes back to `amount`).
-//
-// Try: type into the text input, change selects, edit "Double Amount".
 
 class Form extends Component {
     static template = "example.Form";

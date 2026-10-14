@@ -71,7 +71,6 @@ test("computed should not update even if the effect updates", async () => {
   e();
   expectSpy(e.spy, 1);
   expectSpy(d.spy, 1, { result: 1 });
-  // change unrelated state
   state.b = 3;
   await waitScheduler();
   expectSpy(e.spy, 2);
@@ -208,19 +207,12 @@ test("computed should not be recomputed when called from effect if none of its s
   expectSpy(d.spy, 1, { result: 0 });
   state.a = 2;
   await waitScheduler();
-  // effect should not rerun because computed value didn't change (still 0)
   expectSpy(e.spy, 1);
-  // but computed getter was re-evaluated (source changed)
   expectSpy(d.spy, 2, { result: 0 });
 });
 
 describe("throwing compute", () => {
   test("currentComputation is restored after a thrown compute()", () => {
-    // updateComputation sets currentComputation before invoking compute().
-    // If compute() throws and we don't restore currentComputation in a
-    // finally, the tracking pointer is left dangling at the failed
-    // computation. The next atom read would then silently attach itself as
-    // a source of the broken computation, corrupting the dependency graph.
     class TestError extends Error {
       override name = "TestError";
     }
@@ -232,10 +224,6 @@ describe("throwing compute", () => {
     expect(() => broken()).toThrow(TestError);
     expect(sourcesOf(brokenAtom).length).toBe(0);
 
-    // Read another signal from a non-tracking context. Without the
-    // try/finally in updateComputation, currentComputation would still
-    // point at `broken` here, and this read would wire `witness` as a
-    // source of `broken`.
     const witness = signal(42);
     witness();
     const witnessAtom = (witness as any)[atomSymbol] as ComputationAtom;
@@ -317,48 +305,35 @@ describe("unsubscription", () => {
 
 describe("disposeComputation", () => {
   test("disposing a signalComputation recursively cleans up derived computations from signal observers", () => {
-    // Mimics the component scenario:
-    // selectedId signal -> isSelected computed -> signalComputation (render effect)
     const selectedId = signal(0);
     const selectedIdAtom = (selectedId as any)[atomSymbol];
 
     const isSelected = computed(() => selectedId() === 42);
     const isSelectedAtom = (isSelected as any)[atomSymbol];
 
-    // Simulate a signalComputation (like component's render effect)
-    // that reads isSelected during render
     const signalComp = createComputation(
       () => {
-        return isSelected(); // reads the computed during "render"
+        return isSelected();
       },
       false,
       ComputationState.STALE
     );
 
-    // Execute (simulating first _render)
     updateComputation(signalComp);
 
-    // Verify sources are established
     expect(sourcesOf(signalComp).includes(isSelectedAtom)).toBe(true);
     expect(observersOf(isSelectedAtom).includes(signalComp)).toBe(true);
     expect(sourcesOf(isSelectedAtom).includes(selectedIdAtom)).toBe(true);
     expect(observersOf(selectedIdAtom).includes(isSelectedAtom)).toBe(true);
 
-    // Dispose (simulating _destroy)
     disposeComputation(signalComp);
 
-    // signalComputation's sources should be cleared
     expect(sourcesOf(signalComp).length).toBe(0);
-    // signalComputation should be removed from isSelected's observers
     expect(observersOf(isSelectedAtom).includes(signalComp)).toBe(false);
-    // KEY CHECK: isSelected should be removed from selectedId's observers
-    // (recursive disposal since isSelected has no more observers)
     expect(observersOf(selectedIdAtom).includes(isSelectedAtom)).toBe(false);
   });
 
   test("disposing works after removeSources + re-render (simulating _render flow)", () => {
-    // Simulates the actual _render() flow where removeSources is called first,
-    // then sources are re-established during template rendering
     const selectedId = signal(0);
     const selectedIdAtom = (selectedId as any)[atomSymbol];
 
@@ -373,28 +348,23 @@ describe("disposeComputation", () => {
       ComputationState.EXECUTED
     );
 
-    // Simulate _render() flow: removeSources, then set currentComputation, then render
-    removeSources(signalComp); // noop first time
+    removeSources(signalComp);
     setComputation(signalComp);
-    isSelected(); // reads computed during "render"
+    isSelected();
     setComputation(undefined);
 
-    // Verify sources established
     expect(sourcesOf(signalComp).includes(isSelectedAtom)).toBe(true);
     expect(observersOf(selectedIdAtom).includes(isSelectedAtom)).toBe(true);
 
-    // Simulate second _render() (e.g., parent-triggered render)
-    removeSources(signalComp); // clears sources
+    removeSources(signalComp);
     setComputation(signalComp);
-    isSelected(); // re-establishes sources
+    isSelected();
     setComputation(undefined);
 
-    // Verify sources still correct after second render
     expect(sourcesOf(signalComp).includes(isSelectedAtom)).toBe(true);
     expect(observersOf(isSelectedAtom).includes(signalComp)).toBe(true);
     expect(observersOf(selectedIdAtom).includes(isSelectedAtom)).toBe(true);
 
-    // Dispose (simulating _destroy)
     disposeComputation(signalComp);
 
     expect(sourcesOf(signalComp).length).toBe(0);
@@ -413,11 +383,9 @@ describe("detach on write", () => {
     expect(d()).toBe(2);
     expect(observersOf(storeAtom).length).toBe(1);
 
-    // nothing observes d: the next write to store severs the subscription
     store.set(2);
     await waitScheduler();
     expect(observersOf(storeAtom).length).toBe(0);
-    // still lazy: the write did not recompute it
     expectSpy(d.spy, 1);
   });
 
@@ -451,7 +419,6 @@ describe("detach on write", () => {
 
     store.set(2);
     await waitScheduler();
-    // disposing b drops a's last observer, which recursively detaches a
     expect(observersOf(atomOf(a)).length).toBe(0);
     expect(observersOf(storeAtom).length).toBe(0);
   });
@@ -474,9 +441,7 @@ describe("detach on write", () => {
     const store = signal(1);
     const d = spyComputed(() => store() * 2);
     d();
-    // this write makes d a disposal candidate...
     store.set(2);
-    // ...but an effect subscribes to it before the batched flush runs
     const e = spyEffect(() => d());
     const stop = e();
     await waitScheduler();
@@ -500,11 +465,9 @@ describe("detach on write", () => {
 
     cond.set(false);
     await waitScheduler();
-    // the effect dropped d, but d is still subscribed to store...
     expect(observersOf(atomOf(d)).length).toBe(0);
     expect(observersOf(storeAtom).length).toBe(1);
 
-    // ...until the next write to store mops it up
     store.set(2);
     await waitScheduler();
     expect(observersOf(storeAtom).length).toBe(0);
@@ -530,18 +493,6 @@ describe("nested computed", () => {
   });
 
   test("nested computed should not recompute if none of its sources changed", async () => {
-    /**
-     *   s1
-     *    ↓
-     *   d1 = s1 * 0
-     *    ↓
-     *   d2 = d1
-     *    ↓
-     *   e1
-     *
-     * change s1
-     * -> d1 should recomputes but d2 should not
-     */
     const state = proxy({ a: 1 });
     const d1 = spyComputed(() => state.a);
     const d2 = spyComputed(() => d1() * 0);
@@ -552,44 +503,17 @@ describe("nested computed", () => {
     expectSpy(d2.spy, 1, { result: 0 });
     state.a = 3;
     await waitScheduler();
-    // effect should not rerun because d2's value didn't change (still 0)
     expectSpy(e.spy, 1);
     expectSpy(d1.spy, 2, { result: 3 });
-    // d2 recomputes because its source d1 changed, but its value is still 0
     expectSpy(d2.spy, 2, { result: 0 });
   });
 
   test("recompute children if source changed", async () => {
-    /**
-     *        +-------+
-     *        |  s1   |
-     *        +-------+
-     *            v
-     *        +-------+
-     *        |  d1   |
-     *        +-------+
-     *      v           v
-     *  +-------+       +-------+
-     *  |  d2   |       |  d3   |
-     *  +-------+       +-------+
-     *    |   v          v
-     *    |    +-------+
-     *    |    |  d4   |
-     *    |    +-------+
-     *    |      |
-     *    v      v
-     *    +-------+
-     *    |  e1   |
-     *    +-------+
-     *
-     * change s1
-     * -> d1, d2, d3, d4, e1 should recomputes
-     */
     const state = proxy({ a: 1 });
     const d1 = spyComputed(() => state.a);
-    const d2 = spyComputed(() => d1() + 1); // 1 + 1 = 2
-    const d3 = spyComputed(() => d1() + 2); // 1 + 2 = 3
-    const d4 = spyComputed(() => d2() + d3()); // 2 + 3 = 5
+    const d2 = spyComputed(() => d1() + 1);
+    const d3 = spyComputed(() => d1() + 2);
+    const d4 = spyComputed(() => d2() + d3());
     const e = spyEffect(() => d4());
     e();
     expectSpy(e.spy, 1);
@@ -614,7 +538,6 @@ describe("writable computed", () => {
     expect(percentage()).toBe(0.5);
     expect(value()).toBe(50);
 
-    // @ts-expect-error a computed without a `set` option is typed read-only
     expect(() => value.set(0.21)).toThrow(/read-only computed/);
     expect(percentage()).toBe(0.5);
     expect(value()).toBe(50);
@@ -626,7 +549,6 @@ describe("writable computed", () => {
     expect(percentage()).toBe(0.5);
     expect(value()).toBe(0.5);
 
-    // @ts-expect-error a computed without a `set` option is typed read-only
     expect(() => value.set(0.21)).toThrow(/read-only computed/);
     expect(percentage()).toBe(0.5);
     expect(value()).toBe(0.5);
@@ -696,11 +618,9 @@ describe("writable computed", () => {
     });
     expect(binary()).toBe("100");
 
-    // can set a string
     binary.set("110");
     expect(value()).toBe(6);
 
-    // can also set a number
     binary.set(7);
     expect(value()).toBe(7);
   });
@@ -718,7 +638,7 @@ describe("equals option", () => {
     expect(getter).toHaveBeenCalledTimes(1);
     const before = list();
 
-    n.set(2); // recomputes to a fresh but shallow-equal array
+    n.set(2);
     await waitScheduler();
     expect(getter).toHaveBeenCalledTimes(2);
     expectSpy(e.spy, 1);
@@ -741,7 +661,7 @@ describe("equals option", () => {
     expectSpy(e.spy, 1, { result: true });
     expect(c2Getter).toHaveBeenCalledTimes(1);
 
-    n.set(2); // c1 recomputes to an equal value: c2 must not even recompute
+    n.set(2);
     await waitScheduler();
     expect(c2Getter).toHaveBeenCalledTimes(1);
     expectSpy(e.spy, 1);
@@ -784,19 +704,17 @@ describe("equals option", () => {
   test("reads made by a custom equals are not tracked", async () => {
     const other = signal(1);
     const n = signal(1);
-    // an equals reading a reactive value (e.g. comparing through a proxy) must
-    // not subscribe the computed to it
     const c = computed(() => n() * 10, { equals: (a, b) => (other(), Object.is(a, b)) });
 
     const e = spyEffect(() => c());
     e();
     expectSpy(e.spy, 1, { result: 10 });
 
-    n.set(2); // runs equals, which reads `other`
+    n.set(2);
     await waitScheduler();
     expectSpy(e.spy, 2, { result: 20 });
 
-    other.set(5); // must not invalidate the computed
+    other.set(5);
     await waitScheduler();
     expectSpy(e.spy, 2);
   });
@@ -843,7 +761,6 @@ describe("cycles", () => {
     const self: ReadonlyReactiveValue<number> = computed(
       () => {
         runs++;
-        // bounds the recursion of a graph that does not detect the cycle
         return runs > 50 ? 0 : self() + 1;
       },
       { name: "self" }
@@ -961,7 +878,6 @@ describe("a failing source in a pending check", () => {
     }
     const s = signal(0);
     const t = signal(0);
-    // a derived computation that throws, which computed() never does
     const failing = createComputation(() => {
       if (s() > 0) {
         throw new IntentionalTestError("source failed");
@@ -1006,7 +922,6 @@ describe("disposed reader", () => {
       withEffect();
       s();
     });
-    // the getter's effect belongs to the computed, disposed with it
     expect(dispose).toThrow("cleanup failed");
     expect(observersOf((s as any)[atomSymbol])).toEqual([]);
     expect(observersOf((a as any)[atomSymbol])).toEqual([]);
@@ -1029,7 +944,6 @@ describe("disposed reader", () => {
       s();
     }, false);
     updateComputation(owner);
-    // a derived computation owns no effect through the public API: set one
     derived.owned = new Set([
       () => {
         throw new Error("cleanup failed");
@@ -1050,7 +964,6 @@ describe("disposed reader", () => {
     expect(observersOf((s as any)[atomSymbol])).toEqual([(double as any)[atomSymbol]]);
     dispose();
     expect(observersOf((s as any)[atomSymbol])).toEqual([]);
-    // read again, it follows its source again
     expect(double()).toBe(2);
     s.set(2);
     expect(double()).toBe(4);

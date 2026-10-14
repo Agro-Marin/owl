@@ -75,48 +75,6 @@ const EXAMPLES_V3 = [
     description: "Async + Suspense",
     files: { "main.js": "async_suspense/main.js" },
   },
-  // NOTE: the "kanban_board" and "web_client" demos are not ready yet, so they
-  // are temporarily hidden from the playground selector. The sample code still
-  // lives under samples/ — re-enable these entries once the demos are polished.
-  // {
-  //   id: "kanban_board",
-  //   category: "Demos",
-  //   description: "Kanban Board",
-  //   files: {
-  //     "main.js": "kanban_board/main.js",
-  //     "main.xml": "kanban_board/main.xml",
-  //     "main.css": "kanban_board/main.css",
-  //   },
-  // },
-  // {
-  //   id: "web_client",
-  //   category: "Demos",
-  //   description: "Web Client",
-  //   files: {
-  //     "readme.md": "web_client/readme.md",
-  //     "core/orm.js": "web_client/core/orm.js",
-  //     "core/rpc.js": "web_client/core/rpc.js",
-  //     "web_client/action_plugin.js": "web_client/web_client/action_plugin.js",
-  //     "core/notification_plugin.js": "web_client/core/notification_plugin.js",
-  //     "core/notification_container.js": "web_client/core/notification_container.js",
-  //     "core/notification_container.css": "web_client/core/notification_container.css",
-  //     "web_client/navbar.js": "web_client/web_client/navbar.js",
-  //     "web_client/navbar.xml": "web_client/web_client/navbar.xml",
-  //     "web_client/navbar.css": "web_client/web_client/navbar.css",
-  //     "web_client/menu_plugin.js": "web_client/web_client/menu_plugin.js",
-  //     "web_client/web_client.js": "web_client/web_client/web_client.js",
-  //     "web_client/web_client.xml": "web_client/web_client/web_client.xml",
-  //     "views/controlpanel.js": "web_client/views/controlpanel.js",
-  //     "views/controlpanel.xml": "web_client/views/controlpanel.xml",
-  //     "views/list_view.js": "web_client/views/list_view.js",
-  //     "views/list_view.xml": "web_client/views/list_view.xml",
-  //     "views/form_view.js": "web_client/views/form_view.js",
-  //     "views/form_view.xml": "web_client/views/form_view.xml",
-  //     "discuss/discuss.js": "web_client/discuss/discuss.js",
-  //     "discuss/discuss.xml": "web_client/discuss/discuss.xml",
-  //     "main.js": "web_client/main.js",
-  //   },
-  // },
 ];
 
 const EXAMPLES_V2 = [

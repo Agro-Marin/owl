@@ -1,10 +1,5 @@
 import { Component, mount, xml, signal, computed, useEffect } from "@odoo/owl";
 
-// Accessing the dom is done in two steps:
-// 1. creating a signal (see here line 18)
-// 2. giving the signal to the target element with t-ref (see line 12)
-// Whenever owl creates or remove an element, it will set the signal
-// accordingly
 
 class CanvasPaint extends Component {
     static template = xml`
@@ -15,12 +10,10 @@ class CanvasPaint extends Component {
             t-on-click="this.handleClick"/>`;
 
     points = signal.Array([]);
-    canvas = signal.ref(); // empty for now
+    canvas = signal.ref();
     numberOfDots = computed(() => this.points().length);
 
     setup() {
-        // the draw method will read the canvas signal, so the effect
-        // will rerun whenever it is set
         useEffect(() => this.draw());
     }
 

@@ -30,8 +30,6 @@ describe("wrapping nested objects", () => {
                 };
       const wrapped = read();
       expect(wrapped.value).toBe(1);
-      // Compare identities before passing booleans to the matcher: its
-      // diagnostic deep comparisons would themselves inspect the type tag.
       expect(wrapped !== raw).toBe(true);
       expect(toRaw(wrapped) === raw).toBe(true);
       expect(inspections).toBe(1);

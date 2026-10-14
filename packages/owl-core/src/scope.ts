@@ -10,31 +10,7 @@ import {
 import { STATUS, StatusValue } from "./status";
 import type { PluginManager } from "./plugin_manager";
 
-// -----------------------------------------------------------------------------
-// Scope
-// -----------------------------------------------------------------------------
-//
-// A Scope is the shared lifetime machinery used by every entity that outlives a
-// single synchronous call: components and plugin managers. It unifies:
-//   - "who is currently constructing?" (via the global scopeStack)
-//   - "is this still alive?" (status + AbortSignal)
-//   - "run this when I'm destroyed" (onDestroy callbacks)
-//   - "dispose these computations on destroy" (computations list)
-//
-// Scope is `abstract`: the only concrete scopes in the runtime are
-// `ComponentNode` and `PluginManager`, each of which extends Scope directly
-// (rather than composing a separate scope object).
-//
-// Core knows only the app fields it reads. Runtime subclasses narrow `app`
-// to their concrete App type without making core depend on owl-runtime.
-//
-// The AbortController/signal and destroy-callback list are created lazily so
-// that scopes which never use them pay nothing beyond a null pointer.
-// -----------------------------------------------------------------------------
 
-// The scopes being set up, innermost last. A scope is an ownership root: an
-// effect created while it is set up belongs to no computation, even one whose
-// run is setting it up (see getOwner).
 export const scopeStack = setupStack as Scope[];
 
 export type ScopeMark = [willStart: number, destroyCbs: number, computations: number];
@@ -42,17 +18,12 @@ const EMPTY_SCOPE_MARK = [0, 0, 0] as const;
 
 export interface ScopeApp {
   dev?: boolean;
-  // Optional during bootstrap: App constructs its manager before assigning
-  // this field. PluginManager and ComponentNode both set their scope's manager
-  // before running any setup code.
   pluginManager?: PluginManager;
 }
 
 function runReversed(cbs: Array<() => void>, reportError: (e: unknown) => void): void {
   for (let i = cbs.length - 1; i >= 0; i--) {
     try {
-      // Destruction is not a read of whoever requested it. Cleanup also must
-      // not create child effects owned by that caller's computation.
       runUnowned(cbs[i]);
     } catch (e) {
       reportError(e);
@@ -60,10 +31,6 @@ function runReversed(cbs: Array<() => void>, reportError: (e: unknown) => void):
   }
 }
 
-/**
- * Returns the active scope. Throws if no scope is active — use this inside
- * hooks and setup functions where the caller is expected to be in a scope.
- */
 export function useScope(): Scope {
   const scope = getScope();
   if (!scope) {
@@ -78,8 +45,6 @@ export abstract class Scope<TApp extends ScopeApp = ScopeApp> {
   status: StatusValue = STATUS.NEW;
   computations: ComputationAtom[] = [];
   willStart: Array<() => any> = [];
-  // true while the scope runs the setup code whose onWillStart callbacks it
-  // will await; outside that window a callback would be queued and never run
   collectingWillStart = false;
   private _controller: AbortController | null = null;
   private _destroyCbs: Array<() => void> | null = null;
@@ -90,21 +55,6 @@ export abstract class Scope<TApp extends ScopeApp = ScopeApp> {
     this.pluginManager = app.pluginManager!;
   }
 
-  /**
-   * Pushes this scope on the stack for the duration of `fn`, invoking it with
-   * the given arguments. Any code executed synchronously inside `fn` can reach
-   * this scope via `useScope()`.
-   *
-   * If the scope is already dead when `run` is called, it throws an
-   * `OwlError` (a programming error — nothing should schedule work in a
-   * destroyed scope). This is deliberately *not* an AbortError.
-   *
-   * If `fn` returns a promise, `run` guards the await with the scope's
-   * lifetime: the returned promise rejects with an AbortError if the scope
-   * dies during the await. AbortError is part of the normal async workflow,
-   * unlike the up-front OwlError above. This does not allocate an
-   * AbortController — status checks are sufficient for guarding between awaits.
-   */
   run<Args extends any[], T>(fn: (...args: Args) => T, ...args: Args): T {
     if (this.status > STATUS.MOUNTED) {
       throw new OwlError("Cannot run a callback in a destroyed scope");
@@ -148,11 +98,6 @@ export abstract class Scope<TApp extends ScopeApp = ScopeApp> {
     return result;
   }
 
-  /**
-   * An AbortSignal tied to this scope's lifetime. If the scope is already
-   * dead, returns a pre-aborted signal. Lazily allocates an AbortController
-   * on first access.
-   */
   get abortSignal(): AbortSignal {
     if (this._finalizing || this.status > STATUS.MOUNTED) {
       if (!this._controller) {
@@ -164,19 +109,10 @@ export abstract class Scope<TApp extends ScopeApp = ScopeApp> {
     return (this._controller ??= new AbortController()).signal;
   }
 
-  /**
-   * Returns true once the scope has been destroyed, i.e. `finalize` has run:
-   * the abort signal is aborted, onDestroy callbacks have executed and
-   * computations are disposed.
-   */
   isDestroyed(): boolean {
     return this.status >= STATUS.DESTROYED;
   }
 
-  /**
-   * Registers a callback to run when the scope is destroyed. If the scope is
-   * already destroyed, the callback is invoked immediately.
-   */
   onDestroy(cb: () => void): void {
     if (this.status >= STATUS.DESTROYED) {
       runUnowned(cb);
@@ -185,15 +121,6 @@ export abstract class Scope<TApp extends ScopeApp = ScopeApp> {
     (this._destroyCbs ??= []).push(cb);
   }
 
-  /**
-   * Aborts the scope's signal, runs all registered onDestroy callbacks in
-   * reverse registration order, disposes the computations attached to this
-   * scope that nothing else observes, and transitions status to DESTROYED. Callbacks run *before* the
-   * status transition so they can still observe the pre-destroyed state
-   * (matching the prior onWillDestroy contract). A callback registered by
-   * another callback runs too, after the current round. Errors in callbacks
-   * are routed to `reportError`.
-   */
   finalize(reportError: (e: unknown) => void): void {
     if (this._finalizing || this.status >= STATUS.DESTROYED) {
       return;
@@ -210,7 +137,6 @@ export abstract class Scope<TApp extends ScopeApp = ScopeApp> {
         runUnowned(() => this._controller!.abort());
       }
     } finally {
-      // a reportError that rethrows still leaves the scope destroyed
       try {
         this.release(EMPTY_SCOPE_MARK, reportError);
       } finally {
@@ -219,18 +145,10 @@ export abstract class Scope<TApp extends ScopeApp = ScopeApp> {
     }
   }
 
-  /**
-   * What the scope has registered so far, for `rollback`.
-   */
   mark(): ScopeMark {
     return [this.willStart.length, this._destroyCbs?.length ?? 0, this.computations.length];
   }
 
-  /**
-   * Undoes what the scope registered since `mark`: drops the onWillStart
-   * callbacks, runs the onDestroy callbacks in reverse and disposes the
-   * computations. Used when a setup fails half way.
-   */
   rollback(mark: ScopeMark, reportError: (e: unknown) => void): void {
     if (debug.scope) {
       debugLog(
@@ -241,8 +159,6 @@ export abstract class Scope<TApp extends ScopeApp = ScopeApp> {
     this.release(mark, reportError);
   }
 
-  // Both callback cleanup and computation disposal can register more of
-  // either. Drain them together until the scope reaches its mark again.
   private release(mark: Readonly<ScopeMark>, reportError: (e: unknown) => void): void {
     this.willStart.length = mark[0];
     if ((this._destroyCbs?.length ?? 0) <= mark[1] && this.computations.length <= mark[2]) {
@@ -280,23 +196,11 @@ export abstract class Scope<TApp extends ScopeApp = ScopeApp> {
     }
   }
 
-  /**
-   * Wrapper applied to lifecycle callbacks before they are stored. The base
-   * implementation prepends the scope as the first argument, so every
-   * lifecycle callback receives the scope it was registered in.
-   * ComponentNode overrides to additionally bind `this` to the component and,
-   * in dev mode, to rename the bound function so the hook shows up as
-   * `ComponentName.hookName` in stack traces.
-   */
   decorate(fn: Function, _hookName: string): Function {
     return fn.bind(undefined, this);
   }
 }
 
-// A computation something else still observes outlives its scope: disposed,
-// it would stop following its sources and leave that observer on a value that
-// never changes again. It is disposed once its last observer leaves it (a
-// disposed component takes its unobserved computeds along).
 function disposeUnobserved(
   computations: ComputationAtom[],
   reportError: (e: unknown) => void
@@ -306,18 +210,12 @@ function disposeUnobserved(
       try {
         disposeComputation(computation);
       } catch (error) {
-        // an effect it created failed to clean up: the others are disposed
         reportError(error);
       }
     }
   }
 }
 
-/**
- * Returns the scope currently active on the stack, or null if none. Prefer
- * `useScope()` in hook-like code that expects to be called inside a scope;
- * reach for `getScope()` only when the absence of a scope is meaningful.
- */
 export function getScope(): Scope | null {
   const len = scopeStack.length;
   return len ? scopeStack[len - 1] : null;
@@ -327,8 +225,6 @@ export function isAbortError(e: unknown): boolean {
   try {
     return typeof e === "object" && e !== null && (e as { name?: string }).name === "AbortError";
   } catch {
-    // An unknown rejection can have a throwing name accessor or be a proxy.
-    // Failure to inspect it does not make it an abort or replace the rejection.
     return false;
   }
 }

@@ -12,29 +12,17 @@ import { proxifyTarget } from "./proxy";
 import type { Constructor } from "./types";
 
 export interface Signal<T> extends ReactiveValue<T> {
-  /**
-   * Update the value of the signal with a new value. If the new value is different
-   * from the previous values, all computations that depends on this signal will
-   * be invalidated, and effects will rerun.
-   */
   set(nextValue: T): void;
 }
 
-// TValue is the type held by the signal, TElem the type carried by the
-// (phantom) `type` option: they only differ for collection signals, where
-// `type` names the element type while `equals` compares whole collections.
 interface SignalOptions<TValue, TElem = TValue> {
   type?: TElem;
-  /** Custom equality used by `set` to decide whether to notify (see Equals). */
   equals?: Equals<TValue>;
 }
 
 function buildSignal<T>(value: T, toRead: (value: T) => T, equals?: Equals<T>): Signal<T> {
   const atom = createAtom(value, "signal");
   const equalsFn = toEqualsFn(equals);
-  // with the default equality its readers may compare the value they read to
-  // the current one (a write reverted in a batch changed nothing); a custom
-  // equality, `false` included, decides alone
   const comparable = equals === undefined;
 
   let readValue = toRead(value);
@@ -48,8 +36,6 @@ function buildSignal<T>(value: T, toRead: (value: T) => T, equals?: Equals<T>): 
     if (equalsFn(atom.value, newValue)) {
       return;
     }
-    // converted first: a value a collection signal cannot hold throws
-    // before the signal changes
     readValue = toRead(newValue);
     atom.value = newValue;
     onWriteAtom(atom, comparable);
@@ -73,11 +59,6 @@ function triggerSignal(signal: Signal<any>): void {
   onWriteAtom((signal as any)[atomSymbol]);
 }
 
-/**
- * Create a signal meant to receive an element through t-ref. It starts at null
- * and is typed as `Signal<HTMLElement | null>` (or narrower if a constructor
- * is given): `myRef = signal.ref()` or `inputRef = signal.ref(HTMLInputElement)`.
- */
 function signalRef(): Signal<HTMLElement | null>;
 function signalRef<T extends Constructor<HTMLElement>>(type: T): Signal<InstanceType<T> | null>;
 function signalRef(): Signal<any> {
@@ -110,7 +91,6 @@ function signalObject<T extends Record<PropertyKey, any>>(
 interface MapSignalOptions<K, V> {
   keyType?: K;
   valueType?: V;
-  /** Custom equality used by `set` to decide whether to notify (see Equals). */
   equals?: Equals<Map<K, V>>;
 }
 
@@ -149,7 +129,7 @@ function plainSignal<T>(value: T, options: SignalOptions<T> = {}): Signal<T> {
   return buildSignal<T>(value, identity, options.equals);
 }
 
-export const signal = /* @__PURE__ */ Object.assign(plainSignal, {
+export const signal =   Object.assign(plainSignal, {
   trigger: triggerSignal,
   ref: signalRef,
   Array: signalArray,

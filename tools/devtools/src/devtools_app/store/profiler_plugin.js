@@ -2,26 +2,19 @@ import { Plugin, signal, proxy, toRaw, plugin } from "@odoo/owl";
 import { browserInstance } from "../../utils";
 import { StorePlugin, evalFunctionInWindow } from "./store";
 
-// Plugin handling all profiler-tab state and logic: event recording, event tree,
-// tracing, and subscription tracing.
 export class ProfilerPlugin extends Plugin {
-  // --- Profiler state ---
   events = signal(proxy([]));
   eventsTree = signal(proxy([]));
   eventsTreeView = signal(true);
   activeRecorder = signal(false);
   traceRenderings = signal(false);
   traceSubscriptions = signal(false);
-  // false when inspecting an OWL 3 page (reactive not exposed → patchReactivity() cannot work)
   subscriptionTracingSupported = signal(true);
 
   setup() {
     this._store = plugin(StorePlugin);
   }
 
-  // -------------------------------------------------------------------------
-  // Events / profiler
-  // -------------------------------------------------------------------------
 
   buildEventsTree() {
     let tree = [];
@@ -169,9 +162,6 @@ export class ProfilerPlugin extends Plugin {
     evts.splice(low, 0, item);
   }
 
-  // -------------------------------------------------------------------------
-  // Tracing
-  // -------------------------------------------------------------------------
 
   async toggleTracing() {
     this.traceRenderings.set(
@@ -190,7 +180,6 @@ export class ProfilerPlugin extends Plugin {
       frame ?? this._store.activeFrame()
     );
     this.subscriptionTracingSupported.set(supported);
-    // If the active frame no longer supports subscription tracing, turn it off.
     if (!supported && this.traceSubscriptions()) {
       this.traceSubscriptions.set(false);
     }
@@ -207,9 +196,6 @@ export class ProfilerPlugin extends Plugin {
   }
 }
 
-// -------------------------------------------------------------------------
-// Standalone helper functions
-// -------------------------------------------------------------------------
 
 function isObjectWithShape(obj, shape) {
   if (typeof obj !== "object" || Array.isArray(obj)) {

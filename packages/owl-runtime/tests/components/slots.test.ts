@@ -403,8 +403,6 @@ describe("slots", () => {
     }
 
     class Parent extends Component {
-      // t-set t-value in template is to force compiler to protect the scope
-      // which in turns means that the ctx propagated to the slot is a sub object
       static template = xml`
         <Child>
           <t t-set="var" t-value="1"/>
@@ -585,8 +583,6 @@ describe("slots", () => {
   test("slots are properly bound to correct component", async () => {
     let child: any = null;
     class Child extends Component {
-      // t-set t-value in template is to force compiler to protect the scope
-      // which in turns means that the ctx propagated to the slot is a sub object
       static template = xml`
         <t t-call-slot="default">
           <t t-set="var" t-value="1"/>
@@ -686,7 +682,6 @@ describe("slots", () => {
       '<div><u><li><a href="/user/1">User Aaron</a></li><li><a href="/user/2">User David</a></li></u></div>'
     );
 
-    // test updateprops here
     app.state.users[1].name = "Mathieu";
     await nextTick();
     expect(fixture.innerHTML).toBe(
@@ -726,7 +721,6 @@ describe("slots", () => {
       '<div><u><li><a href="/user/1">User Aaron</a></li><li><a href="/user/2">User David</a></li></u></div>'
     );
 
-    // test updateprops here
     app.state.users[1].name = "Mathieu";
     await nextTick();
     expect(fixture.innerHTML).toBe(
@@ -757,7 +751,6 @@ describe("slots", () => {
 
     expect(fixture.innerHTML).toBe('<div><a href="/user/1">User Aaron</a></div>');
 
-    // test updateprops here
     app.state.user.name = "David";
     await nextTick();
     expect(fixture.innerHTML).toBe('<div><a href="/user/1">User David</a></div>');
@@ -950,7 +943,6 @@ describe("slots", () => {
       static components = { Child, GrandChild };
     }
 
-    // throw new Error("boom")
     const parent = await mount(Parent, fixture, {
       templates: `
         <templates>
@@ -994,9 +986,6 @@ describe("slots", () => {
       }
 
       onClick() {
-        // we do not use expect(this).toBe(dialog) here because if it fails, it
-        // may blow up jest because it then tries to compute a diff, which is
-        // infinite if there is a cycle
         expect(this === dialog).toBe(true);
       }
     }
@@ -1183,8 +1172,6 @@ describe("slots", () => {
 
   test("default slot next to named slot, with default content", async () => {
     class Dialog extends Component {
-      // We're using 2 slots here: a "default" one and a "footer",
-      // both having default children nodes.
       static template = xml`
         <div class="Dialog">
           <div class="content">
@@ -1202,7 +1189,6 @@ describe("slots", () => {
     }
 
     class App extends Component {
-      // Here we're trying to assign the "footer" slot with some content
       static components = { Dialog };
       static template = xml`
         <div>
@@ -1408,7 +1394,7 @@ describe("slots", () => {
     await mount(Parent, fixture);
     expect(fixture.innerHTML).toBe("<div><span>A0</span><span>A1</span></div>");
 
-    await nextTick(); // wait for the changes triggered in mounted to be applied
+    await nextTick();
     expect(fixture.innerHTML).toBe("<div><span>B0</span><span>B1</span></div>");
   });
 
@@ -1440,7 +1426,7 @@ describe("slots", () => {
     await mount(ParentWidget, fixture);
     expect(fixture.innerHTML).toBe("<div><span>A0</span><span>A1</span></div>");
 
-    await nextTick(); // wait for changes triggered in mounted to be applied
+    await nextTick();
     expect(fixture.innerHTML).toBe("<div><span>B0</span><span>B1</span></div>");
   });
 
@@ -1923,7 +1909,6 @@ describe("slots", () => {
       }
 
       get validate() {
-        // we check here that the actual component was not lost somehow
         expect(this.__owl__.component === a).toBe(true);
         return 1;
       }
@@ -2086,8 +2071,6 @@ describe("slots", () => {
         onWillDestroy(() => destroyed.push(this.id));
       }
     }
-    // the t-out takes the site id __1 and the second call __2: the key of
-    // the call for the item keyed 2, without a site id of its own
     class List extends Component {
       static template = xml`<t t-foreach="[1, 2]" t-as="i" t-key="i"><t t-call-slot="default"/></t><i t-out="'|'"/><t t-call-slot="default"/>`;
     }
@@ -2196,8 +2179,6 @@ describe("slots", () => {
 });
 
 describe("the context a slot renders in", () => {
-  // a child renders its slots on its own too (its state changed, its
-  // onWillStart settled): what they show must not depend on when
   test("a variable set again after the component keeps its value at the component, whoever renders", async () => {
     let child: any;
     class Child extends Component {

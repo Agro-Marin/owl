@@ -8,9 +8,6 @@ import {
 import { computed, immediateEffect, signal, untrack } from "../src";
 import { batch } from "../src/computations";
 
-// The cross-framework reactive conformance suite (also run by alien-signals,
-// Preact signals, Vue, Solid, ...): synchronous effects are owl's immediate
-// effects.
 const owl: ReactiveFramework = {
   name: "owl",
   signal(initialValue) {
@@ -35,8 +32,6 @@ const owl: ReactiveFramework = {
   },
 };
 
-// Where owl knowingly differs (none at present): a case named here is run as
-// an expected failure, so a fix flips it to a failure here.
 const KNOWN_DIVERGENCES = new Set<string>([]);
 
 setExpect(expect as any);

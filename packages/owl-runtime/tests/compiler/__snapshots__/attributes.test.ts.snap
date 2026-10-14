@@ -1,4 +1,3 @@
-// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`attributes > changing a class with t-att-class (preexisting class 1`] = `
 "function anonymous(app, bdom, helpers

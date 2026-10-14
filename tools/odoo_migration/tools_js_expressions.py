@@ -4,9 +4,6 @@ from collections import defaultdict
 
 import re
 
-# ------------------------------------------------------------------------------
-# Constants
-# ------------------------------------------------------------------------------
 
 RESERVED_WORDS = {
     "true",
@@ -30,7 +27,7 @@ RESERVED_WORDS = {
     "Object",
     "Date",
     "__globals__",
-    "None",  # technically not correct but will prevent crash
+    "None",
 }
 
 WORD_REPLACEMENT = {
@@ -86,9 +83,6 @@ OPERATORS = [
     "~",
 ]
 
-# ------------------------------------------------------------------------------
-# Token
-# ------------------------------------------------------------------------------
 
 
 class Token:
@@ -101,9 +95,6 @@ class Token:
         self.is_local = False
 
 
-# ------------------------------------------------------------------------------
-# Tokenizers
-# ------------------------------------------------------------------------------
 
 
 def tokenize_string(expr):
@@ -165,7 +156,6 @@ def tokenize(expr):
     tokens = []
     s = expr
     while s:
-        # Capture leading whitespace as a VALUE token
         m = re.match(r"\s+", s)
         if m:
             tokens.append(Token("WHITESPACE", m.group(0)))
@@ -182,9 +172,6 @@ def tokenize(expr):
             raise ValueError(f"Tokenizer error near: {s}")
     return tokens
 
-# ------------------------------------------------------------------------------
-# Expression Compiler
-# ------------------------------------------------------------------------------
 
 
 TEMPLATE_EXPR = re.compile(r"\$\{([^}]+)\}")
@@ -237,7 +224,7 @@ class ExpressionCompiler:
 
         tokens = tokenize(stripped)
         local_vars = set()
-        stack = []  # track {, [, ( for group context
+        stack = []
 
         i = 0
         while i < len(tokens):
@@ -249,7 +236,7 @@ class ExpressionCompiler:
             if tok.type == "TEMPLATE_STRING":
                 def replace(match):
                     inner_expr = match.group(1)
-                    rewritten = self.compile_expr(inner_expr)  # Recursive call
+                    rewritten = self.compile_expr(inner_expr)
                     return "${" + rewritten + "}"
                 tok.value = TEMPLATE_EXPR.sub(replace, tok.value)
 
@@ -257,13 +244,11 @@ class ExpressionCompiler:
             prev_tok = prev_non_whitespace(tokens, i)
             group_type = stack[-1] if stack else None
 
-            # --- Track groups ---
             if tok.type in ("LEFT_BRACE", "LEFT_BRACKET", "LEFT_PAREN"):
                 stack.append(tok.type)
             elif tok.type in ("RIGHT_BRACE", "RIGHT_BRACKET", "RIGHT_PAREN"):
                 stack.pop()
 
-            # Arrow detection
             is_arrow = False
             if next_tok and next_tok.type == "OPERATOR" and next_tok.value in ("=\u2007>", "=>"):
                 is_arrow = True
@@ -274,7 +259,6 @@ class ExpressionCompiler:
 
             if is_arrow:
                 if tok.type == "RIGHT_PAREN":
-                    # (a, b) => ...
                     j = i - 1
                     while j >= 0 and tokens[j].type != "LEFT_PAREN":
                         if tokens[j].type == "SYMBOL":
@@ -284,7 +268,6 @@ class ExpressionCompiler:
                 elif tok.type == "SYMBOL":
                     local_vars.add(tok.value)
 
-            # Variable rewrite
             if (
                 tok.type == "SYMBOL"
                 and tok.value not in RESERVED_WORDS
@@ -300,8 +283,6 @@ class ExpressionCompiler:
                     and next_tok.type == "COLON"
                 )
             ):
-                # if tok.value in self.warning_vars:
-                # self.warnings.append(f"WARNING in template '{self.template_name}' : variable '{tok.value}' also defined in a far parent.")
 
                 if (
                     group_type == "LEFT_BRACE"
@@ -340,9 +321,6 @@ class ExpressionCompiler:
         return INTERP_RE.sub(repl, text)
 
 
-# ------------------------------------------------------------------------------
-# Template
-# ------------------------------------------------------------------------------
 
 class Template:
     def __init__(self, name: str, is_testing: bool = False):
@@ -422,9 +400,6 @@ class ComponentRootTemplate(Template):
         return not self.is_testing
 
 
-# ------------------------------------------------------------------------------
-# Variables
-# ------------------------------------------------------------------------------
 
 
 class VariableAggregator:
@@ -444,8 +419,8 @@ class VariableAggregator:
         self.t_call_vars = defaultdict(set)
         self.t_call_outer_vars = defaultdict(set)
 
-        self.inherit_map = defaultdict(str)  # TODO move to template parser
-        self.full_inherit_and_call_map = defaultdict(str)  # TODO Template parser
+        self.inherit_map = defaultdict(str)
+        self.full_inherit_and_call_map = defaultdict(str)
 
     def add_template(self, template_name: str):
         if template_name not in self.all_templates:
@@ -489,21 +464,16 @@ class VariableAggregator:
             Maps all variable inside t-call by t-call keys eg.
             <t t-call ="web.xyz"> <t t-set="x" t-value=2/> </t>  --> {"web.xyz" : {"x"}}
         """
-        # Find all nodes with t-call="sometemplate"
         for call_node in root.xpath("descendant-or-self::*[@t-call]"):
             template_name = call_node.get("t-call")
             if not template_name:
                 continue
 
-            # Look for t-set inside this t-call subtree
-            # (On purpose only take t-set inside t-call even if those outside still apply)
             for set_node in call_node.xpath("descendant-or-self::*[@t-set]"):
                 var_name = set_node.get("t-set")
                 if var_name:
                     self.t_call_vars[template_name].add(var_name)
 
-            # Collect inline parameters on t-call (OWL 3 syntax: <t t-call="x" param="val"/>)
-            # Skip when t-call is a direct child of t-inherit (attrs are xpath directives)
             parent = call_node.getparent()
             if parent is None or 't-inherit' not in parent.attrib:
                 for attr in call_node.attrib:
@@ -559,15 +529,12 @@ class VariableAggregator:
                     yield var_name
 
 
-# ------------------------------------------------------------------------------
-# Template Compiler
-# ------------------------------------------------------------------------------
 
 
-SKIP_XPATH_ATTRS = {"name", "ref", "set-slot", "slot", "call-slot"}  # attributes to skip
-T_ATTR_RE = re.compile(r"@t-([\w-]+)='(.*?)'")  # For eg xpath=expr="[@t-if]"
+SKIP_XPATH_ATTRS = {"name", "ref", "set-slot", "slot", "call-slot"}
+T_ATTR_RE = re.compile(r"@t-([\w-]+)='(.*?)'")
 EVENT_ATTR_RE = re.compile(r"(@(?:onSelected|onChange)(?:\.[\w-]+)?)='(.*?)'")
-COMPONENT_TARGET_RE = re.compile(r"^.*/[A-Z][\w\-]*(?:\[.*?\])*$")  # This regex ensures the *last* node in the path starts with an uppercase letter.
+COMPONENT_TARGET_RE = re.compile(r"^.*/[A-Z][\w\-]*(?:\[.*?\])*$")
 VALUE_ATTR_RE = re.compile(r"(@value)='(.*?)'")
 ENTITY_RE = re.compile(r"&([A-Za-z0-9#]{2,5});")
 UNMASK_RE = re.compile(r"__x([A-Za-z0-9#]{2,5})x__")
@@ -587,7 +554,7 @@ def get_inheritance_chain(template_name, inherit_map):
 
     while current in inherit_map:
         if current in seen:
-            break  # Break out of accidental circular dependencies
+            break
 
         seen.add(current)
         parent = inherit_map[current]
@@ -601,7 +568,6 @@ def mask_xml_entities(text):
     """Convert XML entities like &apos; to __apos__ before parsing."""
     def repl(match):
         name = match.group(1)
-        # skip masking &amp;
         return match.group(0) if name == "amp" else f"__x{name}x__"
     return ENTITY_RE.sub(repl, text)
 
@@ -614,7 +580,6 @@ def unmask_xml_entities(text):
 def iter_elements(root):
     """Yield only real element nodes (skip comments, PIs, etc.)"""
     for node in root.iter():
-        # node.tag is a string for real elements
         if isinstance(node.tag, str):
             yield node
 
@@ -666,20 +631,18 @@ class TemplateCompiler:
 
         self.modules = modules
         self.template_path = path
-        self.current_template = path  # default to the file path but if inside a t-name takes that value
+        self.current_template = path
         self.excluded_templates = excluded_templates
         self.warnings = []
         self.is_testing = aggregator.is_testing
 
         self.expr_compiler = ExpressionCompiler(self.warnings)
 
-        # Dynamic attributes can change on each nodes
         self.node_vars = set()
         self.warning_vars = set()
 
     def fix_rendering_context(self, root: etree._ElementTree):
         template_nodes = root.xpath("descendant-or-self::*[@t-name] | descendant-or-self::*[@t-inherit]")
-        # Filter out t-name used for positioning inside xpath
         template_nodes = [n for n in template_nodes if not ("position" in n.attrib and "t-inherit" not in n.attrib)]
         if template_nodes:
             for template in template_nodes:
@@ -687,10 +650,9 @@ class TemplateCompiler:
                 if self._should_skip_template(self.current_template):
                     continue
 
-                # Bound vars are variables that are valid for the entire template
                 bound_variables = self._collect_bound_variables(template)
                 bound_variables |= set(self.t_call_vars.get(self.current_template, {}))
-                bound_variables |= set(self.t_call_outer_vars.get(self.current_template, {}))  # We initially separated outer t-call vars and vars inside a t-call
+                bound_variables |= set(self.t_call_outer_vars.get(self.current_template, {}))
                 bound_variables |= set(self.all_vars.get(self.current_template, {}))
 
                 self.fix_template(template, bound_variables)
@@ -754,9 +716,9 @@ class TemplateCompiler:
                     if not value:
                         continue
                     if attr.startswith("t-") or attr.endswith(".translate"):
-                        continue  # skip Owl directives
+                        continue
                     if is_inside_inherit(node) and attr.startswith("position"):
-                        continue  # A component can be replaced with <A position="replace"/> inside inherits
+                        continue
                     node.set(attr, self.expr_compiler.compile_expr(value))
 
     def _should_skip_template(self, template_name: str):
@@ -791,25 +753,24 @@ class TemplateCompiler:
         """
 
         if not isinstance(node.tag, str):
-            return True  # eg. comments
+            return True
 
         if is_inside_inherit(node):
             chain = get_inheritance_chain(self.current_template, self.inherit_map)
             for parent in chain:
                 if parent in self.excluded_templates:
-                    return True  # Don't refactor template inheriting renderAt templates
+                    return True
 
         if self.modules:
-            # Logic only if targetting specific modules
             if is_inside_inherit(node):
                 parent = is_inside_inherit(node)[0].get("t-inherit", "").split(".")[0]
                 is_target = any(parent == m or parent.startswith(f"{m}_") for m in self.modules)
                 if not is_target:
-                    return True   # Don't refactor inherits targetting modules we are not refactoring
+                    return True
             else:
                 in_folder = any(f"/{m}/" in self.template_path or f"/{m}_" in self.template_path for m in self.modules)
                 if not in_folder:
-                    return True  # Don't refactor templates not inside targer folder and not inheriting target
+                    return True
 
         return False
 
@@ -828,7 +789,6 @@ class TemplateCompiler:
             self.node_vars = base_vars | (self.all_vars.get(target, set())) | self.t_call_vars.get(target, set())
         else:
             self.node_vars = base_vars
-        # Now set warning vars
         if self.full_inherit_and_call_map.get(self.current_template):
             for parent in self.full_inherit_and_call_map.get(self.current_template):
                 self.node_vars |= self.all_vars.get(parent, set())
@@ -848,7 +808,6 @@ class TemplateCompiler:
         if not txt.strip() and not (node.get("add", False) or node.get("remove", False)):
             return
 
-        # Locate the parent xpath expression to decide if we should compile
         xp = node.xpath("ancestor::xpath[@expr][1]")
         xp_expr = xp[0].get("expr") if xp else ""
 
@@ -870,21 +829,19 @@ class TemplateCompiler:
             attr_name = match.group(1)
             js_expr = match.group(2)
             if attr_name in SKIP_XPATH_ATTRS:
-                # return original string unchanged
                 return match.group(0)
             if attr_name in ["call", "custom-ref", "ref"]:
                 new_expr = self.expr_compiler.process_dynamic_string(js_expr)
             else:
                 new_expr = self.expr_compiler.compile_expr(js_expr)
-            # preserve quotes
             return match.group(0).replace(js_expr, new_expr)
 
         expr = node.get("expr")
         if expr:
             expr = T_ATTR_RE.sub(repl, expr)
             if COMPONENT_TARGET_RE.search(expr):
-                expr = EVENT_ATTR_RE.sub(repl, expr)  # eg. //DropdownItem[@onSelected.bind='exportAuditReportToPDF']
-                expr = VALUE_ATTR_RE.sub(repl, expr)  # eg. //CheckBox[@value='includeArchived']"
+                expr = EVENT_ATTR_RE.sub(repl, expr)
+                expr = VALUE_ATTR_RE.sub(repl, expr)
             return expr
         return node
 
@@ -930,10 +887,8 @@ class TemplateCompiler:
     @staticmethod
     def _should_compile_attribute_node(attr_name: str, xp_expr: str) -> bool:
         def is_component_xpath_expr(expr: str) -> bool:
-            # component tag selection: //Navbar, //MyComp, etc.
             if expr and COMPONENT_TARGET_RE.match(expr):
                 return True
-            # t-component selection: //t[@t-component='...']
             return expr and ("@t-component" in expr or "t-component" in expr)
 
         if not attr_name:
@@ -948,9 +903,6 @@ class TemplateCompiler:
         return is_component_xpath_expr(xp_expr)
 
 
-# ------------------------------------------------------------------------------
-# Parametric t-call transformation helpers
-# ------------------------------------------------------------------------------
 
 
 def _detach_node_tail(node):
@@ -1050,7 +1002,7 @@ def __varname_is_used_inside(tset, container, skip_to):
 def _remove_tset_add_inherit_attribute(tset, container):
     attribute = etree.Element('attribute')
     if len(container):
-        container[-1].tail = container.text  # indent
+        container[-1].tail = container.text
     container.append(attribute)
 
     if 't-value' in tset.attrib:
@@ -1094,7 +1046,6 @@ def _apply_parametric_tcall(tree, path, warnings):
             else:
                 _remove_tset_add_attribute(tset, tcall)
 
-    # inherit t-call
     inherit_tcalls = (
         tree.xpath('//*[@t-call][@position="inside"]') +
         [
@@ -1167,9 +1118,6 @@ def update_template(path: str, content: str, modules: list[str], aggregator: Var
     result = _AUTO_CLOSE_T.sub(r"\g<1>/>", result)
     return result, warnings
 
-# ------------------------------------------------------------------------------
-# TESTS
-# ------------------------------------------------------------------------------
 
 
 def run_tests_main(test):
@@ -1256,20 +1204,6 @@ tests = [
         "content": "<div><!-- dfsf --></div>",
         "expected": "<div><!-- dfsf --></div>",
     },
-    # TODO, not super important
-    #     {
-    #         "name": "comments 2",
-    #         "content": """<?xml version="1.0" encoding="UTF-8"?>
-    # <!--This field displays a placeholder even if the field is currently not selected.-->
-    # <templates xml:space="preserve">
-    # </templates>
-    # """,
-    #         "expected": """<?xml version="1.0" encoding="UTF-8"?>
-    # <!--This field displays a placeholder even if the field is currently not selected.-->
-    # <templates xml:space="preserve">
-    # </templates>
-    # """,
-    #     },
 
     {
         "name": "simple t-out",
@@ -1856,8 +1790,6 @@ tests = [
 """,
     },
     {
-        # t-as="state" in a t-foreach pollutes bound_variables for the whole template,
-        # preventing state.x from being rewritten to this.state.x outside the loop.
         "name": "t-as name shadows component state outside its scope",
         "content": """
 <t t-name="foo">
@@ -1872,24 +1804,6 @@ tests = [
 </t>
 """,
     },
-    # TODO, not super important
-    #     {
-    #         "name": "xml formatting error",
-    #         "content": """
-    # <templates>
-    #     <t t-name="knowledge.MacrosEmbeddedClipboard" t-inherit="knowledge.EmbeddedClipboard" t-inherit-mode="primary">
-    #         <CardLayout fromTrialMode="this.props.fromTrialMode" companyImageUrl="this.companyImageUrl" kioskReturn.bind="kioskReturn" activeDisplay = "this.state.active_display"/>
-    #     </t>
-    # </templates>
-    # """,
-    #         "expected": """
-    # <templates>
-    #     <t t-name="knowledge.MacrosEmbeddedClipboard" t-inherit="knowledge.EmbeddedClipboard" t-inherit-mode="primary">
-    #         <CardLayout fromTrialMode="this.props.fromTrialMode" companyImageUrl="this.companyImageUrl" kioskReturn.bind="kioskReturn" activeDisplay = "this.state.active_display"/>
-    #     </t>
-    # </templates>
-    # """,
-    #     },
     {
         "name": "t foreach, with variables",
         "content": """
@@ -2338,7 +2252,6 @@ tcall_param_tests = [
         <t t-out="foo"/>
     </t>
 </div>""",
-        # foo is used inside call body → stays in place; no transformation applied
         "expected": """<div>
     <t t-call="my.Template">
         <t t-set="foo" t-value="bar"/>
@@ -2348,7 +2261,6 @@ tcall_param_tests = [
     },
     {
         "name": "tcall-param only t-directives",
-        # t-call with non-t- attributes is skipped; inner t-set stays
         "content": """<div>
     <t t-call="my.Template">
         <t t-set="x" t-value="v"/>
@@ -2374,7 +2286,6 @@ tcall_param_tests = [
     },
 ]
 
-# ------------------------------------------------------------------------------
 
 
 def run_test_specific_modules(test):
@@ -2537,7 +2448,6 @@ test_external_xpath = [
     },
 ]
 
-# ------------------------------------------------------------------------------
 
 
 def run_test_exclude_modules(test):
@@ -2600,7 +2510,6 @@ test_exclude_templates = [
     },
 ]
 
-# ------------------------------------------------------------------------------
 
 
 def run_test_vars(test):
@@ -2611,7 +2520,6 @@ def run_test_vars(test):
         aggregator.t_call_outer_vars = test.get("t_call_outer_vars", defaultdict(set))
         aggregator.full_inherit_and_call_map = test.get("full_inherit_and_call_map", defaultdict(str))
     else:
-        # If vars not specified replicate the real process of using aggregator to map
         def agg_callback(tree):
             aggregator.aggregate_inside_vars(tree)
             aggregator.aggregate_call_vars(tree)
@@ -2885,7 +2793,6 @@ test_vars = [
 ]
 
 
-# ------------------------------------------------------------------------------
 
 
 def run_test_aggregator(test):
@@ -2896,14 +2803,12 @@ def run_test_aggregator(test):
     if "outside_vars" in test:
         aggregator.t_call_vars.update(test["outside_vars"])
 
-    # Run variable aggregation
     def callback(tree):
         aggregator.aggregate_inside_vars(tree)
         aggregator.aggregate_call_vars(tree)
         aggregator.link_templates(tree)
     update_etree(test["content"], callback)
 
-    # Convert defaultdicts to standard dicts for clean printing/comparison
     result = {}
     if aggregator.all_vars:
         result["all_vars"] = dict(aggregator.all_vars)
@@ -2920,7 +2825,6 @@ def run_test_aggregator(test):
 
             full_inherit_and_call_map[template_name] = list(template.get_dependencies())
 
-            # Inherit map
             if template.parent is not None:
                 inherit_map[template_name] = template.parent.name
         if inherit_map:
@@ -3037,7 +2941,6 @@ test_vars_collection = [
 ]
 
 
-# ------------------------------------------------------------------------------
 
 def run_test_warnings(test):
     aggregator = VariableAggregator(is_testing=True)
@@ -3066,25 +2969,8 @@ test_warning_vars = [
         "content": '<t t-name="web.xyz" t-inherit="web.a" t-inherit-mode="primary"> <t t-out="b"/> </t>',
         "expected": [],
     },
-    #  Deprecated because we now automatically use full inherit chain to set `this`
-    # {
-    #     "name": "Far away parent warning",
-    #     "all_vars": {'web.a': {"b"}},
-    #     "full_inherit_and_call_map": {'web.xyz': {'web.a', 'web.b', 'web.c'}},
-    #     "content": '<t t-name="web.xyz"> <t t-out="b"/> </t>',
-    #     "expected": ["WARNING in template 'web.xyz' : variable 'b' also defined in a far parent."]
-    # },
-    #  Deprecated because we now automatically discard outer t-call varsY
-    # {
-    #     "name": "Outer t-call warning",
-    #     "t_call_outer_vars": {'web.xyz': {"b"}},
-    #     "full_inherit_and_call_map": {'web.xyz': {'web.a', 'web.b', 'web.c'}},
-    #     "content": '<t t-name="web.xyz"> <t t-out="b"/> </t>',
-    #     "expected": ["WARNING in template 'web.xyz' : t-call-outer variable 'b'."]
-    # },
 ]
 
-# ------------------------------------------------------------------------------
 
 
 WHITELIST = []
@@ -3093,7 +2979,7 @@ WHITELIST = []
 def run_test_group(name, tests, func):
     success = 0
     fail = 0
-    print(f"running suite '{name}' ({len(tests)} tests)")  # noqa: T201
+    print(f"running suite '{name}' ({len(tests)} tests)")
 
     for test in tests:
         name = test.get("name")
@@ -3106,17 +2992,17 @@ def run_test_group(name, tests, func):
 
             if output != test["expected"]:
                 fail += 1
-                print(f"{name}: fail")  # noqa: T201
-                print("Expected:")  # noqa: T201
-                print(test["expected"])  # noqa: T201
-                print("Output:")  # noqa: T201
-                print(output)  # noqa: T201
+                print(f"{name}: fail")
+                print("Expected:")
+                print(test["expected"])
+                print("Output:")
+                print(output)
             else:
                 success += 1
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             fail += 1
-            print(f"{name}: fail")  # noqa: T201
-            print(e)  # noqa: T201
+            print(f"{name}: fail")
+            print(e)
 
     return success, fail
 
@@ -3139,4 +3025,4 @@ if __name__ == "__main__":
         total_fail += f
 
     if not total_fail:
-        print(f"Yep, {total_success} tests passed")  # noqa: T201
+        print(f"Yep, {total_success} tests passed")

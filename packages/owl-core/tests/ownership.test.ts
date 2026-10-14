@@ -23,7 +23,6 @@ function rethrow(e: unknown) {
   throw e;
 }
 
-// the effects created by `owned()` that are not disposed yet
 let live = 0;
 function owned(name = "inner") {
   return effect(
@@ -95,7 +94,6 @@ describe("an effect created in a computed's getter", () => {
       expect(c()).toBe(i);
     }
     expect(live).toBe(1);
-    // nothing observes it: the write leaves it to the flush, which disposes it
     s.set(4);
     await waitScheduler();
     expect(live).toBe(0);
@@ -160,7 +158,6 @@ describe("an effect created in a computed's getter", () => {
     const c = computed(
       () => {
         const g = ++generation;
-        // subscribed to s before the computed is: queued first by a write
         effect(() => log.push(`effect of run ${g} sees ${s()}`));
         return s();
       },
@@ -246,8 +243,6 @@ describe("an effect created in a computed's getter", () => {
 });
 
 describe("a cleanup that throws while computeds are disposed in bulk", () => {
-  // the flush reports it as an unhandled rejection, which the test config
-  // lets through by this name
   class IntentionalTestError extends Error {
     override name = "IntentionalTestError";
   }
@@ -353,12 +348,10 @@ describe("an effect created inside untrack", () => {
     expect([getterLive, live]).toEqual([1, 1]);
     t.set(1);
     await waitScheduler();
-    // the effect's run replaced its own, not the computed's
     expect([getterLive, live]).toEqual([1, 1]);
     s.set(1);
     c();
     expect([getterLive, live]).toEqual([1, 1]);
-    // once the block is over, nothing owns what is created outside the run
     const disposeTop = owned("top");
     dispose();
     expect(live).toBe(1);

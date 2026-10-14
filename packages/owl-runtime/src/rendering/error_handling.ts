@@ -3,20 +3,14 @@ import type { ComponentNode } from "../component_node";
 import { STATUS } from "../status";
 import type { Fiber } from "./fibers";
 
-// Maps fibers to thrown errors
 export const fibersInError: WeakMap<Fiber, any> = new WeakMap();
 export const nodeErrorHandlers: WeakMap<
   ComponentNode,
   ((error: any, finalize: Function) => void)[]
 > = new WeakMap();
 
-// The component whose onError handler caught the error being handled: the
-// innermost one, when a handler forwards it to another chain (a sub-root's)
 let handledBy: ComponentNode | null = null;
 
-// Walks up from `node` (inclusive), invoking the latest error handler at each
-// level. Returns whether a handler caught and the final (possibly rethrown)
-// error.
 function invokeErrorHandlers(
   node: ComponentNode | null,
   error: any,
@@ -40,12 +34,6 @@ function invokeErrorHandlers(
   return { handled: false, error };
 }
 
-// Builds a sub-root error handler that re-routes errors to `boundary`'s
-// parent chain. Used by Suspense/Portal so a descendant failure reaches the
-// consumer's `onError` without the main `handleError` entry point (which
-// would mark the outer tree's fibers as in-error and stall its mount). An
-// error no handler there catches is rethrown: handleError then destroys the
-// app and reports it, as for any other component.
 export function forwardErrorToParent(boundary: ComponentNode) {
   return (error: any, finalize: Function): void => {
     if (boundary.app.destroyed) {
@@ -65,18 +53,13 @@ export function handleError(params: ErrorParams) {
   const fiber = "fiber" in params ? params.fiber : node!.fiber;
   const app = node!.app;
 
-  // Once the app has been destroyed (e.g. by a prior unhandled error), stop
-  // re-running error handling as the stack unwinds through ancestor renders.
   if (app.destroyed) {
     throw error;
   }
 
   if (fiber) {
-    // resets the fibers on components if possible. This is important so that
-    // new renderings can be properly included in the initial one, if any.
     let current: Fiber | null = fiber;
     do {
-      // a component a newer render was requested for keeps it
       if (current.node.fiber === null) {
         current.node.fiber = current;
       }
@@ -93,14 +76,12 @@ export function handleError(params: ErrorParams) {
     try {
       app.destroy();
     } catch {
-      // mute all errors here because we are in a corrupted state anyway
     }
   };
 
   handledBy = null;
   const result = invokeErrorHandlers(node, error, finalize);
   if (debug.error) {
-    // a root's own handler, rejecting its mount, destroys the app
     debugLog(
       "error",
       result.handled && !app.destroyed
@@ -114,18 +95,10 @@ export function handleError(params: ErrorParams) {
     app._handleError(result.error);
   }
   if (fiber && fiber.root!.counter !== 0) {
-    // the pass may never finish: its scheduler, which holds the renders it
-    // delayed, drops it at the next frame unless a handler re-rendered it
     fiber.root!.node.app.scheduler.requestFrame();
   }
 }
 
-// An onWillStart or onWillUpdateProps rejection, for `fiber`. Once the
-// component is destroyed, or a newer render replaced that one, nobody waits for
-// it: the error is dropped. It must not reach the living ancestors' handlers
-// (they may have handled it already, through the instance it was created for,
-// and rendered the instance this one was) nor tear the app down, nor surface as
-// an unhandled rejection - an error dialog for work nobody consumes.
 export function handleHookRejection(node: ComponentNode, fiber: Fiber, error: any) {
   if (node.fiber !== fiber) {
     if (debug.error) {

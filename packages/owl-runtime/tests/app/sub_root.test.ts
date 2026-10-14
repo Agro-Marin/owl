@@ -114,8 +114,6 @@ test("destroy a subroot while another component is mounted in main app", async (
 
   const app = new App();
   const comp = await app.createRoot(SomeComponent).mount(fixture);
-  // With the sync fast path, the sub-root's child C (no willStart) renders
-  // synchronously during onMounted, so it's already in the DOM.
   expect(fixture.innerHTML).toBe("a<div>c</div>");
   comp.state.flag = true;
   await nextTick();

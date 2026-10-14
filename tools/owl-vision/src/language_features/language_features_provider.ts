@@ -4,11 +4,6 @@ import { getSelectedText, hash, readFile } from "../utils";
 import { elements, events, owlComponentAttributes, owlElementAttributes } from "./items";
 import { ParseResultType, ParseResult, parse, getNodePath, parseXml } from "./parser";
 
-/**
- * Commands return basic js object which needs to be converted
- * to actual CompletionItem instances, this methods streamlines
- * this process.
- */
 function mapCompletionItems(items: any): CompletionItem[] {
     return items.map((i: any) => {
         const item = new CompletionItem(i.label, i.kind);
@@ -31,10 +26,6 @@ function filterComponentItems(items: CompletionItem[], excludedLabels: string[] 
     });
 }
 
-/**
- * Adds "this." in front of the expression if needed and increments
- * the expression offset accordingly.
- */
 function contextualize(properties: string[], expression: string, expressionOffset = 0) {
     const match = expression.match(/^([a-zA-Z_]+)\b/);
     if (!expression.startsWith("this.") && ((match && properties.includes(match[1])) || expression.match(/^\s*$/))) {
@@ -60,23 +51,11 @@ export class OwlLanguageFeaturesProvider implements CompletionItemProvider, Text
         workspace.registerTextDocumentContentProvider("owl", this);
     }
 
-    /**
-     * TextDocumentContentProvider interface implementation to provide
-     * virtual documents to vscode commands.
-     */
     async provideTextDocumentContent(uri: Uri) {
         const id = uri.toString(true);
         return this.virtualDocuments.get(id);
     }
 
-    /**
-     * DefinitionProvider interface implementation.
-     *
-     * - If the target is a js expression, will try to find the definition
-     * inside the current component.
-     * - If the target is a component element, will try to find the definition
-     * of the component.
-     */
     async provideDefinition(document: TextDocument, position: Position) {
         let offset = document.offsetAt(position);
         const documentText = document.getText();
@@ -149,12 +128,6 @@ export class OwlLanguageFeaturesProvider implements CompletionItemProvider, Text
         }
     }
 
-    /**
-     * CompletionItemProvider interface implementation
-     *
-     * See {@link provideElementItems}, {@link provideAttributeItems} and {@link provideExpressionItems}
-     * for further details.
-     */
     async provideCompletionItems(
         document: TextDocument,
         position: Position,
@@ -183,11 +156,6 @@ export class OwlLanguageFeaturesProvider implements CompletionItemProvider, Text
         return [];
     }
 
-    /**
-     * Returns the completion items for attributes.
-     * - Returns props if the element is a component
-     * - Returns the owl directives based on the element type
-     */
     private async provideAttributeItems(
         documentUri: Uri,
         xmlNode: any,
@@ -225,10 +193,6 @@ export class OwlLanguageFeaturesProvider implements CompletionItemProvider, Text
         ], excludedAttrs));
     }
 
-    /**
-     * Returns the completion items for elements, this includes
-     * components, "t" and html elements.
-     */
     private async provideElementItems(
         documentUri: Uri,
         componentUri: Uri,
@@ -246,9 +210,6 @@ export class OwlLanguageFeaturesProvider implements CompletionItemProvider, Text
         ]);
     }
 
-    /**
-     * Returns the completion items for a js expression
-     */
     private async provideExpressionItems(
         documentUri: Uri,
         componentUri: Uri,
@@ -310,19 +271,6 @@ export class OwlLanguageFeaturesProvider implements CompletionItemProvider, Text
         return mapCompletionItems([...items]);
     }
 
-    /**
-     * Creates a virtual document to provide the appropriate
-     * completion items for a parsed js expression.
-     *
-     * This method:
-     * - Adds default owl variables such as env and props
-     * - Adds mocks for frequently used Owl imports (which cannot be resolved using commands)
-     * - Adds local variables generated from Owl xml directives such as t-for or t-set
-     * - Will try to add a "this." in front of the js expression if it was omitted so it can
-     *   be understood by vscode typescript server.
-     *
-     * The expression offset is also modified accordingly.
-     */
     async getVirtualJsDocument(
         documentUri: Uri,
         componentName: string,
@@ -333,11 +281,8 @@ export class OwlLanguageFeaturesProvider implements CompletionItemProvider, Text
     ) {
         const properties = await this.getComponentProperties(documentUri, componentName, componentText);
 
-        // As imports do not work, use mocks for frequently used owl functions.
         let importReplacements = workspace.getConfiguration().get(`owl-vision.autocomplete-mocks`);
 
-        // As imports do not work, manually add "env" and "props"
-        // to the current component instance.
         const localVariables = [
             "let env = {};",
             "this.env = env;",
@@ -345,7 +290,6 @@ export class OwlLanguageFeaturesProvider implements CompletionItemProvider, Text
             `this.props = props;`,
         ];
 
-        // Adds local variables generated based on the template
         const path = getNodePath(xmlDocument, xmlNode);
         for (const node of path) {
             if (node.attr["t-foreach"]) {
@@ -372,15 +316,6 @@ ${expression} }}`,
         }
     }
 
-    /**
-     * Returns the list of properties for a given component class.
-     * The result in cached in `componentProperties`.
-     *
-     * @param documentUri
-     * @param componentName
-     * @param componentText
-     * @returns
-     */
     async getComponentProperties(
         documentUri: Uri,
         componentName: string,

@@ -158,7 +158,6 @@ describe("rendering semantics", () => {
     value = 4;
     render(parent, true);
 
-    // wait for child to be rendered, but dom not yet patched
     await nextMicroTick();
     await nextMicroTick();
     await nextMicroTick();
@@ -265,7 +264,7 @@ describe("rendering semantics", () => {
       ]
     `);
 
-    parent.state.b.c = 3; // parent is now subscribed to 'b' key
+    parent.state.b.c = 3;
     await nextTick();
     expect(fixture.innerHTML).toBe("3");
     expect(steps.splice(0)).toMatchInlineSnapshot(`
@@ -275,7 +274,7 @@ describe("rendering semantics", () => {
       ]
     `);
 
-    parent.state.b = { c: 444 }; // triggers a parent and a child render
+    parent.state.b = { c: 444 };
     await nextTick();
     expect(fixture.innerHTML).toBe("444");
     expect(steps.splice(0)).toMatchInlineSnapshot(`
@@ -418,7 +417,6 @@ test("force render in case of existing render", async () => {
     ]
   `);
 
-  // trigger a new rendering, blocked in B
   parent.state.val = 2;
   await nextTick();
   expect(steps.splice(0)).toMatchInlineSnapshot(`
@@ -427,8 +425,6 @@ test("force render in case of existing render", async () => {
     ]
   `);
 
-  // initiate a new render with deep=true. it should cancel the current render
-  // and also be blocked in B
   render(parent, true);
   await nextTick();
   expect(steps.splice(0)).toMatchInlineSnapshot(`
@@ -439,7 +435,6 @@ test("force render in case of existing render", async () => {
 
   def.resolve();
   await nextTick();
-  // we check here that the render reaches C (so, that it was properly forced)
   expect(steps.splice(0)).toMatchInlineSnapshot(`
     [
       "C:willUpdateProps",
@@ -508,8 +503,6 @@ describe("render loop detection", () => {
       static template = xml`<t t-out="this.props.value"/>`;
       props = props({ value: t.number(), inc: t.function() });
       setup() {
-        // Updating parent state during setup retriggers the parent render, which
-        // recreates this child, whose setup runs again: an infinite render loop.
         this.props.inc();
       }
     }
@@ -517,12 +510,10 @@ describe("render loop detection", () => {
       static components = { Child };
       static template = xml`<Child value="this.value()" inc="this.inc"/>`;
       value = signal(1);
-      // arrow so it stays bound to the Root instance when called from the child
       inc = () => this.value.set(this.value() + 1);
     }
 
     let error: any;
-    // Before the fix this never resolves (the tab freezes); now it rejects.
     await mount(Root, fixture, { test: true }).catch((e) => (error = e));
 
     expect(error).toBeInstanceOf(OwlError);
@@ -532,10 +523,6 @@ describe("render loop detection", () => {
   });
 
   test("wide re-render under an uncommitted root is not a render loop", async () => {
-    // 1001 children each re-rendering once while the root fiber is held open
-    // by an async sibling. Each child renders only twice: no loop. A counter
-    // shared at the root level would add up all sibling re-renders and reach
-    // the limit anyway (false positive), so the count must stay per fiber.
     const shared = signal(0);
     const def = makeDeferred();
 
@@ -558,8 +545,8 @@ describe("render loop detection", () => {
     }
 
     const promise = mount(Root, fixture, { test: true });
-    await nextTick(); // all Child fibers rendered; root fiber waits on AsyncChild
-    shared.set(1); // every Child re-renders exactly once
+    await nextTick();
+    shared.set(1);
     await nextTick();
 
     def.resolve();
@@ -575,7 +562,6 @@ test("node.renderFn can be wrapped during setup and the original called unbound"
     static template = xml`<span t-out="this.state.n"/>`;
     state = proxy({ n: 1 });
     setup() {
-      // the shape of Odoo's onWillRender / onRendered (web/core/utils/render_hooks.js)
       const node: any = this.__owl__;
       const render = node.renderFn;
       node.renderFn = (...args: any[]) => {

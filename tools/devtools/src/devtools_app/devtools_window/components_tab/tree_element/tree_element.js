@@ -28,7 +28,6 @@ export class TreeElement extends Component {
     this.components = plugin(ComponentsPlugin);
     this.element = signal(null);
     this.stringifiedPath = JSON.stringify(this.props.component.path);
-    // Scroll to the selected element when it changes
     onMounted(() => {
       if (this.props.component.selected) {
         this.element()?.scrollIntoView({ block: "center", behavior: "auto" });
@@ -44,7 +43,6 @@ export class TreeElement extends Component {
         this.components.selectedElement.set(el);
       }
     });
-    // Effect to apply a short highlight effect to the component when it is rendered
     useEffect(() => {
       if (this.components.renderPaths.has(this.stringifiedPath)) {
         if (this.blockHighlight) {
@@ -65,7 +63,6 @@ export class TreeElement extends Component {
         }
       }
     });
-    // Used to know when the component is in the search bar results
     useEffect(() => {
       const searchResults = this.components.searchResults();
       if (searchResults.includes(this.props.component.path)) {
@@ -167,12 +164,10 @@ export class TreeElement extends Component {
     this.store.openContextMenu(ev, this.contextMenuItems);
   }
 
-  // Expand/fold the component node
   toggleDisplay() {
     this.props.component.toggled = !this.props.component.toggled;
   }
 
-  // Used to select the component node
   toggleComponent() {
     if (this.store.toggleOnSelected()) {
       this.toggleDisplay();
@@ -182,8 +177,6 @@ export class TreeElement extends Component {
     }
   }
 
-  // Adds the component name to the components toggle blacklist if not already present
-  // Else, remove it from the blacklist
   toggleComponentToBlacklist() {
     if (this.store.componentsToggleBlacklist().has(this.props.component.name)) {
       if (!this.props.component.toggled) {

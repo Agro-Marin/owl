@@ -1,8 +1,5 @@
 import { Component, mount, useState, onPatched} from "@odoo/owl";
 
-// -----------------------------------------------------------------------------
-// Data generation
-// -----------------------------------------------------------------------------
 
 let idCounter = 1;
 const adjectives = [
@@ -26,9 +23,6 @@ function buildData(count) {
     return data;
 }
 
-// -----------------------------------------------------------------------------
-// Components
-// -----------------------------------------------------------------------------
 class Button extends Component {
   static template = "Button";
 }
@@ -120,5 +114,4 @@ class Root extends Component {
 }
 
 
-// dev=false for benchmarking. we don't want to benchmark dev code!
 mount(Root, document.body, { templates: TEMPLATES, dev: false });

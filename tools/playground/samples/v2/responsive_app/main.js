@@ -1,17 +1,5 @@
-// In this example, we show how one can design an application that is responsive:
-// its UI is different in mobile mode or in desktop mode.
-//
-// The main idea is to have a "isMobile" key in the environment, then listen
-// to resize events and update the env if needed.  Then, the whole interface
-// will be updated, creating and destroying components as needed.
-//
-// To see this in action, try resizing the window.  The application will switch
-// to mobile mode whenever it has less than 768px.
 import { Component, useState, mount, reactive, useEnv } from "@odoo/owl";
 
-//------------------------------------------------------------------------------
-// Helpers
-//------------------------------------------------------------------------------
 
 function debounce(func, wait, immediate) {
   let timeout;
@@ -33,9 +21,6 @@ function debounce(func, wait, immediate) {
   };
 }
 
-//------------------------------------------------------------------------------
-// Responsive hook
-//------------------------------------------------------------------------------
 
 function createUI() {
   const getIsMobile = () => window.innerWidth <= 768;
@@ -58,9 +43,6 @@ function useUI() {
 }
 
 
-//------------------------------------------------------------------------------
-// Components
-//------------------------------------------------------------------------------
 class Navbar extends Component {
   static template = "Navbar";
 }
@@ -108,9 +90,6 @@ class Root extends Component {
 
 
 
-//------------------------------------------------------------------------------
-// Application Startup
-//------------------------------------------------------------------------------
 const env = {
   ui: createUI()
 };

@@ -18,12 +18,6 @@ import { logStep, makeTestFixture, nextTick, snapshotEverything } from "../helpe
 snapshotEverything();
 let fixture: HTMLElement;
 
-// Browsers dispatch events synchronously from inside remove(): chrome fires
-// `change` when a focused input whose value is not committed yet gets detached.
-// jsdom does not, so an element opts in by carrying the event it should fire on
-// removal. Installed here rather than inside a test because blockdom captures
-// Element.prototype.remove when it builds a block class, and those classes are
-// cached across tests.
 const originalElementRemove = Element.prototype.remove;
 Element.prototype.remove = function (this: Element) {
   const eventName = (this as any).fireOnRemove;
@@ -54,7 +48,7 @@ describe("refs", () => {
     }
     const test = await mount(Test, fixture);
     expect(test.input()).toBe(fixture.firstChild);
-    test.input()!.value = "test"; // typed as HTMLInputElement | null
+    test.input()!.value = "test";
     expect((fixture.firstChild as HTMLInputElement).value).toBe("test");
   });
 
@@ -352,8 +346,6 @@ describe("refs", () => {
     await nextTick();
     expect(root.myRef()).toBe(fixture.querySelector(".slotted"));
 
-    // Removing the wrapper removes the slotted element from the DOM; the ref
-    // signal (owned by the surviving Root) must be cleared too.
     root.visible.set(false);
     await nextTick();
     expect(fixture.innerHTML).not.toContain("Coucou");
@@ -380,7 +372,6 @@ describe("refs", () => {
     const root = await mount(Root, fixture);
     expect(root.myRef()).not.toBeNull();
 
-    // tearing down the host (and the slot content with it) clears the ref
     root.visible.set(false);
     await nextTick();
     expect(root.myRef()).toBeNull();
@@ -426,8 +417,6 @@ describe("refs", () => {
     const root = await mount(Root, fixture);
     expect(root.myRef()).toBe(fixture.querySelector(".slotted"));
 
-    // Wrapper is NOT unmounted; toggling its own t-if removes the slot element
-    // in place, so the ref is cleared by Wrapper's post-patch sweep.
     const wrapper = Object.values((root as any).__owl__.children)[0] as any;
     wrapper.component.show.set(false);
     await nextTick();
@@ -441,10 +430,6 @@ describe("refs", () => {
     }
     class Root extends Component {
       static components = { Inner };
-      // The ref is hosted by Inner (it owns the slotted span's dom), but Inner
-      // is a block-child of a t-if that Root removes in place: Root survives, so
-      // its own post-patch sweep doesn't cover Inner, and Inner.remove() never
-      // fires (the block bulk-removes it). The removal must still clear the ref.
       static template = xml`<div t-if="this.show()"><Inner><span t-ref="this.myRef">x</span></Inner></div>`;
       show = signal(true);
       myRef = signal.ref();
@@ -471,9 +456,6 @@ describe("refs", () => {
     class Wrapper extends Component {
       static template = xml`<div><t t-call-slot="default"/></div>`;
       setup() {
-        // Like Portal/Suspense: tear down a sub-root from this component's own
-        // teardown — a removal that re-enters while the parent patch that hosts
-        // our ref is still collecting. Only the outermost removal must sweep.
         onWillDestroy(() => subApp.destroy());
       }
     }
@@ -518,9 +500,6 @@ describe("refs", () => {
   });
 
   test("a listener firing during the removal still sees its ref", async () => {
-    // Reached in practice because owl patches on an animation frame: the frame
-    // can land between the keydown handler that hides the input and the key
-    // press that commits its value, so the input is still dirty when detached.
     const steps: string[] = [];
     class Test extends Component {
       static template = xml`<div><input t-if="this.show()" t-ref="this.input"/></div>`;

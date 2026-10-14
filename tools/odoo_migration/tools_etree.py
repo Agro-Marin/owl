@@ -12,10 +12,10 @@ next(new_node_id)
 
 class ArchItem(NamedTuple):
     tag_name: str | None
-    attribute_spaces: dict  # Dictionary of attributes linked to the spaces that precede them
-    end_space: str  # Space between the last attribute and the closing chevron
-    auto_close: bool  # Was the tag closed beforehand (to avoid converting </node> to .../>)?
-    node_id: int  # Node identifier used during the process
+    attribute_spaces: dict
+    end_space: str
+    auto_close: bool
+    node_id: int
 
 
 emptyItem = ArchItem(None, {}, '', True, 0)
@@ -61,14 +61,9 @@ def update_etree(origin: str, callback: Callable[[etree._ElementTree]]) -> str:
     start_space = template.split('<', 1)[0]
     end_space = template.rsplit('>', 1)[-1]
 
-    # Etree removes \n and escape > and < in attribute values
-    # So you must escape it.
 
     template = ATTRIBUTES_SPACE_REG.sub(_escape_newlines_in_attr, template)
 
-    # etree does not preserve spaces between attributes
-    # So you have to parse the document, associate the etree elements with the
-    # spaces and reapply them after the tostring
 
     structure = iter([
         ArchItem(
@@ -95,7 +90,6 @@ def update_etree(origin: str, callback: Callable[[etree._ElementTree]]) -> str:
         else:
             break
 
-    # apply changes
     callback(root)
 
     if ref_template == etree.tostring(root, encoding='unicode'):
@@ -103,19 +97,16 @@ def update_etree(origin: str, callback: Callable[[etree._ElementTree]]) -> str:
 
     _dedent_node(root)
 
-    # add node_id on every node to have a reference when we update the string
     for el in root.iter(tag=etree.Element):
         if ref := arch.get(el):
             el.attrib['__uprade__'] = ref.node_id
 
-    # re-insert spaces between attributes
     new_arch: dict[str, ArchItem] = {}
     for el in root.iter(tag=etree.Element):
         item = arch.get(el, emptyItem)
         need_dedent = int(el.attrib.pop('__need_dedent_attributes__', 0))
         node_id = item.node_id
         if not node_id:
-            # new nodes
             node_id = str(next(new_node_id))
             el.attrib['__uprade__'] = node_id
         arch_item = ArchItem(
@@ -129,7 +120,6 @@ def update_etree(origin: str, callback: Callable[[etree._ElementTree]]) -> str:
 
     new_template = etree.tostring(root, encoding='unicode')
 
-    # unescape \n in attribute values
     indented_template = ATTRIBUTES_SPACE_REG.sub(_un_escape_newlines_in_attr, new_template)
 
     for match in NODE_REG.finditer(indented_template):
@@ -158,10 +148,9 @@ def update_etree(origin: str, callback: Callable[[etree._ElementTree]]) -> str:
 
         indented_template = indented_template.replace(node_xml, new_node_xml, 1)
 
-    # test if indent does not fail
     try:
         etree.fromstring(indented_template)
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
         log.warning('Wrong template conversion:\n%s\n%s', indented_template, e)
         return origin
 
@@ -245,15 +234,15 @@ def _get_attribute_spaces(arch, el, need_dedent):
     if not len(attrib):
         return {}
     spaces = [arch.get(el, (None, {}, ' '))[1].get(attr, (None, '"', None))[0] for attr in attrib]
-    nb_space = max([0] + [len(s) for s in spaces if s is not None])  # auto indent new attribute from other attributes
+    nb_space = max([0] + [len(s) for s in spaces if s is not None])
     has_new_attr = any(v is None for v in spaces)
     has_old_attr = any(v is not None for v in spaces)
 
     if has_new_attr and (has_old_attr and nb_space > 3 or len(attrib) > 3 or len(''.join(attrib.keys()) + ''.join(attrib.values())) > 80):
-        if nb_space < 4:  # auto indent new attribute from closed char '>' indentation
+        if nb_space < 4:
             tag_tail_space = arch.get(el, (None, {}, ' '))[2]
             nb_space = max([len(tag_tail_space), nb_space])
-        if nb_space < 4:  # auto indent new attribute from the indentation node
+        if nb_space < 4:
             tag_indent_space = get_indentation(el)
             nb_space = max(nb_space, len(tag_indent_space) + 4)
 
@@ -296,14 +285,12 @@ def _dedent_node(root):
                 elif el.getparent().text:
                     el.getparent().text = el.getparent().text[0:-need_dedent]
 
-            # dedent text in node
             match = INDENT_TEXT_REG.findall(el.text or '')
             if any(text and len(space) > need_dedent for space, text in match):
                 el.text = ''.join([
                     f'{space[0:-need_dedent] if len(space) > need_dedent else space}{text}'
                     for space, text in match
                 ])
-            # dedent text tails
             match = INDENT_TEXT_REG.findall(el.tail or '')
             if any(text and len(space) > need_dedent for space, text in match) or el.getnext() is None:
                 el.tail = ''.join([
@@ -312,10 +299,8 @@ def _dedent_node(root):
                 ])
 
 
-# QUICK TESTING
 
 def _test():
-    # ruff: noqa: W293, W291, E222
 
     template_test = """<?xml version="1.0" encoding="utf-8"?>
     <odoo>
@@ -357,17 +342,13 @@ def _test():
     </odoo>
     """
 
-    # no change
     assert template_test == update_etree(template_test, lambda el: None)
 
-    # trigger a change
     other_test = update_etree(template_test, lambda el: el.set('__test__', '33'))
     assert '__test__' in other_test
     assert template_test == other_test.replace(' __test__="33"', '')
 
-    # replace a node and move an other with dedent
     def change(el):
-        # replace a node
         placeholder = el.xpath('//placeholder')[0]
 
         parent = placeholder.getparent()
@@ -392,7 +373,6 @@ def _test():
 
         parent.remove(placeholder)
 
-        # move a node to his parent and dedent
         article = el.xpath('//article')[0]
         parent = article.getparent()
         begin_indent = get_indentation(article)

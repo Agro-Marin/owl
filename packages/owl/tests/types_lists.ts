@@ -1,5 +1,3 @@
-// Compile-time checks for prop type lists e.g. t.or([...]). This file is
-// only typechecked (npm run test:types); it is not executed.
 import { props, t } from "../src";
 
 type IsAny<T> = boolean extends (T extends never ? true : false) ? true : false;

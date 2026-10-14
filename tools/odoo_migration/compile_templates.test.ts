@@ -34,8 +34,6 @@ test("the Odoo template checker releases every temporary app, including failures
     expect(run.stdout).toContain("compiled 3 templates, 1 failures");
     expect(run.stdout).toContain("[owl:integration] temporary apps retained: 0");
     expect(run.stdout.match(/\[owl:lifecycle\] destroy app/g)).toHaveLength(3);
-    // The checker exits with failure when its compilation findings include a
-    // failure. The probe itself completes without throwing about retained apps.
     expect(run.status).toBe(1);
     expect(run.stderr).toBe("");
   } finally {
@@ -87,8 +85,6 @@ test.each(["regression", "coverage"] as const)(
       await mkdir(join(web, "static/src/core"), { recursive: true });
       await mkdir(xpath, { recursive: true });
       await writeFile(join(scratch, "package.json"), '{"type":"module"}');
-      // These tests exercise checker status, coverage and lifetime, rather than
-      // Odoo's inheritance engine. No XPath is evaluated by these fixtures.
       await writeFile(join(xpath, "package.json"), '{"main":"index.cjs"}');
       await writeFile(
         join(xpath, "index.cjs"),

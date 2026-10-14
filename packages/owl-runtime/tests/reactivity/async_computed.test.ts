@@ -18,8 +18,6 @@ beforeEach(() => {
 });
 
 async function flush() {
-  // Async computeds rely on Promise resolutions plus the scheduler tick used
-  // by signal writes; a handful of microticks settles both.
   for (let i = 0; i < 4; i++) {
     await Promise.resolve();
   }
@@ -87,7 +85,7 @@ test("equals option: a fetch resolving to an equal value does not notify", async
   expect(fetches).toBe(1);
   expect(seen).toEqual([undefined, ["pos"]]);
 
-  a.refresh(); // re-fetches, resolves to a fresh but equal array
+  a.refresh();
   await flush();
   expect(fetches).toBe(2);
   expect(seen).toEqual([undefined, ["pos"]]);
@@ -144,7 +142,6 @@ test("ignores stale resolution from a superseded run", async () => {
   id.set(2);
   await Promise.resolve();
 
-  // Stale run resolves last — must be ignored.
   def2.resolve(200);
   await flush();
   expect(a()).toBe(200);
@@ -220,7 +217,6 @@ test("AbortError from fetcher does not populate error", async () => {
 
   await Promise.resolve();
   id.set(2);
-  // Resolve the now-stale run; the fetcher will throw AbortError after.
   def1.resolve(0);
   def2.resolve(0);
   await flush();
@@ -327,13 +323,10 @@ test("reads after the first await are NOT tracked", async () => {
   await flush();
   expect(calls).toEqual([{ id: 1, filter: "a" }]);
 
-  // Changing filter should NOT trigger a re-run (read after await).
   filter.set("b");
   await flush();
   expect(calls).toEqual([{ id: 1, filter: "a" }]);
 
-  // Changing id (read before await) DOES trigger a re-run; the new run
-  // observes the latest filter value.
   id.set(2);
   await flush();
   expect(calls).toEqual([
@@ -399,7 +392,6 @@ test("currentPromise() resolves immediately when no run is in flight", async () 
   await flush();
   expect(a.loading()).toBe(false);
 
-  // Awaiting it and reaching the next line proves it already resolved.
   let resolved = false;
   await a.currentPromise().then(() => (resolved = true));
   expect(resolved).toBe(true);
@@ -411,8 +403,6 @@ test("currentPromise() reuses one deferred per in-flight run, lazily", async () 
   const def = makeDeferred<number>();
   const a = asyncComputed(() => def);
 
-  // Repeated calls within a single in-flight run hand out the same promise
-  // (the deferred is created once, on the first call, and reused).
   const p1 = a.currentPromise();
   const p2 = a.currentPromise();
   expect(p1).toBe(p2);
@@ -421,7 +411,6 @@ test("currentPromise() reuses one deferred per in-flight run, lazily", async () 
   await flush();
   expect(a.loading()).toBe(false);
 
-  // Once idle, a fresh already-resolved promise is returned instead.
   const p3 = a.currentPromise();
   expect(p3).not.toBe(p1);
   await p3;
@@ -440,17 +429,15 @@ test("currentPromise() resolves only after the latest run when superseded", asyn
   a.currentPromise().then(() => (resolved = true));
 
   await Promise.resolve();
-  id.set(2); // supersede run 1 with run 2
+  id.set(2);
   await flush();
   expect(resolved).toBe(false);
 
-  // Resolving the superseded run 1 must NOT resolve currentPromise.
   def1.resolve(100);
   await flush();
   expect(resolved).toBe(false);
   expect(a.loading()).toBe(true);
 
-  // Resolving the latest run 2 does.
   def2.resolve(200);
   await flush();
   expect(resolved).toBe(true);
@@ -536,13 +523,11 @@ test("onWillStart can await currentPromise() before mounting", async () => {
     .then(() => (mounted = true));
 
   await flush();
-  // onWillStart is still awaiting the in-flight fetch: not mounted yet.
   expect(mounted).toBe(false);
   expect(fixture.innerHTML).toBe("");
 
   def.resolve("hello");
   await mountProm;
-  // The value is ready by the time the component renders.
   expect(mounted).toBe(true);
   expect(fixture.innerHTML).toBe("<div>hello</div>");
 

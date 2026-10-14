@@ -1,4 +1,3 @@
-// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`t-if > a t-if next to a div 1`] = `
 "function anonymous(app, bdom, helpers

@@ -1,8 +1,5 @@
 import type { ComponentNode } from "./component_node";
 
-// -----------------------------------------------------------------------------
-//  Component Class
-// -----------------------------------------------------------------------------
 
 interface StaticComponentProperties {
   template: string;

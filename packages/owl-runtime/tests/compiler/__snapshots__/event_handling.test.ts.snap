@@ -1,4 +1,3 @@
-// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`t-on > an arrow handler with a computed default parameter 1`] = `
 "function anonymous(app, bdom, helpers

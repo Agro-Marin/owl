@@ -2,9 +2,6 @@ import { renderToString, snapshotEverything } from "../helpers";
 
 snapshotEverything();
 
-// -----------------------------------------------------------------------------
-// comments
-// -----------------------------------------------------------------------------
 
 describe("comments", () => {
   test("comments are ignored", () => {

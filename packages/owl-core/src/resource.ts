@@ -14,7 +14,6 @@ export interface ResourceAddOptions {
   sequence?: number;
 }
 
-// T is the validation type; items carry the value type it describes.
 type Entry<T> = [sequence: number, item: StripBrands<T>];
 
 export class Resource<T> {
@@ -75,8 +74,6 @@ export class Resource<T> {
 
   use(item: StripBrands<T>, options: ResourceAddOptions = {}): Resource<T> {
     const scope = useScope();
-    // Lifetime registration must finish before immediate readers can throw
-    // or destroy the scope in response to the newly published entry.
     batch(() => {
       const entry = this._add(item, options);
       scope.onDestroy(() => this._remove((e) => e === entry));

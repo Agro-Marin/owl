@@ -1,14 +1,5 @@
 import { Component, mount, onWillDestroy, usePlugin, Plugin, signal, xml } from "@odoo/owl";
 
-// Plugins: shared, scoped state with lifecycle.
-// `ClockPlugin` owns a single `setInterval` and a reactive `now` signal.
-// Two clock widgets read the same plugin — they stay perfectly in sync, and
-// only one interval runs no matter how many widgets are mounted.
-//
-// `onWillDestroy` runs when the plugin is torn down (here: when the app
-// unmounts) — that's where the interval is cleared.
-//
-// Try: add a third widget that displays `clock.now().getFullYear()`.
 
 class ClockPlugin extends Plugin {
     now = signal(new Date());

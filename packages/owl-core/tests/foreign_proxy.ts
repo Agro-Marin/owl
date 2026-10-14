@@ -1,10 +1,3 @@
-// Targets that sit behind a Proxy of their own, under owl's: the shape of Odoo
-// mail's records (a class instance whose set trap tells a write through the
-// reactive proxy from an internal one by its receiver) and record lists (an
-// Array subclass whose traps map its indices and length to `receiver.data`).
-// Owl must treat them as it treats an ordinary target: every read and write
-// goes through the target's own traps with owl's proxy (or an observe() view)
-// as the receiver, and is tracked and notified once.
 import { proxy } from "../src";
 
 export interface Item {
@@ -44,8 +37,6 @@ class RecordBase {
   a = 0;
   items: Item[] = [];
   nested = { v: 0 };
-  // what the record's own Proxy is, and the proxy its internal writes go
-  // through: Odoo mail's `_proxyInternal` and `_proxy`
   declare _internal: RecordBase;
   declare _proxy: RecordBase;
   get total() {
@@ -56,14 +47,6 @@ class RecordBase {
   }
 }
 
-/**
- * A class instance behind a receiver-sensitive Proxy (Odoo mail's
- * makeRecordProxy): a function read is bound to the receiver; a write whose
- * receiver is not the record's own Proxy (a write through owl's proxy) is made
- * on the record itself, any other write is made again through `_proxy`, the
- * reactive proxy, whose set trap comes back with the field marked as being
- * written.
- */
 export function makeRecord(): Fields {
   const record = Object.assign(new RecordBase(), fields());
   const writing = new Set<PropertyKey>();
@@ -104,7 +87,6 @@ export const objectKinds: ObjectKind[] = [
   },
 ];
 
-/** A Proxy with every trap written out, forwarding to Reflect as it is given. */
 export function forwardingProxy<T extends object>(target: T): T {
   return new Proxy(target, {
     get: (t, key, receiver) => Reflect.get(t, key, receiver),
@@ -121,12 +103,6 @@ export function forwardingProxy<T extends object>(target: T): T {
 const isIndex = (key: PropertyKey): key is string =>
   typeof key === "string" && String(Number(key) >>> 0) === key;
 
-/**
- * An Array subclass that keeps its items in `data` and answers its index and
- * length reads and writes through `receiver.data`: read through owl's proxy,
- * `data` is read through it too, tracked. Array.prototype's methods run on it
- * as on any array.
- */
 class MappedList<T> extends Array<T> {
   declare data: T[];
 }
@@ -168,11 +144,6 @@ export function makeMappedList<T>(items: T[]): T[] {
   return new Proxy(list, mappedListTraps<T>());
 }
 
-/**
- * Odoo mail's RecordList: a MappedList whose class reimplements the Array
- * methods over `this.data`, and whose Proxy binds every function it hands out
- * to the receiver.
- */
 class OwnMethodsList<T> extends MappedList<T> {
   push(...items: T[]): number {
     return this.data.push(...items);
@@ -219,8 +190,6 @@ export function makeOwnMethodsList<T>(items: T[]): T[] {
 export interface ListKind {
   name: string;
   make<T>(items: T[]): T[];
-  // where a list that keeps its items elsewhere keeps them: Odoo mail writes
-  // a record list's `data` through the list's reactive proxy, not its indices
   mapped?: true;
 }
 

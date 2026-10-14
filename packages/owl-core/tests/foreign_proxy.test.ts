@@ -275,8 +275,6 @@ describe.each(listKinds)("$name under a proxy", ({ make, mapped }) => {
   test.skipIf(mapped)(
     "a delete runs an immediate reader of the index, the length and the items once",
     () => {
-      // (a list whose traps report no own index property is outside it: a proxy
-      // tells a key's presence by the target's own properties)
       const list = proxy(make(items(3)));
       let runs = 0;
       immediateEffect(() => {
@@ -346,8 +344,6 @@ describe.each(listKinds)("$name under a proxy", ({ make, mapped }) => {
   });
 
   test("a shallow signal of it notifies an index written past the end once and hands out items as stored", async () => {
-    // (a method of the list writing the array it keeps its items in is not
-    // seen: a shallow proxy hands that array out raw)
     const raw = items(2);
     const list = signal.Array(make(raw));
     const seen: number[] = [];

@@ -15,27 +15,15 @@ import {
 } from "./computations";
 import { debug, debugLog } from "./debug";
 
-// Special keys to subscribe to: the key list, notified of a key's creation or
-// deletion; an array's items as one atom, notified by any write of an index or
-// of the length (read by readArrayItems and the searches). Their descriptions
-// name them in the debug log.
 const KEYCHANGES = Symbol("(keys)");
 const ITEMS = Symbol("items");
 
-// The following types only exist to signify places where objects are expected
-// to be proxy or not, they provide no type checking benefit over "object"
 type Target = object;
 type Reactive<T extends Target> = T;
 
 const objectToString = Object.prototype.toString;
 const objectHasOwnProperty = Object.prototype.hasOwnProperty;
 
-/**
- * Checks whether a given value can be made into a proxy object.
- *
- * @param value the value to check
- * @returns whether the value can be made proxy
- */
 function canBeMadeReactive(value: any): boolean {
   if (typeof value !== "object" || value === null) {
     return false;
@@ -47,12 +35,6 @@ function canBeMadeReactive(value: any): boolean {
     objectToString.call(raw) === "[object Object]"
   );
 }
-/**
- * The deep proxy of `value` when it can have one, `value` itself otherwise
- * (and always for a shallow proxy, which hands its values out as stored). The
- * proxy an object read before already has spares the checks proxifyTarget
- * would make (twice) to find it.
- */
 function reactiveValue(value: any, shallow: boolean): any {
   if (shallow || typeof value !== "object" || value === null) {
     return value;
@@ -65,11 +47,9 @@ function reactiveValue(value: any, shallow: boolean): any {
 }
 
 const skipped = new WeakSet<Target>();
-// class prototypes marked raw: an object inheriting from one is raw too
 const rawPrototypes = new WeakSet<Target>();
 let hasRawPrototypes = false;
-// what every plain object, array, collection or function inherits from
-const builtinPrototypes = /* @__PURE__ */ builtinPrototypeSet();
+const builtinPrototypes =   builtinPrototypeSet();
 
 function builtinPrototypeSet(): Set<object> {
   return new Set([
@@ -82,15 +62,6 @@ function builtinPrototypeSet(): Set<object> {
   ]);
 }
 
-/**
- * Mark an object or array so that it is ignored by the reactivity system: a
- * proxy hands it out as it is. Marking a class prototype (`markRaw(Foo.prototype)`)
- * marks every instance of the class and of its subclasses, which a class with
- * private members needs: a proxy cannot reach them.
- *
- * @param value the value to mark (a proxy marks its raw object)
- * @returns the value itself
- */
 export function markRaw<T extends Target>(value: T): T {
   const raw = toRaw(value);
   if (builtinPrototypes.has(raw)) {
@@ -129,8 +100,6 @@ function isMarkedRaw(target: Target): boolean {
   return false;
 }
 
-// Proxy invariants: a locked data property must be handed out as stored,
-// and a non-configurable accessor without a getter must yield undefined.
 function isLocked(target: Target, key: PropertyKey): boolean {
   const desc = Reflect.getOwnPropertyDescriptor(target, key);
   return (
@@ -140,10 +109,6 @@ function isLocked(target: Target, key: PropertyKey): boolean {
   );
 }
 
-// The TypeError an engine throws when a getter, setter or method reaches a
-// private member (`this.#x`) through a proxy, which does not have it: V8,
-// SpiderMonkey, JavaScriptCore. The member's name, or its class's, is captured
-// where the message gives it.
 const PRIVATE_MEMBER_ERROR =
   /^(?:Cannot (?:read|write) private member (#\S+)|Receiver must be an instance of class (\S+)|can't access private field or method|Cannot access invalid private field \(evaluating '[^']*?(#[\w$]+))/;
 
@@ -160,10 +125,6 @@ function privateMemberError(error: unknown, target: Target, key: PropertyKey): u
   );
 }
 
-// Whether a class up the prototype chain of `target` declares the private
-// `member` (its source names it), or is the class `className`: the error is
-// then the proxy's. One naming neither is blamed on the proxy; one naming a
-// member no class of the target has came from elsewhere.
 function declaresMember(target: Target, member?: string, className?: string): boolean {
   if (member === undefined && className === undefined) {
     return true;
@@ -184,21 +145,10 @@ function declaresMember(target: Target, member?: string, className?: string): bo
 
 const PRIVATE_NAMES = /#[\p{ID_Continue}$\u200c\u200d]+/gu;
 
-/**
- * Given a proxy objet, return the raw (non proxy) underlying object
- *
- * @param value a proxy value
- * @returns the underlying value
- */
 export function toRaw<T extends Target, U extends Reactive<T>>(value: U | T): T {
-  // a raw object is never undefined: one lookup answers both questions
   return (targets.get(value) as T | undefined) ?? (value as T);
 }
 
-// The atoms of the keys of each target. A weakly holdable key (an object or
-// unregistered symbol) is held weakly: its atom must not keep a deleted key,
-// or any key of a WeakMap, alive. String property keys, the common case,
-// are one WeakMap lookup and one Map lookup away.
 interface KeyAtoms {
   keys: WeakMap<Target, Map<PropertyKey, Atom>>;
   weakKeys: WeakMap<Target, WeakMap<WeakKey, Atom>>;
@@ -210,10 +160,7 @@ interface AtomTable {
   delete(key: any): boolean;
 }
 
-// a key's value, read by a get
 const itemAtoms: KeyAtoms = { keys: new WeakMap(), weakKeys: new WeakMap() };
-// a key's presence, read by `in` / has(): notified when the key appears or
-// disappears, not when its value changes
 const presenceAtoms: KeyAtoms = { keys: new WeakMap(), weakKeys: new WeakMap() };
 const allAtoms = [itemAtoms, presenceAtoms];
 
@@ -231,7 +178,6 @@ function tablesOf(atoms: KeyAtoms, key: unknown): WeakMap<Target, AtomTable> {
   return isWeakKey(key) ? atoms.weakKeys : atoms.keys;
 }
 
-// the table of the atoms of `target`'s keys of the kind of `key`, made on first use
 function keyTable(target: Target, key: unknown, atoms: KeyAtoms): AtomTable {
   const tables = tablesOf(atoms, key);
   let table = tables.get(target);
@@ -253,18 +199,7 @@ function findAtom(target: Target, key: unknown, atoms: KeyAtoms): Atom | undefin
   return tablesOf(atoms, key).get(target)?.get(key);
 }
 
-/**
- * Subscribes the current computation to the value (or the presence) of `key`
- * on `target`.
- *
- * @param target the target whose key is read
- * @param key the key read (or `KEYCHANGES` for the key list, `ITEMS` for an
- *   array's items)
- * @param atoms the value atoms (default) or the presence atoms
- */
 function onReadTargetKey(target: Target, key: unknown, atoms: KeyAtoms = itemAtoms): void {
-  // a read nobody observes subscribes nothing, and creates no atom for its
-  // key: a model building its records outside any render reads thousands
   if (isObserving()) {
     if (debug.reactivity) {
       debugRead(target, key, atoms);
@@ -273,14 +208,6 @@ function onReadTargetKey(target: Target, key: unknown, atoms: KeyAtoms = itemAto
   }
 }
 
-/**
- * Notifies the readers of `key` on `target` that it changed, if it has any.
- *
- * @param target the target whose key changed
- * @param key the key that changed (or `KEYCHANGES` if a key was created or
- *   deleted)
- * @param atoms the value atoms (default) or the presence atoms
- */
 function onWriteTargetKey(target: Target, key: unknown, atoms: KeyAtoms = itemAtoms): void {
   const atom = findAtom(target, key, atoms);
   if (atom) {
@@ -295,8 +222,6 @@ function describeKey(key: unknown): string {
   return key === KEYCHANGES || key === ITEMS ? key.description! : String(key);
 }
 
-// which atom a tracked proxy read subscribes to, and who reads it: what a
-// "why does this not re-render" question needs
 function debugRead(target: Target, key: unknown, atoms: KeyAtoms): void {
   const reader = getCurrentComputation();
   const what = atoms === presenceAtoms ? `presence of ${String(key)}` : describeKey(key);
@@ -307,15 +232,11 @@ function debugRead(target: Target, key: unknown, atoms: KeyAtoms): void {
   );
 }
 
-// a key appeared or disappeared: the key list and the key's presence
 function onWriteKeyPresence(target: Target, key: unknown): void {
   onWriteTargetKey(target, KEYCHANGES);
   onWriteTargetKey(target, key, presenceAtoms);
 }
 
-// A removed key's atoms that nothing observes are dropped: kept, every key a
-// long-lived object ever had would stay allocated, object keys included. A
-// later read creates them again.
 function releaseKey(target: Target, key: unknown): void {
   for (const atoms of allAtoms) {
     const table = tablesOf(atoms, key).get(target);
@@ -326,16 +247,6 @@ function releaseKey(target: Target, key: unknown): void {
   }
 }
 
-/**
- * Notifies the readers of the indices an array dropped when its
- * length was written: such a write does not go through the deleteProperty trap.
- * Visits the dropped range or the atoms, whichever is smaller: a pop() drops
- * one index of an array whose every index may have an atom.
- *
- * @param target the array whose length was written
- * @param newLength the length after the write
- * @param oldLength the length before the write
- */
 function onWriteDroppedIndices(target: Target, newLength: number, oldLength: number): void {
   for (const atoms of allAtoms) {
     const table = atoms.keys.get(target);
@@ -365,11 +276,7 @@ function onWriteDroppedIndex(target: Target, key: string, atoms: KeyAtoms): void
   releaseKey(target, key);
 }
 
-// Maps proxy objects to the underlying target
 const targets = new WeakMap<Reactive<Target>, Target>();
-// A shallow proxy (the value of a collection signal) does not wrap what it
-// holds, a deep one (proxy()) does: one target may have both, and neither
-// may be handed out for the other.
 const deepProxies = new WeakMap<Target, Reactive<Target>>();
 const shallowProxies = new WeakMap<Target, Reactive<Target>>();
 
@@ -380,14 +287,9 @@ export function proxifyTarget<T extends Target>(target: T, shallow: boolean): T 
   return proxifyCheckedTarget(target, shallow);
 }
 
-// reactiveValue has already checked eligibility. Rechecking would both repeat
-// the work and run a value's Symbol.toStringTag getter a second time.
 function proxifyCheckedTarget<T extends Target>(target: T, shallow: boolean): T {
   const raw = targets.get(target);
   if (raw) {
-    // a proxy of the other flavor is unwrapped: proxy() of a collection
-    // signal's value is deep, a collection signal of a proxy() is shallow. A
-    // proxy of this flavor, or an observe() view, is kept as it is.
     if ((shallow ? deepProxies : shallowProxies).get(raw) !== target) {
       return target;
     }
@@ -414,48 +316,12 @@ function proxifyCheckedTarget<T extends Target>(target: T, shallow: boolean): T 
   return proxy;
 }
 
-/**
- * Wraps an object so it behaves like a signal, but with the familiar
- * property-access API: instead of `count()` / `count.set(n)`, you write
- * `state.count` and `state.count = n`. Reading and writing the proxy
- * transparently looks and feels like reading and writing the original object.
- *
- * Reactivity is nested: reading a property that holds another object/array
- * returns a proxy for that value too, recursively. Arrays, Maps, Sets, and
- * WeakMaps are also wrapped, so `state.items.push(x)` or `state.map.set(k, v)`
- * notify subscribers the same way property writes do.
- *
- * Subscriptions are only created when a read happens *while a computation is
- * active* — i.e. inside a component's render, or inside an `effect`,
- * `computed`, or `asyncComputed`. Reading the proxy from a plain function
- * with no surrounding computation just returns the value without subscribing
- * anything.
- *
- * @param target the object to make reactive
- * @returns a proxy that tracks reads/writes against `target`
- */
 export function proxy<T extends Target>(target: T): T {
   return proxifyTarget(target, false);
 }
 
-// the proxy each observe() view reads through, so that a view of a view
-// observes the same target instead of stacking observers
 const viewBases = new WeakMap<object, any>();
 
-/**
- * Returns a view of `target` that calls `callback` the first time a value read
- * through the view changes, synchronously, as OWL 2's `reactive(target,
- * callback)` did. The subscription is one-shot: once `callback` ran, only the
- * values read through the view again are observed. Objects read through the
- * view are views too, with the same callback; reads keep subscribing the
- * computation they happen in (a render, an effect) as a plain proxy read does.
- * An array method that changes the length (push, splice...) reads it through
- * the view, so a push calls the callback, as OWL 2's reactive() did.
- *
- * @param target the object to observe
- * @param callback called when an observed value changes
- * @returns a view of the proxy of `target`
- */
 export function observe<T extends Target>(target: T, callback: () => void): T {
   const computation = createComputation(
     () => untrack(callback),
@@ -467,7 +333,6 @@ export function observe<T extends Target>(target: T, callback: () => void): T {
   computation.notifiesWithoutRecompute = true;
   const views = new WeakMap<Target, any>();
   const read = <R>(fn: () => R): R => withObserver(computation, fn);
-  // a proxy read through the view is a view too
   const wrap = (value: any): any => (targets.has(value) ? view(value) : value);
   function view(target: any): any {
     const reactive = viewBases.get(target) ?? target;
@@ -477,13 +342,9 @@ export function observe<T extends Target>(target: T, callback: () => void): T {
     }
     const raw = toRaw(reactive);
     const methodKeys = collectionMethods(raw);
-    // the functions handed out for the methods the view runs on its proxy, by
-    // the method the proxy handed out
     let methods: Map<Function, Function> | undefined;
     const self: any = new Proxy(reactive, {
       get(r, key, receiver) {
-        // the view is the receiver: a getter, or a target that is itself a
-        // proxy, reads through it and so subscribes the callback
         const value = read(() => Reflect.get(r, key, receiver));
         if (typeof value !== "function") {
           const result = wrap(value);
@@ -537,8 +398,6 @@ export function observe<T extends Target>(target: T, callback: () => void): T {
     targets.set(self, raw);
     return self;
   }
-  // a collection's iterator reads its entries as it advances: each step is
-  // read through the view, not only the call that created the iterator
   function* observedIterator(iterator: Iterator<any>, entries: boolean): IterableIterator<any> {
     let done = false;
     try {
@@ -548,8 +407,6 @@ export function observe<T extends Target>(target: T, callback: () => void): T {
           done = true;
           return step.value;
         }
-        // Only entries yield fresh pairs. An array yielded by keys/values is
-        // the member itself: keep its identity and observe reads through it.
         yield entries ? step.value.map(wrap) : wrap(step.value);
       }
     } finally {
@@ -570,14 +427,8 @@ function isIterator(value: any): value is Iterator<any> {
   );
 }
 
-/**
- * The handler of a regular object or array proxy. One per proxy: the traps
- * cache the strong and weak property-key tables separately, avoiding a
- * WeakMap lookup per read without mixing their accepted key types.
- */
 class BasicHandler implements ProxyHandler<any> {
   shallow: boolean;
-  // the value atoms of the target's keys
   keyAtoms: AtomTable | undefined;
   weakKeyAtoms: AtomTable | undefined;
 
@@ -587,15 +438,11 @@ class BasicHandler implements ProxyHandler<any> {
     this.weakKeyAtoms = undefined;
   }
 
-  // what the atoms of the target's own properties are keyed by: the target,
-  // or for a collection an object standing for its properties
   host(target: Target): Target {
     return target;
   }
 
   get(target: any, key: PropertyKey, receiver: any): any {
-    // a read nobody observes subscribes nothing, and creates no atom for its
-    // key: a model building its records outside any render reads thousands
     if (isObserving()) {
       if (debug.reactivity) {
         debugRead(target, key, itemAtoms);
@@ -620,8 +467,6 @@ class BasicHandler implements ProxyHandler<any> {
   }
 
   set(target: any, key: PropertyKey, value: any, receiver: any): boolean {
-    // a write subscribes nothing, though a getter or setter it runs reads
-    // through the proxy
     const shallow = this.shallow;
     const atoms = this.host(target);
     try {
@@ -637,8 +482,6 @@ class BasicHandler implements ProxyHandler<any> {
     const hadKey = Object.hasOwn(target, key);
     const ret = Reflect.deleteProperty(target, key);
     if (hadKey && ret) {
-      // one batch: an immediate reader of the key, its presence and the keys
-      // runs once
       batch(() => {
         const atoms = this.host(target);
         onWriteKeyPresence(atoms, key);
@@ -671,26 +514,13 @@ function writeKey(
   shallow: boolean,
   atoms: Target
 ): boolean {
-  // a shallow proxy hands its values back as stored: it keeps a proxy
   const stored = shallow ? value : toRaw(value);
   const own = Reflect.getOwnPropertyDescriptor(target, key);
-  // An own data property of an object runs no code and notifies its key only.
-  // Any other write may reach a setter, and an array's notifies its items (and
-  // length) too: one batch, so an immediate reader of several of the keys it
-  // notifies runs once, after the write.
   return own !== undefined && "value" in own && !Array.isArray(target)
     ? write(target, key, stored, receiver, own, atoms)
     : batch(() => write(target, key, stored, receiver, own, atoms));
 }
 
-// The write itself, with the reactive proxy as the receiver: an accessor runs
-// with it as `this`, and a target behind its own Proxy sees it in its set trap.
-// A write that failed changed nothing. It notifies the key's creation and
-// value, and for an array its length and items. An array's length is compared
-// with the length before the write, not with the value the trap is given: an
-// index written past the end has already grown it, whether the target made it
-// an own property or keeps its items elsewhere (an Array subclass behind its
-// own Proxy).
 function write(
   target: any,
   key: PropertyKey,
@@ -734,8 +564,6 @@ function write(
   return true;
 }
 
-// The items atom of an array (ITEMS) is notified without a debug line: the
-// line of the index or length written stands for it.
 function onWriteItems(target: Target): void {
   const atom = findAtom(target, ITEMS, itemAtoms);
   if (atom !== undefined) {
@@ -743,28 +571,16 @@ function onWriteItems(target: Target): void {
   }
 }
 
-// whether a read of `raw` itself sees what a read through its proxy would: true
-// of a plain array, not of a subclass, which may answer from elsewhere
 function isPlainArray(raw: object): boolean {
   return Object.getPrototypeOf(raw) === Array.prototype;
 }
 
-/**
- * The items of `array`, a proxy() of a plain array, read at once: one
- * subscription for the whole array instead of one per index, and each object
- * item handed out as its proxy, as an index read through the proxy would. For
- * any other array (a raw one, a collection signal's shallow value, an observe()
- * view, a subclass of Array) the array itself, to be read as usual. A subclass
- * may answer its index reads from elsewhere (its own proxy, getters), which a
- * read of the raw target would neither see nor subscribe to.
- */
 export function readArrayItems<T>(array: T[]): T[] {
   const raw = targets.get(array) as T[] | undefined;
   if (raw === undefined || deepProxies.get(raw) !== array || !isPlainArray(raw)) {
     return array;
   }
   onReadTargetKey(raw, ITEMS);
-  // the get trap hands out a frozen array's items raw (a proxy invariant)
   if (Object.isFrozen(raw)) {
     return raw.slice();
   }
@@ -776,16 +592,8 @@ export function readArrayItems<T>(array: T[]): T[] {
   return items;
 }
 
-// The replaced methods that read through something other than the proxy's
-// traps: an observe() view runs them on its proxy, observed. Filled by
-// replaceMethods, the only source of the functions it holds.
 const viewReaders = new Set<Function>();
-// Methods a proxy replaces, by the function its read would return. The array
-// methods that write several keys run as one batch: an immediate computation
-// sees the array before or after the call, not in between. Those that search
-// an item by identity also find the raw object of an item they read as its
-// proxy.
-const replacedMethods = /* @__PURE__ */ replaceMethods();
+const replacedMethods =   replaceMethods();
 
 function replaceMethods(): Map<Function, Function> {
   const replaced = new Map<Function, Function>();
@@ -795,13 +603,6 @@ function replaceMethods(): Map<Function, Function> {
       return batch(() => method.apply(this, args));
     });
   }
-  // The methods that change the length read it, and the items they shift, as
-  // their own business, not as reads of the caller: tracked, an effect that only
-  // pushes would re-run on every push of another, and two of them would re-run
-  // each other forever. The others stay tracked: a sort reads the items its
-  // comparator orders, and its caller depends on them (as in Vue).
-  // Called on an observe() view they still read through it, which subscribes
-  // the view: a push through it calls its callback, as OWL 2's reactive() did.
   for (const name of ["pop", "push", "shift", "splice", "unshift"] as const) {
     const method = Array.prototype[name] as Function;
     replaced.set(method, function (this: unknown[], ...args: unknown[]) {
@@ -809,13 +610,6 @@ function replaceMethods(): Map<Function, Function> {
     });
   }
 
-  // The searches of a plain array read its items as one atom, as readArrayItems
-  // does, and search the raw array: a search reading each index through the
-  // proxy would make an atom per index, and a proxy per object item, for an
-  // answer that depends on every item anyway. Any other array (a subclass, which
-  // may keep its items elsewhere and map its indices through its own traps) is
-  // searched through the proxy, each index read tracked. An object is looked for
-  // as given, then as its raw object (which a deep array holds).
   for (const name of ["includes", "indexOf", "lastIndexOf"] as const) {
     const method = Array.prototype[name] as Function;
     const search = function (this: unknown[], ...args: unknown[]) {
@@ -829,7 +623,6 @@ function replaceMethods(): Map<Function, Function> {
       if (result !== -1 && result !== false) {
         return result;
       }
-      // a plain array holds no proxy: only a proxy argument can still match
       if (plain && (typeof item !== "object" || item === null || toRaw(item) === item)) {
         return result;
       }
@@ -840,7 +633,6 @@ function replaceMethods(): Map<Function, Function> {
     viewReaders.add(search);
   }
 
-  // hasOwnProperty reads the presence of the key it asks about, as `in` does
   const hasOwnPropertyReader = function (this: object, key: PropertyKey) {
     const raw = toRaw(this);
     onReadTargetKey(
@@ -855,9 +647,6 @@ function replaceMethods(): Map<Function, Function> {
   return replaced;
 }
 
-// A collection's own properties (a subclass's fields, an expando) have atoms
-// of their own, keyed by this stand-in: an entry of the same key is another
-// value.
 const propertyHosts = new WeakMap<Target, Target>();
 
 function propertyHost(target: Target): Target {
@@ -868,11 +657,6 @@ function propertyHost(target: Target): Target {
   return host;
 }
 
-/**
- * The method of a collection proxy that replaces the method `key` (one of
- * collectionMethods()): it observes, or notifies, the keys it touches. Eg: `has`
- * on a proxy set observes the key it is asked about, `add` notifies it.
- */
 function makeMethod(key: PropertyKey, target: any, shallow: boolean): Function {
   switch (key) {
     case "has":
@@ -907,14 +691,6 @@ function makeMethod(key: PropertyKey, target: any, shallow: boolean): Function {
   return makeSetOperation(key as string, target);
 }
 
-/**
- * Creates an iterator method (keys, values, entries, @@iterator) that observes
- * the key list, and a Map's values as it reads them. A deep proxy yields the
- * proxies of the objects. An entry is the fresh array the raw iterator made:
- * proxying it would only subscribe its reader to atoms no write can reach. A
- * Set's members, or a Map's keys, change only by being added or removed, which
- * the key list notifies.
- */
 function makeIteratorObserver(methodName: PropertyKey, target: any, shallow: boolean) {
   const isMap = target instanceof Map;
   const entries = methodName === "entries" || (methodName === Symbol.iterator && isMap);
@@ -938,11 +714,6 @@ function makeIteratorObserver(methodName: PropertyKey, target: any, shallow: boo
   };
 }
 
-/**
- * Creates a forEach that observes the key list, and a Map's values, and hands
- * out the proxies of the objects, and the proxy it is called through as the
- * collection.
- */
 function makeForEachObserver(target: any, shallow: boolean) {
   const readsValues = target instanceof Map;
   return function forEach(
@@ -966,9 +737,6 @@ function makeForEachObserver(target: any, shallow: boolean) {
   };
 }
 
-// The members of a set-like by their raw object: a shallow set may hold
-// proxies, a deep one yields them, and either way a member is the same member
-// as its raw object.
 function membersByRaw(members: Iterator<any>): Map<any, any> {
   const byRaw = new Map();
   for (let step = members.next(); !step.done; step = members.next()) {
@@ -977,16 +745,6 @@ function membersByRaw(members: Iterator<any>): Map<any, any> {
   return byRaw;
 }
 
-/**
- * Creates a version of an ES2025 Set method (union, isSubsetOf...) that reads
- * the whole membership of the set, on members compared by their raw object,
- * so that any mix of shallow, deep and plain sets answers as the raw sets
- * would. The native method computes it on the raw members; a set result is a
- * fresh, plain Set holding them as the sets hold them (the target's first), in
- * the target's order, then `other`'s. `other` is checked as the native method
- * checks it (an empty set's isSubsetOf reads nothing else), then read through
- * its keys() iterator, which need not be iterable: a reactive one is observed.
- */
 function makeSetOperation(name: string, target: Set<any>) {
   return (other: any) => {
     (new Set() as any).isSubsetOf(other);
@@ -1006,11 +764,6 @@ function makeSetOperation(name: string, target: Set<any>) {
   };
 }
 
-/**
- * Creates a writing method (set, add, delete) that notifies the presence of
- * its key when it changes, and the value of its key when it changes: a
- * Map's or WeakMap's value, a Set's membership.
- */
 function delegateAndNotify(setterName: "set" | "add" | "delete", target: any, shallow: boolean) {
   const readsValue = setterName === "set" || (setterName === "delete" && !(target instanceof Set));
   const prototype =
@@ -1027,16 +780,12 @@ function delegateAndNotify(setterName: "set" | "add" | "delete", target: any, sh
       : setterName === "add"
         ? Set.prototype.add
         : (prototype as Map<any, any>).set;
-  // The proxy already exists when its method is first read. Keep it rather
-  // than resolving it on every mutation, or changing the return to the raw
-  // target if somebody marks that target raw later.
   const collection = (shallow ? shallowProxies : deepProxies).get(target)!;
   return (key: any, value: any) =>
     batch(() => {
       key = toRaw(key);
       const hadKey = has.call(target, key);
       const before = get && hadKey ? get.call(target, key) : undefined;
-      // a shallow collection hands its values back as stored: keep the proxy
       let ret;
       let method;
       let completed = false;
@@ -1045,10 +794,6 @@ function delegateAndNotify(setterName: "set" | "add" | "delete", target: any, sh
         ret = Reflect.apply(method, target, [key, shallow ? value : toRaw(value)]);
         completed = true;
       } finally {
-        // An override can change the key before throwing, or return without
-        // changing it. Notify actual storage changes in either case.
-        // Only a successful intrinsic guarantees this postcondition. Avoid
-        // another lookup on that common path; inspect overrides and failures.
         const hasKey =
           completed && method === nativeMethod ? setterName !== "delete" : has.call(target, key);
         if (hadKey !== hasKey) {
@@ -1062,22 +807,15 @@ function delegateAndNotify(setterName: "set" | "add" | "delete", target: any, sh
           releaseKey(target, key);
         }
       }
-      // Native set/add return the collection. Returning its raw target would
-      // let the next chained call bypass every read/write notification.
       return ret === target ? collection : ret;
     });
 }
 
-// The upsert methods both read an entry and may write it. Delegate validation
-// and callback semantics to the native method, normalize deep values as set()
-// does, and notify all readers in one batch before returning the reactive value.
 function makeGetOrInsert(
   method: "getOrInsert" | "getOrInsertComputed",
   target: any,
   shallow: boolean
 ) {
-  // Native upsert uses internal entries, independently of a subclass's
-  // has/get overrides. Bookkeeping must read those same entries.
   const prototype = target instanceof Map ? Map.prototype : WeakMap.prototype;
   const has = prototype.has;
   const get = prototype.get;
@@ -1111,15 +849,10 @@ function makeGetOrInsert(
     });
 }
 
-// The atoms of a collection's keys may exist
 function hasKeyAtoms(target: Target): boolean {
   return allAtoms.some((atoms) => atoms.keys.has(target) || atoms.weakKeys.has(target));
 }
 
-/**
- * Creates a clear() that notifies the key list, and the presence and value of
- * each key that had atoms. An empty collection notifies nothing.
- */
 function makeClearNotifier(target: Map<any, any> | Set<any>) {
   const prototype = target instanceof Map ? Map.prototype : Set.prototype;
   const size = Object.getOwnPropertyDescriptor(prototype, "size")!.get!;
@@ -1134,8 +867,6 @@ function makeClearNotifier(target: Map<any, any> | Set<any>) {
   return () => {
     const clear = target.clear;
     if (clear !== prototype.clear) {
-      // An override may retain entries, update values or reorder keys. Read
-      // actual internal entries, without invoking overridden readers.
       if (!hasKeyAtoms(target)) return Reflect.apply(clear, target, []);
       const before = snapshot();
       return batch(() => {
@@ -1166,8 +897,6 @@ function makeClearNotifier(target: Map<any, any> | Set<any>) {
     }
     const nonempty = size.call(target) !== 0;
     const keys = nonempty && hasKeyAtoms(target) ? [...keysOf.call(target)] : [];
-    // Notify every atom before immediate readers run: one mutation is one
-    // update, and a reader throwing must not leave the other readers stale.
     batch(() => {
       Reflect.apply(clear, target, []);
       if (nonempty) onWriteTargetKey(target, KEYCHANGES);
@@ -1198,7 +927,6 @@ const weakMapMethods = new Set<PropertyKey>([
   "getOrInsert",
   "getOrInsertComputed",
 ]);
-// the ES2025 Set methods, which every engine owl targets has
 const setOperations = [
   "difference",
   "intersection",
@@ -1209,8 +937,8 @@ const setOperations = [
   "union",
 ];
 
-const mapMethods = /* @__PURE__ */ unionOf(setLikeMethods, weakMapMethods);
-const setMethods = /* @__PURE__ */ unionOf(setLikeMethods, ["add"], setOperations);
+const mapMethods =   unionOf(setLikeMethods, weakMapMethods);
+const setMethods =   unionOf(setLikeMethods, ["add"], setOperations);
 
 function unionOf(...lists: Iterable<PropertyKey>[]): Set<PropertyKey> {
   const union = new Set<PropertyKey>();
@@ -1222,8 +950,6 @@ function unionOf(...lists: Iterable<PropertyKey>[]): Set<PropertyKey> {
   return union;
 }
 
-// the methods a proxy of `target` replaces (see makeMethod), if it is a
-// collection
 function collectionMethods(target: Target): Set<PropertyKey> | null {
   return target instanceof Map
     ? mapMethods
@@ -1234,14 +960,6 @@ function collectionMethods(target: Target): Set<PropertyKey> | null {
         : null;
 }
 
-/**
- * The handler of a Set, Map or WeakMap proxy. Its methods are built on first
- * read and kept for the proxy: most proxies use a few of them. Its own
- * properties are read with the proxy as receiver, a subclass's getter reading
- * the entries through it, and observed apart from the entries. The table of
- * its methods and the stand-in its properties' atoms are keyed by are made
- * when first needed: most collection proxies are made, iterated and dropped.
- */
 class CollectionHandler extends BasicHandler {
   methodKeys: Set<PropertyKey>;
   hasSize: boolean;

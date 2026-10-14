@@ -186,7 +186,6 @@ describe("dependency tracking", () => {
     });
     state.a = 3;
     expect(calls).toBe(1);
-    // one-shot: the view is not read again until the effect re-runs
     state.a = 4;
     expect(calls).toBe(1);
     await waitScheduler();
@@ -259,7 +258,6 @@ describe("dependency tracking", () => {
       expect(render.state).toBe(ComputationState.EXECUTED);
       s();
       s.set(1);
-      // a signal write leaves its readers pending a check of the value
       expect(render.state).toBe(ComputationState.PENDING);
     });
     expect(observersOf(atomOf(t))).toEqual([]);
@@ -304,7 +302,6 @@ describe("dependency tracking", () => {
     expect(observersOf(atomOf(c))).toEqual([]);
     runTracked(render, () => s());
     expect(atomOf(c).subs).toBeUndefined();
-    // the next write makes it a disposal candidate, disposed at the flush
     s.set(2);
     await waitScheduler();
     expect(sourcesOf(atomOf(c))).toEqual([]);
@@ -340,7 +337,6 @@ describe("links", () => {
     });
     expect(reader.deps.dep).toBe(atomOf(firstTwo));
     expect(reader.deps.seen).toBeUndefined();
-    // a signal's link keeps it: a write set back compares to it
     expect(reader.deps.nextDep.seen).toBe(list());
     dispose();
   });

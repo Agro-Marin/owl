@@ -62,7 +62,6 @@ function writes(owl: Owl, rows: number, selective: boolean): Workload {
     },
     dispose() {
       stops.forEach((stop) => stop());
-      // Once every key is unread, enough source checks release the selector.
       for (let i = 0; selective && i < rows; i++) value.set(iterations + i + 2);
     },
   };

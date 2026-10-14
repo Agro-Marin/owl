@@ -37,7 +37,6 @@ beforeEach(() => {
   fixture = makeTestFixture();
 });
 
-// following code is there to prevent memory leaks in the scheduled tasks
 let lastScheduler: Scheduler;
 const addFiber = Scheduler.prototype.addFiber;
 Scheduler.prototype.addFiber = function (fiber: Fiber) {
@@ -47,7 +46,6 @@ Scheduler.prototype.addFiber = function (fiber: Fiber) {
 
 afterEach(() => {
   if (lastScheduler && lastScheduler.tasks.size > 0) {
-    // we still clear the scheduler to prevent additional noise
     lastScheduler.tasks.clear();
     throw new Error("we got a memory leak...");
   }
@@ -584,10 +582,6 @@ test("update a sub-component twice in the same frame, 2", async () => {
     ]
   `);
   await nextMicroTick();
-  // For an unknown reason, this test fails on windows without the next microtick. It works
-  // in linux and osx, but fails on at least this machine.
-  // I do not see anything harmful in waiting an extra tick. But it is annoying to not
-  // know what is different.
   await nextMicroTick();
   expect(steps.splice(0)).toMatchInlineSnapshot(`[]`);
   expect(fixture.innerHTML).toBe("<div><span>1</span></div>");
@@ -601,7 +595,6 @@ test("update a sub-component twice in the same frame, 2", async () => {
   `);
 
   await nextMicroTick();
-  // same as above
   await nextMicroTick();
   expect(steps.splice(0)).toMatchInlineSnapshot(`[]`);
   expect(fixture.innerHTML).toBe("<div><span>1</span></div>");
@@ -667,8 +660,6 @@ test("properly behave when destroyed/unmounted while rendering ", async () => {
     ]
   `);
 
-  // this change triggers a rendering of the parent. This rendering is delayed,
-  // because child is now waiting for def to be resolved
   parent.state.val = "Framboise Girardin";
   await nextTick();
   expect(fixture.innerHTML).toBe("<div><div><div></div></div></div>");
@@ -679,8 +670,6 @@ test("properly behave when destroyed/unmounted while rendering ", async () => {
     ]
   `);
 
-  // with this, we remove child, and subchild, even though it is not finished
-  // rendering from previous changes
   parent.state.flag = false;
   await nextTick();
   expect(fixture.innerHTML).toBe("<div></div>");
@@ -695,7 +684,6 @@ test("properly behave when destroyed/unmounted while rendering ", async () => {
     ]
   `);
 
-  // we now resolve def, so the child rendering is now complete.
   def.resolve();
   await nextTick();
   expect(fixture.innerHTML).toBe("<div></div>");
@@ -849,8 +837,6 @@ test("concurrent renderings scenario 1", async () => {
 });
 
 test("concurrent renderings scenario 2", async () => {
-  // this test asserts that a rendering initiated before another one, and that
-  // ends after it, is re-mapped to that second rendering
   const defs = [makeDeferred(), makeDeferred()];
   let index = 0;
   let stateB: any = null;
@@ -920,7 +906,7 @@ test("concurrent renderings scenario 2", async () => {
     ]
   `);
 
-  defs[1].resolve(); // resolve rendering initiated in B
+  defs[1].resolve();
   await nextTick();
   expect(fixture.innerHTML).toBe("<div>2<p><span>2c</span></p></div>");
   expect(steps.splice(0)).toMatchInlineSnapshot(`
@@ -934,7 +920,7 @@ test("concurrent renderings scenario 2", async () => {
     ]
   `);
 
-  defs[0].resolve(); // resolve rendering initiated in A
+  defs[0].resolve();
   await nextTick();
   expect(fixture.innerHTML).toBe("<div>2<p><span>2c</span></p></div>");
   expect(steps.splice(0)).toMatchInlineSnapshot(`[]`);
@@ -1011,12 +997,12 @@ test("concurrent renderings scenario 2bis", async () => {
     ]
   `);
 
-  defs[0].resolve(); // resolve rendering initiated in A
+  defs[0].resolve();
   await nextTick();
-  expect(fixture.innerHTML).toBe("<div><p><span>1b</span></p></div>"); // TODO: is this what we want?? 2b could be ok too
+  expect(fixture.innerHTML).toBe("<div><p><span>1b</span></p></div>");
   expect(steps.splice(0)).toMatchInlineSnapshot(`[]`);
 
-  defs[1].resolve(); // resolve rendering initiated in B
+  defs[1].resolve();
   await nextTick();
   expect(fixture.innerHTML).toBe("<div><p><span>2c</span></p></div>");
   expect(steps.splice(0)).toMatchInlineSnapshot(`
@@ -1117,7 +1103,7 @@ test("concurrent renderings scenario 3", async () => {
   expect(fixture.innerHTML).toBe("<div><p><span><i>1c</i></span></p></div>");
   expect(steps.splice(0)).toMatchInlineSnapshot(`[]`);
 
-  defB.resolve(); // resolve rendering initiated in A (still blocked in D)
+  defB.resolve();
   await nextTick();
   expect(fixture.innerHTML).toBe("<div><p><span><i>1c</i></span></p></div>");
   expect(steps.splice(0)).toMatchInlineSnapshot(`
@@ -1127,7 +1113,7 @@ test("concurrent renderings scenario 3", async () => {
     ]
   `);
 
-  defsD[0].resolve(); // resolve rendering initiated in C (should be ignored)
+  defsD[0].resolve();
   await nextTick();
   expect(fixture.innerHTML).toBe("<div><p><span><i>2d</i></span></p></div>");
   expect(steps.splice(0)).toMatchInlineSnapshot(`
@@ -1230,7 +1216,7 @@ test("concurrent renderings scenario 4", async () => {
   expect(fixture.innerHTML).toBe("<div><p><span><i>1c</i></span></p></div>");
   expect(steps.splice(0)).toMatchInlineSnapshot(`[]`);
 
-  defB.resolve(); // resolve rendering initiated in A (still blocked in D)
+  defB.resolve();
   await nextTick();
   expect(fixture.innerHTML).toBe("<div><p><span><i>1c</i></span></p></div>");
   expect(steps.splice(0)).toMatchInlineSnapshot(`
@@ -1240,13 +1226,13 @@ test("concurrent renderings scenario 4", async () => {
     ]
   `);
 
-  defsD[1].resolve(); // completely resolve rendering initiated in A
+  defsD[1].resolve();
   await nextTick();
   expect(fixture.innerHTML).toBe("<div><p><span><i>1c</i></span></p></div>");
   expect(ComponentD.prototype.someValue).toHaveBeenCalledTimes(1);
   expect(steps.splice(0)).toMatchInlineSnapshot(`[]`);
 
-  defsD[0].resolve(); // resolve rendering initiated in C (should be ignored)
+  defsD[0].resolve();
   await nextTick();
   expect(fixture.innerHTML).toBe("<div><p><span><i>2d</i></span></p></div>");
   expect(ComponentD.prototype.someValue).toHaveBeenCalledTimes(2);
@@ -1322,13 +1308,13 @@ test("concurrent renderings scenario 5", async () => {
     ]
   `);
 
-  defsB[0].resolve(); // resolve first re-rendering (should be ignored)
+  defsB[0].resolve();
   await nextTick();
   expect(fixture.innerHTML).toBe("<div><p>1</p></div>");
   expect(ComponentB.prototype.someValue).toHaveBeenCalledTimes(1);
   expect(steps.splice(0)).toMatchInlineSnapshot(`[]`);
 
-  defsB[1].resolve(); // resolve second re-rendering
+  defsB[1].resolve();
   await nextTick();
   expect(fixture.innerHTML).toBe("<div><p>3</p></div>");
   expect(ComponentB.prototype.someValue).toHaveBeenCalledTimes(2);
@@ -1401,7 +1387,7 @@ test("concurrent renderings scenario 6", async () => {
     ]
   `);
 
-  defsB[1].resolve(); // resolve second re-rendering
+  defsB[1].resolve();
   await nextTick();
   expect(fixture.innerHTML).toBe("<div><p>3</p></div>");
   expect(ComponentB.prototype.someValue).toHaveBeenCalledTimes(2);
@@ -1414,7 +1400,7 @@ test("concurrent renderings scenario 6", async () => {
     ]
   `);
 
-  defsB[0].resolve(); // resolve first re-rendering (should be ignored)
+  defsB[0].resolve();
   await nextTick();
   expect(fixture.innerHTML).toBe("<div><p>3</p></div>");
   expect(ComponentB.prototype.someValue).toHaveBeenCalledTimes(2);
@@ -1541,18 +1527,6 @@ test("concurrent renderings scenario 8", async () => {
 });
 
 test("concurrent renderings scenario 9", async () => {
-  // Here is the global idea of this scenario:
-  //       A
-  //      / \
-  //     B   C
-  //         |
-  //         D
-  // A state is updated, triggering a whole re-rendering
-  // B is async, and blocked
-  // C (and D) are rendered
-  // C state is updated, producing a re-rendering of C and D
-  // this last re-rendering of C should be correctly re-mapped to the whole
-  // re-rendering
   const def = makeDeferred();
   let stateC: any = null;
 
@@ -1655,20 +1629,6 @@ test("concurrent renderings scenario 9", async () => {
 });
 
 test("concurrent renderings scenario 10", async () => {
-  // Here is the global idea of this scenario:
-  //       A
-  //       |
-  //       B    <- async willUpdateProps
-  //     -----  <- conditional (initialy false)
-  //       |
-  //       C    <- async willStart
-  // Render A and B normally
-  // Change the condition on B to trigger a re-rendering with C (async willStart)
-  // Change the state on A to trigger a global re-rendering, which is blocked
-  // in B (async willUpdateProps)
-  // Resolve the willStart of C: the first re-rendering has been cancelled by
-  // the global re-rendering, but handlers waiting for the rendering promise to
-  // resolve might execute and we don't want them to crash/do anything
 
   const defB = makeDeferred();
   const defC = makeDeferred();
@@ -1761,11 +1721,6 @@ test("concurrent renderings scenario 10", async () => {
 });
 
 test("concurrent renderings scenario 11", async () => {
-  // This scenario is the following: we have a component being updated (by props),
-  // and then rendered (render method), but before the willUpdateProps resolves.
-  // We check that in that case, the return value of the render method is a promise
-  // that is resolved when the component is completely rendered (so, properly
-  // remapped to the promise of the ambient rendering)
   const def = makeDeferred();
   let child: any = null;
   class Child extends Component {
@@ -1825,12 +1780,6 @@ test("concurrent renderings scenario 11", async () => {
 });
 
 test("concurrent renderings scenario 12", async () => {
-  // In this scenario, we have a parent component that will be re-rendered
-  // several times simultaneously:
-  //    - once in a tick: it will create a new fiber, render it, but will have
-  //    to wait for its child (blocking) to be completed
-  //    - twice in the next tick: it will twice reuse the same fiber (as it is
-  //    rendered but not completed yet)
   const def = makeDeferred();
 
   class Child extends Component {
@@ -1951,7 +1900,7 @@ test("concurrent renderings scenario 13", async () => {
     ]
   `);
 
-  await nextTick(); // wait for changes triggered in mounted to be applied
+  await nextTick();
   expect(fixture.innerHTML).toBe("<div><span>1</span></div>");
   expect(steps.splice(0)).toMatchInlineSnapshot(`
     [
@@ -1961,7 +1910,7 @@ test("concurrent renderings scenario 13", async () => {
   `);
 
   parent.state.bool = true;
-  await nextTick(); // wait for this change to be applied
+  await nextTick();
   expect(steps.splice(0)).toMatchInlineSnapshot(`
     [
       "Child:setup",
@@ -1972,7 +1921,7 @@ test("concurrent renderings scenario 13", async () => {
     ]
   `);
 
-  await nextTick(); // wait for changes triggered in mounted to be applied
+  await nextTick();
   expect(fixture.innerHTML).toBe("<div><span>0</span><span>1</span></div>");
   expect(steps.splice(0)).toMatchInlineSnapshot(`
     [
@@ -2038,9 +1987,7 @@ test("concurrent renderings scenario 14", async () => {
     ]
   `);
 
-  // trigger a re-rendering of the whole tree
   a.state.fromA += 10;
-  // wait enough for the whole tree to be re-rendered, but not patched yet
   await nextMicroTick();
   await nextMicroTick();
   await nextMicroTick();
@@ -2054,14 +2001,9 @@ test("concurrent renderings scenario 14", async () => {
     ]
   `);
 
-  // trigger a re-rendering from C, which will remap its new fiber
   c!.state.fromC += 10;
-  // trigger a re-rendering from B, which will remap its new fiber as well
   b!.state.fromB += 10;
   await nextTick();
-  // at this point, all re-renderings should have been done correctly, and
-  // the root fiber (A) counter should have been reset to 0, so the DOM should
-  // have been patched with the updated version of each component
   expect(fixture.innerHTML).toBe(
     "<p><p><p><span>11</span><span>12</span><span>13</span></p></p></p>"
   );
@@ -2131,9 +2073,7 @@ test("concurrent renderings scenario 15", async () => {
     ]
   `);
 
-  // trigger a re-rendering of the whole tree
   a.state.fromA += 10;
-  // wait enough for the whole tree to be re-rendered, but not patched yet
   await nextMicroTick();
   await nextMicroTick();
   await nextMicroTick();
@@ -2147,18 +2087,13 @@ test("concurrent renderings scenario 15", async () => {
     ]
   `);
 
-  // trigger a re-rendering from C, which will remap its new fiber
   c!.state.fromC += 10;
-  // trigger a re-rendering from B, which will remap its new fiber as well
   b!.state.fromB += 10;
 
-  // simulate a flush (nothing should have changed as no fiber should have its
-  // counter to 0)
   app.scheduler.flush();
   expect(fixture.innerHTML).toBe("<p><p><p><span>1</span><span>2</span><span>3</span></p></p></p>");
   expect(steps.splice(0)).toMatchInlineSnapshot(`[]`);
 
-  // wait a bit and simulate another flush (we expect nothing to change as well)
   await nextMicroTick();
   app.scheduler.flush();
   expect(fixture.innerHTML).toBe("<p><p><p><span>1</span><span>2</span><span>3</span></p></p></p>");
@@ -2203,7 +2138,7 @@ test("concurrent renderings scenario 16", async () => {
         <D t-if="this.state.fromC === 13"/>`;
     static components = { D };
     props = props();
-    state = { fromC: 3 }; // not proxy
+    state = { fromC: 3 };
     setup() {
       useLogLifecycle(this);
       c = this;
@@ -2244,9 +2179,7 @@ test("concurrent renderings scenario 16", async () => {
     ]
   `);
 
-  // trigger a re-rendering of the whole tree
   a.state.fromA += 10;
-  // wait enough for the whole tree to be re-rendered, but not patched yet
   await nextMicroTick();
   await nextMicroTick();
   await nextMicroTick();
@@ -2261,11 +2194,9 @@ test("concurrent renderings scenario 16", async () => {
     ]
   `);
 
-  // trigger a re-rendering from C, which will remap its new fiber
   c!.state.fromC += 10;
   render(c!);
   await nextMicroTick();
-  // trigger a re-rendering from B, which will remap its new fiber as well
   b!.state.fromB += 10;
   render(b!);
   await nextTick();
@@ -2280,8 +2211,6 @@ test("concurrent renderings scenario 16", async () => {
     ]
   `);
 
-  // at this point, C rendering is still pending, and nothing should have been
-  // updated yet.
   expect(fixture.innerHTML).toBe("1:2:3: ");
   dStarts.forEach((started) => started.resolve());
   await nextTick();
@@ -2359,7 +2288,6 @@ test("calling render in destroy", async () => {
   a.key = 2;
   render(a);
   await nextTick();
-  // this nextTick is critical, otherwise jest may silently swallow errors
   await nextTick();
   expect(steps.splice(0)).toMatchInlineSnapshot(`
     [
@@ -2514,7 +2442,6 @@ test("two renderings initiated between willPatch and patched", async () => {
     }
   }
 
-  // Main root component
   class Parent extends Component {
     static template = xml`<div><Panel t-key="'panel_' + this.state.panel" val="this.state.panel" t-if="this.state.flag"/></div>`;
     static components = { Panel };
@@ -2695,7 +2622,7 @@ test("delay willUpdateProps", async () => {
   promise = makeDeferred();
   const prom1 = promise;
   parent.state.value = 1;
-  render(child); // trigger a root rendering first
+  render(child);
   render(parent);
   await nextTick();
   expect(fixture.innerHTML).toBe("0_0");
@@ -2739,15 +2666,10 @@ test("delay willUpdateProps", async () => {
 });
 
 test("delay willUpdateProps with rendering grandchild", async () => {
-  // This test is a bit tricky, a Parent and one of his grandchildren render while another of the parent's
-  // grandchildren is awaiting its willUpdateProps.
-  // Technically RootFibers will be downgraded in ChildFibers, keeping the same container RootFiber.
-  // This case happens when Parent and ReaciveChild react together to a change in a proxy state/
   let promise: any = null;
   let child: any;
   let proxyChild: any;
 
-  // Delayed willUpdateProps
   class DelayedChild extends Component {
     static template = xml`<t t-out="this.props.value"/>_<t t-out="this.state.int" />`;
     props = props();
@@ -2763,7 +2685,6 @@ test("delay willUpdateProps with rendering grandchild", async () => {
     }
   }
 
-  // A sibling of the delayed component, we will trigger a render on it manually
   class ReactiveChild extends Component {
     static template = xml`<div />`;
     setup() {
@@ -2772,7 +2693,6 @@ test("delay willUpdateProps with rendering grandchild", async () => {
     }
   }
 
-  // The parent of everybody, we also manually trigger render on it.
   class Parent extends Component {
     static template = xml`<DelayedChild value="this.props.state.value"/><ReactiveChild />`;
     static components = { DelayedChild, ReactiveChild };
@@ -2813,7 +2733,7 @@ test("delay willUpdateProps with rendering grandchild", async () => {
   promise = makeDeferred();
   const prom1 = promise;
   parent.state.value = 1;
-  render(child); // trigger a root rendering first
+  render(child);
   render(parent, true);
   render(proxyChild);
   await nextTick();
@@ -2828,7 +2748,7 @@ test("delay willUpdateProps with rendering grandchild", async () => {
 
   promise = makeDeferred();
   const prom2 = promise;
-  render(child); // trigger a root rendering first
+  render(child);
   parent.state.value = 2;
   render(parent, true);
   render(proxyChild);
@@ -2913,7 +2833,6 @@ test("two sequential renderings before an animation frame", async () => {
   `);
 
   parent.state.value = 2;
-  // enough microticks to wait for render + willupdateprops
   await nextMicroTick();
   await nextMicroTick();
   await nextMicroTick();
@@ -2927,7 +2846,6 @@ test("two sequential renderings before an animation frame", async () => {
   `);
 
   await nextTick();
-  // we check here that the willPatch and patched hooks are called only once
   expect(steps.splice(0)).toMatchInlineSnapshot(`
     [
       "Parent:willPatch",
@@ -3196,7 +3114,6 @@ test("rendering parent twice, with different props on child and stuff", async ()
   `);
 
   parent.state.value = 2;
-  // wait for child to be rendered
   await nextMicroTick();
   await nextMicroTick();
   await nextMicroTick();
@@ -3208,8 +3125,6 @@ test("rendering parent twice, with different props on child and stuff", async ()
   `);
   expect(fixture.innerHTML).toBe("1");
 
-  // trigger a render, but keep the props for child the same: the child
-  // renders again, its onWillUpdateProps already ran for these props
   render(parent);
   await nextTick();
   expect(fixture.innerHTML).toBe("2");
@@ -3287,7 +3202,6 @@ test("delayed rendering, but then initial rendering is cancelled by yet another 
     ]
   `);
 
-  // update B and C, but render is blocked by C willupdateProps
   stateB.someValue = 5;
   await nextTick();
   expect(steps.splice(0)).toMatchInlineSnapshot(`
@@ -3296,12 +3210,10 @@ test("delayed rendering, but then initial rendering is cancelled by yet another 
     ]
   `);
 
-  // update D => render should be delayed, because B is currently rendering
   fixture.querySelector("button")!.click();
   await nextTick();
   expect(steps.splice(0)).toMatchInlineSnapshot(`[]`);
 
-  // update A => render should go to B and cancel it
   parent.state.value = 34;
   await nextTick();
   expect(steps.splice(0)).toMatchInlineSnapshot(`
@@ -3390,7 +3302,6 @@ test("delayed rendering, reusing fiber and stuff", async () => {
     ]
   `);
 
-  // initiate a render in A, but is blocked in B
   parent.state.value = 34;
   await nextTick();
   expect(steps.splice(0)).toMatchInlineSnapshot(`
@@ -3399,17 +3310,14 @@ test("delayed rendering, reusing fiber and stuff", async () => {
     ]
   `);
 
-  // initiate a render in C => delayed because of render in A
   fixture.querySelector("button")!.click();
   await nextTick();
   expect(steps.splice(0)).toMatchInlineSnapshot(`[]`);
 
-  // wait for render in A to be completed
   prom1.resolve();
   await prom2;
   expect(steps.splice(0)).toMatchInlineSnapshot(`[]`);
 
-  // initiate a new render in A => fiber will be reused
   parent.state.value = 355;
   await nextTick();
   expect(fixture.innerHTML).toBe("355<button>2</button>");
@@ -3475,10 +3383,7 @@ test("delayed rendering, then component is destroyed and  stuff", async () => {
     ]
   `);
 
-  // initiate a render in C (so will be first task)
   fixture.querySelector("button")!.click();
-  // initiate a render in A, but is blocked in B. the render will destroy c. also,
-  // it blocks the render C
   parent.state.value = 34;
   await nextTick();
   expect(steps.splice(0)).toMatchInlineSnapshot(`
@@ -3487,7 +3392,6 @@ test("delayed rendering, then component is destroyed and  stuff", async () => {
     ]
   `);
 
-  // wait for render in A to be completed
   prom1.resolve();
   await nextTick();
   expect(fixture.innerHTML).toBe("34");
@@ -3554,7 +3458,6 @@ test("delayed rendering, reusing fiber then component is destroyed and  stuff", 
     ]
   `);
 
-  // initiate a render in A, but is blocked in B
   parent.state.value = 5;
   await nextTick();
   expect(steps.splice(0)).toMatchInlineSnapshot(`
@@ -3563,12 +3466,10 @@ test("delayed rendering, reusing fiber then component is destroyed and  stuff", 
     ]
   `);
 
-  // initiate a render in C (will be delayed because of render in A)
   fixture.querySelector("button")!.click();
   await nextTick();
   expect(steps.splice(0)).toMatchInlineSnapshot(`[]`);
 
-  // initiate a render in A, that will destroy B
   parent.state.value = 23;
   await nextTick();
   expect(fixture.innerHTML).toBe("A");
@@ -3642,7 +3543,6 @@ test("another scenario with delayed rendering", async () => {
     ]
   `);
 
-  // initiate a render in A, but is blocked in B
   parent.state.value = 5;
   await nextTick();
   expect(steps.splice(0)).toMatchInlineSnapshot(`
@@ -3651,18 +3551,15 @@ test("another scenario with delayed rendering", async () => {
     ]
   `);
 
-  // initiate a render in C (will be delayed because of render in A)
   fixture.querySelector("button")!.click();
   await nextTick();
   expect(steps.splice(0)).toMatchInlineSnapshot(`[]`);
 
-  // initiate a render in A, that will destroy B
   parent.state.value = 23;
   await onSecondRenderA;
   await nextMicroTick();
   expect(steps.splice(0)).toMatchInlineSnapshot(`[]`);
 
-  // rerender A, but without destroying B
   parent.state.value = 7;
   await nextTick();
   expect(steps.splice(0)).toMatchInlineSnapshot(`
@@ -3735,14 +3632,10 @@ test("delayed fiber does not get rendered if it was cancelled", async () => {
       "A:mounted",
     ]
   `);
-  // Start a render in C
   render(c!, true);
   await nextMicroTick();
   expect(steps.splice(0)).toMatchInlineSnapshot(`[]`);
-  // Start a render in A such that C is already rendered, but D will be delayed
-  // (because A is rendering) then cancelled (when the render from A reaches C)
   render(a, true);
-  // Make sure the render can go to completion (Cancelled fibers will throw when rendered)
   await nextTick();
   expect(steps.splice(0)).toMatchInlineSnapshot(`
     [
@@ -3810,7 +3703,6 @@ test("destroyed component causes other soon to be destroyed component to rerende
     ]
   `);
 
-  // initiate a render in A, but is blocked in B
   parent.state.flag = true;
 
   await def;
@@ -3824,7 +3716,6 @@ test("destroyed component causes other soon to be destroyed component to rerende
     ]
   `);
 
-  // initiate render in A => will cancel renders in B/C and restarts
   parent.state.valueB = 2;
   await nextTick();
   expect(steps.splice(0)).toMatchInlineSnapshot(`
@@ -3909,7 +3800,6 @@ test("delayed rendering, destruction, stuff happens", async () => {
     ]
   `);
 
-  // render in A, it updates B and C, but render is blocked in C
   parent.state.value = 50;
   await nextTick();
   expect(steps.splice(0)).toMatchInlineSnapshot(`
@@ -3919,9 +3809,7 @@ test("delayed rendering, destruction, stuff happens", async () => {
     ]
   `);
 
-  // update B => removes child C
   stateB.hasChild = false;
-  // update D => render should be delayed, because AB is currently rendering
   fixture.querySelector("button")!.click();
   await nextTick();
   expect(steps.splice(0)).toMatchInlineSnapshot(`
@@ -3953,7 +3841,6 @@ test("renderings, destruction, patch, stuff, ... yet another variation", async (
     }
   }
 
-  // almost the same as D
   class C extends Component {
     static template = xml`C<span t-on-click="this.increment"><t t-out="this.state.val"/></span>`;
     state = proxy({ val: 1 });
@@ -4003,7 +3890,6 @@ test("renderings, destruction, patch, stuff, ... yet another variation", async (
     ]
   `);
 
-  // render in A, it updates B, will remove C, stopped in B
   parent.state.value = 50;
   await nextTick();
   expect(steps.splice(0)).toMatchInlineSnapshot(`
@@ -4012,12 +3898,10 @@ test("renderings, destruction, patch, stuff, ... yet another variation", async (
     ]
   `);
 
-  // update C => render should be delayed, because AB is currently rendering
   fixture.querySelector("span")!.click();
   await nextTick();
   expect(steps.splice(0)).toMatchInlineSnapshot(`[]`);
 
-  // resolve prom B => render is done, component C is destroyed
   promB.resolve();
   await nextTick();
   expect(steps.splice(0)).toMatchInlineSnapshot(`
@@ -4032,7 +3916,6 @@ test("renderings, destruction, patch, stuff, ... yet another variation", async (
   `);
   expect(fixture.innerHTML).toBe("ABD<p>1</p>");
 
-  // update D => should just render completely independently
   fixture.querySelector("p")!.click();
   await nextTick();
   expect(steps.splice(0)).toMatchInlineSnapshot(`
@@ -4080,9 +3963,7 @@ test("delayed render does not go through when t-component value changed", async 
       "A:mounted",
     ]
   `);
-  // start a render in B
   b!.state.val = 2;
-  // start a render in A, invalidating the scheduled render of B, which could crash if executed.
   a.state.component = C;
   await nextTick();
   expect(fixture.innerHTML).toBe("AC");
@@ -4203,7 +4084,6 @@ test("cancelled components are destroyed immediately", async () => {
     ]
   `);
 
-  // turn the flag on, this will render A and stops at B because of def
   a.state.flag = true;
   await nextTick();
   expect(steps.splice(0)).toMatchInlineSnapshot(`
@@ -4213,14 +4093,10 @@ test("cancelled components are destroyed immediately", async () => {
     ]
   `);
 
-  // force a render of A
-  //  => owl will need to create a new B component
-  //  => initial B component will be cancelled, and destroyed on the spot
   render(a);
   await nextMicroTick();
   expect(["B:willDestroy", "B:setup", "B:willStart"]).toBeLogged();
 
-  // resolve def, so B render is unblocked
   def.resolve();
   await nextTick();
   expect(steps.splice(0)).toMatchInlineSnapshot(`
@@ -4266,8 +4142,8 @@ test("component destroyed just after render", async () => {
     ]
   `);
 
-  stateB!.value++; // force a render of B
-  await nextMicroTick(); // wait for B render to actually start
+  stateB!.value++;
+  await nextMicroTick();
   a.__owl__.app.destroy();
   expect(steps.splice(0)).toMatchInlineSnapshot(`
     [
@@ -4278,25 +4154,11 @@ test("component destroyed just after render", async () => {
     ]
   `);
   await nextTick();
-  // check that B was not rendered after being destroyed
   expect(steps.splice(0)).toMatchInlineSnapshot(`[]`);
 });
 
-// When a component has no willStart hook, the rendering takes a fast path that
-// renders the template synchronously during the parent's template execution,
-// skipping the microtick from awaitWillStart. Owl does not guarantee a specific
-// rendering order for siblings. This test documents the current behavior.
 
 test("sibling rendering: child without willStart renders before async sibling", async () => {
-  // ChildA has willStart (async path): goes through awaitWillStart which yields
-  // a microtick before rendering the template.
-  // ChildB has no willStart (fast path): renders synchronously during the
-  // parent's template execution.
-  // Both children are created during the parent's template rendering (which
-  // itself runs after a microtick), so neither template has executed before
-  // the first microtick boundary. But within the same microtask, ChildB (fast
-  // path) renders its template before ChildA (async path) because ChildA
-  // needs an additional microtick from awaitWillStart's await.
   class ChildA extends Component {
     static template = xml`<span t-out="this.log()"/>`;
     log() {
@@ -4321,7 +4183,6 @@ test("sibling rendering: child without willStart renders before async sibling", 
 
   const prom = mount(Parent, fixture);
 
-  // parent and child b are rendered immediately
   expect(steps.splice(0)).toMatchInlineSnapshot(`
    [
      "B:template",
@@ -4329,10 +4190,6 @@ test("sibling rendering: child without willStart renders before async sibling", 
   `);
 
   await prom;
-  // ChildB's template executes before ChildA's: ChildB renders synchronously
-  // (fast path) while ChildA waits for an extra microtick from awaitWillStart.
-  // Without the fast path optimization, ChildA's template would execute first
-  // (template order) since both would go through awaitWillStart.
   expect(steps.splice(0)).toMatchInlineSnapshot(`
     [
       "A:template",
@@ -4342,9 +4199,6 @@ test("sibling rendering: child without willStart renders before async sibling", 
 });
 
 test("slot content renders synchronously when child has no willStart", async () => {
-  // Child has no willStart, so it takes the fast path and renders its
-  // template (including slot content) synchronously. Sibling also has no
-  // willStart. Both render in the same synchronous frame.
   class Child extends Component {
     static template = xml`<div><t t-call-slot="default"/></div>`;
   }
@@ -4365,8 +4219,6 @@ test("slot content renders synchronously when child has no willStart", async () 
   }
 
   await mount(Parent, fixture);
-  // Child renders synchronously (fast path), so its slot content renders
-  // before the sibling's template.
   expect(steps.splice(0)).toMatchInlineSnapshot(`
     [
       "slot:template",
@@ -4377,9 +4229,6 @@ test("slot content renders synchronously when child has no willStart", async () 
 });
 
 test("slot content renders after microtick when child has willStart", async () => {
-  // Child has willStart, so it goes through the async path. Its template
-  // (including slot content) renders after a microtick. Sibling has no
-  // willStart and renders synchronously via the fast path.
   class Child extends Component {
     static template = xml`<div><t t-call-slot="default"/></div>`;
     setup() {
@@ -4403,8 +4252,6 @@ test("slot content renders after microtick when child has willStart", async () =
   }
 
   await mount(Parent, fixture);
-  // Sibling renders first (fast path), then Child renders after the
-  // microtick from awaitWillStart, which includes the slot content.
   expect(steps.splice(0)).toMatchInlineSnapshot(`
     [
       "sibling:template",
@@ -4415,9 +4262,6 @@ test("slot content renders after microtick when child has willStart", async () =
 });
 
 test("a root fiber whose node was patched through another render is dropped, not completed", async () => {
-  // a slot of one app rendered by a component of another: the owner app's
-  // scheduler keeps the node's own root fiber while the other app's render
-  // patches the node and clears node.fiber
   class Comp extends Component {
     static template = xml`<div><t t-out="this.state.value"/></div>`;
     state = proxy({ value: 1 });
@@ -4439,9 +4283,6 @@ test("a root fiber whose node was patched through another render is dropped, not
 });
 
 test("a render delayed by a rendering ancestor of another app resumes when that app renders", async () => {
-  // a slot of one app rendered by a component of another: the nodes' own
-  // renders are delayed by the other app's ancestor, whose scheduler is the one
-  // that flushes once that ancestor has rendered
   const def = makeDeferred();
   class Slow extends Component {
     static template = xml`<span><t t-out="this.props.value"/></span>`;
@@ -4545,15 +4386,12 @@ test("a child re-rendered because its parent's pass was cancelled runs onWillUpd
   const parent = await mount(Parent, fixture);
   parent.state.value = 2;
   await nextTick();
-  // Fast rendered with 2, the pass waits for Slow
   expect(updates).toEqual([2]);
   parent.state.other = "b";
   await nextTick();
   def.resolve();
   await nextTick();
   expect(fixture.innerHTML).toBe("<div><span>2</span><b>2</b><i>b</i></div>");
-  // the cancelled pass applied value 2 to Fast already: rendering it again
-  // needs no second onWillUpdateProps for the same props
   expect(updates).toEqual([2]);
   parent.state.value = 3;
   await nextTick();

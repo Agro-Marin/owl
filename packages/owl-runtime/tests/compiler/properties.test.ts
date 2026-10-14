@@ -3,7 +3,6 @@ import { makeTestFixture, renderToBdom, renderToString, snapshotEverything } fro
 
 snapshotEverything();
 test("changing an attribute with t-att-", () => {
-  // render input with initial value
   const template = `<div t-att-value="v"/>`;
   const bnode1 = renderToBdom(template, { v: "zucchini" });
   const fixture = makeTestFixture();
@@ -17,7 +16,6 @@ test("changing an attribute with t-att-", () => {
 
   const bnode3 = renderToBdom(template, { v: "" });
   patch(bnode1, bnode3);
-  // not sure about this. maybe we want to remove the attribute?
   expect(fixture.innerHTML).toBe('<div value=""></div>');
 });
 
@@ -27,7 +25,6 @@ test("dynamic input value: falsy values", () => {
     mount(renderToBdom(`<input t-att-value="${expr}"/>`), fixture);
     return fixture.querySelector("input")!.value;
   };
-  // 0 doesn't fall back to empty string
   expect(valueOf("0")).toBe("0");
   expect(valueOf("false")).toBe("");
   expect(valueOf("undefined")).toBe("");
@@ -35,7 +32,6 @@ test("dynamic input value: falsy values", () => {
 });
 
 test("updating property with falsy value", async () => {
-  // render input with initial value
   const template = `<input t-att-value="v"></input>`;
   const bnode1 = renderToBdom(template, { v: false });
   const fixture = makeTestFixture();
@@ -70,7 +66,6 @@ test("input type= checkbox, with t-att-checked", () => {
 });
 
 test("various boolean html attributes", () => {
-  // will cause the template to be snapshotted
   renderToString(`
       <div>
         <input type="checkbox" checked="checked"/>
@@ -85,7 +80,6 @@ test("various boolean html attributes", () => {
 });
 
 test("input with t-att-value", () => {
-  // render input with initial value
   const template = `<input  t-att-value="v"/>`;
   const bnode1 = renderToBdom(template, { v: "zucchini" });
   const fixture = makeTestFixture();
@@ -93,19 +87,15 @@ test("input with t-att-value", () => {
   const input = fixture.querySelector("input")!;
   expect(input.value).toBe("zucchini");
 
-  // change value manually in input, to simulate user input
   input.value = "tomato";
   expect(input.value).toBe("tomato");
 
-  // rerender with a different value, and patch actual dom, to check that
-  // input value was properly reset by owl
   const bnode2 = renderToBdom(template, { v: "potato" });
   patch(bnode1, bnode2);
   expect(input.value).toBe("potato");
 });
 
 test("input with t-att-value (patching with same value", () => {
-  // render input with initial value
   const template = `<input t-att-value="v"/>`;
   const bnode1 = renderToBdom(template, { v: "zucchini" });
   const fixture = makeTestFixture();
@@ -113,7 +103,6 @@ test("input with t-att-value (patching with same value", () => {
   const input = fixture.querySelector("input")!;
   expect(input.value).toBe("zucchini");
 
-  // change value manually in input, to simulate user input
   input.value = "tomato";
   expect(input.value).toBe("tomato");
 
@@ -123,7 +112,6 @@ test("input with t-att-value (patching with same value", () => {
 });
 
 test("input, type checkbox, with t-att-checked (patching with same value", () => {
-  // render input with initial value
   const template = `<input type="checkbox" t-att-checked="v"/>`;
   const bnode1 = renderToBdom(template, { v: true });
   const fixture = makeTestFixture();
@@ -131,7 +119,6 @@ test("input, type checkbox, with t-att-checked (patching with same value", () =>
   const input = fixture.querySelector("input")!;
   expect(input.checked).toBe(true);
 
-  // change checked manually in input, to simulate user input
   input.checked = false;
   expect(input.checked).toBe(false);
 
@@ -150,7 +137,6 @@ test("input of type checkbox with t-att-indeterminate", () => {
 });
 
 test("textarea with t-att-value", () => {
-  // render textarea with initial value
   const template = `<textarea t-att-value="v"/>`;
   const bnode1 = renderToBdom(template, { v: "zucchini" });
   const fixture = makeTestFixture();
@@ -158,12 +144,9 @@ test("textarea with t-att-value", () => {
   const elm = fixture.querySelector("textarea")!;
   expect(elm.value).toBe("zucchini");
 
-  // change value manually in textarea, to simulate user textarea
   elm.value = "tomato";
   expect(elm.value).toBe("tomato");
 
-  // rerender with a different value, and patch actual dom, to check that
-  // textarea value was properly reset by owl
   const bnode2 = renderToBdom(template, { v: "potato" });
   patch(bnode1, bnode2);
   expect(elm.value).toBe("potato");
@@ -185,15 +168,12 @@ test("select with t-att-value", () => {
   elm.value = "potato";
   expect(elm.value).toBe("potato");
 
-  // rerender with a different value, and patch actual dom, to check that
-  // select value was properly reset by owl
   const bnode2 = renderToBdom(template, { value: "onion" });
   patch(bnode1, bnode2);
   expect(elm.value).toBe("onion");
 });
 
 test("readonly and readOnly are both interpreted as the readOnly property", () => {
-  // render input with initial value
   const staticTemplates = [`<input readonly=""/>`, `<input readOnly=""/>`];
   for (let template of staticTemplates) {
     const fixture = makeTestFixture();

@@ -36,33 +36,22 @@ import {
 } from "./template_fuzz_lib";
 
 const COUNT = Number(process.env.OWL_TEMPLATE_FUZZ || 400);
-// ---------------------------------------------------------------------------
-// interactive templates: mounted as components in an App
-// ---------------------------------------------------------------------------
 
 interface LogEntry {
   entry: string;
-  // where the listener that ran the handler is: the element, or for a
-  // catcher, its parent element
   node: EventTarget | null;
-  // run by a document or shadow root listener, replaying the path
   synthetic: boolean;
   phase: number;
 }
 interface World {
   state: any;
   model: any;
-  // per key of the model, a function reading it with a set method writing it
   accessors: Record<string, any>;
   log: LogEntry[];
-  // the node owl dispatches the running handler at
   listener: EventTarget | null;
-  // the Portal targets, by key, created when a render first names one
   targets: Map<string, HTMLElement>;
   container: Node;
-  // what each Gate's onWillStart waits for
   gate: Promise<void>;
-  // the components alive, and how many times each rendered
   alive: Set<any>;
   renders: Map<any, number>;
   root: any;
@@ -71,8 +60,6 @@ interface World {
 const MODEL: Scope = { t: "init", c: true, r: "y", s: "z" };
 
 function makeRoot(world: World, comps: Def[]) {
-  // read through a private member: a template run with a proxy of its
-  // component as `this` (a slot rendered through a proxied descriptor) throws
   class Base extends Component {
     #world = world;
     setup() {
@@ -127,7 +114,6 @@ function makeRoot(world: World, comps: Def[]) {
       static template = def.name;
       static components = components;
     };
-    // named in owl's debug logs
     Object.defineProperty(components[def.name], "name", { value: def.name });
     if (def.relay) {
       const copy = def.relay === 2;
@@ -136,7 +122,6 @@ function makeRoot(world: World, comps: Def[]) {
         static components = components;
         props = props();
         box = proxy({ slots: undefined as any });
-        // the slots this render received, read back through the proxy
         relayed() {
           toRaw(this.box).slots = copy ? { ...this.props.slots } : this.props.slots;
           return this.box;
@@ -155,7 +140,6 @@ function toNumber(value: string): number | string {
   return isNaN(n) ? value : n;
 }
 
-// what a value property shows for a value
 function shown(value: unknown): string {
   return value === 0 ? "0" : value ? String(value) : "";
 }
@@ -169,16 +153,6 @@ function pathOf(v: VEl): string {
   return parts.join(">");
 }
 
-// the handlers a dispatch on the target must run, grouped by where they run:
-// `<depth><c|t|b>` (capture, at target, bubble) for native listeners, and
-// `<depth>s<c|b>` for synthetic ones, which a document (or shadow root)
-// listener replays over the path: the capturing ones before every native
-// listener, outermost first, the others after them, innermost first. Each
-// group is sorted (the order of two listeners of one element is not
-// specified), then ` !` if the default was prevented (a passive handler
-// cannot). A stop ends the propagation after the group where it happened;
-// .self holds back the handler (and the modifiers after it) unless the target
-// is its element, or for a catcher, the element of its child holding the target.
 function expectedLog(target: VEl, event: string): string {
   const path: VEl[] = [];
   for (let n: VEl | null = target; n; n = n.parent) {
@@ -187,8 +161,6 @@ function expectedLog(target: VEl, event: string): string {
   const top = path.length - 1;
   const groups: string[] = [];
   let prevented = false;
-  // the entries of the current group: at the target, capture listeners run in
-  // a pass of their own before the others (a stop between them counts)
   let entries: string[] = [];
   const flush = (label: string) => {
     if (entries.length) {
@@ -218,8 +190,6 @@ function expectedLog(target: VEl, event: string): string {
     h.event === event &&
     h.mods.includes("capture") === capture &&
     h.mods.includes("synthetic") === synthetic;
-  // the handlers of path[i]: its own, and those of the catchers of its child
-  // holding the target, which listen on it
   const at = (i: number, capture: boolean, synthetic: boolean): [RHandler, boolean][] => {
     const items: [RHandler, boolean][] = path[i].on
       .filter((h) => matches(h, capture, synthetic))
@@ -299,8 +269,6 @@ function actualLog(log: LogEntry[], target: Element, prevented: boolean): string
   );
 }
 
-// pairs each element owl built with the reference's, once the two serialize
-// alike; the difference otherwise
 function pair(actual: Element, expected: VEl): [Element, VEl][] | string {
   const owl = domString(actual);
   const ref = serialize(expected, true);
@@ -317,9 +285,6 @@ function pair(actual: Element, expected: VEl): [Element, VEl][] | string {
   return pairs;
 }
 
-// every component alive is mounted and in its parent's children: two that
-// share a key leave one out, and nothing renders or destroys it from there.
-// Until the gate opens, a slow Suspense's content is rendered, not mounted.
 function componentProblems(world: World, loaded: boolean): string[] {
   const problems: string[] = [];
   for (const component of world.alive) {
@@ -410,8 +375,6 @@ async function settle(app: App) {
 
 const TEXT_INPUTS = [" 7 ", "abc", "4.5", "q r", "0", "init"];
 
-// one user edit of a form control holding a model (holder[key]), applied to
-// the reference too; false when the control cannot change the model
 function edit(el: HTMLInputElement, model: Model, holder: Scope, key: string, n: number): boolean {
   switch (model.kind) {
     case "text": {
@@ -443,7 +406,6 @@ function edit(el: HTMLInputElement, model: Model, holder: Scope, key: string, n:
       }
       el.checked = true;
       holder[key] = value;
-      // a plain event: no activation behavior, only the model's handler
       el.dispatchEvent(new Event("click", { bubbles: true }));
       return true;
     }
@@ -514,8 +476,6 @@ async function runInteractive(generated: Generated): Promise<string[]> {
       },
     });
   }
-  // the node owl dispatches at: the outermost call is the listener's (a
-  // catcher's listener dispatches to each catcher's handlers in turn)
   const { config } = blockDom;
   const mainEventHandler = config.mainEventHandler;
   config.mainEventHandler = (fn, mods, ctx, ev, currentTarget, arg) => {
@@ -620,7 +580,6 @@ async function runInteractive(generated: Generated): Promise<string[]> {
       await settle(app);
       pairs = check("back", true);
     }
-    // user edits of each form control holding a model, one at a time
     for (let k = 0; pairs && k < pairs.length; k++) {
       const [el, v] = pairs[k];
       if (v.model) {
@@ -635,7 +594,6 @@ async function runInteractive(generated: Generated): Promise<string[]> {
     if (pairs) {
       pairs = check("edited", true);
     }
-    // user edits of bound properties: a render sets them back
     if (pairs) {
       for (const [el, v] of pairs) {
         for (const [prop] of v.props) {
@@ -683,8 +641,6 @@ test(
     const failures: string[] = [];
     for (let i = 0; i < COUNT && failures.length < 3; i++) {
       const generated = next();
-      // OWL_TEMPLATE_FUZZ_ONLY=<n>: run the template #n alone, and with
-      // OWL_TEMPLATE_FUZZ_DUMP=<file>, write its templates there
       if (only !== undefined && i !== only) {
         continue;
       }

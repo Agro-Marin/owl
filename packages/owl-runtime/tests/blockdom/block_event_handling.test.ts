@@ -1,11 +1,7 @@
 import { setDebug, setDebugSink } from "@odoo/owl-core";
 import { mount, createBlock, multi, config, patch } from "../../src/blockdom";
-// import { defaultHandler, setupMainHandler } from "../../src/bdom/block";
 import { makeTestFixture } from "./helpers";
 
-//------------------------------------------------------------------------------
-// Setup and helpers
-//------------------------------------------------------------------------------
 
 let fixture: HTMLElement;
 let initialHandler = config.mainEventHandler;
@@ -36,8 +32,6 @@ test("simple event handling, with function", async () => {
 
 test("simple event handling, with function and argument", async () => {
   let n = 0;
-  // the handler's code is static, given with the block; its data is the
-  // context the handler gets
   const onClick = (arg: number) => {
     n += arg;
   };
@@ -323,7 +317,6 @@ test("a block string has one block type, given its handlers at each call", async
   expect(type([{}], null, handlers).constructor).toBe(type([{}], null, [() => {}]).constructor);
   expect(() => createBlock(str, [])).toThrow("1 handlers, 0 given");
   expect(() => createBlock(str, ["f" as any])).toThrow("Invalid handler");
-  // a call without its handlers fails at mount, not at the first event
   expect(() => mount(type([{}]), fixture)).toThrow("1 handlers, 0 given");
 });
 

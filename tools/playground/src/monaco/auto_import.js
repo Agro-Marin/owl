@@ -1,4 +1,3 @@
-/* Inspired from https://github.com/pieterjanv/monaco-editor-module-auto-import-demo */
 
 import { playgroundAssetUrl } from "../asset_url.js";
 

@@ -6,7 +6,6 @@ class Counter extends Component {
           <t t-out="this.label"/>: <t t-out="this.value()"/>
         </button>`;
 
-    // note that the prop is fixed: it cannot change!
     label = useProps.static("label", t.string());
     value = signal(0);
 

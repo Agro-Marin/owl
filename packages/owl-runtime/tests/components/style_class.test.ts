@@ -164,23 +164,7 @@ describe("style and class handling", () => {
     expect(fixture.innerHTML).toBe(`<span class="someclass">b</span>`);
   });
 
-  // test("t-att-class is properly added/removed on widget root el", async () => {
-  //   class Child extends Component {
-  //     static template = xml`<div class="c"/>`;
-  //   }
-  //   class Parent extends Component {
-  //     static template = xml`<div><Child t-att-class="{a:state.a, b:state.b}"/></div>`;
-  //     static components = { Child };
-  //     state = proxy({ a: true, b: false });
-  //   }
-  //   const widget = await mount(Parent, fixture);
-  //   expect(fixture.innerHTML).toBe(`<div><div class="c a"></div></div>`);
 
-  //   widget.state.a = false;
-  //   widget.state.b = true;
-  //   await nextTick();
-  //   expect(fixture.innerHTML).toBe(`<div><div class="c b"></div></div>`);
-  // });
 
   test("class with extra whitespaces", async () => {
     class Child extends Component {
@@ -208,7 +192,6 @@ describe("style and class handling", () => {
     expect(fixture.innerHTML).toBe(`<p><div class="a b c d"></div></p>`);
   });
 
-  // TODO: adapt name (t-att-class no longer makes sense on Components)
   test("t-att-class is properly added/removed on widget root el (v2)", async () => {
     let child: Child;
     class Child extends Component {
@@ -250,7 +233,6 @@ describe("style and class handling", () => {
     expect(span.className).toBe("c b d");
   });
 
-  // TODO: adapt name (t-att-class no longer makes sense on Components)
   test("t-att-class is properly added/removed on widget root el (v3)", async () => {
     let child: Child;
     class Child extends Component {
@@ -308,7 +290,6 @@ describe("style and class handling", () => {
     expect(fixture.innerHTML).toBe('<div class="user"></div>');
   });
 
-  // TODO: adapt name
   test("style is properly added on widget root el", async () => {
     class SomeComponent extends Component {
       static template = xml`<div t-att-style="this.props.style"/>`;
@@ -401,10 +382,6 @@ describe("style and class handling", () => {
   });
 
   test("longhand override is preserved when a preceding shorthand changes", async () => {
-    // `margin` is a shorthand that resets `margin-top`. When only the shorthand
-    // changes, the diff must still re-apply the following longhand, otherwise the
-    // shorthand silently clobbers it. (Same class of bug as `background` +
-    // `background-color`.)
     class App extends Component {
       static template = xml`<div t-att-style="this.getStyle()" />`;
       state = proxy({ m: "10px" });
@@ -516,7 +493,6 @@ describe("style and class handling", () => {
     expect(div.style.getPropertyPriority("color")).toBe("");
   });
 
-  // TODO: does this test need to be moved? (class now a standard prop)
   test("error in subcomponent with class", async () => {
     class Child extends Component {
       static template = xml`<div t-att-class="this.props.class" t-out="this.will.crash"/>`;

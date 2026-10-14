@@ -31,23 +31,14 @@ import {
   type EventHandlers,
 } from "./parser";
 
-// a context made under a loop item, resolved once the template is compiled
 const SCOPE_MARK = "\u0001scope";
 const SCOPE_MARKER_RE = /\u0001scope\d+\u0001/g;
-// a context kept for later (a slot's, a called template's), resolved once the
-// template is compiled: as it is, or a copy if a t-set may still write it
 const CAPTURE_MARK = "\u0001capture";
 const CAPTURE_MARKER_RE = /\u0001capture\d+\u0001/g;
-// after a marker, a line that only a copied context keeps
 const CAPTURE_LINE = "\u0001line";
-// an expression writing a context variable: `ctx['v'] = 1`, `ctx['v']++`, ...
-// (a destructuring one too; a literal string holding `=` reads as one: the
-// check only ever errs towards inheriting)
 const CONTEXT_WRITE =
   /ctx\['[^']*'\]\s*(?:[-+*/%&|^]|\*\*|<<|>>>?|&&|\|\||\?\?)?=(?![=>])|ctx\['[^']*'\]\s*(?:\+\+|--)|(?:\+\+|--)\s*ctx\[|delete\s+ctx\[|[[,{:]\s*ctx\['[^']*'\]\s*[,\]}][^;=\n]*?=(?![=>])/;
 
-// The context variables code reads (`ctx['v']`), or null when it may read any:
-// a called template's code is not known here
 function readsOf(code: string[]): Set<string> | null {
   const names = new Set<string>();
   for (const line of code) {
@@ -62,15 +53,11 @@ function readsOf(code: string[]): Set<string> | null {
 }
 const CONTEXT_READ = /ctx\['([^']*)'\]/g;
 
-// loop levels whose keys a t-out passes to safeOutput as is (see compileTOut)
 const MAX_LAZY_LOOP_KEYS = 3;
 
-// the mark that starts a segment of a key (see keyOf in the runtime's
-// template_helpers), as written in a string literal of the generated code
 const KEY_MARK = "\\u0002";
 
 type BlockType = "block" | "text" | "multi" | "list" | "html";
-// HTML whitespace: a non-breaking space is content, never condensed
 const whitespaceRE = /[ \t\n\r\f]+/g;
 
 export interface CompileOptions {
@@ -82,9 +69,7 @@ export interface CompileOptions {
   hasGlobalValues: boolean;
 }
 
-// using a non-html document so that <inner/outer>HTML serializes as XML instead
-// of HTML (as we will parse it as xml later)
-const xmlDoc: Document = /* @__PURE__ */ makeXmlDocument();
+const xmlDoc: Document =   makeXmlDocument();
 
 function makeXmlDocument(): Document {
   return typeof document === "undefined"
@@ -92,9 +77,6 @@ function makeXmlDocument(): Document {
     : document.implementation.createDocument(null, null, null);
 }
 
-// a compiled attribute expression that cannot hold a t-set body: a string,
-// number or keyword literal, a template literal (a string already) or an
-// object literal (a class or style object)
 const LITERAL_RE =
   /^(?:'[^'\\]*'|"[^"\\]*"|`(?:[^`\\]|\\.)*`|-?\d[\d.e+-]*|true|false|null|undefined|\{.*\})$/s;
 
@@ -122,24 +104,14 @@ function isProp(tag: string, key: string): boolean {
   return false;
 }
 
-/**
- * The key a prop of name `name` takes in a generated object literal.
- */
 function propKey(name: string): string {
   return /^[a-z_]+$/i.test(name) ? name : `'${name}'`;
 }
 
-/**
- * Returns a template literal that evaluates to str. You can add interpolation
- * sigils into the string if required
- */
 function toStringExpression(str: string) {
   return `\`${escapeTemplateString(str)}\``;
 }
 
-// -----------------------------------------------------------------------------
-// BlockDescription
-// -----------------------------------------------------------------------------
 
 class BlockDescription {
   varName: string;
@@ -149,7 +121,6 @@ class BlockDescription {
   hasDynamicChildren: boolean = false;
   children: BlockDescription[] = [];
   data: string[] = [];
-  // the code of the block's handlers, in the order of their data index
   handlers: string[] = [];
   dom?: Node;
   currentDom?: Element;
@@ -179,8 +150,6 @@ class BlockDescription {
     return this.data.push(id) - 1;
   }
 
-  // a handler's data is the context (`ctx`, or its capture marker); its code
-  // is static, given with the block
   insertHandler(fn: string, ctx: string): number {
     this.handlers.push(fn);
     return this.data.push(ctx) - 1;
@@ -202,7 +171,6 @@ class BlockDescription {
         params += ", [" + this.children.map((c) => c.varName).join(", ") + "]";
       }
       if (this.handlers.length) {
-        // the code of its handlers, made once with the template's functions
         params += `${hasChildren ? "" : ", null"}, ${this.blockName}_handlers`;
       }
       if (this.dynamicTagName) {
@@ -216,17 +184,12 @@ class BlockDescription {
   }
 
   asXmlString() {
-    // Can't use outerHTML on text nodes
-    // append dom to any element and use innerHTML instead
     const t = xmlDoc.createElement("t");
     t.appendChild(this.dom!);
     return t.innerHTML;
   }
 }
 
-// -----------------------------------------------------------------------------
-// Compiler code
-// -----------------------------------------------------------------------------
 
 interface Context {
   block: BlockDescription | null;
@@ -236,8 +199,6 @@ interface Context {
   translationCtx: string;
   tKeyExpr: string | null;
   nameSpace?: string;
-  // in a <select t-model> with dynamic options: the model's value, to which
-  // an option's value is compared, as a number with .number
   tModelSelected?: { expr: string; number: boolean };
   inPreTag?: boolean;
 }
@@ -259,23 +220,16 @@ function createContext(parentCtx: Context, params?: Partial<Context>): Context {
   );
 }
 
-// A loop of a function: its items are made under `parentVar`, the context
-// around the loop, and each sets `names` (its t-as and the flags it reads).
 interface LoopScope {
   level: number;
   parentVar: string;
   names: string[];
-  // the loop it is in, in the same function
   parent: LoopScope | null;
 }
 
-// A t-set, and a context kept for later, in the order a function's code runs
-// them: the loops each is in tell which contexts they share (see
-// resolveCaptures)
 interface WriteSite {
   name: string;
   seq: number;
-  // the loop level whose context it writes (0: the function's)
   level: number;
   loops: LoopScope[];
 }
@@ -284,26 +238,17 @@ interface CaptureSite {
   target: CodeTarget;
   seq: number;
   loops: LoopScope[];
-  // the expression keeping the context as it is, and the one copying it
   live: string;
   copy: string;
   helper: string;
-  // the variables the code given the context reads (null: any, as a called
-  // template's may)
   reads: Set<string> | null;
 }
 
-// A context made under a loop item of the same function (an item of a nested
-// loop, the context of a t-call with attributes or a body): it is written with
-// a marker, resolved once the template is compiled (see resolveScopes)
 interface ScopeSite {
   marker: string;
   target: CodeTarget;
-  // the loop whose item the new context is made under, and the variable
-  // holding that item where the context is made
   from: LoopScope;
   itemVar: string;
-  // the new context's variable, and the names it sets itself
   varName: string;
   names: string[];
 }
@@ -313,18 +258,12 @@ class CodeTarget {
   indentLevel = 0;
   loopLevel = 0;
   loopCtxVars: string[] = [];
-  // the loops being compiled, innermost last
   loops: LoopScope[] = [];
-  // the loop levels whose item (or, for 0, whose function scope) a t-set writes
   writtenLevels: Set<number> = new Set();
-  // loop levels whose key is concatenated into a string key: they get a
-  // `skey<level>` that tells object keys apart
   stringKeyLevels: Set<number> = new Set();
   tSetVars: Map<string, number> = new Map();
-  // the t-sets and the contexts kept for later, numbered in code order
   seq = 0;
   writes: WriteSite[] = [];
-  // the loop levels whose item is memoized: a memo hit skips the item's body
   memoLevels: number[] = [];
   code: string[] = [];
   hasRoot = false;
@@ -362,8 +301,6 @@ class CodeTarget {
     return result.join("\n  ");
   }
 
-  // the key of a list's child: of the item of the innermost loop, which a
-  // list's child is always in
   currentKey(ctx: Context) {
     if (ctx.tKeyExpr) {
       return `\`\${${this.stringKey(this.loopLevel)}}${KEY_MARK}k\${${ctx.tKeyExpr}}\``;
@@ -393,7 +330,6 @@ export class CodeGenerator {
   blocks: BlockDescription[] = [];
   scopeSites: ScopeSite[] = [];
   captureSites: CaptureSite[] = [];
-  // the code of each handler, in the order the template uses them
   handlerUses: string[] = [];
   isDebug: boolean = false;
   targets: CodeTarget[] = [];
@@ -406,8 +342,6 @@ export class CodeGenerator {
   staticDefs: { id: string; expr: string }[] = [];
   hoistedHandlers: Map<string, string> = new Map();
   helpers: Set<string> = new Set();
-  // per generator, so that generating a template (a translateFn may compile
-  // another) never shifts the names of the one in progress
   nextBlockId = 1;
   nextDataIds: { [prefix: string]: number } = {};
   generateId = (prefix: string = "") => {
@@ -453,7 +387,6 @@ export class CodeGenerator {
     });
     this.resolveCaptures();
     this.resolveScopes();
-    // define blocks and utility functions
     let mainCode = [`  let { text, createBlock, list, multi, html, toggler } = bdom;`];
     if (this.helpers.size) {
       mainCode.push(`let { ${[...this.helpers].join(", ")} } = helpers;`);
@@ -467,7 +400,6 @@ export class CodeGenerator {
       mainCode.push(`const ${id} = ${expr};`);
     }
 
-    // define all blocks
     if (this.blocks.length) {
       mainCode.push(``);
       for (let block of this.blocks) {
@@ -481,7 +413,6 @@ export class CodeGenerator {
             xmlString = xmlString.slice(0, -close.length) + `</${tag}>\``;
           }
           if (block.handlers.length) {
-            // the handlers are checked once per tag, and the string made once
             const types = `${block.blockName}_types`;
             mainCode.push(
               `const ${block.blockName}_handlers = [${block.handlers.join(", ")}];`,
@@ -502,7 +433,6 @@ export class CodeGenerator {
       }
     }
 
-    // define all slots/defaultcontent function
     if (this.targets.length) {
       for (let fn of this.targets) {
         mainCode.push("");
@@ -510,7 +440,6 @@ export class CodeGenerator {
       }
     }
 
-    // generate main code
     mainCode.push("");
     mainCode = mainCode.concat("return " + this.target.generateCode());
     const code = mainCode.join("\n  ");
@@ -547,10 +476,6 @@ export class CodeGenerator {
     return marker;
   }
 
-  /**
-   * A context kept for later (`live`), or a copy of it (`copy`, made with
-   * the helper `helper`): see resolveCaptures.
-   */
   captureMarker(live: string, copy: string, helper: string, reads: Set<string> | null): string {
     const marker = `${CAPTURE_MARK}${this.captureSites.length}\u0001`;
     const target = this.target;
@@ -567,15 +492,10 @@ export class CodeGenerator {
     return marker;
   }
 
-  // the context here, kept for later by code reading `reads`: a slot, a t-set
-  // body...
   capturedContext(reads: Set<string> | null): string {
     return this.captureMarker("ctx", "slotContext(ctx)", "slotContext", reads);
   }
 
-  // the context a handler keeps: its block's data is read where the block is
-  // made, after the element's content and the t-sets in it ran, so a copy
-  // is made here, on a line of its own
   handlerContext(handlerIds: string[]): string {
     const copy = this.generateId("hctx");
     const code = handlerIds.map((id) => this.staticDefs.find((d) => d.id === id)?.expr ?? "");
@@ -584,12 +504,10 @@ export class CodeGenerator {
     return marker;
   }
 
-  // where a compilation starts: see readsSince
   mark(): [number, number] {
     return [this.targets.length, this.handlerUses.length];
   }
 
-  // the variables read by the functions and the handlers compiled since `mark`
   readsSince([targets, uses]: [number, number]): Set<string> | null {
     return readsOf([
       ...this.targets.slice(targets).flatMap((t) => t.code),
@@ -597,21 +515,6 @@ export class CodeGenerator {
     ]);
   }
 
-  /**
-   * A slot's context, a called template's and the one a t-call body runs in
-   * are read later than where they are given: when the child renders its
-   * slots on its own (its state changed, its onWillStart settled), when the
-   * called template's slots do. Kept as they are, they would show what a
-   * t-set wrote into them after that point. A t-set writes the context of a
-   * loop level: the function's (0), or a loop item's. It reaches a kept
-   * context when that level's context is in its chain, the same loop item
-   * for a loop level, and it runs after the context was kept: later in the
-   * code, or in a later item of a loop holding both. Such a context is
-   * copied; any other is kept as it is, which costs nothing. A called
-   * template's context is the caller's, which the called template's own
-   * t-sets never write (a t-set at its top level makes a scope first): the
-   * caller copies it when its own t-sets may still write it.
-   */
   resolveCaptures() {
     const sites = this.captureSites;
     if (!sites.length) {
@@ -641,7 +544,6 @@ export class CodeGenerator {
         }
         const lineAt = line.indexOf(CAPTURE_LINE);
         if (lineAt !== -1) {
-          // a copy's own line: kept only if the copy is made
           const marker = line.trimStart().slice(0, line.trimStart().indexOf(CAPTURE_LINE));
           const indent = line.slice(0, line.length - line.trimStart().length);
           return resolved.get(marker) === "ctx"
@@ -653,16 +555,6 @@ export class CodeGenerator {
     }
   }
 
-  /**
-   * A context made under another one made in the same render (a loop item)
-   * costs V8 about 1.6 us and 1.2 KB: the item becomes a prototype. A loop
-   * item no t-set writes holds only its loop's names, set when it is made:
-   * a context made under it can be made under the item's own prototype with
-   * a copy of those names instead, which no later write can make stale. That
-   * holds while nothing else writes a context: an expression assigning a
-   * variable (`t-on-click="v = 1"`, a bare-name `t-model.proxy`) turns it off
-   * for the whole template.
-   */
   resolveScopes() {
     const sites = this.scopeSites;
     if (!sites.length) {
@@ -673,11 +565,8 @@ export class CodeGenerator {
       ...[this.target, ...this.targets].flatMap((t) => t.code),
     ].join("\n");
     const writesContext = CONTEXT_WRITE.test(code);
-    // whether a context can be made under the prototype of `loop`'s items
-    // with a copy of their names
     const copiable = (loop: LoopScope, target: CodeTarget): boolean =>
       !writesContext && !target.writtenLevels.has(loop.level);
-    // the prototype of `loop`'s items, and the names they hold themselves
     const base = (loop: LoopScope, target: CodeTarget): string =>
       loop.parent && copiable(loop.parent, target) ? base(loop.parent, target) : loop.parentVar;
     const ownNames = (loop: LoopScope, target: CodeTarget): string[] => {
@@ -731,7 +620,6 @@ export class CodeGenerator {
     return block;
   }
 
-  // a dom block or a list builds its own expression
   insertBlock(block: BlockDescription, ctx: Context, expression?: string): void {
     let blockExpr = block.generateExpr(expression);
     if (block.parentVar) {
@@ -767,9 +655,6 @@ export class CodeGenerator {
     return match[1] + this.translateFn(match[2], translationCtx) + match[3];
   }
 
-  /**
-   * @returns the newly created block name, if any
-   */
   compileAST(ast: AST, ctx: Context): string | null {
     switch (ast.type) {
       case ASTType.Text:
@@ -807,8 +692,6 @@ export class CodeGenerator {
     }
   }
 
-  // a t-debug, t-log, t-translation or t-translation-context renders what it
-  // wraps, if anything
   compileContent(content: AST | null, ctx: Context): string | null {
     return content ? this.compileAST(content, ctx) : null;
   }
@@ -842,8 +725,6 @@ export class CodeGenerator {
     return block.varName;
   }
 
-  // the static code of a handler, a function of (context, event); its
-  // modifiers are read from its key at run time, checked here
   generateHandlerCode(rawEvent: string, handler: string): string {
     eventModifierMask(rawEvent);
     const { expr: compiled, arrow } = processExpr(handler);
@@ -863,7 +744,6 @@ export class CodeGenerator {
     return this.hoistHandler(hoistedExpr);
   }
 
-  // handlers are static functions of (context, event): one per distinct code
   hoistHandler(expr: string): string {
     let id = this.hoistedHandlers.get(expr);
     if (!id) {
@@ -889,9 +769,7 @@ export class CodeGenerator {
         block.dynamicTagName = tagExpr;
       }
     }
-    // attributes
     const attrs: Attrs = {};
-    // the variable holding a dynamic value attribute, for t-model to compare
     let valueVar: string | null = null;
 
     for (let key in ast.attrs) {
@@ -901,21 +779,16 @@ export class CodeGenerator {
         attrName = isFormat ? key.slice(7) : key === "t-att" ? null : key.slice(6);
         expr = isFormat ? interpolate(ast.attrs[key]) : compileExpr(ast.attrs[key]);
         if (!attrName) {
-          // an object or a pair: its t-set bodies become their strings
           this.helpers.add("attrsValue");
           expr = `attrsValue(${expr})`;
         } else if (!LITERAL_RE.test(expr)) {
-          // a t-set body becomes its string in the render, not in the patch
           this.helpers.add("attrValue");
           expr = `attrValue(${expr})`;
         }
         if (attrName && isProp(ast.tag, attrName)) {
           if (attrName === "readonly") {
-            // the property has a different name than the attribute
             attrName = "readOnly";
           }
-          // a synced property is set on every patch, changed or not: a
-          // value the user changed is set back
           const idx = block!.insertData(expr, "prop");
           attrs[`block-sync-property-${idx}`] = attrName!;
           if (attrName === "value") {
@@ -950,7 +823,6 @@ export class CodeGenerator {
       }
     }
 
-    // t-model
     let tModelSelected: Context["tModelSelected"];
     if (ast.model) {
       const {
@@ -981,8 +853,6 @@ export class CodeGenerator {
         this.helpers.add("modelExpr");
         this.define(modelId, `modelExpr(${compileExpr(expr)})`);
         readExpr = `${modelId}()`;
-        // the model is the handler's extra argument: its context stays ctx,
-        // whose component must be mounted for the handler to run
         handlerId = this.hoistHandler(`(ctx, ev, model) => model.set(${valueCode})`);
       }
 
@@ -991,7 +861,6 @@ export class CodeGenerator {
         let targetExpr =
           targetAttr in attrs ? JSON.stringify(attrs[targetAttr]) : valueVar || "false";
         if (shouldNumberize) {
-          // the handler sets the model to the number of the value
           targetExpr = `toNumber(${targetExpr})`;
         }
         idx = block!.insertData(`${readExpr} === ${targetExpr}`, "prop");
@@ -1012,21 +881,15 @@ export class CodeGenerator {
       }
     }
 
-    // event handlers
     for (let ev in ast.on) {
       const handlerId = this.generateHandlerCode(ev, ast.on[ev]);
       const idx = block!.insertHandler(handlerId, this.handlerContext([handlerId]));
       attrs[`block-handler-${idx}`] = ev;
     }
 
-    // t-ref
     if (ast.ref) {
       const refExpr = compileExpr(ast.ref);
       this.helpers.add("createRef");
-      // `node` is the component that physically hosts this element (for slot
-      // content it is the innermost host, threaded through callSlot). createRef
-      // registers the ref there so it is cleared if the element is removed
-      // without this block's own remove() running (bulk removal).
       const setRefStr = `createRef(${refExpr}, node)`;
       const idx = block!.insertData(setRefStr, "ref");
       attrs["block-ref"] = String(idx);
@@ -1093,8 +956,6 @@ export class CodeGenerator {
       const name = this.compileInNewTarget("defaultContent", bodyAst, ctx);
       defaultContent = `${name}.call(this, ctx, node, ${key})`;
     }
-    // a t-call body is static: the context it runs in is the caller's, which
-    // the call stores beside it; its owner is the caller's, which is this one's
     return `ctx[zero] ? ctx[zero].call(this, ctx[zeroCtx], node, ${key}) : ${defaultContent}`;
   }
 
@@ -1105,18 +966,12 @@ export class CodeGenerator {
     if (ast.expr === "0") {
       blockStr = this.compileZero(ast, ctx);
     } else {
-      // the key of this output site: a t-set body (LazyValue) output at several
-      // sites, or once per loop iteration, renders its components under each.
-      // Only a LazyValue needs it, so its parts are passed and safeOutput joins
-      // them only then: the key, the site id, and the raw loop keys
       const site = this.siteId();
       const keyExpr = ctx.tKeyExpr ? `key + \`${KEY_MARK}k\${${ctx.tKeyExpr}}\`` : "key";
       const level = this.target.loopLevel;
       let keyArgs: string;
       if (level <= MAX_LAZY_LOOP_KEYS) {
         if (this.dev) {
-          // safeOutput stringifies the loop keys of a LazyValue: the dev duplicate
-          // key check must compare that form
           for (let i = 1; i <= level; i++) {
             this.target.stringKey(i);
           }
@@ -1187,8 +1042,6 @@ export class CodeGenerator {
     const id = block ? block.id : this.generateId("_");
     let memo: string | null = null;
     if (ast.memo !== undefined && block) {
-      // one site per list instance: a list inside a loop, or in a template
-      // called several times, gets the keys of its position
       memo = this.generateId("memo");
       this.helpers.add("memoPrevious");
       this.helpers.add("memoKeep");
@@ -1208,7 +1061,6 @@ export class CodeGenerator {
     const lists = block ? [keys, vals, l, `c_block${id}`] : [keys, vals, l];
     this.helpers.add("prepareList");
     this.define(`[${lists.join(", ")}]`, `prepareList(${compileExpr(ast.collection)})`);
-    // Throw errors on duplicate keys in dev mode
     if (this.dev) {
       this.define(`keys${id}`, `new Set()`);
     }
@@ -1234,7 +1086,6 @@ export class CodeGenerator {
       names: suffixes.map((suffix) => ast.elem + suffix),
       parent: parentLoop,
     };
-    // an item of a loop in a loop is made under the outer item: see resolveScopes
     const itemExpr = parentLoop
       ? this.scopeMarker(parentLoop, ctxVar, "ctx", loopScope.names)
       : `Object.create(${ctxVar})`;
@@ -1266,7 +1117,6 @@ export class CodeGenerator {
     if (memo) {
       this.target.memoLevels.pop();
     }
-    // the body is compiled: whether its keys need the string form is known
     const keyLines: string[] = [];
     let uniqueKey = `key${level}`;
     if (this.target.stringKeyLevels.delete(level)) {
@@ -1275,9 +1125,6 @@ export class CodeGenerator {
       uniqueKey = `skey${level}`;
     }
     if (this.dev) {
-      // Throw error on duplicate keys in dev mode: two keys are the same when
-      // the body's string keys (components, slots, calls) are, even if the
-      // list tells them apart
       this.helpers.add("OwlError");
       keyLines.push(
         `if (keys${id}.has(${uniqueKey})) { throw new OwlError(\`Got duplicate key in t-foreach: \${key${level}}\`)}`,
@@ -1347,8 +1194,6 @@ export class CodeGenerator {
       const n = ast.content.filter((c) => !c.hasNoRepresentation).length;
       let result: string | null = null;
       if (n <= 1) {
-        // Check if there are non-DOM directives (like t-set) after the DOM child.
-        // If so, defer the return so those directives are compiled before it.
         const shouldDefer =
           !this.target.hasRoot &&
           n === 1 &&
@@ -1399,9 +1244,6 @@ export class CodeGenerator {
     const isDynamic = isInterpolated(ast.name);
     const subTemplate = isDynamic ? interpolate(ast.name) : toStringExpression(ast.name);
     block = this.createBlock(block, "multi");
-    // the body is a static function: the called template's t-out="0" runs it
-    // in the context stored beside it, with its own `this`, which is the
-    // caller's (callTemplate passes it on)
     const zero: [string, string][] = [];
     if (ast.body) {
       const start = this.mark();
@@ -1410,8 +1252,6 @@ export class CodeGenerator {
       this.helpers.add("zeroCtx");
       zero.push(["[zero]", name], ["[zeroCtx]", this.capturedContext(this.readsSince(start))]);
     } else if (!ast.context) {
-      // a call without a body must not let the called template see the 0 of
-      // the template that calls it
       this.helpers.add("zero");
       zero.push(["[zero]", "null"]);
     }
@@ -1420,8 +1260,6 @@ export class CodeGenerator {
     if (ast.context) {
       const dynCtxVar = this.generateId("ctx");
       this.addLine(`const ${dynCtxVar} = ${compileExpr(ast.context)};`);
-      // the context is the called template's `this`, and its keys are also its
-      // variables: Odoo's arch templates read `record`, `__comp__`... by name
       const entries = [
         `this: ${dynCtxVar}`,
         ...attrs.map(([name, value]) => `${propKey(name)}: ${value}`),
@@ -1429,10 +1267,6 @@ export class CodeGenerator {
       ];
       ctxExpr = `Object.assign({}, ${dynCtxVar}, {${entries.join(", ")}})`;
     } else if (!attrs.length && !ast.body) {
-      // nothing to add: the called template runs in the caller's context, as
-      // a slot does (its code writes no variable into the context it is
-      // given), unless there is a 0 to hide. A new context would make the
-      // caller's a prototype, a cost when it is new, as a loop item's is
       this.helpers.add("withoutZero");
       ctxExpr = this.captureMarker(
         "ctx[zero] ? withoutZero(ctx) : ctx",
@@ -1441,9 +1275,7 @@ export class CodeGenerator {
         null
       );
     } else {
-      // assigned one by one, as Object.assign would, without a literal to copy
       ctxExpr = this.generateId("ctx");
-      // in a loop, made under the item: see resolveScopes
       const loop = this.target.loops[this.target.loops.length - 1];
       this.define(
         ctxExpr,
@@ -1530,10 +1362,6 @@ export class CodeGenerator {
     target.writes.push({ name, seq: ++target.seq, level, loops: [...target.loops] });
   }
 
-  // the key of a site's content: the t-key around it, the site's id, then
-  // the key of each open loop, each a segment of its own (see keyOf in the
-  // runtime): no loop key, t-key or id can spell another, so two sites, or
-  // two items of a site, never share a key in their component's children
   scopeKey(ctx: Context, site: string = this.siteId()): string {
     let suffix = ctx.tKeyExpr ? `${KEY_MARK}k\${${ctx.tKeyExpr}}${site}` : site;
     for (let i = 1; i <= this.target.loopLevel; i++) {
@@ -1542,22 +1370,10 @@ export class CodeGenerator {
     return `key + \`${suffix}\``;
   }
 
-  // a keyed site's id, unique in the template, as written in the generated code
   siteId(): string {
     return this.generateId(KEY_MARK);
   }
 
-  /**
-   * Formats a prop name and value into a string suitable to be inserted in the
-   * generated code. For example:
-   *
-   * Name              Value            Result
-   * ---------------------------------------------------------
-   * "number"          "state"          "number: ctx['state']"
-   * "something"       ""               "something: undefined"
-   * "some-prop"       "state"          "'some-prop': ctx['state']"
-   * "onClick.bind"    "onClick"        "onClick: bind(ctx, ctx['onClick'])"
-   */
   formatProp(
     name: string,
     value: string,
@@ -1568,10 +1384,6 @@ export class CodeGenerator {
     return `${propKey(key)}: ${code}`;
   }
 
-  /**
-   * The name a prop or t-call attribute `name` (suffix stripped) defines, and
-   * the code of its value.
-   */
   propEntry(
     name: string,
     value: string,
@@ -1618,14 +1430,12 @@ export class CodeGenerator {
   }
 
   getPropString(props: string[], dynProps: string | null): string {
-    // spread, not Object.assign: no literal of the static props to copy
     const entries = dynProps ? [`...${compileExpr(dynProps)}`, ...props] : props;
     return `{${entries.join(",")}}`;
   }
 
   compileComponent(ast: ASTComponent, ctx: Context): string {
     let { block } = ctx;
-    // props
     const hasSlotsProp = "slots" in (ast.props || {});
     const props: string[] = [];
     const propList: string[] = [];
@@ -1641,7 +1451,6 @@ export class CodeGenerator {
       }
 
       if (suffix) {
-        // .alike, .bind, .translate — delegate to formatProp, no propList entry
         props.push(this.formatProp(p, ast.props![p], ast.propsTranslationCtx, ctx));
         continue;
       }
@@ -1661,7 +1470,6 @@ export class CodeGenerator {
       }
     }
 
-    // slots
     let slotDef: string = "";
     if (ast.slots) {
       let slotCtx: string | null = null;
@@ -1677,7 +1485,6 @@ export class CodeGenerator {
             slotCtx = this.capturedContext(null);
             slotSite = this.captureSites[this.captureSites.length - 1];
           }
-          // static: callSlot runs it with the owner the descriptor carries
           params.push(`__render: ${name}, __ctx: ${slotCtx}, __owner: this`);
         }
         const scope = ast.slots[slotName].scope;
@@ -1698,7 +1505,6 @@ export class CodeGenerator {
       }
       slotDef = `{${slotStr.join(", ")}}`;
       if (slotSite) {
-        // what every slot's content reads
         slotSite.reads = this.readsSince(start);
       }
     }
@@ -1720,7 +1526,6 @@ export class CodeGenerator {
       this.addLine(`${propVar!}.slots = Object.assign(${slotDef}, ${propVar!}.slots);`);
     }
 
-    // cmap key
     let expr: string;
     if (ast.isDynamic) {
       expr = this.generateId("Comp");
@@ -1741,13 +1546,11 @@ export class CodeGenerator {
       })`,
     });
 
-    // a dynamic component's key gets its class's id at run time (createComponent)
     let blockExpr = `${id}(${propString}, ${keyArg}, node, this, ${ast.isDynamic ? expr : null})`;
     if (ast.isDynamic) {
       blockExpr = `toggler(${expr}, ${blockExpr})`;
     }
 
-    // event handling
     if (ast.on) {
       blockExpr = this.wrapWithEventCatcher(blockExpr, ast.on);
     }
@@ -1757,8 +1560,6 @@ export class CodeGenerator {
     return block.varName;
   }
 
-  // a catcher's handlers are static, given with its spec; a render gives it
-  // their context
   wrapWithEventCatcher(expr: string, on: EventHandlers): string {
     this.helpers.add("createCatcher");
     let name = this.generateId("catcher");
@@ -1789,8 +1590,6 @@ export class CodeGenerator {
     const key = this.scopeKey(ctx);
 
     const props = ast.attrs ? this.formatPropObject(ast.attrs, ast.attrsTranslationCtx, ctx) : [];
-    // a slot scope without attributes is an object callSlot makes when the
-    // slot declares a scope
     const scope =
       props.length || ast.dynamicProps ? this.getPropString(props, ast.dynamicProps) : "null";
     if (ast.defaultContent) {
@@ -1805,7 +1604,6 @@ export class CodeGenerator {
         blockString = `callSlot(ctx, node, ${key}, ${slotName}, ${dynamic}, ${scope})`;
       }
     }
-    // event handling
     if (ast.on) {
       blockString = this.wrapWithEventCatcher(blockString, ast.on);
     }

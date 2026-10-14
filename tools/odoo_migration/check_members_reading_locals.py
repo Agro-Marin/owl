@@ -25,7 +25,7 @@ for r in roots:
             reads = set(re.findall(r"\bthis\.([A-Za-z_$][\w$]*)", body_at(src, m.end() - 1)))
             getters[m[1]].append((str(f), reads - members))
 sys.path.insert(0, str(pathlib.Path(__file__).parent))
-import this_scope as ts  # noqa: E402
+import this_scope as ts
 _files = ts.collect(roots)
 passed = ts.dynamic_whitelist(_files, ts.dynamic_calls(_files))
 _graph = {}

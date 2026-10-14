@@ -1185,7 +1185,6 @@ class Explorer extends Component {
 
     if (targetPath === sourcePath) return;
 
-    // Check if target already exists
     const files = this.code.files();
     if (files.some((f) => f.name === targetPath)) return;
 
@@ -1882,10 +1881,6 @@ class ContentView extends Component {
 
       const nonMainFiles = Object.entries(jsFiles).filter(([name]) => name !== entryPoint);
 
-      // Build blob URLs in multiple passes. Each pass creates blobs with
-      // imports rewritten to the previous pass's URLs. Pass 0 uses original
-      // code, subsequent passes rewrite relative imports to blob URLs.
-      // N passes support import chains N-1 levels deep among non-main files.
       const fileUrlMap = {};
       for (let pass = 0; pass < 4; pass++) {
         for (const [name, code] of nonMainFiles) {

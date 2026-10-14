@@ -1,9 +1,6 @@
 import { createBlock, list, mount, patch, text, toggler } from "../../src/blockdom";
 import { makeTestFixture } from "./helpers";
 
-//------------------------------------------------------------------------------
-// Setup and helpers
-//------------------------------------------------------------------------------
 
 let fixture: HTMLElement;
 
@@ -37,7 +34,6 @@ describe("togglers", () => {
     expect(fixture.innerHTML).toBe("bar");
     expect(fixture.firstChild).not.toBe(textnode);
 
-    // we check here that the key was properly reset
     const other = fixture.firstChild;
     patch(tree, toggler("key1", text("foo")));
     expect(fixture.innerHTML).toBe("foo");

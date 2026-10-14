@@ -12,7 +12,6 @@ const isChrome = browser === "chrome";
 const DEVTOOLS_SRC = "tools/devtools/src";
 const DEVTOOLS_DIST = "dist/devtools";
 
-// ---- Step 1: Pre-build (build owl, compile templates) ----
 
 if (isProduction) {
   execSync("npm run build", { stdio: "inherit" });
@@ -21,9 +20,7 @@ execSync("npm run compile_templates -- tools/devtools/src -o tools/devtools/asse
   stdio: "inherit",
 });
 
-// ---- Step 2: Bundle JS entry points with esbuild ----
 
-// Plugin to import owl_devtools_global_hook.js as a string (for Firefox injection)
 const stringImportPlugin = {
   name: "string-import",
   setup(build) {
@@ -54,14 +51,11 @@ await Promise.all(
       format: "esm",
       minify: isProduction,
       plugins: [stringImportPlugin],
-      // the panel and popup apps bundle the ES build they import (the page
-      // script inspects the page's own owl and imports none)
       alias: { "@odoo/owl": "./packages/owl/dist/owl.es.js" },
     });
   })
 );
 
-// ---- Step 3: Copy static files ----
 
 const filesToCopy = [
   { src: "tools/devtools/assets", dest: `${DEVTOOLS_DIST}/assets` },
@@ -78,7 +72,6 @@ const filesToCopy = [
   },
 ];
 
-// Copy fonts directory
 mkdirSync(`${DEVTOOLS_DIST}/fonts`, { recursive: true });
 cpSync(`${DEVTOOLS_SRC}/fonts`, `${DEVTOOLS_DIST}/fonts`, { recursive: true });
 
@@ -87,7 +80,6 @@ for (const { src, dest } of filesToCopy) {
   cpSync(src, dest, { recursive: true });
 }
 
-// ---- Step 4: Cleanup temp files ----
 
 for (const file of readdirSync("tools/devtools/assets")) {
   if (file.endsWith(".js")) {

@@ -28,7 +28,6 @@ function trackLifecycle(name: string) {
   onWillDestroy(() => log.push(`${name}:willDestroy`));
 }
 
-// a boundary whose child's onMounted throws during the first mount
 function boundaryApp(opts: { childThrows: () => boolean; mid?: boolean }) {
   let n = 0;
   const refs: { boundary?: any; mid?: any } = {};
@@ -203,7 +202,6 @@ test("a render delayed behind a pass that fails on its last pending render waits
   await nextTick();
   await nextTick();
   expect(fixture.innerHTML).toBe("<div><b>2</b></div>");
-  // B renders once, in the recovered pass, never with the props of the failed one
   expect(bSeen).toEqual(["failed=true v=2"]);
 });
 
@@ -248,7 +246,7 @@ describe("a pass failed by one component, handled without a re-render", () => {
       await nextMicroTick();
       await nextMicroTick();
       if (i % 100 === 0) {
-        await nextTick(); // its renders are committed: none is recycled 1000 times
+        await nextTick();
       }
     }
     await nextTick();
@@ -313,7 +311,6 @@ test("an onMounted error does not drop a render of its component requested earli
   class Y extends Component {
     static template = xml`<y/>`;
     setup() {
-      // Y's onMounted runs before X's: later siblings first
       onMounted(() => {
         x.state.n = 1;
         x.__owl__.render(false);

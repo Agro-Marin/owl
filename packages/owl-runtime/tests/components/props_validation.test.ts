@@ -15,9 +15,6 @@ beforeEach(() => {
   fixture = makeTestFixture();
 });
 
-//------------------------------------------------------------------------------
-// Props validation
-//------------------------------------------------------------------------------
 
 describe("props validation", () => {
   test("validation is only done in dev mode", async () => {
@@ -701,7 +698,6 @@ describe("props validation", () => {
   });
 
   test("default values are applied before validating props at update", async () => {
-    // need to do something about errors catched in render
     class SubComp extends Component {
       static template = xml`<div><t t-out="this.props.p"/></div>`;
       props = props({ p: t.number().optional(4) });
@@ -766,7 +762,6 @@ describe("props validation", () => {
       static components = { Child };
     }
 
-    // we just check that it doesn't throw
     await expect(mount(Parent, fixture, { dev: true })).resolves.toEqual(expect.anything());
   });
 
@@ -836,9 +831,6 @@ describe("props validation", () => {
   });
 });
 
-//------------------------------------------------------------------------------
-// Schema defaults (.optional(value))
-//------------------------------------------------------------------------------
 
 describe("schema defaults", () => {
   test("default values can be declared in the schema", async () => {
@@ -859,7 +851,6 @@ describe("schema defaults", () => {
       static template = xml`<div><t t-out="this.props.p"/></div>`;
       props = props({ p: t.number().optional(4) });
     }
-    // no error in dev mode even though p is not given
     await mount(SubComp, fixture, { dev: true });
     expect(fixture.innerHTML).toBe("<div>4</div>");
   });
@@ -963,9 +954,6 @@ describe("schema defaults", () => {
   });
 });
 
-//------------------------------------------------------------------------------
-// Reusing a schema as props via schema.toShape() — see #1966
-//------------------------------------------------------------------------------
 
 describe("schema.toShape()", () => {
   test("t.object().toShape() returns the shape it was built from", () => {
@@ -986,7 +974,6 @@ describe("schema.toShape()", () => {
   test("t.and().toShape() ignores members with no shape and recurses", () => {
     const inner = t.and([t.object({ a: t.string() }), t.object({ b: t.string() })]);
     const shape = t.and([inner, t.string(), t.object({ c: t.string() })]).toShape();
-    // t.string() carries no shape and is skipped; the nested t.and is merged
     expect(Object.keys(shape)).toEqual(["a", "b", "c"]);
   });
 
@@ -1005,13 +992,10 @@ describe("schema.toShape()", () => {
     }
     await mount(Parent, fixture, { test: true });
     expect(fixture.innerHTML).toBe("<div><div>hello</div></div>");
-    // a schema default is filled, and the declared key is reactive-readable
     expect(captured.color).toBe("red");
   });
 
   test("a composed (t.and) schema drives props via toShape()", async () => {
-    // #1966: passing the composed schema itself to props() failed with a
-    // spurious missingKeys: ["optional"]. Passing schema.toShape() works.
     const OptionSchema = t.object({
       type: t.selection(["warning", "danger"]).optional("warning"),
       title: t.string().optional(),
@@ -1034,7 +1018,6 @@ describe("schema.toShape()", () => {
     await mount(Root, fixture, { test: true });
     expect(captured.message).toBe("hello");
     expect(captured.title).toBe("DEBUG");
-    // top-level defaults from either member of the intersection are applied
     expect(captured.type).toBe("warning");
     expect(captured.autocloseDelay).toBe(4000);
   });
@@ -1078,7 +1061,6 @@ describe("schema.toShape()", () => {
     expect(error.message).toMatch("Invalid component props (SubComp)");
     expect(error.message).toMatch("missing keys");
     expect(error.message).toMatch('"b"');
-    // crucially, "optional" is not reported as a missing key
     expect(error.message).not.toMatch('"optional"');
   });
 
@@ -1108,7 +1090,6 @@ describe("schema.toShape()", () => {
     await mount(Root, fixture, { test: true });
     expect(captured.message).toBe("hi");
     expect(captured.autocloseDelay).toBe(4000);
-    // nested default inside the array element is filled by applyDefaults
     expect(captured.buttons).toEqual([{ name: "ok", primary: false }]);
   });
 });

@@ -90,7 +90,7 @@ describe("Reactivity", () => {
     expectSpy(spy, 1, [1]);
     await waitScheduler();
     expectSpy(spy, 2, [100]);
-    state.a = state.a + 5; // key is modified
+    state.a = state.a + 5;
     expectSpy(spy, 2, [100]);
     await waitScheduler();
     expectSpy(spy, 3, [105]);
@@ -105,7 +105,7 @@ describe("Reactivity", () => {
     expectSpy(spy, 1, [1]);
     await waitScheduler();
     expectSpy(spy, 2, [101]);
-    state.a.k = state.a.k + 5; // key is modified
+    state.a.k = state.a.k + 5;
     expectSpy(spy, 2, [101]);
     await waitScheduler();
     expectSpy(spy, 3, [106]);
@@ -155,7 +155,7 @@ describe("Reactivity", () => {
     await waitScheduler();
     expectSpy(spy, 2, [true]);
 
-    state.a = 3; // Write on existing property shouldn't notify
+    state.a = 3;
     expectSpy(spy, 2, [true]);
     await waitScheduler();
     expectSpy(spy, 2, [true]);
@@ -172,14 +172,14 @@ describe("Reactivity", () => {
     const state = createProxy({ a: 1 });
     effect(() => spy(state.a));
     expectSpy(spy, 1, [1]);
-    state.a = 1; // same value
+    state.a = 1;
     await waitScheduler();
     expectSpy(spy, 1, [1]);
-    state.a = state.a + 5; // read and modifies property a to have value 6
+    state.a = state.a + 5;
     expectSpy(spy, 1, [1]);
     await waitScheduler();
     expectSpy(spy, 2, [6]);
-    state.a = 6; // same value
+    state.a = 6;
     expectSpy(spy, 2, [6]);
     await waitScheduler();
     expectSpy(spy, 2, [6]);
@@ -364,7 +364,6 @@ describe("Reactivity", () => {
     expectSpy(spy, 2, [3]);
 
     state.a;
-    // same value again: no notification
     state.a = 3;
     await waitScheduler();
     expectSpy(spy, 2, [3]);
@@ -395,7 +394,6 @@ describe("Reactivity", () => {
     expect(state).toEqual([1, "hey"]);
     expect(state.length).toBe(2);
 
-    // clear all observations caused by previous expects
     state[0] = 2;
     await waitScheduler();
     expectSpy(spy, 4, [[2, "hey"]]);
@@ -406,7 +404,6 @@ describe("Reactivity", () => {
     expect(state).toEqual(["lindemans", 2, "hey"]);
     expect(state.length).toBe(3);
 
-    // clear all observations caused by previous expects
     state[1] = 3;
     await waitScheduler();
     expectSpy(spy, 6, [["lindemans", 3, "hey"]]);
@@ -527,7 +524,7 @@ describe("Reactivity", () => {
 
     state.b = 8;
     await waitScheduler();
-    expectSpy(spy, 1, [1]); // Not observing key changes: shouldn't get notified
+    expectSpy(spy, 1, [1]);
     expect(state.b).toBe(8);
     expect(state).toEqual({ a: 1, b: 8 });
   });
@@ -793,7 +790,6 @@ describe("Reactivity", () => {
     });
     expectSpy(spy, 1, [arrDict, 1]);
 
-    // swap a and b
     const b = state.b;
     const a = state.a;
     state.b = a;
@@ -801,7 +797,6 @@ describe("Reactivity", () => {
     await waitScheduler();
     expectSpy(spy, 2, [1, arrDict]);
 
-    // push something into array to make sure it works
     state.b.arr.push("blanche");
     await waitScheduler();
     expectSpy(spy, 3, [1, arrDict]);
@@ -817,7 +812,6 @@ describe("Reactivity", () => {
     await waitScheduler();
     expectSpy(spy, 2, [state.a, []]);
 
-    // push something into array to make sure it works
     state.a.arr.push("blanche");
     await waitScheduler();
     expectSpy(spy, 3, [state.a, ["blanche"]]);
@@ -913,7 +907,6 @@ describe("Reactivity", () => {
     effect(() => spy2(obj2.b));
     effect(() => spy3(obj3.c));
 
-    // assign the same object shouldn't notify reactivity
     obj2.b = obj2.b;
     obj3.c = obj3.c;
     await waitScheduler();
@@ -941,26 +934,10 @@ describe("Reactivity", () => {
     expectSpy(spy3, 2, [obj1]);
   });
 
-  //   test("notification is not done after unregistration", async () => {
-  //     let n = 0;
-  //     const observer = () => n++;
-  //     const unregisterObserver = registerObserver(observer);
-  //     const state = atom({ a: 1 } as any, observer);
 
-  //     state.a = state.a;
-  //     await nextMicroTick();
-  //     expect(n).toBe(0);
 
-  //     unregisterObserver();
 
-  //     state.a = { b: 2 };
-  //     await nextMicroTick();
-  //     expect(n).toBe(0);
 
-  //     state.a.b = state.a.b + 3;
-  //     await nextMicroTick();
-  //     expect(n).toBe(0);
-  //   });
 
   test("don't react to changes in subobject that has been deleted", async () => {
     const spy = vi.fn();
@@ -981,7 +958,7 @@ describe("Reactivity", () => {
 
     kVal.l = 2;
     await waitScheduler();
-    expectSpy(spy, 3, [undefined]); // kVal must no longer be observed
+    expectSpy(spy, 3, [undefined]);
   });
 
   test("don't react to changes in subobject that has been deleted", async () => {
@@ -1034,7 +1011,7 @@ describe("Reactivity", () => {
     const spy = vi.fn();
     const a = { k: { n: 1 } } as any;
     const state = createProxy(a);
-    const kVal = state.k; // read k
+    const kVal = state.k;
 
     effect(() => spy(state.k.n));
     expectSpy(spy, 1, [1]);
@@ -1148,7 +1125,7 @@ describe("Collections", () => {
       expect([...state.entries()]).toEqual([[1, 1]]);
       expect([...state.values()]).toEqual([1]);
       expect([...state.keys()]).toEqual([1]);
-      expect([...state]).toEqual([1]); // Checks Symbol.iterator
+      expect([...state]).toEqual([1]);
       expect(state.size).toBe(1);
       expect(typeof state).toBe("object");
       expect(state).toBeInstanceOf(Set);
@@ -1189,19 +1166,19 @@ describe("Collections", () => {
       state.clear();
       await waitScheduler();
       expectSpy(spy, 5, [false]);
-      state.clear(); // clearing again doesn't notify again
+      state.clear();
       await waitScheduler();
       expectSpy(spy, 5, [false]);
 
-      state.add(3); // setting unobserved key doesn't notify
+      state.add(3);
       await waitScheduler();
       expectSpy(spy, 5, [false]);
-      expect(state.has(3)).toBe(true); // subscribe to 3
-      state.add(3); // adding observed key doesn't notify if key was already present
+      expect(state.has(3)).toBe(true);
+      state.add(3);
       await waitScheduler();
       expectSpy(spy, 5, [false]);
-      expect(state.has(4)).toBe(false); // subscribe to 4
-      state.delete(4); // deleting observed key doesn't notify if key was already not present
+      expect(state.has(4)).toBe(false);
+      state.delete(4);
       await waitScheduler();
       expectSpy(spy, 5, [false]);
     });
@@ -1218,11 +1195,11 @@ describe("Collections", () => {
       proxyObj.a = 0;
       await waitScheduler();
       expectSpy(spy, 2, [0]);
-      proxyObj.a; // observe key "a" in sub-proxy;
+      proxyObj.a;
       proxyObj.a = 1;
       await waitScheduler();
       expectSpy(spy, 3, [1]);
-      proxyObj.a = 1; // setting same value again shouldn't notify
+      proxyObj.a = 1;
       await waitScheduler();
       expectSpy(spy, 3, [1]);
     });
@@ -1239,11 +1216,11 @@ describe("Collections", () => {
       proxyObj.a = 0;
       await waitScheduler();
       expectSpy(spy, 2, [0]);
-      proxyObj.a; // observe key "a" in sub-proxy;
+      proxyObj.a;
       proxyObj.a = 1;
       await waitScheduler();
       expectSpy(spy, 3, [1]);
-      proxyObj.a = 1; // setting same value again shouldn't notify
+      proxyObj.a = 1;
       await waitScheduler();
       expectSpy(spy, 3, [1]);
     });
@@ -1261,11 +1238,11 @@ describe("Collections", () => {
       proxyObj.a = 0;
       await waitScheduler();
       expectSpy(spy, 2, [0]);
-      proxyObj.a; // observe key "a" in sub-proxy;
+      proxyObj.a;
       proxyObj.a = 1;
       await waitScheduler();
       expectSpy(spy, 3, [1]);
-      proxyObj.a = 1; // setting same value again shouldn't notify
+      proxyObj.a = 1;
       await waitScheduler();
       expectSpy(spy, 3, [1]);
     });
@@ -1282,11 +1259,11 @@ describe("Collections", () => {
       proxyObj.a = 0;
       await waitScheduler();
       expectSpy(spy, 2, [0]);
-      proxyObj.a; // observe key "a" in sub-proxy;
+      proxyObj.a;
       proxyObj.a = 1;
       await waitScheduler();
       expectSpy(spy, 3, [1]);
-      proxyObj.a = 1; // setting same value again shouldn't notify
+      proxyObj.a = 1;
       await waitScheduler();
       expectSpy(spy, 3, [1]);
     });
@@ -1302,11 +1279,11 @@ describe("Collections", () => {
       }, thisArg);
       expect(proxyKeyObj).not.toBe(keyObj);
       expect(proxyValObj).not.toBe(keyObj);
-      expect(mapObj).toBe(state); // third argument should be the proxy
-      expect(thisObj).toBe(thisArg); // thisArg should not be made proxy
+      expect(mapObj).toBe(state);
+      expect(thisObj).toBe(thisArg);
       expect(toRaw(proxyKeyObj as any)).toBe(keyObj);
       expect(toRaw(proxyValObj as any)).toBe(keyObj);
-      expect(proxyKeyObj).toBe(proxyValObj); // proxyKeyObj and proxyValObj should be the same object
+      expect(proxyKeyObj).toBe(proxyValObj);
 
       effect(() => spy(proxyKeyObj.a));
       expectSpy(spy, 1, [2]);
@@ -1315,19 +1292,18 @@ describe("Collections", () => {
       await waitScheduler();
       expectSpy(spy, 2, [0]);
 
-      proxyKeyObj!.a; // observe key "a" in key sub-proxy;
+      proxyKeyObj!.a;
       proxyKeyObj!.a = 1;
       await waitScheduler();
       expectSpy(spy, 3, [1]);
 
-      proxyKeyObj!.a = 1; // setting same value again shouldn't notify
+      proxyKeyObj!.a = 1;
       proxyValObj!.a = 1;
       await waitScheduler();
       expectSpy(spy, 3, [1]);
     });
 
     test("ES2025 set methods work on a reactive set, and observe its membership", async () => {
-      // the ES2025 methods are not in the lib the tests compile against
       const set: any = proxy(new Set([1, 2]));
       const other = proxy(new Set([2, 3]));
       const spy = vi.fn();
@@ -1442,7 +1418,7 @@ describe("Collections", () => {
       expect([...state.entries()]).toEqual([[1, 2]]);
       expect([...state.values()]).toEqual([2]);
       expect([...state.keys()]).toEqual([1]);
-      expect([...state]).toEqual([[1, 2]]); // Checks Symbol.iterator
+      expect([...state]).toEqual([[1, 2]]);
       expect(state.size).toBe(1);
       expect(typeof state).toBe("object");
       expect(state).toBeInstanceOf(Map);
@@ -1483,19 +1459,19 @@ describe("Collections", () => {
       state.clear();
       await waitScheduler();
       expectSpy(spy, 5, [false]);
-      state.clear(); // clearing again doesn't notify again
+      state.clear();
       await waitScheduler();
       expectSpy(spy, 5, [false]);
 
-      state.set(3, 4); // setting unobserved key doesn't notify
+      state.set(3, 4);
       await waitScheduler();
       expectSpy(spy, 5, [false]);
-      expect(state.has(3)).toBe(true); // subscribe to 3
-      state.set(3, 4); // setting the same value doesn't notify
+      expect(state.has(3)).toBe(true);
+      state.set(3, 4);
       await waitScheduler();
       expectSpy(spy, 5, [false]);
-      expect(state.has(4)).toBe(false); // subscribe to 4
-      state.delete(4); // deleting observed key doesn't notify if key was already not present
+      expect(state.has(4)).toBe(false);
+      state.delete(4);
       await waitScheduler();
       expectSpy(spy, 5, [false]);
     });
@@ -1509,34 +1485,34 @@ describe("Collections", () => {
       state.set(2, 3);
       await waitScheduler();
       expectSpy(spy, 2, [3]);
-      expect(state.get(2)).toBe(3); // subscribe to 2
+      expect(state.get(2)).toBe(3);
       state.delete(2);
       await waitScheduler();
       expectSpy(spy, 3, [undefined]);
-      state.delete(2); // deleting again doesn't notify again
+      state.delete(2);
       await waitScheduler();
       expectSpy(spy, 3, [undefined]);
       state.set(2, 3);
       await waitScheduler();
       expectSpy(spy, 4, [3]);
-      expect(state.get(2)).toBe(3); // subscribe to 2
+      expect(state.get(2)).toBe(3);
       state.clear();
       await waitScheduler();
       expectSpy(spy, 5, [undefined]);
-      expect(state.get(2)).toBeUndefined(); // subscribe to 2
-      state.clear(); // clearing again doesn't notify again
+      expect(state.get(2)).toBeUndefined();
+      state.clear();
       await waitScheduler();
       expectSpy(spy, 5, [undefined]);
 
-      state.set(3, 4); // setting unobserved key doesn't notify
+      state.set(3, 4);
       await waitScheduler();
       expectSpy(spy, 5, [undefined]);
-      expect(state.get(3)).toBe(4); // subscribe to 3
-      state.set(3, 4); // setting the same value doesn't notify
+      expect(state.get(3)).toBe(4);
+      state.set(3, 4);
       await waitScheduler();
       expectSpy(spy, 5, [undefined]);
-      expect(state.get(4)).toBe(undefined); // subscribe to 4
-      state.delete(4); // deleting observed key doesn't notify if key was already not present
+      expect(state.get(4)).toBe(undefined);
+      state.delete(4);
       await waitScheduler();
       expectSpy(spy, 5, [undefined]);
     });
@@ -1556,7 +1532,7 @@ describe("Collections", () => {
       proxyObj.a = 1;
       await waitScheduler();
       expectSpy(spy, 3, [1]);
-      proxyObj.a = 1; // setting same value again shouldn't notify
+      proxyObj.a = 1;
       await waitScheduler();
       expectSpy(spy, 3, [1]);
     });
@@ -1576,7 +1552,7 @@ describe("Collections", () => {
       proxyObj.a = 1;
       await waitScheduler();
       expectSpy(spy, 3, [1]);
-      proxyObj.a = 1; // setting same value again shouldn't notify
+      proxyObj.a = 1;
       await waitScheduler();
       expectSpy(spy, 3, [1]);
     });
@@ -1596,7 +1572,7 @@ describe("Collections", () => {
       proxyObj.a = 1;
       await waitScheduler();
       expectSpy(spy, 3, [1]);
-      proxyObj.a = 1; // setting same value again shouldn't notify
+      proxyObj.a = 1;
       await waitScheduler();
       expectSpy(spy, 3, [1]);
     });
@@ -1623,7 +1599,7 @@ describe("Collections", () => {
       proxyValObj.a = 1;
       await waitScheduler();
       expectSpy(spy, 4, [1, 1]);
-      proxyKeyObj.a = 1; // setting same value again shouldn't notify
+      proxyKeyObj.a = 1;
       proxyValObj.a = 1;
       await waitScheduler();
       expectSpy(spy, 4, [1, 1]);
@@ -1651,7 +1627,7 @@ describe("Collections", () => {
       proxyValObj.a = 1;
       await waitScheduler();
       expectSpy(spy, 4, [1, 1]);
-      proxyKeyObj.a = 1; // setting same value again shouldn't notify
+      proxyKeyObj.a = 1;
       proxyValObj.a = 1;
       await waitScheduler();
       expectSpy(spy, 4, [1, 1]);
@@ -1669,8 +1645,8 @@ describe("Collections", () => {
       }, thisArg);
       expect(proxyKeyObj).not.toBe(keyObj);
       expect(proxyValObj).not.toBe(valObj);
-      expect(mapObj).toBe(state); // third argument should be the proxy
-      expect(thisObj).toBe(thisArg); // thisArg should not be made proxy
+      expect(mapObj).toBe(state);
+      expect(thisObj).toBe(thisArg);
       expect(toRaw(proxyKeyObj as any)).toBe(keyObj);
       expect(toRaw(proxyValObj as any)).toBe(valObj);
 
@@ -1690,7 +1666,7 @@ describe("Collections", () => {
       await waitScheduler();
       expectSpy(spy, 4, [1, 1]);
 
-      proxyKeyObj!.a = 1; // setting same value again shouldn't notify
+      proxyKeyObj!.a = 1;
       proxyValObj!.a = 1;
       await waitScheduler();
       expectSpy(spy, 4, [1, 1]);
@@ -1750,18 +1726,17 @@ describe("Collections", () => {
       state.set(obj, 3);
       await waitScheduler();
       expectSpy(spy, 2, [true]);
-      expect(state.has(obj)).toBe(true); // subscribe to obj
+      expect(state.has(obj)).toBe(true);
       state.delete(obj);
       await waitScheduler();
       expectSpy(spy, 3, [false]);
       state.set(obj, 3);
       state.delete(obj);
       await waitScheduler();
-      // todo: should be 3 or 4?
       expectSpy(spy, 4, [false]);
-      expect(state.has(obj)).toBe(false); // subscribe to obj
+      expect(state.has(obj)).toBe(false);
 
-      state.set(obj3, 4); // setting unobserved key doesn't notify
+      state.set(obj3, 4);
       await waitScheduler();
       expectSpy(spy, 4, [false]);
     });
@@ -1779,7 +1754,7 @@ describe("Collections", () => {
       state.set(obj, 3);
       await waitScheduler();
       expectSpy(spy, 2, [3]);
-      expect(state.get(obj)).toBe(3); // subscribe to obj
+      expect(state.get(obj)).toBe(3);
       state.delete(obj);
       await waitScheduler();
       expectSpy(spy, 3, [undefined]);
@@ -1787,9 +1762,9 @@ describe("Collections", () => {
       state.delete(obj);
       await waitScheduler();
       expectSpy(spy, 4, [undefined]);
-      expect(state.get(obj)).toBeUndefined(); // subscribe to obj
+      expect(state.get(obj)).toBeUndefined();
 
-      state.set(obj3, 4); // setting unobserved key doesn't notify
+      state.set(obj3, 4);
       await waitScheduler();
       expectSpy(spy, 4, [undefined]);
     });
@@ -1810,7 +1785,7 @@ describe("Collections", () => {
       proxyObj.a = 1;
       await waitScheduler();
       expectSpy(spy, 3, [1]);
-      proxyObj.a = 1; // setting same value again shouldn't notify
+      proxyObj.a = 1;
       await waitScheduler();
       expectSpy(spy, 3, [1]);
     });
@@ -1999,11 +1974,6 @@ describe("Reactivity: proxy", () => {
     fixture = makeTestFixture();
   });
 
-  /**
-   * A context can be defined as a proxy with a default observer.
-   * It can be exposed and share by multiple components or other objects
-   * (via proxy for instance)
-   */
 
   test("very simple use, with initial value", async () => {
     const testContext = createProxy({ value: 123 });
@@ -2250,14 +2220,6 @@ describe("Reactivity: proxy", () => {
     const testContext = createProxy({ a: 123, b: 456 });
     const steps: Set<string> = new Set();
 
-    /**
-     * Scheme:
-     *         L1A
-     *        /   \
-     *      L2A   L2B
-     *       |
-     *      L3A
-     */
 
     class L3A extends Component {
       static template = xml`<t t-set="noop" t-value="this.notify()"/><div><t t-out="this.contextObj.a"/> <t t-out="this.contextObj.b"/></div>`;
@@ -2405,8 +2367,8 @@ describe("Reactivity: proxy", () => {
       }
     }
 
-    const prom = mount(Parent, fixture); // cannot work
-    await nextTick(); // wait for Child to be instantiated
+    const prom = mount(Parent, fixture);
+    await nextTick();
     testContext.a = 321;
     await nextMicroTick();
     parent.state.flag = false;

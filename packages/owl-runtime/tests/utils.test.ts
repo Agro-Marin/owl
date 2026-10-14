@@ -64,9 +64,9 @@ describe("batched", () => {
     expect(n).toBe(0);
     fn();
     expect(n).toBe(0);
-    await nextMicroTick(); // First batch
+    await nextMicroTick();
     expect(n).toBe(1);
-    await nextMicroTick(); // Second batch initiated from within the callback
+    await nextMicroTick();
     expect(n).toBe(2);
     await nextMicroTick();
     expect(n).toBe(2);

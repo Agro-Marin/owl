@@ -2,9 +2,6 @@ import type { CustomDirectives } from ".";
 import { OwlError } from "@odoo/owl-core";
 import { parseXML } from "./parse_xml";
 
-// -----------------------------------------------------------------------------
-// AST Type definition
-// -----------------------------------------------------------------------------
 
 export type EventHandlers = { [eventName: string]: string };
 export type Attrs = { [attrs: string]: string };
@@ -85,9 +82,9 @@ export interface ASTTif extends BaseAST {
 export interface ASTTSet extends BaseAST {
   type: (typeof ASTType)["TSet"];
   name: string;
-  value: string | null; // value defined in attribute
-  defaultValue: string | null; // value defined in body, if text
-  body: AST[] | null; // content of body if not text
+  value: string | null;
+  defaultValue: string | null;
+  body: AST[] | null;
   hasNoRepresentation: true;
 }
 
@@ -106,8 +103,6 @@ export interface ASTTForEach extends BaseAST {
   noFlags: number;
   key: string;
   memo?: string;
-  // whether the memoized item renders child components or memoized lists of
-  // its own, to carry on a hit
   memoContent?: boolean;
 }
 
@@ -200,14 +195,10 @@ export type AST =
   | ASTTranslation
   | ASTTranslationContext;
 
-// -----------------------------------------------------------------------------
-// Parser
-// -----------------------------------------------------------------------------
 const NO_DIRECTIVES = {};
 const cache: WeakMap<object, WeakMap<Element, AST>> = new WeakMap();
 
 export function parse(xml: string | Element, customDir?: CustomDirectives): AST {
-  // no custom directive and an empty set of them parse alike: one cache
   const customDirectives = customDir && Object.keys(customDir).length ? customDir : undefined;
   const ctx = { inPreTag: false, customDirectives };
   if (typeof xml === "string") {
@@ -222,7 +213,6 @@ export function parse(xml: string | Element, customDir?: CustomDirectives): AST 
   }
   let ast = astCache.get(xml);
   if (!ast) {
-    // we clone here the xml to prevent modifying it in place
     ast = _parse(xml.cloneNode(true) as Element, ctx);
     astCache.set(xml, ast);
   }
@@ -264,9 +254,6 @@ function parseNode(node: Node, ctx: ParsingContext): AST | null {
   );
 }
 
-// -----------------------------------------------------------------------------
-// <t /> tag
-// -----------------------------------------------------------------------------
 
 function isTranslationContext(attribute: string): boolean {
   return attribute === "t-translation-context" || attribute.startsWith(TRANSLATION_CONTEXT_PREFIX);
@@ -282,10 +269,6 @@ function tRefError(node: Element): OwlError {
   );
 }
 
-/**
- * The value of the directive `attr` of `node`, which must be an expression
- * when present: an empty one would compile to invalid code.
- */
 function exprAttr(node: Element, attr: string): string | null {
   const value = node.getAttribute(attr);
   if (value !== null && !value.trim()) {
@@ -298,9 +281,6 @@ function emptyExprError(attr: string, node: Element): OwlError {
   return new OwlError(`Directive '${attr}' needs an expression (on a <${node.tagName}>)`);
 }
 
-/**
- * Marks `ast` as rendering nothing when the content it wraps renders nothing.
- */
 function wrapping<T extends AST>(ast: T, content: AST | null): T {
   if (!content || content.hasNoRepresentation) {
     ast.hasNoRepresentation = true;
@@ -320,11 +300,6 @@ interface NodeHandlers {
   translationCtx: Attrs | null;
 }
 
-/**
- * Collects the attribute `name` into `found` if it is a translation context
- * (`t-translation-context-<attr>`) or, with `events`, an event handler
- * (`t-on-<event>`), and tells whether it did.
- */
 function collectHandler(
   found: NodeHandlers,
   name: string,
@@ -352,9 +327,6 @@ function parseTNode(node: Element, ctx: ParsingContext): AST | null {
   return parseChildNodes(node, ctx);
 }
 
-// -----------------------------------------------------------------------------
-// Text and Comment Nodes
-// -----------------------------------------------------------------------------
 const lineBreakRE = /[\r\n]/;
 const htmlWhitespaceOnlyRE = /^[ \t\n\r\f]*$/;
 
@@ -401,9 +373,6 @@ function parseTCustom(node: Element, ctx: ParsingContext): AST | null {
   return null;
 }
 
-// -----------------------------------------------------------------------------
-// debugging
-// -----------------------------------------------------------------------------
 
 function parseTDebugLog(node: Element, ctx: ParsingContext): AST | null {
   if (node.hasAttribute("t-debug")) {
@@ -421,16 +390,11 @@ function parseTDebugLog(node: Element, ctx: ParsingContext): AST | null {
   return null;
 }
 
-// -----------------------------------------------------------------------------
-// Regular dom node
-// -----------------------------------------------------------------------------
 const ROOT_SVG_TAGS = new Set(["svg", "g", "path"]);
 
 const ATT_DIRECTIVE_RE = /^t-att(f?-.+)?$/;
 const T_MODEL_MODIFIERS = new Set(["lazy", "trim", "number", "proxy"]);
 
-// the directives whose content renders conditionally, repeatedly or somewhere
-// else: a t-set-slot lifted out of it would be defined unconditionally, once
 const SLOT_HIDING_DIRECTIVES = new Set([
   "t-if",
   "t-elif",
@@ -514,7 +478,6 @@ function parseDOMNode(node: Element, ctx: ParsingContext): AST | null {
         isProxy: hasProxyMod,
       };
       if (isSelect) {
-        // ctx is this node's copy: its options see the model
         ctx.tModelInfo = model;
       }
     } else if (attr.startsWith("block-")) {
@@ -525,7 +488,6 @@ function parseDOMNode(node: Element, ctx: ParsingContext): AST | null {
       if (attr.startsWith("t-")) {
         if (!ATT_DIRECTIVE_RE.test(attr)) {
           if (attr.startsWith("t-custom-") && attr.length > 9) {
-            // parseTCustom only runs with a set of custom directives
             throw new OwlError(`Custom directive "${attr.split(".")[0].slice(9)}" is not defined`);
           }
           throw new OwlError(`Unknown QWeb directive: '${attr}'`);
@@ -561,9 +523,6 @@ function parseDOMNode(node: Element, ctx: ParsingContext): AST | null {
   };
 }
 
-// -----------------------------------------------------------------------------
-// t-out
-// -----------------------------------------------------------------------------
 
 function parseTOutNode(node: Element, ctx: ParsingContext): AST | null {
   if (!node.hasAttribute("t-out") && !node.hasAttribute("t-esc")) {
@@ -583,8 +542,6 @@ function parseTOutNode(node: Element, ctx: ParsingContext): AST | null {
     if (node.hasAttribute("t-ref")) {
       throw tRefError(node);
     }
-    // a translation context is no directive: template inheritance adds one
-    // for each attribute an extension sets, a t-if included
     const directive = node
       .getAttributeNames()
       .find((a) => a.startsWith("t-") && a !== "t-name" && !isTranslationContext(a));
@@ -609,9 +566,6 @@ function parseTOutNode(node: Element, ctx: ParsingContext): AST | null {
   };
 }
 
-// -----------------------------------------------------------------------------
-// t-foreach and t-key
-// -----------------------------------------------------------------------------
 
 function parseTForEach(node: Element, ctx: ParsingContext): AST | null {
   if (!node.hasAttribute("t-foreach")) {
@@ -642,10 +596,6 @@ function parseTForEach(node: Element, ctx: ParsingContext): AST | null {
     return null;
   }
   if (memo !== null) {
-    // a memoized item keeps its previous vnode without running its body: the
-    // child components it rendered are carried over by key, but a slot or a
-    // called template may render components another node owns, or that only
-    // the called template knows of
     const directive = findNode(body, unvisitable);
     if (body.hasNoRepresentation || directive) {
       throw new OwlError(
@@ -654,7 +604,6 @@ function parseTForEach(node: Element, ctx: ParsingContext): AST | null {
     }
   }
 
-  // a called template reads the loop variables from the context
   const hasNoTCall = !/\st-call="/.test(html);
   let noFlags = 0;
   if (hasNoTCall && !html.includes(`${elem}_first`)) noFlags |= ForEachNoFlag.First;
@@ -679,7 +628,7 @@ function parseTForEach(node: Element, ctx: ParsingContext): AST | null {
   return wrapping(ast, body);
 }
 
-const UNVISITABLE: Partial<Record<ASTType, string>> = /* @__PURE__ */ unvisitableTypes();
+const UNVISITABLE: Partial<Record<ASTType, string>> =   unvisitableTypes();
 
 function unvisitableTypes(): Partial<Record<ASTType, string>> {
   return {
@@ -689,11 +638,6 @@ function unvisitableTypes(): Partial<Record<ASTType, string>> {
   };
 }
 
-/**
- * The first AST node in `value` for which `test` returns a name, and that
- * name. It walks every nested object, so that a branch kept outside
- * `content` (t-elif, a t-out or t-set body) is searched too.
- */
 function findNode(value: any, test: (ast: AST) => string | null): string | null {
   if (!value || typeof value !== "object") {
     return null;
@@ -734,9 +678,6 @@ function parseTKey(node: Element, ctx: ParsingContext): AST | null {
   return wrapping<ASTTKey>({ type: ASTType.TKey, expr: key, content }, content);
 }
 
-// -----------------------------------------------------------------------------
-// t-call
-// -----------------------------------------------------------------------------
 
 function parseTCall(node: Element, ctx: ParsingContext): AST | null {
   if (!node.hasAttribute("t-call")) {
@@ -777,9 +718,6 @@ function parseTCall(node: Element, ctx: ParsingContext): AST | null {
   };
 }
 
-// -----------------------------------------------------------------------------
-// t-call-block
-// -----------------------------------------------------------------------------
 
 function parseTCallBlock(node: Element, ctx: ParsingContext): AST | null {
   if (!node.hasAttribute("t-call-block")) {
@@ -798,9 +736,6 @@ function parseTCallBlock(node: Element, ctx: ParsingContext): AST | null {
   };
 }
 
-// -----------------------------------------------------------------------------
-// t-if
-// -----------------------------------------------------------------------------
 
 function parseTIf(node: Element, ctx: ParsingContext): AST | null {
   if (!node.hasAttribute("t-if")) {
@@ -811,7 +746,6 @@ function parseTIf(node: Element, ctx: ParsingContext): AST | null {
   const content = parseNode(node, ctx) || { type: ASTType.Text, value: "" };
 
   let nextElement = node.nextElementSibling;
-  // t-elifs
   const tElifs: any[] = [];
   while (nextElement && nextElement.hasAttribute("t-elif")) {
     const condition = exprAttr(nextElement, "t-elif");
@@ -823,7 +757,6 @@ function parseTIf(node: Element, ctx: ParsingContext): AST | null {
     tElifs.push({ condition, content: tElif });
   }
 
-  // t-else
   let tElse: AST | null = null;
   if (nextElement && nextElement.hasAttribute("t-else")) {
     nextElement.removeAttribute("t-else");
@@ -840,9 +773,6 @@ function parseTIf(node: Element, ctx: ParsingContext): AST | null {
   };
 }
 
-// -----------------------------------------------------------------------------
-// t-set directive
-// -----------------------------------------------------------------------------
 
 function parseTSetNode(node: Element, ctx: ParsingContext): AST | null {
   if (!node.hasAttribute("t-set")) {
@@ -864,11 +794,7 @@ function parseTSetNode(node: Element, ctx: ParsingContext): AST | null {
   return { type: ASTType.TSet, name, value, defaultValue, body, hasNoRepresentation: true };
 }
 
-// -----------------------------------------------------------------------------
-// Components
-// -----------------------------------------------------------------------------
 
-// Error messages when trying to use an unsupported directive on a component
 const directiveErrorMap = new Map([
   [
     "t-ref",
@@ -923,9 +849,6 @@ function parseComponent(node: Element, ctx: ParsingContext): AST | null {
   if (node.hasChildNodes()) {
     const clone = node.cloneNode(true) as Element;
 
-    // named slots
-    // the slots of this component, found before any is parsed: parsing a
-    // sub component's node takes its directives off
     const slotNodes = Array.from(clone.querySelectorAll("[t-set-slot]")).filter((slotNode) =>
       isOwnSlot(slotNode, clone)
     );
@@ -936,9 +859,6 @@ function parseComponent(node: Element, ctx: ParsingContext): AST | null {
       const slotHandlers: NodeHandlers = { on: null, translationCtx: null };
       let attrs: Attrs | null = null;
       let scope: string | null = null;
-      // a t-set-slot is a <t> (isOwnSlot): the directives of the slot
-      // definition go before its content is parsed, as a t-out or a t-call on
-      // the same node would reject them
       for (let attributeName of slotNode.getAttributeNames()) {
         const value = slotNode.getAttribute(attributeName)!;
         if (attributeName === "t-slot-scope") {
@@ -949,7 +869,6 @@ function parseComponent(node: Element, ctx: ParsingContext): AST | null {
         slotNode.removeAttribute(attributeName);
       }
       const slotAst = parseNode(slotNode, ctx);
-      // what the content left are the slot's params
       for (let attributeName of slotNode.getAttributeNames()) {
         attrs = attrs || {};
         attrs[attributeName] = slotNode.getAttribute(attributeName)!;
@@ -964,10 +883,8 @@ function parseComponent(node: Element, ctx: ParsingContext): AST | null {
       };
     }
 
-    // default slot
     const defaultContent = parseChildNodes(clone, ctx);
     slots = slots || {};
-    // t-set-slot="default" has priority over content
     if (defaultContent && !slots.default) {
       slots.default = {
         content: defaultContent,
@@ -990,12 +907,6 @@ function parseComponent(node: Element, ctx: ParsingContext): AST | null {
   };
 }
 
-/**
- * Whether the t-set-slot `slotNode` defines a slot of the component whose
- * content is `root`, and not of a sub component. Throws where it cannot be
- * one: on an element, nested in another t-set-slot, or under a directive that
- * would make it conditional.
- */
 function isOwnSlot(slotNode: Element, root: Element): boolean {
   if (slotNode.tagName !== "t") {
     throw new OwlError(
@@ -1016,7 +927,6 @@ function isOwnSlot(slotNode: Element, root: Element): boolean {
     directiveAbove ||= directive ? `${directive} on a <${el.tagName}>` : null;
   }
   if (directiveAbove) {
-    // the slot would be lifted out of the directive and always be defined
     throw new OwlError(
       `Directive 't-set-slot' cannot be used under a directive (${directiveAbove}) inside a component`
     );
@@ -1024,9 +934,6 @@ function isOwnSlot(slotNode: Element, root: Element): boolean {
   return true;
 }
 
-// -----------------------------------------------------------------------------
-// Slots
-// -----------------------------------------------------------------------------
 
 function parseTCallSlot(node: Element, ctx: ParsingContext): AST | null {
   if (!node.hasAttribute("t-call-slot") && !node.hasAttribute("t-slot")) {
@@ -1064,14 +971,7 @@ function parseTCallSlot(node: Element, ctx: ParsingContext): AST | null {
   };
 }
 
-// -----------------------------------------------------------------------------
-// Translation
-// -----------------------------------------------------------------------------
 
-/**
- * Parses `node` without its directive `attr` and wraps what it renders, each
- * part of a multi apart.
- */
 function parseWrapped(
   node: Element,
   ctx: ParsingContext,
@@ -1095,9 +995,6 @@ function parseTTranslation(node: Element, ctx: ParsingContext): AST | null {
   );
 }
 
-// -----------------------------------------------------------------------------
-// Translation Context
-// -----------------------------------------------------------------------------
 
 function parseTTranslationContext(node: Element, ctx: ParsingContext): AST | null {
   const translationCtx = node.getAttribute("t-translation-context");
@@ -1112,13 +1009,7 @@ function parseTTranslationContext(node: Element, ctx: ParsingContext): AST | nul
   );
 }
 
-// -----------------------------------------------------------------------------
-// helpers
-// -----------------------------------------------------------------------------
 
-/**
- * Parse all the child nodes of a given node and return a list of ast elements
- */
 function parseChildren(node: Element, ctx: ParsingContext): AST[] {
   const children: AST[] = [];
   for (let child of node.childNodes) {
@@ -1142,10 +1033,6 @@ function makeASTMulti(children: AST[]) {
   return ast;
 }
 
-/**
- * Parse all the child nodes of a given node and return an ast if possible.
- * In the case there are multiple children, they are wrapped in a astmulti.
- */
 function parseChildNodes(node: Element, ctx: ParsingContext): AST | null {
   const children = parseChildren(node, ctx);
   switch (children.length) {
@@ -1158,14 +1045,6 @@ function parseChildNodes(node: Element, ctx: ParsingContext): AST | null {
   }
 }
 
-/**
- * Normalizes the content of an Element so that t-if/t-elif/t-else directives
- * immediately follow one another (by removing empty text nodes or comments).
- * Throws an error when a conditional branching statement is malformed. This
- * function modifies the Element in place.
- *
- * @param el the element containing the tree that should be normalized
- */
 function normalizeTIf(el: Element) {
   let tbranch = el.querySelectorAll("[t-elif], [t-else]");
   for (let i = 0, ilen = tbranch.length; i < ilen; i++) {
@@ -1177,16 +1056,11 @@ function normalizeTIf(el: Element) {
           "t-if cannot stay at the same level as t-foreach when using t-elif or t-else"
         );
       }
-      // t-else with a t-if is an else branch holding an `if`: it reads as
-      // t-elif, and is what an inheriting template gets when it adds a t-if to
-      // an else node, which owl always rendered that way
       const elseIf = node.hasAttribute("t-else") && node.hasAttribute("t-if");
       const branches = ["t-if", "t-elif", "t-else"].filter((a) => node.hasAttribute(a)).length;
       if (!(elseIf && !node.hasAttribute("t-elif")) && branches > 1) {
         throw new OwlError("Only one conditional branching directive is allowed per node");
       }
-      // All text (with only spaces) and comment nodes (nodeType 8) between
-      // branch nodes are removed
       let textNode;
       while ((textNode = node.previousSibling) !== prevElem) {
         if (textNode!.nodeValue!.trim().length && textNode!.nodeType !== 8) {
@@ -1202,14 +1076,6 @@ function normalizeTIf(el: Element) {
   }
 }
 
-/**
- * Normalizes the content of an Element so that t-out directives on components
- * are removed and instead places a <t t-out=""> as the default slot of the
- * component. Also throws if the component already has content. This function
- * modifies the Element in place.
- *
- * @param el the element containing the tree that should be normalized
- */
 function normalizeTOut(el: Element) {
   const elements = [...el.querySelectorAll(`[t-out], [t-esc]`)].filter(isComponentNode);
   for (const el of elements) {
@@ -1225,12 +1091,6 @@ function normalizeTOut(el: Element) {
   }
 }
 
-/**
- * Normalizes the tree inside a given element and do some preliminary validation
- * on it. This function modifies the Element in place.
- *
- * @param el the element containing the tree that should be normalized
- */
 function normalizeXML(el: Element) {
   normalizeTIf(el);
   normalizeTOut(el);

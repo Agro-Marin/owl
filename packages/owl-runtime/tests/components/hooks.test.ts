@@ -34,7 +34,6 @@ beforeEach(() => {
 });
 
 describe("hooks", () => {
-  // TODO: rename like next test (ensures willPatch/patched calls are symmetrical)
   test("two different call to willPatch/patched should work", async () => {
     const steps: string[] = [];
     function useMyHook(i: number) {
@@ -104,7 +103,6 @@ describe("hooks", () => {
           isInDom = false;
         }
       }
-      // could be an effect
       onPatched(updateFocus);
       onMounted(updateFocus);
 
@@ -197,12 +195,6 @@ describe("hooks", () => {
     const app = await mount(App, fixture);
     expect(fixture.innerHTML).toBe("<span>1</span>");
 
-    // NOTE: 'on2ndStart' appears first in the list even though
-    // the 'use2ndHook' is declared after 'useMyHook'. This is
-    // because Promise.all is used to call the callbacks specified
-    // in the hooks, which runs them simultaneously.
-    // Additionally, 'slow' should be listed before 'onWillStart'
-    // because call to `slow` is awaited.
     expect(steps).toEqual(["on2ndStart", "slow", "onWillStart"]);
 
     app.state.value = 2;
@@ -333,10 +325,6 @@ describe("hooks", () => {
     expect(fixture.innerHTML).toBe("<span>1</span>");
   });
 
-  // jsdom dispatches with a non-empty JS stack, so no microtask checkpoint
-  // happens mid-dispatch and a component cannot really be created while its
-  // creating event still bubbles. The tests below recreate that by dispatching
-  // the same event object a second time, which is what the guard keys on.
   test("useListener ignores the event that created its component", async () => {
     const steps: string[] = [];
 
@@ -362,11 +350,9 @@ describe("hooks", () => {
     await nextTick();
     expect(fixture.innerHTML).toBe("<button>open</button><div>child</div>");
 
-    // the click that created Child is still propagating: Child must not see it
     window.dispatchEvent(ev);
     expect(steps).toEqual([]);
 
-    // any subsequent click is a normal one
     window.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     expect(steps).toEqual(["clicked"]);
   });
@@ -404,8 +390,6 @@ describe("hooks", () => {
   });
 
   test("useListener still receives an event dispatched while it is being attached", async () => {
-    // the guard only skips an event that was already in flight: an event
-    // dispatched by `setup()` itself is newer than the listener
     let n = 0;
 
     class MyComponent extends Component {
@@ -446,8 +430,6 @@ describe("hooks", () => {
     }
 
     await mount(MyComponent, fixture);
-    // compare with what a plain listener receives, rather than with `window`
-    // itself: jsdom's global `window` is not the object handed to listeners
     window.addEventListener(
       "click",
       function (this: EventTarget) {
@@ -483,7 +465,6 @@ describe("hooks", () => {
 
       steps.push("before state mutation");
       component.state.value++;
-      // Wait for an owl render
       await new Promise((resolve) => requestAnimationFrame(resolve));
       steps.push("after state mutation");
       await component.__owl__.destroy();
@@ -491,10 +472,6 @@ describe("hooks", () => {
       expect(steps).toEqual([
         "value is 0",
         "before state mutation",
-        // While one might expect value to be 0 at cleanup, because the value is
-        // read during cleanup from the state rather than captured by a dependency
-        // it already has the new value. Having this in business code is a symptom
-        // of a missing dependency and can lead to bugs.
         "cleaning up for value = 1 (cleanup 0)",
         "value is 1",
         "after state mutation",
@@ -513,7 +490,6 @@ describe("hooks", () => {
         });
         ref = signal<HTMLElement | null>(null);
         setup() {
-          // could be effect()
           useEffect(() => {
             const el = this.ref();
             logStep("effect started:" + (el ? "EL" : "NULL"));
@@ -563,19 +539,16 @@ describe("hooks", () => {
 
       steps.push("before state mutation: a");
       component.state.a++;
-      // Wait for an owl render
       await new Promise((resolve) => requestAnimationFrame(resolve));
       steps.push("after state mutation: a");
 
       steps.push("before state mutation: b");
       component.state.b++;
-      // Wait for an owl render
       await new Promise((resolve) => requestAnimationFrame(resolve));
       steps.push("after state mutation: b");
       await component.__owl__.destroy();
 
       expect(steps).toEqual([
-        // All effects run on mount
         "before mount",
         "Effect a: 0",
         "Effect b: 0",
@@ -583,27 +556,21 @@ describe("hooks", () => {
         "after mount",
 
         "before state mutation: a",
-        // Cleanups run in reverse order
-        // Cleanup for b is not run
         "cleaning up for a: 0",
 
         "Effect a: 1",
         "cleaning up for ab: {a: 0, b: 0}",
-        // Effect b is not run
         "Effect ab: {a: 1, b: 0}",
         "after state mutation: a",
 
         "before state mutation: b",
         "cleaning up for b: 0",
-        // Cleanup for a is not run
 
-        // Effect a is not run
         "Effect b: 1",
         "cleaning up for ab: {a: 1, b: 0}",
         "Effect ab: {a: 1, b: 1}",
         "after state mutation: b",
 
-        // All cleanups run on unmount
         "cleaning up for ab: {a: 1, b: 1}",
         "cleaning up for b: 1",
         "cleaning up for a: 1",
@@ -630,9 +597,7 @@ describe("hooks", () => {
 
       steps.push("before state mutation");
       component.state.value++;
-      // Wait for an owl render
       await new Promise((resolve) => requestAnimationFrame(resolve));
-      // Value was correctly changed inside the component
       expect(elem(component).textContent).toBe("1");
       steps.push("after state mutation");
       await component.__owl__.destroy();
@@ -735,9 +700,7 @@ describe("hooks", () => {
           useOnChange(
             () => [this.a()],
             (a) => {
-              // reading b here should not subscribe the callback to it
               logStep(`a=${a}, b=${this.b()}`);
-              // ... and writing to b should not retrigger it either
               this.b.set(this.b() + 1);
             }
           );
@@ -774,7 +737,6 @@ describe("hooks", () => {
       const component = await mount(MyComponent, fixture);
       expect(["isBig=false"]).toBeLogged();
 
-      // count changed, but the dependency value did not
       component.count.set(2);
       await nextTick();
       expect([]).toBeLogged();
@@ -783,7 +745,6 @@ describe("hooks", () => {
       await nextTick();
       expect([]).toBeLogged();
 
-      // the dependency value now changes
       component.count.set(11);
       await nextTick();
       expect(["cleaning up for isBig=false", "isBig=true"]).toBeLogged();

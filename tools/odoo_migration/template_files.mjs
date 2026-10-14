@@ -1,6 +1,3 @@
-// The template files a compile check reads: under each root given as an
-// argument, every `static/src` XML file outside node_modules (fs.glob); with
-// no argument, the paths on stdin, one per line.
 import fs from "node:fs";
 import { join } from "node:path";
 

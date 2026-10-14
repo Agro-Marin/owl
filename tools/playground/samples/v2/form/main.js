@@ -1,7 +1,3 @@
-// This example illustrate how the t-model directive can be used to synchronize
-// data between html inputs (and select/textareas) and the state of a component.
-// Note that there are two controls with t-model="color": they are totally
-// synchronized.
 import { Component, useState, mount } from "@odoo/owl";
 
 class Form extends Component {
@@ -18,5 +14,4 @@ class Form extends Component {
   }
 }
 
-// Application setup
 mount(Form, document.body, { templates: TEMPLATES, dev: true });

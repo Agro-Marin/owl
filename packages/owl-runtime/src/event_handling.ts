@@ -2,9 +2,6 @@ import { STATUS } from "./status";
 import { debug, debugLog, EventModifier, setCurrentEvent } from "@odoo/owl-core";
 import type { HandlerFn } from "./blockdom/config";
 
-// handler and modifiers are static (see EventModifier); context and model are
-// what the latest render gave: model, the extra argument, only a t-model
-// handler has
 export const mainEventHandler = (
   handler: HandlerFn | null,
   modifiers: number,
@@ -13,7 +10,6 @@ export const mainEventHandler = (
   currentTarget: EventTarget | null,
   model?: any
 ) => {
-  // lets `useListener` skip an event older than the listener
   setCurrentEvent(ev);
   if (modifiers) {
     if (modifiers & EventModifier.PREVENT_ANY) {
@@ -35,7 +31,6 @@ export const mainEventHandler = (
       ev.stopPropagation();
     }
   }
-  // an empty handler (`t-on-click.stop=""`) is null
   if (handler !== null) {
     let node = context ? context.__owl__ : null;
     const live = node ? node.status === STATUS.MOUNTED : true;
@@ -47,8 +42,6 @@ export const mainEventHandler = (
       );
     }
     if (live) {
-      // only a t-model handler carries its model (never undefined: modelExpr
-      // checks it): any other handler gets exactly (context, event)
       if (model !== undefined) {
         handler(context, ev, model);
       } else {

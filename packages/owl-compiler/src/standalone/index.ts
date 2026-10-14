@@ -1,21 +1,12 @@
-// -----------------------------------------------------------------------------
-// This file exports a function that compiles templates ahead of time:
-// tools/compile_owl_templates.mjs (`npm run compile_templates` in this
-// repository) runs it with Node, from its TypeScript source.
-// -----------------------------------------------------------------------------
 
 import { readdir, readFile, realpath, stat } from "fs/promises";
 import path from "path";
 import { debuglog } from "node:util";
 import "./setup_jsdom";
-// Compiler imports must be made after setting up jsdom in the global namespace
 import { compile, parseXML } from "..";
 
 const log = debuglog("owl-compile");
 
-// -----------------------------------------------------------------------------
-// helpers
-// -----------------------------------------------------------------------------
 async function getXmlFiles(paths: string[]): Promise<string[]> {
   const directories = new Set<string>();
   const files = new Set<string>();
@@ -45,9 +36,6 @@ function templateFunctionName(name: string): string {
   return `template_${name.replace(/[^\w$]/g, "_")}`;
 }
 
-// -----------------------------------------------------------------------------
-// main
-// -----------------------------------------------------------------------------
 
 export async function compileTemplates(paths: string[]) {
   log("discover templates under %d input path(s)", paths.length);
@@ -82,12 +70,9 @@ export async function compileTemplates(paths: string[]) {
         }
         names.set(name, fileName);
         log("compile %s in %s", name, fileName);
-        // __globals__ among the helpers: the runtime always passes it
         const fn = compile(template, { name, hasGlobalValues: true })
           .toString()
           .replace("anonymous", fnName);
-        // Computed keys keep '__proto__' as an own entry rather than setting
-        // the generated object's prototype.
         templates.push(`[${JSON.stringify(name)}]: ${fn},\n`);
       } catch (e) {
         log("compile failed: %s in %s", name, fileName);

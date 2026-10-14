@@ -1,4 +1,3 @@
-// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`rows reading a selector render on a selection change only when their answer changed 1`] = `
 "function anonymous(app, bdom, helpers

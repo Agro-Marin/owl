@@ -16,7 +16,6 @@ interface RegistryAddOptions extends ResourceAddOptions {
   force?: boolean;
 }
 
-// T is the validation type; entries carry the value type it describes.
 type Entry<T> = [sequence: number, value: StripBrands<T>, order: number];
 
 export class Registry<T> {
@@ -24,8 +23,6 @@ export class Registry<T> {
   private _order = 0;
   private _name: string;
   private _validation?: T;
-  // the entry a use() overwrote, put back when that use() ends, and the use()
-  // entries that ended: a restore skips them
   private _overwritten = new WeakMap<Entry<T>, Entry<T>>();
   private _ended = new WeakSet<Entry<T>>();
 
@@ -94,8 +91,6 @@ export class Registry<T> {
           `Registry entry does not match the type (registry '${this._name}', key: '${key}')`
         );
       }
-      // Validators and option accessors can change or clear this registry.
-      // Finish them before selecting storage and recording what is replaced.
       const sequence = options.sequence ?? 50;
       this._assertCanAdd(key, force);
       const map = this._map();
@@ -133,7 +128,6 @@ export class Registry<T> {
 
   use(key: string, value: StripBrands<T>, options: RegistryAddOptions = {}): Registry<T> {
     const scope = useScope();
-    // Publish only once restoration metadata and lifetime cleanup exist.
     batch(() => {
       this._add(key, value, options, (entry, previous) => {
         if (previous) {

@@ -22,8 +22,6 @@ export class ErrorBoundary extends Component {
   setup() {
     onError((e) =>
       untrack(() => {
-        // an error while the fallback shows is the fallback's: caught here, it
-        // would show that fallback again, failing again
         if (this.props.error()) {
           throw e;
         }

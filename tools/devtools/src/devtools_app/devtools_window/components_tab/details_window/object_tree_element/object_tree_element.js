@@ -19,7 +19,6 @@ export class ObjectTreeElement extends Component {
     this.store = plugin(StorePlugin);
     this.components = plugin(ComponentsPlugin);
     useEffect(() => {
-      // Focus on the input when it is created
       if (this.state.editMode) {
         this.inputRef()?.select();
       }
@@ -35,11 +34,9 @@ export class ObjectTreeElement extends Component {
   }
 
   classFor(object) {
-    // Prototype items will be dyed down to appear less important
     if (object.path.some((item) => item?.type === "prototype") && !object.keepLit) {
       return "attenuate";
     }
-    // Same for subscription items which are not present in the keys while the keys will be bold
     if (object.objectType === "subscription" && object.depth > 0) {
       if (this.props.object.keys?.includes(object.name.toString())) {
         return "fw-bolder";

@@ -2,9 +2,6 @@ import { setDebug, setDebugSink } from "@odoo/owl-core";
 import { html, list, mount, multi, patch, text, createBlock, VNode } from "../../src/blockdom";
 import { makeTestFixture } from "./helpers";
 
-//------------------------------------------------------------------------------
-// Setup and helpers
-//------------------------------------------------------------------------------
 
 function withKey(vnode: VNode, key: any) {
   vnode.key = key;
@@ -670,7 +667,6 @@ describe("repeated keys", () => {
       fixture.appendChild(host);
       const tree = items(k1, "o");
       if (i % 2) {
-        // a list in a mixed parent, not cleared in bulk
         host.appendChild(document.createElement("i"));
       }
       mount(tree, host);

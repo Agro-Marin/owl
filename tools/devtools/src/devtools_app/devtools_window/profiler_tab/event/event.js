@@ -14,12 +14,10 @@ export class Event extends Component {
     this.components = plugin(ComponentsPlugin);
   }
 
-  // Formatting for displaying the key of the component
   get minimizedKey() {
     return minimizeKey(this.props.event.key);
   }
 
-  // Same for the origin component
   get originMinimizedKey() {
     return minimizeKey(this.props.event.origin.key);
   }
@@ -40,7 +38,6 @@ export class Event extends Component {
     }
   }
 
-  // Expand/fold the event
   toggleDisplay() {
     if (this.props.event.origin) {
       this.props.event.toggled = !this.props.event.toggled;

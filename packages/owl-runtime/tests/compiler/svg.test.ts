@@ -2,7 +2,6 @@ import { renderToString, renderToBdom, snapshotEverything, makeTestFixture } fro
 import { mount } from "../../src/blockdom";
 import { mount as mountComponent, Component, xml } from "../../src";
 
-// NB: check the snapshots to see where the SVG namespaces are added
 snapshotEverything();
 
 describe("properly support svg", () => {
@@ -44,7 +43,6 @@ describe("properly support svg", () => {
     expect(renderToString(template, { path: false })).toBe(
       `<svg xmlns="http://www.w3.org/2000/svg"></svg>`
     );
-    // Because the path is its own block, it has its own xmlns attribute
     expect(renderToString(template, { path: true })).toBe(
       `<svg xmlns="http://www.w3.org/2000/svg"><path xmlns="http://www.w3.org/2000/svg"></path></svg>`
     );

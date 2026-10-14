@@ -1,13 +1,6 @@
 import { Component, mount, xml, signal } from "@odoo/owl";
 import { Dialog } from "./dialog";
 
-// Slots: a Dialog is a generic shell that the parent fills in.
-// - The default slot is the dialog body — anything between
-//   <Dialog>...</Dialog> renders there.
-// - The named "footer" slot is a separate insertion point: set it with
-//   `<t t-set-slot="footer">...</t>`.
-// Slot content is evaluated in the *parent's* scope (Counter is the parent's
-// component, `this.toggle` refers to the parent's method).
 
 class Counter extends Component {
     static template = xml`<button t-on-click="this.increment" t-out="this.value()"/>`;

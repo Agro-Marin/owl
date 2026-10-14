@@ -5,9 +5,6 @@ import { markup } from "../../src/utils";
 import { STATUS } from "../../src/status";
 
 snapshotEverything();
-// -----------------------------------------------------------------------------
-// t-on
-// -----------------------------------------------------------------------------
 
 describe("t-on", () => {
   function mountToFixture(template: string, ctx: any = {}, node?: any): HTMLDivElement {

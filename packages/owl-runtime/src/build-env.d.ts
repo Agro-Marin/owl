@@ -1,2 +1,6 @@
-declare const __BUILD_DATE__: string;
-declare const __BUILD_HASH__: string;
+export {};
+
+declare global {
+  const __BUILD_DATE__: string;
+  const __BUILD_HASH__: string;
+}

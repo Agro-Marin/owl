@@ -21,31 +21,19 @@ export interface TemplateSetConfig {
 export interface TemplateCompiler {
   compile: typeof compile;
   parseXML: (xml: string) => Document;
-  // a compiler module's build, which must be the runtime's, and the class of
-  // the errors it throws, which the runtime rethrows as its own OwlError
   version?: string;
   hash?: string;
   OwlError?: new (...args: any[]) => Error;
 }
 
-// where the compiler modules (@odoo/owl/compiler) register themselves, each
-// under its build ("<version>+<hash>"): a key every owl build agrees on, so
-// that a compiler module and its runtime need not resolve to one module
-// instance (an import map, a bundler and Node's package exports each resolve
-// them their own way), and two runtime builds on one page each find their own
 export const COMPILER_KEY = Symbol.for("@odoo/owl/compiler");
 
-// undefined: the compiler module of this build, once registered; null: none
 let ownCompiler: TemplateCompiler | null | undefined;
 
 function registeredBuilds(): string[] {
   return Object.keys((globalThis as any)[COMPILER_KEY] || {});
 }
 
-/**
- * Refuses a compiler of another build: its code calls the runtime's helpers by
- * name.
- */
 function checkBuild(compiler: TemplateCompiler) {
   if (compiler.version === undefined || compiler.hash === undefined) {
     throw new OwlError(
@@ -61,12 +49,6 @@ function checkBuild(compiler: TemplateCompiler) {
 }
 
 export class TemplateSet {
-  /**
-   * The compiler: the full build's own, else the compiler module of this
-   * runtime's build once it is registered. Setting a compiler checks that it
-   * is of this build; null leaves the runtime without one, undefined takes
-   * the build's own or the registered one again.
-   */
   static get compiler(): TemplateCompiler | null {
     if (ownCompiler === undefined) {
       if (bundledCompiler) {
@@ -127,7 +109,6 @@ export class TemplateSet {
 
   addTemplate(name: string, template: string | Element | TemplateFunction) {
     if (name in this.rawTemplates) {
-      // this check can be expensive, just silently ignore double definitions outside dev mode
       if (!this.dev) {
         return;
       }
@@ -142,7 +123,6 @@ export class TemplateSet {
 
   addTemplates(xml: string | Document) {
     if (!xml) {
-      // empty string
       return;
     }
     xml = xml instanceof Document ? xml : this._parseXML(xml);
@@ -175,8 +155,6 @@ export class TemplateSet {
             : `${name}: compiled${start < 0 ? "" : ` in ${(debugNow() - start).toFixed(2)} ms`}, ${String(templateFn).length} chars`
         );
       }
-      // first add a function to lazily get the template, in case there is a
-      // recursive call to the template name
       const templates = this.templates;
       this.templates[cacheKey] = function (context, parent) {
         return templates[cacheKey].call(this, context, parent);
@@ -227,10 +205,6 @@ export class TemplateSet {
   }
 }
 
-/**
- * What the runtime lacks a compiler for, when it is not the obvious: compiler
- * modules of other builds only, or none by choice.
- */
 function missingCompiler(): string {
   if (ownCompiler === null) {
     return ` (TemplateSet.compiler was set to null)`;
@@ -241,10 +215,6 @@ function missingCompiler(): string {
     : "";
 }
 
-/**
- * An error of the compiler module's own OwlError class as this runtime's: the
- * page catches the runtime's class.
- */
 function asOwnError(error: unknown, compiler: TemplateCompiler): unknown {
   const ForeignError = compiler.OwlError;
   if (!ForeignError || ForeignError === OwlError || !(error instanceof ForeignError)) {
@@ -255,13 +225,10 @@ function asOwnError(error: unknown, compiler: TemplateCompiler): unknown {
   return ownError;
 }
 
-// -----------------------------------------------------------------------------
-//  xml tag helper
-// -----------------------------------------------------------------------------
 export const globalTemplates: { [key: string]: string | Element | TemplateFunction } =
   Object.create(null);
 
-export const xml = /* @__PURE__ */ Object.assign(
+export const xml =   Object.assign(
   function (...args: Parameters<typeof String.raw>): string {
     const name = `__template__${xml.nextId++}`;
     const value = String.raw(...args);
@@ -271,14 +238,6 @@ export const xml = /* @__PURE__ */ Object.assign(
   { nextId: 1 }
 );
 
-/**
- * The template of one of owl's components, made on its first read and the
- * class's own `template` from then on, so that importing owl registers no
- * template: `static get template() { return ownTemplate(Portal, "Portal").xml`...`; }`.
- * It has a name of its own, not one of xml's counter (which a test may reset);
- * the tag is spelled `.xml` so that a scanner of xml templates, as Odoo's
- * precompiler is, finds it in the build.
- */
 export function ownTemplate(C: Function, name: string): { xml: typeof String.raw } {
   return {
     xml(...args) {

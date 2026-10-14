@@ -10,7 +10,6 @@ HOST = '127.0.0.1'
 PORT = 8000
 URL = 'http://{0}:{1}/playground'.format(HOST, PORT)
 
-# Serve from the repo root
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
@@ -19,22 +18,16 @@ class OWLHandler(SimpleHTTPRequestHandler):
         super().__init__(*args, directory=REPO_ROOT, **kwargs)
 
     def do_GET(self):
-        # Redirect /playground to /playground/ so that relative URLs in
-        # index.html (e.g. "playground.css") resolve under /playground/.
-        path = urlparse(self.path).path  # ignore query params
+        path = urlparse(self.path).path
         if path == '/playground':
             self.send_response(301)
             self.send_header('Location', '/playground/')
             self.end_headers()
             return
-        # Serve OWL build. The playground iframe's import map points at
-        # "../owl.js", which resolves to /owl.js when the iframe is hosted
-        # under /playground/ (matching the integrated site layout).
         if path == '/owl.js' or path == '/playground/owl.js':
             self.path = '/packages/owl/dist/owl.es.js'
         elif path == '/owl.d.ts' or path == '/playground/owl.d.ts':
             self.path = '/packages/owl/dist/types/owl.d.ts'
-        # Map playground routes to tools/playground
         elif path.startswith('/playground/libs/') or path.startswith('/playground/samples/'):
             self.path = '/tools/playground' + path[len('/playground'):]
         elif path.startswith('/playground'):

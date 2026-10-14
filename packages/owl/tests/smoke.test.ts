@@ -1,7 +1,6 @@
 import { App, Component, mount, TemplateSet, xml } from "../src";
 
 const COMPILER_KEY = Symbol.for("@odoo/owl/compiler");
-// read before any test makes an App or reads the compiler
 const globalsOnImport = {
   devtools: "__OWL_DEVTOOLS__" in window,
   registry: COMPILER_KEY in globalThis,

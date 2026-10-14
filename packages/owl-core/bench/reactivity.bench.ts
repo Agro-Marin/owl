@@ -3,12 +3,6 @@ import * as owl from "../src";
 import { computed, effect, signal } from "../src";
 import { workloads } from "./workloads";
 
-// Reactivity microbenchmark suite. Run with `npm run bench`.
-//
-// Each `bench` measures one focused operation. Setup (signal/effect creation)
-// happens outside the timed body where possible. For effect re-run paths the
-// timed body has to include the awaited microtask flush, since the work we
-// care about happens in the queueMicrotask callback.
 
 async function flushMicrotasks() {
   await Promise.resolve();
@@ -17,8 +11,6 @@ async function flushMicrotasks() {
 
 describe("signal read outside a computation", () => {
   const s = signal(0);
-  // An effect subscribing to s does not make later reads tracked. Only a
-  // read during a computation's run exercises dependency tracking.
   bench("signal()", () => {
     s();
   });

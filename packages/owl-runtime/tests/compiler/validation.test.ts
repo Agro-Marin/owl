@@ -2,9 +2,6 @@ import { compile } from "@odoo/owl-compiler";
 import { TemplateSet } from "../../src/template_set";
 import { renderToString, snapshotTemplate, TestContext } from "../helpers";
 
-// -----------------------------------------------------------------------------
-// basic validation
-// -----------------------------------------------------------------------------
 
 describe("basic validation", () => {
   test("error if no template with given name", () => {
@@ -15,9 +12,7 @@ describe("basic validation", () => {
   test("cannot add a different template with the same name in dev mode", () => {
     const context = new TemplateSet({ dev: true });
     context.addTemplate("test", `<t/>`);
-    // Same template with the same name is fine
     expect(() => context.addTemplate("test", "<t/>")).not.toThrow();
-    // Different template with the same name crashes
     expect(() => context.addTemplate("test", "<div/>")).toThrow("already defined");
   });
 
@@ -32,13 +27,9 @@ describe("basic validation", () => {
     const context = new TemplateSet({ dev: true });
     const fn = compile(`<t/>`);
     context.addTemplate("test", fn);
-    // Re-adding the same function reference is a no-op
     expect(() => context.addTemplate("test", fn)).not.toThrow();
-    // Same source code (different function instance) is fine too
     expect(() => context.addTemplate("test", compile(`<t/>`))).not.toThrow();
-    // A function with different generated code throws
     expect(() => context.addTemplate("test", compile(`<div/>`))).toThrow("already defined");
-    // Mixing a function and a string also throws
     expect(() => context.addTemplate("test", `<div/>`)).toThrow("already defined");
   });
 

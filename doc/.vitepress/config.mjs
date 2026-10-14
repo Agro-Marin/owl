@@ -4,17 +4,6 @@ import fs from "fs";
 import path from "path";
 import { getShikiGrammars } from "../../tools/shiki-grammars.mjs";
 
-// Re-enable this group at the top of each per-route sidebar when a second
-// package lands (owl-router, owl-orm, …). For now it's noise — a single
-// "Owl" entry linking to the same section the user is already in.
-// const packageSwitcher = {
-//   text: "Packages",
-//   items: [
-//     { text: "Owl", link: "/v3/owl/" },
-//     { text: "Router", link: "/v3/owl-router/" },
-//     { text: "ORM", link: "/v3/owl-orm/" },
-//   ],
-// };
 
 const owlSidebar = [
   { text: "Introduction", link: "/v3/owl/" },
@@ -91,7 +80,6 @@ export default defineConfig({
   ],
   markdown: {
     anchor: {
-      // adapted from https://medium.com/@mhagemann/the-ultimate-way-to-slugify-a-url-string-in-javascript-b8e4a0d849e1
       slugify: function (str) {
         const a = "àáäâãåăæçèéëêǵḧìíïîḿńǹñòóöôœøṕŕßśșțùúüûǘẃẍÿź·_,:;";
         const b = "aaaaaaaaceeeeghiiiimnnnooooooprssstuuuuuwxyz-----";
@@ -99,14 +87,14 @@ export default defineConfig({
         return str
           .toString()
           .toLowerCase()
-          .replace(/\//g, "") // remove /
-          .replace(/\s+/g, "-") // Replace spaces with -
-          .replace(p, (c) => b.charAt(a.indexOf(c))) // Replace special characters
-          .replace(/&/g, "-and-") // Replace & with 'and'
-          .replace(/[^\w\-]+/g, "") // Remove all non-word characters
-          .replace(/\-\-+/g, "-") // Replace multiple - with single -
-          .replace(/^-+/, "") // Trim - from start of text
-          .replace(/-+$/, ""); // Trim - from end of text
+          .replace(/\//g, "")
+          .replace(/\s+/g, "-")
+          .replace(p, (c) => b.charAt(a.indexOf(c)))
+          .replace(/&/g, "-and-")
+          .replace(/[^\w\-]+/g, "")
+          .replace(/\-\-+/g, "-")
+          .replace(/^-+/, "")
+          .replace(/-+$/, "");
       }
     },
     languages: [
@@ -115,17 +103,10 @@ export default defineConfig({
     ],
   },
 
-  // The v2 docs are a separate VitePress project under doc/v2/ with its own
-  // config; exclude them from the v3 build.
   srcExclude: ["v2/**"],
 
-  // Links to ../playground/ and ../v2/ go outside VitePress's scope (sibling
-  // in the assembled site), so skip dead-link validation for them. The v2
-  // pattern matches a `v2/` path segment at any relative depth (`v2/`,
-  // `./v2/`, `../../../v2/`, …).
   ignoreDeadLinks: [/playground/, /(^|\/)v2\//],
 
-  // Inject a static navbar into every page, outside Vue's DOM tree.
   transformHtml(code) {
     return code.replace(/<body[^>]*>/, "$&" + buildNavbar({ docsVersion: "3" }));
   },
@@ -137,7 +118,6 @@ export default defineConfig({
 
     sidebar: {
       "/v3/owl/": owlSidebar,
-      // Future per-package sidebars go here, each starting with packageSwitcher.
     },
 
     search: {

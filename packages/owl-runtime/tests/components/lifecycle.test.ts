@@ -37,7 +37,7 @@ beforeEach(() => {
 
 describe("lifecycle hooks", () => {
   test("basic checks for a component", async () => {
-    expect.assertions(6); // 1 for snapshots
+    expect.assertions(6);
     class Test extends Component {
       static template = xml`<span>test</span>`;
 
@@ -385,9 +385,6 @@ describe("lifecycle hooks", () => {
     }
 
     class Parent extends Component {
-      // the t-else part in the template is important. This is
-      // necessary to have a situation that could confuse the vdom
-      // patching algorithm
       static template = xml`
         <div>
           <t t-if="this.state.ok">
@@ -594,7 +591,7 @@ describe("lifecycle hooks", () => {
     const widget = await mount(Test, fixture);
     expect(n).toBe(0);
 
-    widget.state.a = 1; // empty update, should do nothing
+    widget.state.a = 1;
     await nextTick();
     expect(n).toBe(0);
 
@@ -765,7 +762,6 @@ describe("lifecycle hooks", () => {
     `);
 
     parent.state.hasChild = true;
-    // immediately destroy everything
     app.destroy();
     await nextTick();
     expect(steps.splice(0)).toMatchInlineSnapshot(`
@@ -919,7 +915,6 @@ describe("lifecycle hooks", () => {
     `);
   });
 
-  // TODO: rename (remove? seems covered by lifecycle semantics)
   test("sub widget (inside sub node): hooks are correctly called", async () => {
     let created = false;
     let mounted = false;
@@ -948,7 +943,6 @@ describe("lifecycle hooks", () => {
     expect(created).toBe(true);
   });
 
-  // TODO: rename (corresponds to https://github.com/odoo/owl/blob/master/doc/v3/owl/reference/concurrency_model.md#semantics)
   test("component semantics", async () => {
     class TestWidget extends Component {
       name: string = "test";
@@ -1017,7 +1011,6 @@ describe("lifecycle hooks", () => {
       ]
     `);
 
-    // update
     c!.state.flag = false;
     await nextTick();
     expect(steps.splice(0)).toMatchInlineSnapshot(`
@@ -1280,8 +1273,6 @@ describe("lifecycle hooks", () => {
         useLogLifecycle(this);
       }
       async notify() {
-        // we destroy here the app after the new child component has been
-        // created, but before this rendering has been patched to the DOM
         if (this.state.flag) {
           await Promise.resolve();
           app.destroy();

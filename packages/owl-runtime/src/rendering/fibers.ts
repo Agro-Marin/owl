@@ -6,16 +6,10 @@ import { fibersInError, handleError } from "./error_handling";
 import { memoResume, memoSuspend } from "./memo";
 import { Scheduler } from "./scheduler";
 
-// Max times a given fiber may be recycled before being committed to the DOM
-// before we treat it as an infinite render loop. A healthy render commits after
-// ~1 pass; only a self-retriggering loop ever approaches this. See issue #1968.
 const MAX_RENDER_ITERATIONS = 1000;
 
-// Bit 0 of Fiber.renderState: whether the fiber's result was applied to the
-// DOM (the other bits hold the recycle count, see the renderState declaration).
 export const APPLIED_TO_DOM = 1;
 
-// Fiber.phase: a fiber whose render threw is RENDERED too, without a bdom
 export enum FiberPhase {
   NEW,
   RENDERING,
@@ -45,8 +39,6 @@ export function makeRootFiber(node: ComponentNode): Fiber {
     ) {
       return recycleFiber(node, current, root);
     }
-    // rendered for a pass another component failed: recycled, it would stay in
-    // that pass, which the scheduler drops every frame until it recovers
     if (debug.fiber) {
       debugLog(
         "fiber",
@@ -67,26 +59,12 @@ export function makeRootFiber(node: ComponentNode): Fiber {
   return fiber;
 }
 
-/**
- * Renders `current` again in its pass, before that pass was committed.
- */
 function recycleFiber(node: ComponentNode, current: Fiber, root: RootFiber): Fiber {
-  // This fiber is being re-rendered before it was ever committed to the DOM.
-  // In a healthy app a fiber is committed (and node.fiber nulled) before the
-  // next render, so this only climbs without bound in a render loop (#1968).
-  // The count is per fiber, NOT on the root: under a long-lived uncommitted
-  // root, many sibling subtrees may legitimately re-render once each, and a
-  // shared counter would add those up and flag a loop where there is none.
-  current.renderState += 2; // bump the recycle count held in bits 1+
+  current.renderState += 2;
   if (debug.fiber) {
     debugLog("fiber", `recycle ${node.componentName} (${current.renderState >> 1})`);
   }
-  // lock root fiber because canceling children fibers may destroy components,
-  // which means any arbitrary code can be run in onWillDestroy, which may
-  // trigger new renderings
   root.locked = true;
-  // a fiber that never rendered (its onWillStart or onWillUpdateProps
-  // failed) is still counted from its creation
   const rendered = current.phase === FiberPhase.NEW ? 0 : 1;
   root.counter += rendered - cancelFibers(current.children);
   root.locked = false;
@@ -95,7 +73,6 @@ function recycleFiber(node: ComponentNode, current: Fiber, root: RootFiber): Fib
   current.bdom = null;
   current.phase = FiberPhase.NEW;
   if (root instanceof MountFiber && root.prepared) {
-    // re-rendered between prepare and commit: commit() must wait again
     root.prepared = false;
     root.renderState &= ~APPLIED_TO_DOM;
   }
@@ -106,7 +83,6 @@ function recycleFiber(node: ComponentNode, current: Fiber, root: RootFiber): Fib
     if (failed) {
       failed.delete(current);
       for (const fiber of failed) {
-        // a cancelled failure no longer belongs to the pass
         if (fiber.node.fiber === fiber) {
           failedElsewhere = true;
           break;
@@ -119,27 +95,15 @@ function recycleFiber(node: ComponentNode, current: Fiber, root: RootFiber): Fib
     }
     current.renderState &= ~APPLIED_TO_DOM;
     if (current instanceof RootFiber) {
-      // it is possible that this fiber is a fiber that crashed while being
-      // mounted, so the mounted list is possibly corrupted. We restore it to
-      // its normal initial state (which is empty list or a list with a mount
-      // fiber.
       current.mounted = current instanceof MountFiber ? [current] : [];
     }
   }
   return current;
 }
 
-// Host component node of each sub-root node (Portal/Suspense content), seeded
-// by createRoot. Sparse metadata kept out of ComponentNode itself (same
-// pattern as nodeErrorHandlers): only sub-roots have entries, and they are
-// GC'd with their node.
 export const subRootHosts = new WeakMap<ComponentNode, ComponentNode>();
-// the other way: the sub-roots each host holds, while they live
 export const hostedSubRoots = new WeakMap<ComponentNode, Set<ComponentNode>>();
 
-// A deep render of a host renders its mounted sub-roots deep too: their
-// content is its template's (a slot), but no child fiber reaches it. Each
-// renders as a root of its own, after the host's pass (see above).
 function renderSubRootsDeep(node: ComponentNode) {
   const subRoots = hostedSubRoots.get(node);
   if (subRoots) {
@@ -157,22 +121,10 @@ function renderSubRootsDeep(node: ComponentNode) {
   }
 }
 
-/**
- * The node whose in-flight render this node's own render must yield to.
- * Usually the parent; for a mounted sub-root node (Portal/Suspense content),
- * its host, so renders inside the sub-root still yield to an ancestor render
- * that may be about to remove the host. An unmounted sub-root deliberately
- * stays unlinked: its initial render must proceed in parallel with the host's
- * own mount (Suspense renders its default slot while the outer tree is still
- * rendering).
- */
 function above(node: ComponentNode): ComponentNode | null {
   return node.parent || (node.status === STATUS.MOUNTED ? subRootHosts.get(node) || null : null);
 }
 
-/**
- * @returns number of not-yet rendered fibers cancelled
- */
 function cancelFibers(fibers: Fiber[]): number {
   let result = 0;
   for (let fiber of fibers) {
@@ -182,21 +134,9 @@ function cancelFibers(fibers: Fiber[]): number {
     }
     node.fiber = null;
     if (fiber.phase !== FiberPhase.NEW) {
-      // if fiber has been rendered, this means that the component props have
-      // been updated. however, this fiber will not be patched to the dom, so
-      // it could happen that the next render compare the current props with
-      // the same props, and skip the render completely. With the next line,
-      // we kindly request the component code to force a render, so it works as
-      // expected.
       node.forceNextRender = true;
     } else {
       result++;
-      // The fiber has no bdom yet, but a mounted node still needs to be
-      // re-rendered: this fiber represents an in-progress update that was
-      // cancelled, which may have come from the node's own render() (whose
-      // makeRootFiber recycled the existing child fiber and reset its bdom
-      // to null). If the parent then skips the child because props are
-      // unchanged, the child's reactive update would be lost.
       if (node.bdom) {
         node.forceNextRender = true;
       }
@@ -209,14 +149,9 @@ function cancelFibers(fibers: Fiber[]): number {
 export class Fiber {
   node: ComponentNode;
   bdom: BDom | null = null;
-  root: RootFiber | null; // A Fiber that has been replaced by another has no root
+  root: RootFiber | null;
   parent: Fiber | null;
   children: Fiber[] = [];
-  // Packs the "applied to DOM" flag (bit 0, see APPLIED_TO_DOM) together with
-  // the number of times this uncommitted fiber has been recycled by
-  // makeRootFiber (bits 1 and up). The recycle count climbs without bound only
-  // in a render loop (#1968); it shares a slot with the flag so the many
-  // fibers that are never recycled don't pay for a dedicated field.
   renderState = 0;
   deep: boolean = false;
   phase: FiberPhase = FiberPhase.NEW;
@@ -238,29 +173,18 @@ export class Fiber {
 
   render() {
     const scheduler = this.root!.node.app.scheduler;
-    // If more than one root fiber is in flight, an ancestor may be rendering —
-    // walk up to detect it and delay if needed. Otherwise no ancestor can have
-    // a fiber (every in-progress root lives in the tasks of a scheduler, this
-    // one or, for an ancestor of another app, another active one), so skip
-    // the walk.
     if (scheduler.tasks.size > 1 || Scheduler.active.size > 1) {
       let prev = this.root!.node;
       let current = above(prev);
       while (current) {
         if (current.fiber) {
           let root = current.fiber.root!;
-          // `!prev.parent` means we crossed a sub-root boundary: the content
-          // never appears in the host's childrenMap, but it is retained as
-          // long as the host node survives — and a node holding a fiber of a
-          // finished (counter 0) or failed render pass survives that pass.
           if (
             (root.counter === 0 || fibersInError.has(root)) &&
             (!prev.parent || !!current.fiber.childrenMap?.has(prev.parentKey!))
           ) {
             current = root.node;
           } else {
-            // the ancestor's app flushes its delayed renders once that
-            // ancestor has rendered; it may not be this fiber's app
             if (debug.fiber) {
               debugLog(
                 "fiber",
@@ -276,15 +200,9 @@ export class Fiber {
       }
     }
 
-    // there are no current rendering from above => we can render
     const node = this.node;
     const root = this.root;
     if (root) {
-      // Bail before touching the computation tracking pointer (below) so a
-      // detected loop never leaves currentComputation pinned to a signalComputation
-      // that app.destroy is about to dispose. The looping node's own fiber is
-      // the one makeRootFiber keeps recycling, so the reported component is
-      // the one actually stuck in the loop.
       if (this.renderState >> 1 > MAX_RENDER_ITERATIONS) {
         handleError({
           node,
@@ -298,18 +216,12 @@ export class Fiber {
         });
         return;
       }
-      // A render is marked EXECUTED while it runs, so that writing a value it
-      // already read schedules a re-render. A value the last render read and
-      // this one has not read yet does not: runTracked leaves that link stale
-      // until the render reads it again (and drops it if it does not).
       node.signalComputation.state = ComputationState.EXECUTED;
       node.previousMemos = node.memos;
       node.memos = null;
       const outerCollection = memoSuspend();
       this.phase = FiberPhase.RENDERING;
       const start = debug.fiber ? debugNow() : -1;
-      // the error is handled while the render is still the current
-      // computation, as onError handlers have always run
       this.bdom = runTracked(node.signalComputation, () => {
         try {
           return node.renderFn() as BDom;
@@ -334,8 +246,6 @@ export class Fiber {
       }
       if (newCounter === 0) {
         if (fibersInError.has(root)) {
-          // the pass failed: the renders it delayed wait for the frame that
-          // drops it, after its handlers had their chance to re-render
           scheduler.requestFrame();
         } else {
           scheduler.flush();
@@ -347,16 +257,11 @@ export class Fiber {
 
 export class RootFiber extends Fiber {
   counter: number = 1;
-  // the fibers of this pass whose render, onWillStart or onWillUpdateProps
-  // failed: the pass stays failed until none of them is current
   failed: Set<Fiber> | null = null;
 
-  // only add stuff in this if they have registered some hooks
   willPatch: Fiber[] = [];
   patched: Fiber[] = [];
   mounted: Fiber[] = [];
-  // A fiber is typically locked when it is completing and the patch has not, or is being applied.
-  // i.e.: render triggered in onWillUnmount or in willPatch will be delayed
   locked: boolean = false;
 
   complete() {
@@ -370,11 +275,7 @@ export class RootFiber extends Fiber {
       );
     }
     try {
-      // Step 1: calling all willPatch lifecycle hooks
       for (current of this.willPatch) {
-        // because of the asynchronous nature of the rendering, some parts of the
-        // UI may have been rendered, then deleted in a followup rendering, and we
-        // do not want to call onWillPatch in that case.
         let node = current.node;
         if (node.fiber === current) {
           const component = node.component;
@@ -392,13 +293,9 @@ export class RootFiber extends Fiber {
         return;
       }
 
-      // Step 2: patching the dom
       node._patch();
       this.locked = false;
     } catch (e) {
-      // none of the pass's onMounted runs: a component it mounted before the
-      // error has it called by the commit of a recovering render, and no
-      // onWillUnmount until then
       for (let fiber of this.mounted) {
         oweMounted(fiber.node);
       }
@@ -407,7 +304,6 @@ export class RootFiber extends Fiber {
       return;
     }
 
-    // Step 3: calling all mounted, then all patched lifecycle hooks
     const failed = callCommitHooks(this.mounted, "mounted");
     if (failed !== null) {
       callCommitHooks(this.patched, "patched", failed);
@@ -415,9 +311,6 @@ export class RootFiber extends Fiber {
   }
 }
 
-// The components a commit mounted without calling their onMounted (the commit
-// failed, or a hook of their chain did), with their onWillUnmount hooks, held
-// until a later commit calls their onMounted.
 const owedMounted = new WeakMap<ComponentNode, Function[]>();
 
 function oweMounted(node: ComponentNode) {
@@ -427,8 +320,6 @@ function oweMounted(node: ComponentNode) {
   }
 }
 
-// A new fiber of a component still owed its onMounted is in the list of the
-// pass, in place of an older fiber of that component.
 function queueOwedMounted(fiber: Fiber) {
   const node = fiber.node;
   if (owedMounted.has(node)) {
@@ -442,19 +333,6 @@ function queueOwedMounted(fiber: Fiber) {
   }
 }
 
-/**
- * Calls the onMounted (or onPatched) hooks of the fibers a commit applied,
- * last registered first. A throwing hook is reported at once and the other
- * components' hooks still run, so one failure does not leave the rest of the
- * committed tree without its lifecycle (a Portal committing its content). The
- * failing chain (the fibers handleError marked) is skipped and kept in the
- * list, without onWillUnmount, for the commit of a recovering render. While an
- * error is reported, the components still waiting for onMounted have no
- * onWillUnmount, in case the error destroys the app.
- *
- * @returns null once an error destroyed the app, else whether a hook failed,
- * which the onPatched call takes as `failed`
- */
 function callCommitHooks(
   fibers: Fiber[],
   hook: "mounted" | "patched",
@@ -518,14 +396,7 @@ type Position = "first-child" | "last-child";
 
 export interface MountOptions {
   position?: Position;
-  // If set, the bdom is inserted immediately before this node inside `target`
-  // (ignoring `position`). Used by Suspense to anchor its sub-root next to
-  // an in-template text node instead of requiring a dedicated wrapper.
   afterNode?: Node | null;
-  // The target was attached when the mount was requested; a render phase that
-  // outlives it (the target's container replaced meanwhile) mounts into it
-  // anyway instead of failing. Used by Portal, which then looks its target up
-  // again.
   allowDetached?: boolean;
 }
 
@@ -534,10 +405,6 @@ export class MountFiber extends RootFiber {
   position: Position;
   afterNode: Node | null = null;
   allowDetached = false;
-  // true once the render phase finishes (counter reaches 0), false again if
-  // the root re-renders before its commit. If target is set at that point, we
-  // mount immediately; otherwise we signal readiness via onPrepared and wait
-  // for commit() to supply a target.
   prepared = false;
   onPrepared: (() => void) | null = null;
 
@@ -554,9 +421,6 @@ export class MountFiber extends RootFiber {
     if (this.target) {
       this._mount();
     } else {
-      // Prepare-only: the render phase is done, but no target has been
-      // supplied yet. Signal readiness and let the scheduler drop this
-      // fiber from its tasks — commit() will run _mount() when called.
       this.renderState |= APPLIED_TO_DOM;
       this.onPrepared?.();
     }
@@ -570,8 +434,6 @@ export class MountFiber extends RootFiber {
     if (this.prepared) {
       this._mount();
     }
-    // Otherwise the render phase is still in flight. complete() will fire
-    // when the counter reaches 0 and pick up the now-set target.
   }
 
   private _mount() {
@@ -586,10 +448,6 @@ export class MountFiber extends RootFiber {
         attached: !this.allowDetached,
       });
       if (node.bdom) {
-        // this is a complicated situation: if we mount a fiber with an existing
-        // bdom, this means that this same fiber was already completed, mounted,
-        // but a crash occurred in some mounted hook. Then, it was handled and
-        // the new rendering is being applied.
         node.updateDom();
       } else {
         node.bdom = this.bdom;
@@ -603,8 +461,6 @@ export class MountFiber extends RootFiber {
         }
       }
 
-      // unregistering the fiber before mounted since it can do another render
-      // and that the current rendering is obviously completed
       node.fiber = null;
 
       node.status = STATUS.MOUNTED;

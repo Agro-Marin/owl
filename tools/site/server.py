@@ -20,8 +20,6 @@ class NoCacheHandler(SimpleHTTPRequestHandler):
         super().__init__(*args, directory=SITE_DIR, **kwargs)
 
     def translate_path(self, path):
-        # Strip the /owl/ prefix so VitePress assets (which use
-        # base: "/owl/documentation/") resolve correctly in local dev.
         if path == '/owl':
             path = '/'
         elif path.startswith('/owl/'):

@@ -43,8 +43,6 @@ class VText {
     }
   }
 
-  // its text, not markup: what an attribute or an interpolation of a t-set
-  // body needs (t-att-title="label"), and what text(vtext) renders
   toString(): string {
     return "" + toText(this.text);
   }

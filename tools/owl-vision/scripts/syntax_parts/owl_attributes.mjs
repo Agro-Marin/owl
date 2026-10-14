@@ -45,7 +45,6 @@ const formattedString = createPattern("formatted-string", {
     patterns: inilineJs
 });
 
-// -------------------------------- Attributes --------------------------------
 
 export const htmlAttributes = createAttributePatterns("html-attributes", {
     match: "[a-z]{2}[a-z_:.-]+",

@@ -6,8 +6,15 @@ const sources = {
   "@odoo/owl-compiler": fileURLToPath(new URL("../owl-compiler/src/index.ts", import.meta.url)),
   "@odoo/owl-runtime": fileURLToPath(new URL("../owl-runtime/src/index.ts", import.meta.url)),
 };
-// the tests of the runtime build: their owl-runtime carries no compiler
 const RUNTIME_TESTS = ["tests/compiler_module.test.ts", "tests/runtime.test.ts"];
+const NODE_TESTS = ["tests/dist.test.ts", "tests/types_build.test.ts"];
+const fullAliases = [
+  ...Object.entries(sources).map(([find, replacement]) => ({ find, replacement })),
+  {
+    find: /^\.\/bundled_compiler$/,
+    replacement: fileURLToPath(new URL("src/bundled_compiler.ts", import.meta.url)),
+  },
+];
 
 const test = {
   environment: "jsdom",
@@ -26,22 +33,23 @@ export default defineConfig({
     projects: [
       {
         extends: true,
-        resolve: {
-          alias: [
-            ...Object.entries(sources).map(([find, replacement]) => ({ find, replacement })),
-            // as build.mjs does for the full build
-            {
-              find: /^\.\/bundled_compiler$/,
-              replacement: fileURLToPath(new URL("src/bundled_compiler.ts", import.meta.url)),
-            },
-          ],
+        resolve: { alias: fullAliases },
+        test: {
+          ...test,
+          name: "full",
+          include: ["tests/**/*.test.ts"],
+          exclude: [...RUNTIME_TESTS, ...NODE_TESTS],
         },
-        test: { ...test, name: "full", include: ["tests/**/*.test.ts"], exclude: RUNTIME_TESTS },
       },
       {
         extends: true,
         resolve: { alias: sources },
         test: { ...test, name: "runtime", include: RUNTIME_TESTS },
+      },
+      {
+        extends: true,
+        resolve: { alias: fullAliases },
+        test: { ...test, name: "node", environment: "node", include: NODE_TESTS },
       },
     ],
   },

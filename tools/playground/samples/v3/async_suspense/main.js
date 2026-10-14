@@ -1,10 +1,5 @@
 import { Component, mount, Suspense, onWillStart, signal, xml } from "@odoo/owl";
 
-// Suspense: declarative loading state.
-// While a child's `onWillStart` is pending, Owl renders the fallback slot.
-// When the promise resolves, Owl swaps in the real content.
-//
-// Try: increase DELAY_MS, throw inside fakeFetch, toggle multiple times.
 
 const DELAY_MS = 1000;
 const fakeFetch = () =>

@@ -2,10 +2,6 @@ import { mount, patch } from "../../src/blockdom";
 import { makeTestFixture, renderToBdom, renderToString } from "../helpers";
 import { CONTEXT, UPDATED, canonical, generator, prng, render, toXml } from "./template_fuzz_lib";
 
-// Random templates rendered by owl must serialize to what the reference
-// renderer renders, at first and once patched to other values (see
-// template_fuzz_lib.ts; template_fuzz_interactive.test.ts mounts them as
-// components and dispatches events)
 
 const COUNT = Number(process.env.OWL_TEMPLATE_FUZZ || 400);
 

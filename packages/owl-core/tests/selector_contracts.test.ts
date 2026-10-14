@@ -26,7 +26,6 @@ function subscribers(value: unknown) {
 let traces: string[];
 beforeEach(() => {
   traces = [];
-  // Recording live key objects here would invalidate the lifetime probes.
   setDebugSink((channel, message) => traces.push(`${channel}: ${message}`));
   setDebug("reactivity,effect,computed,scope,error");
 });
@@ -529,7 +528,6 @@ describe.each(["object", "symbol"])("disposed selector %s key lifetime", (kind) 
         await new Promise((resolve) => setTimeout(resolve, 0));
         gc();
       }
-      // Keep the selector alive: losing the table itself would hide retention.
       expect(isSelected(0)).toBe(true);
       console.debug("[owl:selector-review] key lifetime", {
         kind,

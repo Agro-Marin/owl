@@ -21,7 +21,6 @@ describe("shallowEqual", () => {
     expect(shallowEqual([1, 2], [1, 2, 3])).toBe(false);
     expect(shallowEqual([1, 2], [1, 3])).toBe(false);
     expect(shallowEqual([NaN], [NaN])).toBe(true);
-    // one level deep only
     expect(shallowEqual([[1]], [[1]])).toBe(false);
     const inner = [1];
     expect(shallowEqual([inner], [inner])).toBe(true);
@@ -36,9 +35,7 @@ describe("shallowEqual", () => {
     expect(shallowEqual({ a: 1 }, { a: 1, b: 2 })).toBe(false);
     expect(shallowEqual({ a: 1, b: 2 }, { a: 1 })).toBe(false);
     expect(shallowEqual({ a: undefined }, { b: undefined })).toBe(false);
-    // one level deep only
     expect(shallowEqual({ a: { b: 1 } }, { a: { b: 1 } })).toBe(false);
-    // null-prototype objects count as plain
     const nullProto = Object.assign(Object.create(null), { a: 1 });
     expect(shallowEqual(nullProto, { a: 1 })).toBe(true);
   });

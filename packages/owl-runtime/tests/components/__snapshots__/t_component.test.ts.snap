@@ -1,4 +1,3 @@
-// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`t-component > can switch between dynamic components without the need for a t-key 1`] = `
 "function anonymous(app, bdom, helpers

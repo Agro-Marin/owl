@@ -1,9 +1,6 @@
 import { createBlock, mount } from "../../src/blockdom";
 import { makeTestFixture } from "./helpers";
 
-//------------------------------------------------------------------------------
-// Setup and helpers
-//------------------------------------------------------------------------------
 
 const XHTML_URI = "http://www.w3.org/1999/xhtml";
 const SVG_URI = "http://www.w3.org/2000/svg";
@@ -17,9 +14,6 @@ afterEach(() => {
   fixture.remove();
 });
 
-//------------------------------------------------------------------------------
-// Tests
-//------------------------------------------------------------------------------
 
 describe("namespace", () => {
   test("default namespace is xhtml", () => {

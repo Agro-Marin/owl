@@ -4,9 +4,6 @@ import { ASTType, ForEachNoFlag, parse } from "../src/parser";
 import { getConsoleOutput } from "./helpers";
 
 describe("qweb parser", () => {
-  // ---------------------------------------------------------------------------
-  // texts and basic stuff
-  // ---------------------------------------------------------------------------
 
   test("simple text node", async () => {
     expect(parse("foo")).toEqual({
@@ -390,9 +387,6 @@ describe("qweb parser", () => {
     });
   });
 
-  // ---------------------------------------------------------------------------
-  // t-out
-  // ---------------------------------------------------------------------------
 
   test("t-esc node (deprecated)", async () => {
     expect(parse(`<t t-esc="text"/>`)).toEqual({
@@ -445,9 +439,6 @@ describe("qweb parser", () => {
     });
   });
 
-  // ---------------------------------------------------------------------------
-  // t-if
-  // ---------------------------------------------------------------------------
 
   test("t-if", async () => {
     expect(parse(`<div><t t-if="condition">hey</t></div>`)).toEqual({
@@ -624,9 +615,6 @@ describe("qweb parser", () => {
     });
   });
 
-  // ---------------------------------------------------------------------------
-  // t-set
-  // ---------------------------------------------------------------------------
 
   test("simple t-set expression", async () => {
     expect(parse(`<t t-set="key" t-value="value" />`)).toEqual({
@@ -744,9 +732,6 @@ describe("qweb parser", () => {
     });
   });
 
-  // ---------------------------------------------------------------------------
-  // t-foreach
-  // ---------------------------------------------------------------------------
 
   test("simple t-foreach expression, t-key mandatory", async () => {
     expect(() =>
@@ -1001,9 +986,6 @@ describe("qweb parser", () => {
     );
   });
 
-  // ---------------------------------------------------------------------------
-  // t-call
-  // ---------------------------------------------------------------------------
 
   test("simple t-call expression", async () => {
     expect(parse(`<t t-call="blabla" />`)).toEqual({
@@ -1061,9 +1043,6 @@ describe("qweb parser", () => {
     });
   });
 
-  // ---------------------------------------------------------------------------
-  // t-on
-  // ---------------------------------------------------------------------------
 
   test("simple t-on expression", async () => {
     expect(parse(`<button t-on-click="add">Click</button>`)).toEqual({
@@ -1107,9 +1086,6 @@ describe("qweb parser", () => {
     );
   });
 
-  // ---------------------------------------------------------------------------
-  // t-model
-  // ---------------------------------------------------------------------------
 
   test("t-model select", async () => {
     expect(parse(`<select t-model="state.model"><option value="1" /></select>`)).toEqual({
@@ -1187,9 +1163,6 @@ describe("qweb parser", () => {
     });
   });
 
-  // ---------------------------------------------------------------------------
-  // t-component
-  // ---------------------------------------------------------------------------
 
   test("just a plain component", async () => {
     expect(parse(`<MyComponent />`)).toEqual({
@@ -1499,7 +1472,6 @@ describe("qweb parser", () => {
   });
 
   test("a translation context beside t-out or t-call-block is no directive", async () => {
-    // template inheritance adds one for each attribute an extension sets
     expect(() => parse(`<t t-out="value" t-translation-context-t-if="mod"/>`)).not.toThrow();
     expect(() => parse(`<t t-call-block="b" t-translation-context="mod"/>`)).not.toThrow();
     expect(() => parse(`<t t-out="value" t-foo="1"/>`)).toThrow(
@@ -1508,7 +1480,6 @@ describe("qweb parser", () => {
   });
 
   test("t-else with a t-if is an else branch holding the if", async () => {
-    // what an inheriting template gets by adding a t-if to an else node
     expect(() => parse(`<t t-if="a">A</t><t t-else="" t-if="b">B</t>`)).not.toThrow();
   });
 
@@ -1794,9 +1765,6 @@ describe("qweb parser", () => {
     });
   });
 
-  // ---------------------------------------------------------------------------
-  // t-call-slot
-  // ---------------------------------------------------------------------------
 
   test("a simple t-call-slot", async () => {
     expect(parse(`<t t-call-slot="default"/>`)).toEqual({
@@ -1846,9 +1814,6 @@ describe("qweb parser", () => {
     });
   });
 
-  // ---------------------------------------------------------------------------
-  // t-debug
-  // ---------------------------------------------------------------------------
 
   test("a t-debug on a dom node", async () => {
     expect(parse(`<div t-debug="">hey</div>`)).toEqual({
@@ -1887,9 +1852,6 @@ describe("qweb parser", () => {
     });
   });
 
-  // ---------------------------------------------------------------------------
-  // t-ref
-  // ---------------------------------------------------------------------------
 
   test("a t-ref on a dom node", async () => {
     expect(parse(`<div t-ref="name">hey</div>`)).toEqual({
@@ -1930,9 +1892,6 @@ describe("qweb parser", () => {
     expect(() => parse(`<t t-if="c" t-ref="r"><div/></t>`)).toThrow(error);
   });
 
-  // ---------------------------------------------------------------------------
-  // t-call-block
-  // ---------------------------------------------------------------------------
   test("simple t-call-block", async () => {
     expect(parse(`<t t-call-block="myBlock" />`)).toEqual({
       type: ASTType.TCallBlock,
@@ -1940,9 +1899,6 @@ describe("qweb parser", () => {
     });
   });
 
-  // ---------------------------------------------------------------------------
-  // t-translation
-  // ---------------------------------------------------------------------------
   test('t-translation="off"', async () => {
     expect(parse(`<t t-translation="off">word</t>`)).toEqual({
       type: ASTType.TTranslation,
@@ -2007,9 +1963,6 @@ describe("qweb parser", () => {
     });
   });
 
-  // ---------------------------------------------------------------------------
-  // t-translation-context
-  // ---------------------------------------------------------------------------
 
   test('t-translation-context="fr"', async () => {
     expect(parse(`<t t-translation-context="fr">word</t>`)).toEqual({
@@ -2069,9 +2022,6 @@ describe("qweb parser", () => {
     });
   });
 
-  // ---------------------------------------------------------------------------
-  // t-translation-context-attr
-  // ---------------------------------------------------------------------------
 
   test('t-translation-context="fr" and t-translation-context-title="pt" for a div attr title', async () => {
     expect(
@@ -2118,9 +2068,6 @@ describe("qweb parser", () => {
     });
   });
 
-  // ---------------------------------------------------------------------------
-  // t-model
-  // ---------------------------------------------------------------------------
   test("t-model", async () => {
     expect(parse(`<input t-model="state.stuff" />`)).toEqual({
       type: ASTType.DomNode,
@@ -2271,9 +2218,6 @@ describe("qweb parser", () => {
     },
   });
 
-  // ---------------------------------------------------------------------------
-  // t-tag
-  // ---------------------------------------------------------------------------
   test("t-tag", async () => {
     expect(parse(`<div t-tag="theTag" />`)).toEqual({
       type: ASTType.DomNode,
@@ -2368,7 +2312,6 @@ describe("directives that need an expression", () => {
     expect(getConsoleOutput()).toEqual([
       'warn:t-esc has been deprecated in favor of t-out. If the value to render is not wrapped by the "markup" function, it will be escaped',
     ]);
-    // an empty handler, an empty t-attf and an empty t-value stay allowed
     expect(() =>
       parse(`<div t-on-click="" t-attf-class=""><t t-set="x" t-value=""/></div>`)
     ).not.toThrow();
@@ -2394,15 +2337,11 @@ describe("nested t-set-slot", () => {
     expect(() => parse(`<C><t t-set-slot="a"><t t-set-slot="b">x</t></t></C>`)).toThrow(
       'Directive \'t-set-slot\' cannot be nested in another t-set-slot (slot "b" in slot "a")'
     );
-    // in a sub component, it is that component's slot
     expect(() =>
       parse(`<C><t t-set-slot="a"><D><t t-set-slot="b">x</t></D></t></C>`)
     ).not.toThrow();
   });
 
-  // ---------------------------------------------------------------------------
-  // pins of the helpers' simplification: same ASTs and errors as before
-  // ---------------------------------------------------------------------------
 
   test("a t-set-slot's scope, handlers and translation contexts are not its attributes", async () => {
     const ast: any = parse(

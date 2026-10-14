@@ -362,8 +362,6 @@ test.each([
   "cleanup plus loading",
 ] as const)("a throwing %s still settles the async run and surfaces its error", (scenario) => {
   const root = resolve(__dirname, "../../..");
-  // Observe real unhandled-rejection delivery in a separate process. No
-  // suite filter or swallowed rejection can make this settlement test pass.
   const script = `
       import assert from "node:assert/strict";
       import { build } from ${JSON.stringify(resolve(root, "node_modules/esbuild/lib/main.js"))};

@@ -22,13 +22,6 @@ function makeFileEntry(name) {
   return { name, type, iconClass: FILE_ICON_CLASSES[type] || "" };
 }
 
-/**
- * Parses a flat list of file entries into a recursive tree of folders and files.
- *
- * Returns: { folders: [[name, { path, folders, files }], ...], files: [...] }
- *  - folders: sorted array of [folderName, subtree] pairs
- *  - files: sorted array of file entries at this level (with fullName)
- */
 function parseFilePaths(files) {
   const hiddenFiles = [".gitkeep"];
 

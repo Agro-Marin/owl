@@ -24,8 +24,6 @@ export function providePlugins(
   startPlugins(manager, pluginConstructors);
 
   if (manager.status < STATUS.MOUNTED) {
-    // Provided plugins registered onWillStart — defer the owning component's
-    // first render until they resolve.
     onWillStart(() => manager.ready);
   }
 }

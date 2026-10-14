@@ -7,7 +7,6 @@ class VHtml {
   content: ChildNode[] = [];
 
   constructor(html: string | String) {
-    // a Markup is a String object: compare its value, not its identity
     this.html = String(html);
   }
 
@@ -45,7 +44,6 @@ class VHtml {
     const html2 = other.html;
     if (this.html !== html2) {
       const parent = this.parentEl;
-      // insert new html in front of current
       const afterNode = this.content[0];
       const template = document.createElement("template");
       template.innerHTML = html2;
@@ -59,7 +57,6 @@ class VHtml {
         nodeInsertBefore.call(parent, textNode, afterNode);
       }
 
-      // remove current content
       this.remove();
       this.content = content;
       this.html = other.html;

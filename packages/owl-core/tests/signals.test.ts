@@ -161,7 +161,6 @@ describe("signal.Array", () => {
     await waitScheduler();
     expectSpy(e.spy, 1, { result: 0 });
 
-    // writing an unobserved index must not trigger the effect
     reactiveArray()[2] = 42;
     await waitScheduler();
     expectSpy(e.spy, 1, { result: 0 });
@@ -296,7 +295,6 @@ describe("signal.Object", () => {
     e();
     expectSpy(e.spy, 1, { result: 0 });
 
-    // writing an unobserved key must not trigger the effect
     reactiveObject().b = 42;
     await waitScheduler();
     expectSpy(e.spy, 1, { result: 0 });
@@ -358,7 +356,6 @@ describe("signal.Map", () => {
     e();
     expectSpy(e.spy, 1, { result: undefined });
 
-    // mutating an unobserved key must not trigger the effect
     reactiveMap().set("b", 42);
     await waitScheduler();
     expectSpy(e.spy, 1, { result: undefined });
@@ -465,7 +462,7 @@ describe("signal.Set", () => {
     expectSpy(e.spy, 1);
 
     reactiveSet().values().next().value!.value = 1;
-    expectSpy(e.spy, 1, { result: [{ value: 1 }] }); // changed inplace
+    expectSpy(e.spy, 1, { result: [{ value: 1 }] });
     expect(reactiveSet().values().next().value).toBe(obj);
 
     await waitScheduler();
@@ -480,7 +477,6 @@ describe("signal.Set", () => {
     e();
     expectSpy(e.spy, 1, { result: false });
 
-    // adding a different key must not trigger the effect
     reactiveSet().add(2);
     await waitScheduler();
     expectSpy(e.spy, 1, { result: false });
@@ -538,8 +534,6 @@ describe("signal.Set", () => {
 });
 
 describe("signal atom notifications", () => {
-  // Counts the notifications of the signal's own atom: an immediate effect
-  // that reads the signal, and nothing it holds, runs once per notification.
   function countAtomNotifications(sig: any): () => number {
     let count = -1;
     immediateEffect(() => {
@@ -592,7 +586,7 @@ describe("equals option", () => {
     e();
     expectSpy(e.spy, 1);
 
-    s.set(2); // |1 - 2| < 2: considered equal
+    s.set(2);
     await waitScheduler();
     expectSpy(e.spy, 1);
     expect(s()).toBe(1);
@@ -641,7 +635,6 @@ describe("equals option", () => {
     await waitScheduler();
     expectSpy(e.spy, 1);
 
-    // mutations through the proxy are not gated by equals
     s().push(3);
     await waitScheduler();
     expectSpy(e.spy, 2, { result: 3 });
@@ -667,8 +660,6 @@ describe("equals option", () => {
     const s = signal(1, { equals: (a, b) => (other(), Object.is(a, b)) });
     const trigger = signal(0);
 
-    // set() from inside an effect: equals runs while tracking is active, and
-    // its read of `other` must not subscribe the effect
     const e = spyEffect(() => {
       trigger();
       s.set(1);

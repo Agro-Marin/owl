@@ -2,10 +2,7 @@ import { Plugin, signal, proxy, toRaw, plugin } from "@odoo/owl";
 import { fuzzySearch, IS_FIREFOX, browserInstance } from "../../utils";
 import { StorePlugin, evalFunctionInWindow, evalInWindow } from "./store";
 
-// Plugin handling all components-tab state and logic: tree, search, navigation,
-// selector/highlight, details panel, inspect/debug, and observed variables.
 export class ComponentsPlugin extends Plugin {
-  // --- Component tree state ---
   apps = signal(proxy([]));
   activeComponent = signal(
     proxy({
@@ -20,26 +17,20 @@ export class ComponentsPlugin extends Plugin {
     })
   );
 
-  // --- Search state ---
   searchText = signal("");
   searchResults = signal([]);
   searchIndex = signal(0);
 
-  // --- Selector / highlight state ---
   activeSelector = signal(false);
   selectedElement = signal(null);
   renderPaths = proxy(new Set());
 
-  // --- Inspect state ---
   observedVariables = signal(proxy([]));
 
   setup() {
     this._store = plugin(StorePlugin);
   }
 
-  // -------------------------------------------------------------------------
-  // Components tree
-  // -------------------------------------------------------------------------
 
   async loadComponentsTree(fromOld) {
     if (IS_FIREFOX) {
@@ -55,10 +46,8 @@ export class ComponentsPlugin extends Plugin {
       this._store.activeFrame()
     );
     if (treeResult === undefined) {
-      // Delayed retry on failure
       await new Promise((r) => setTimeout(r, 500));
       treeResult = await evalFunctionInWindow("getComponentsTree", args, this._store.activeFrame());
-      // Hard reload when even the retry fails
       if (treeResult === undefined) {
         this._store.refreshExtension();
         return;
@@ -78,15 +67,12 @@ export class ComponentsPlugin extends Plugin {
     }
   }
 
-  // Deselects all components, walks the tree to the given path, marks it selected,
-  // and returns the resolved component node.
   _applyTreeSelection(path) {
     this.apps().forEach((app) => {
       app.selected = false;
       app.highlighted = false;
       app.children.forEach((child) => deselectComponent(child));
     });
-    // path[0] = app index, path[1] = root index, path[2..] = child keys
     let component =
       path.length === 1
         ? this.apps()[path[0]]
@@ -128,8 +114,6 @@ export class ComponentsPlugin extends Plugin {
     }
   }
 
-  // Used during HTML selector hover: updates tree selection without loading component
-  // details, avoiding expensive async evals on every mouseover event.
   hoverSelectComponent(path) {
     this.lastHoveredPath = path;
     this._applyTreeSelection(path);
@@ -138,7 +122,6 @@ export class ComponentsPlugin extends Plugin {
     }
   }
 
-  // Toggle all parent components of the specified one to make sure it is visible in the tree
   toggleComponentParents(path) {
     let cp = path.slice(2);
     this.apps()[path[0]].toggled = true;
@@ -149,7 +132,6 @@ export class ComponentsPlugin extends Plugin {
     }
   }
 
-  // Returns access to the specified component in the tree
   getComponentByPath(path) {
     let component;
     if (path.length < 2) {
@@ -164,7 +146,6 @@ export class ComponentsPlugin extends Plugin {
     return component;
   }
 
-  // Expand/fold the component and its children based on toggle
   toggleComponentAndChildren(component, toggle) {
     if (toggle) {
       expandNodes(component);
@@ -173,9 +154,6 @@ export class ComponentsPlugin extends Plugin {
     }
   }
 
-  // -------------------------------------------------------------------------
-  // Component search
-  // -------------------------------------------------------------------------
 
   updateSearch(search) {
     this.searchText.set(search);
@@ -232,9 +210,6 @@ export class ComponentsPlugin extends Plugin {
     this.selectComponent(this.searchResults()[index]);
   }
 
-  // -------------------------------------------------------------------------
-  // Tree navigation (keyboard)
-  // -------------------------------------------------------------------------
 
   toggleOrSelectPrevElement(toggle) {
     if (toggle) {
@@ -306,9 +281,6 @@ export class ComponentsPlugin extends Plugin {
     }
   }
 
-  // -------------------------------------------------------------------------
-  // Object tree / details
-  // -------------------------------------------------------------------------
 
   async loadGetterContent(obj) {
     const result = await evalFunctionInWindow(
@@ -341,9 +313,6 @@ export class ComponentsPlugin extends Plugin {
     evalFunctionInWindow("editObject", [path, value, objectType], this._store.activeFrame());
   }
 
-  // -------------------------------------------------------------------------
-  // Selector / highlight
-  // -------------------------------------------------------------------------
 
   toggleSelector() {
     this.activeSelector.set(!this.activeSelector());
@@ -369,9 +338,6 @@ export class ComponentsPlugin extends Plugin {
     copyToClipboard(this.activeComponent().name);
   }
 
-  // -------------------------------------------------------------------------
-  // Inspect / debug
-  // -------------------------------------------------------------------------
 
   refreshComponent(path = this.activeComponent().path) {
     evalFunctionInWindow("refreshComponent", [path], this._store.activeFrame());
@@ -479,9 +445,6 @@ export class ComponentsPlugin extends Plugin {
   }
 }
 
-// -------------------------------------------------------------------------
-// Standalone helper functions
-// -------------------------------------------------------------------------
 
 function deselectComponent(component) {
   component.selected = false;

@@ -35,8 +35,6 @@ describe("t-call", () => {
         </templates>`,
     });
     expect(fixture.innerHTML).toBe("<i>1</i><i>12</i>");
-    // the first render creates both children; a shared key shows on the next
-    // one, which finds a single child for both items
     root.suffix = "x";
     render(root);
     await nextTick();
@@ -387,11 +385,6 @@ describe("t-call", () => {
       myRef2 = signal<any>(null);
     }
 
-    // The following things need a reference to the ComponentNode, historically
-    // we used to do this with ctx.__owl__, but this cannot work inside t-call-context
-    // - t-ref: node.refs[refName] = something
-    // - t-set: caused a call to capture, which used to use node.component
-    // - .bind: used to bind to node.component
     const root = await mount(Root, fixture, {
       templates: `
         <templates>

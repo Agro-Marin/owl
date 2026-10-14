@@ -16,9 +16,6 @@ beforeEach(() => {
   fixture = makeTestFixture();
 });
 
-// -----------------------------------------------------------------------------
-// Basics
-// -----------------------------------------------------------------------------
 
 describe("basics", () => {
   test("reads the named prop", async () => {
@@ -129,9 +126,6 @@ describe("basics", () => {
   });
 });
 
-// -----------------------------------------------------------------------------
-// Dev mode
-// -----------------------------------------------------------------------------
 
 describe("dev mode", () => {
   test("validates initial type on mount (root component)", async () => {
@@ -184,7 +178,7 @@ describe("dev mode", () => {
     }
 
     const parent = await mount(Parent, fixture, { dev: true });
-    parent.state.todo = new Todo(); // different reference
+    parent.state.todo = new Todo();
     render(parent);
     const error = await nextAppError(parent.__owl__.app);
     expect(error.message).toMatch("Prop 'todo' changed in component 'Child'");
@@ -207,10 +201,9 @@ describe("dev mode", () => {
     }
 
     const parent = await mount(Parent, fixture, { dev: true });
-    todoSig.set(new Todo()); // inner value changes, signal reference stays the same
-    render(parent, true); // deep re-render → triggers willUpdateProps
+    todoSig.set(new Todo());
+    render(parent, true);
     await nextTick();
-    // no error: same signal reference, so the static-prop check passes
     expect(fixture.innerHTML).toBe("<div></div>");
   });
 
@@ -242,10 +235,9 @@ describe("dev mode", () => {
     }
 
     const parent = await mount(Parent, fixture);
-    parent.state.todo = new Todo(); // different reference
+    parent.state.todo = new Todo();
     render(parent);
     await nextTick();
-    // no error in prod mode
     expect(fixture.innerHTML).toBe("<div></div>");
   });
 
@@ -255,7 +247,6 @@ describe("dev mode", () => {
       label = props.static("label", t.string().optional("fallback"));
     }
 
-    // No error even though prop is missing: default covers it
     await mount(Root, fixture, { dev: true });
     expect(fixture.innerHTML).toBe("<div>fallback</div>");
   });
@@ -274,9 +265,8 @@ describe("dev mode", () => {
     const parent = await mount(Parent, fixture, { dev: true });
     expect(fixture.innerHTML).toBe("<div>fallback</div>");
     parent.state.tick = 1;
-    render(parent, true); // deep re-render → triggers willUpdateProps on Child
+    render(parent, true);
     await nextTick();
-    // no error: the raw prop stayed undefined, so the static-prop check passes
     expect(fixture.innerHTML).toBe("<div>fallback</div>");
   });
   test("a key another view defaults does not trigger the static-prop error on re-render", async () => {
@@ -299,9 +289,6 @@ describe("dev mode", () => {
   });
 });
 
-// -----------------------------------------------------------------------------
-// Error outside component scope
-// -----------------------------------------------------------------------------
 
 test("throws if called outside a component scope", () => {
   let error: any;

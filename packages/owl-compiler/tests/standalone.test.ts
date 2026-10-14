@@ -1,4 +1,3 @@
-// @vitest-environment node
 import { spawnSync } from "child_process";
 import {
   chmod,
@@ -87,7 +86,6 @@ describe("standalone compiler", () => {
     expect(getConsoleOutput()).toEqual(["log:1 templates compiled"]);
     const templates = new Function(code.replace("export const templates =", "return"))();
     const source = String(templates["web.g"]);
-    // the runtime always passes __globals__ among its helpers
     expect(source).toContain("let { __globals__, safeOutput } = helpers;");
     expect(source).toContain(`// Template name: "web.g"`);
   });
@@ -141,8 +139,6 @@ describe("standalone compiler", () => {
   });
 });
 
-// Node runs the compiler's TypeScript sources as they are (tools/ts_hooks.mjs):
-// a syntax it cannot strip, or a type imported as a value, breaks the tool
 test("npm run compile_templates runs the sources with Node, nothing built first", async () => {
   await writeFile(
     path.join(dir, "a.xml"),

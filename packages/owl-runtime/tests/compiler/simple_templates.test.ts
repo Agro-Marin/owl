@@ -3,9 +3,6 @@ import { renderToString, snapshotEverything, TestContext } from "../helpers";
 
 snapshotEverything();
 
-// -----------------------------------------------------------------------------
-// Simple templates, mostly static
-// -----------------------------------------------------------------------------
 
 describe("simple templates, mostly static", () => {
   test("simple string", () => {

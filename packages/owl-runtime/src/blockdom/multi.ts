@@ -1,9 +1,6 @@
 import type { VNode } from "./index";
 import { characterDataRemove, nodeInsertBefore, nodeRemoveChild } from "./dom";
 
-// -----------------------------------------------------------------------------
-// Multi NODE
-// -----------------------------------------------------------------------------
 
 export class VMulti {
   children: (VNode | undefined)[];

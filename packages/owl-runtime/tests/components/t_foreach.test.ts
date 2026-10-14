@@ -53,7 +53,6 @@ describe("list of components", () => {
     parent.ids.set([]);
     await nextTick();
     expect(fixture.innerHTML).toBe("<ul><b></b></ul>");
-    // every item unmounts while the list is still in place
     expect(seen).toEqual(["1:3", "2:3", "3:4"]);
   });
 
@@ -262,7 +261,6 @@ describe("list of components", () => {
   });
 
   test("list of sub components inside other nodes", async () => {
-    // this confuses the patching algorithm...
     class SubComponent extends Component {
       static template = xml`<span>asdf</span>`;
     }
@@ -321,7 +319,7 @@ describe("list of components", () => {
     await mount(Parent, fixture);
     expect(fixture.innerHTML).toBe("<div><span>A0</span><span>A1</span></div>");
 
-    await nextTick(); // wait for changes triggered in mounted to be applied
+    await nextTick();
     expect(fixture.innerHTML).toBe("<div><span>B0</span><span>B1</span></div>");
   });
 

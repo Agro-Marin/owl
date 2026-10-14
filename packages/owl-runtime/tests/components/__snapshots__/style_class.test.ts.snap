@@ -1,4 +1,3 @@
-// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`style and class handling > can set class on multi root component 1`] = `
 "function anonymous(app, bdom, helpers

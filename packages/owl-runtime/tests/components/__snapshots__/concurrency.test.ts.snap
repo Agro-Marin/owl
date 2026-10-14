@@ -1,4 +1,3 @@
-// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`Cascading renders after microtaskTick 1`] = `
 "function anonymous(app, bdom, helpers

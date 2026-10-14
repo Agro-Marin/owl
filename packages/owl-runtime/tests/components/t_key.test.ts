@@ -43,7 +43,6 @@ describe("t-key", () => {
       static template = xml`<t t-foreach="this.items" t-as="item" t-key="item"><Child v="typeof item"/></t>`;
       static components = { Child };
       obj = {};
-      // the id the object gets, as a string
       items = [this.obj, helpers.keyOf(this.obj)];
     }
     await mount(Parent, fixture, { test: true });
@@ -119,19 +118,16 @@ describe("t-key", () => {
     const parent = await mount(Parent, fixture);
     expect(fixture.innerHTML).toBe("<button>b</button><span>end</span>");
 
-    // key change while the outgoing component rendered an empty list
     parent.key = "b";
     render(parent);
     await nextTick();
     expect(fixture.innerHTML).toBe("<button>b</button>12<span>end</span>");
 
-    // key change back: outgoing component has content, incoming one is empty
     parent.key = "a";
     render(parent);
     await nextTick();
     expect(fixture.innerHTML).toBe("<button>b</button><span>end</span>");
 
-    // and once more from an empty one, to check the anchor bookkeeping survives
     parent.key = "b";
     render(parent);
     await nextTick();
@@ -163,7 +159,7 @@ describe("t-key", () => {
 
     const parent = await mount(Parent, fixture);
     expect(fixture.innerHTML).toBe("<span><div>1</div></span>");
-    expect(keyCalls).toBe(2); // one for t-key, the other for the props
+    expect(keyCalls).toBe(2);
 
     const oldChild = childInstance;
     __key = 2;

@@ -1,4 +1,3 @@
-// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`translation context > a translation directive without content before a t-set renders nothing 1`] = `
 "function anonymous(app, bdom, helpers

@@ -34,17 +34,6 @@ export const owlElementAttributes = [
 
 owlElementAttributes.push(...owlComponentAttributes);
 
-/**
-To generate this list, run the following snippet on https://developer.mozilla.org/fr/docs/Web/Events
-
-(function () {
-  const events = [...document.querySelectorAll(".section-content li a")]
-    .map(e => e.childNodes[0])
-    .filter(n => n.nodeType === 3 && n.textContent.toLowerCase() == n.textContent)
-    .map(n => "t-on-" + n.textContent.trim());
-  return JSON.stringify([...new Set(events)], null, 2);
-}())
-*/
 export const events = [
     "t-on-abort",
     "t-on-ended",
@@ -266,16 +255,6 @@ export const events = [
 }))
 
 
-/**
-To generate the elements list, run the following snippet on https://developer.mozilla.org/en-US/docs/Web/HTML/Element
-
-(function () {
-  const names = [...document.querySelectorAll("section:not([aria-labelledby='obsolete_and_deprecated_elements']) td:nth-child(1)")]
-  .flatMap(n => n.innerText.split(","))
-  .map(n => n.trim().replace("<", "").replace(">", ""))
-  return JSON.stringify([...new Set(names)], null, 2);
-})()
-*/
 export const elements = [
     "t",
     "link",

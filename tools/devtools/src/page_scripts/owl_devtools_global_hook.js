@@ -5,34 +5,19 @@
 
   class OwlDevtoolsGlobalHook {
     constructor() {
-      // The set of apps exposed by owl
       this.apps = window.__OWL_DEVTOOLS__.apps;
-      // Class definition of an owl Fiber
       this.Fiber = window.__OWL_DEVTOOLS__.Fiber;
-      // Same but for RootFiber
       this.RootFiber = window.__OWL_DEVTOOLS__.RootFiber;
-      // This is for retrocompatibility purposes since new versions of owl should always expose toRaw and reactive
-      // in __OWL_DEVTOOLS__
       this.toRaw = window.__OWL_DEVTOOLS__.toRaw ?? window.owl?.toRaw;
       this.reactive = window.__OWL_DEVTOOLS__.reactive ?? window.owl?.reactive;
-      // Set to keep track of the HTML elements we added to the page
       this.addedElements = [];
-      // To keep track of the succession order of the render events
       this.eventId = 0;
-      // Set to keep track of the frame on which this script is loaded
       this.frame = "top";
-      // Allows to launch a message each time an iframe html element is added to the page
       const iFrameObserver = new MutationObserver(function (mutationsList) {
         mutationsList.forEach(function (mutation) {
           mutation.addedNodes.forEach(function (addedNode) {
             if (addedNode.tagName == "IFRAME") {
-              // Ensure it is not an empty iframe element
               if (addedNode.contentDocument) {
-                /*
-                 * This message is intercepted by the content script which relays it to the background script which relays it to the devtools app.
-                 * This process may seem long and indirect but is necessary. This applies to all window.top.postMessage methods in this file.
-                 * More information in the docs: https://developer.chrome.com/docs/extensions/mv3/devtools/#evaluated-scripts-to-devtools
-                 */
                 window.top.postMessage({
                   source: "owl-devtools",
                   type: "NewIFrame",
@@ -51,17 +36,10 @@
       this.requestedFrame = false;
       this.enabledSelector = false;
       this.eventsBatch = [];
-      // ComponentNode of each OWL 3 root, cached as its mount promise resolves
-      // (roots do not expose their node synchronously anymore). null = pending.
       this.rootNodes = new WeakMap();
       this.breakpointsClassMap = new Map();
       this.breakpointsHookMap = new Map();
-      // Object which defines how different types of data should be displayed when passed to the devtools
       this.serializer = {
-        // Defines how leaf object nodes should be displayed in the extension when inside a bigger structure
-        // This is also used by default when it is a standalone item (like functions, numbers, strings, etc)
-        // The asConstructorName parameter can be passed to change the display of objects and functions to
-        // be their constructor name (useful for prototype, map and set display)
         serializeItem(value, asConstructorName = false) {
           if (typeof value === "object") {
             if (value == null) {
@@ -86,7 +64,6 @@
             if (functionString.startsWith("class")) {
               return "class " + value.name;
             } else {
-              // This replaces the body of any function with curly braces by ...
               const regex = /\{(?![^()]*\))(.*?)\}(?![^{}]*\})/s;
               return functionString.replace(regex, "{...}");
             }
@@ -185,8 +162,6 @@
           }
           return "Set(" + obj.size + "){" + result.join(", ") + "}";
         },
-        // Returns a shortened string version of a collection of properties for display purposes
-        // Shortcut for serializeItem when it is a standalone item
         serializeContent(item, type) {
           if (this[type]) {
             return this[type](item);
@@ -196,20 +171,15 @@
       };
     }
 
-    // Returns the OWL version string for the given app
     getAppVersion(app) {
       return app.__proto__.constructor?.version || "<2.0.8";
     }
 
-    // Returns a normalized array of root ComponentNodes for the given app.
-    // OWL 2: main root at index 0, subRoots at index 1+.
-    // OWL 3: all roots from app.roots.
     getRoots(app) {
       const version = this.getAppVersion(app);
       if (version.startsWith("3")) {
         const nodes = [];
         for (const root of app.roots) {
-          // TODO: Early OWL 3 versions exposed the ComponentNode directly on the root, remove when stable
           if (root.node) {
             nodes.push(root.node);
             continue;
@@ -226,14 +196,12 @@
                 this.rootNodes.set(root, component.__owl__);
                 window.top.postMessage({ source: "owl-devtools", type: "RefreshApps" });
               },
-              // Root failed to mount: there is no component tree to inspect
               () => {}
             );
           }
         }
         return nodes;
       }
-      // OWL 2: main root at index 0, subRoots at index 1+
       const roots = [];
       if (app.root) {
         roots.push(app.root);
@@ -251,12 +219,10 @@
         document.addEventListener("mouseover", this.HTMLSelector, { capture: true });
         this.frame = frame;
         const self = this;
-        // Flush the events batcher when a root render is completed
         const original_Complete = self.RootFiber.prototype.complete;
         self.RootFiber.prototype.complete = function () {
           original_Complete.call(this, ...arguments);
           const path = self.getComponentPath(this.node);
-          //Add a functionnality to the complete function which sends a message to the window every time it is triggered.
           window.top.postMessage({
             source: "owl-devtools",
             type: "Complete",
@@ -275,7 +241,6 @@
         this.devtoolsInit = true;
       }
     }
-    // Modify the methods of the apps set in order to send a message each time it is modified.
     patchAppsSetMethods() {
       const originalAdd = this.apps.add;
       const originalDelete = this.apps.delete;
@@ -295,7 +260,6 @@
       };
     }
 
-    // Modify methods of each app so that it triggers messages on each flush and component render
     patchAppMethods() {
       let app;
       for (const appItem of this.apps) {
@@ -310,17 +274,8 @@
       const self = this;
       const originalFlush = app.scheduler.constructor.prototype.flush;
       let inFlush = false;
-      // Per-fiber symbol to track whether _render() was actually called for this
-      // fiber's render() invocation. A shared boolean flag is unreliable in OWL 3
-      // because the counter reaching 0 → flush() → other fibers' render() can all run
-      // synchronously inside one render() call, resetting a shared flag before
-      // the outer render() reads it back.
       const renderCalledKey = Symbol("owlDevtoolsRenderCalled");
       app.scheduler.constructor.prototype.flush = function () {
-        // Used to know when a render is triggered inside the flush method or not.
-        // Save/restore rather than hard-reset to false so recursive flush() calls
-        // (which occur in OWL 3 when the pass counter reaching 0 fires flush() from inside
-        // _render()) do not prematurely clear the flag for the outer caller.
         const wasInFlush = inFlush;
         inFlush = true;
         originalFlush.call(this, ...arguments);
@@ -329,18 +284,12 @@
       const originalRender = self.Fiber.prototype.render;
       self.Fiber.prototype.render = function () {
         const id = self.eventId++;
-        // Reset the per-fiber flag before calling the original render.
         this[renderCalledKey] = false;
         let flushed = false;
-        // We know if a render comes from flush before calling the render method
         if (this instanceof self.RootFiber && inFlush) {
           flushed = true;
         }
 
-        // Patch the renderFn to measure time and detect that an actual render
-        // happened (as opposed to a delayed render where renderFn is never called).
-        // This works for both OWL 2 (where _render() calls renderFn) and OWL 3
-        // (where render() calls renderFn directly — there is no _render() method).
         const fiber = this;
         const node = this.node;
         const nodeRenderFn = node.renderFn;
@@ -349,18 +298,13 @@
           const before = performance.now();
           const result = nodeRenderFn.call(this);
           time = performance.now() - before;
-          // unpatch the node render function
           node.renderFn = nodeRenderFn;
-          // Mark the fiber: renderFn was actually invoked (not a delayed render).
           fiber[renderCalledKey] = true;
           return result;
         };
 
         originalRender.call(this, ...arguments);
-        // OWL 3: ComponentNode has no .name getter; use component.constructor.name instead.
-        // The ?? fallback keeps OWL 2 compatibility where node.name was a direct property.
         const nodeName = this.node.component?.constructor?.name ?? this.node.name ?? "";
-        // Read the per-fiber flag: true means renderFn was called for this fiber.
         const didRender = this[renderCalledKey];
         if (didRender && self.traceRenderings && this instanceof self.RootFiber) {
           console.groupCollapsed(`Rendering <${nodeName}>`);
@@ -369,7 +313,6 @@
         }
         if (self.recordEvents) {
           const path = self.getComponentPath(this.node);
-          // if the render comes from flush
           if (flushed) {
             self.eventsBatch.push({
               type: "render (flushed)",
@@ -379,9 +322,7 @@
               time: time,
               id: id,
             });
-            // if renderFn was called, it is a proper render (and not a delayed one)
           } else if (didRender) {
-            // A render on a RootFiber is a root render and can propagate other renders to its children
             if (this instanceof self.RootFiber) {
               self.eventsBatch.push({
                 type: this.deep ? "render (deep)" : "render",
@@ -391,7 +332,6 @@
                 time: time,
                 id: id,
               });
-              // if the node status is NEW, the node has been created just before rendering
             } else if (this.node.status === 0) {
               self.eventsBatch.push({
                 type: "create",
@@ -401,7 +341,6 @@
                 time: time,
                 id: id,
               });
-              // else it is an update
             } else {
               self.eventsBatch.push({
                 type: "update",
@@ -412,7 +351,6 @@
                 id: id,
               });
             }
-            // renderFn not called: it is a delayed render that could be flushed later on
           } else {
             self.eventsBatch.push({
               type: "render (delayed)",
@@ -425,15 +363,11 @@
           }
         }
       };
-      // Signals when a component is destroyed
-      // All component nodes share the same prototype, so patching one suffices
       const firstRoot = this.getRoots(app)[0];
       const originalDestroy = firstRoot.constructor.prototype._destroy;
       firstRoot.constructor.prototype._destroy = function () {
         if (self.recordEvents) {
           const path = self.getComponentPath(this);
-          // OWL 3: ComponentNode has no .name; use component.constructor.name.
-          // parentKey is string|null in OWL 3; normalise null to "" for validation.
           const event = {
             type: "destroy",
             component: this.component?.constructor?.name ?? this.name ?? "",
@@ -452,9 +386,7 @@
       };
     }
 
-    // patch reactivity system to activate subscription tracing
     patchReactivity() {
-      // i am simultaneously proud and ashamed of this code...
       const WeakMapGet = WeakMap.prototype.get;
       const MapGet = Map.prototype.get;
       const SetAdd = Set.prototype.add;
@@ -463,7 +395,6 @@
       let callbacksToTargets;
       let targetToKeysToCallbacks;
 
-      // Step 1: extract internal values from owl
       const obj = self.reactive({}, () => {});
       let count = 0;
       WeakMap.prototype.get = function () {
@@ -479,7 +410,6 @@
       };
       obj.a;
 
-      // Step 2: patch these objects
       let key;
       function getKey(_key) {
         key = _key;
@@ -495,7 +425,6 @@
       };
 
       function addTarget(target) {
-        // HERE
         if (self.traceSubscriptions && !this.has(target)) {
           console.groupCollapsed(`Observing:`, key, target);
           console.trace();
@@ -515,13 +444,12 @@
     toggleTracing(value) {
       if (value) {
         this.patchAppMethods();
-        this.patchAppMethods = () => {}; // to only patch once
+        this.patchAppMethods = () => {};
       }
       this.traceRenderings = value;
       return this.traceRenderings;
     }
 
-    // Returns whether subscription tracing is supported in the current OWL version.
     supportsSubscriptionTracing() {
       const apps = [...this.apps];
       if (!apps.length) {
@@ -533,28 +461,25 @@
     toggleSubscriptionTracing(value) {
       if (value) {
         this.patchReactivity();
-        this.patchReactivity = () => {}; // to only patch once
+        this.patchReactivity = () => {};
       }
       this.traceSubscriptions = value;
       return value;
     }
-    // Enables/disables the recording of the render/destroy events based on value
     toggleEventsRecording(value, index) {
       if (value) {
         this.patchAppMethods();
-        this.patchAppMethods = () => {}; // to only patch once
+        this.patchAppMethods = () => {};
       }
       this.recordEvents = value;
       this.eventId = index;
       return this.recordEvents;
     }
 
-    // Reset the event ids (the events on devtools side will be cleared at the same time)
     resetEvents() {
       this.eventId = 0;
     }
 
-    // Get the urls of all iframes present on the page
     getIFrameUrls() {
       let frames = [];
       for (const frame of document.querySelectorAll("iframe")) {
@@ -563,7 +488,6 @@
       return frames;
     }
 
-    // Draws a highlighting rectangle on the specified html element and displays its dimensions and the specified name in a box
     highlightElements(elements, name) {
       this.removeHighlights();
 
@@ -578,7 +502,6 @@
 
       for (const element of elements) {
         let rect;
-        // Since this function accepts text nodes, we need to create a range to get the position and dimensions
         if (element instanceof Text) {
           const range = document.createRange();
           range.selectNode(element);
@@ -641,7 +564,6 @@
           highlightMargins.style.pointerEvents = "none";
           document.body.appendChild(highlightMargins);
           this.addedElements.push(highlightMargins);
-          // In case the element is a range because a text node was passed
         } else {
           const highlight = document.createElement("div");
           highlight.style.top = `${top}px`;
@@ -698,7 +620,6 @@
       detailsBox.style.left = `${detailsBoxLeft + 5}px`;
     }
 
-    // Remove all elements drawn by the HighlightElement function
     removeHighlights = () => {
       for (const el of this.addedElements) {
         el.remove();
@@ -706,15 +627,11 @@
       this.addedElements = [];
     };
 
-    // Identify the hovered component based on the corresponding DOM element and send the Select message
-    // when the target changes
     HTMLSelector = (ev) => {
       if (this.enabledSelector) {
         const target = ev.target;
         if (this.currentSelectedElement !== target) {
           this.currentSelectedElement = target;
-          // Throttle to one computation per animation frame: if the mouse crosses several
-          // elements in the same frame we only process the last one.
           if (this._selectorRafId) {
             cancelAnimationFrame(this._selectorRafId);
           }
@@ -737,22 +654,18 @@
       }
     };
 
-    // Activate the HTML selector tool
     enableHTMLSelector() {
       this.enabledSelector = true;
       document.addEventListener("click", this.disableHTMLSelector, { capture: true });
       document.addEventListener("scroll", this.removeHighlights, { capture: true });
     }
 
-    // Diasble the HTML selector tool
     disableHTMLSelector = (ev = undefined) => {
       this.enabledSelector = false;
       if (this._selectorRafId) {
         cancelAnimationFrame(this._selectorRafId);
         this._selectorRafId = null;
       }
-      // Only block propagation for real user clicks; synthetic (untrusted) clicks
-      // must still reach the cleanup path so the devtools state stays in sync.
       if (ev && ev.isTrusted) {
         ev.stopPropagation();
         ev.preventDefault();
@@ -766,7 +679,6 @@
       });
     };
 
-    // Returns the object specified by the path starting from the topParent object
     getObject(topParent, path) {
       let obj = topParent;
       if (path.length === 0) {
@@ -777,17 +689,13 @@
           case "prototype":
             obj = Object.getPrototypeOf(obj);
             break;
-          // We will be handling maps and sets entries as arrays to keep things stable
           case "set entries":
           case "map entries":
             obj = [...obj];
             break;
-          // Kind of tricky structure-wise but the set entry already is the object itself so this is
-          // only useful for display purpose in the devtools.
           case "set value":
             obj = obj;
             break;
-          // A map entry is a two items array with the key and the value so indexes 0 and 1
           case "map key":
             obj = obj[0];
             break;
@@ -795,7 +703,6 @@
             obj = obj[1];
             break;
           case "getter":
-            // When the item is a getter, get its value.
             try {
               obj = Object.getOwnPropertyDescriptor(obj, key.value).get.call(obj);
             } catch (e) {
@@ -813,8 +720,6 @@
           case "set entry":
           case "map entry":
           case "item":
-            // When the item is a symbol, we make sure it is the right one by using the index on the
-            // Object.getOwnPropertySymbols array.
             if (key.hasOwnProperty("symbolIndex") && key.symbolIndex >= 0) {
               const symbol = Object.getOwnPropertySymbols(obj)[key.symbolIndex];
               if (symbol) {
@@ -841,13 +746,10 @@
       return obj;
     }
 
-    // Returns the asked property given its global path
     getObjectProperty(path) {
-      // Just return the corresponding app if path is of length 1 and not simplified
       if (path.length === 1 && !isNaN(path[0])) {
         return [...this.apps][path[0]];
       }
-      // Path to the component node is only strings, becomes objects for properties
       const index = path.findIndex((key) => typeof key !== "string");
       if (index === -1) {
         return this.getComponentNode(path);
@@ -881,9 +783,6 @@
       return this.toRaw(obj) !== obj;
     }
 
-    // Returns a modified version of an object node that has compatible format with the devtools ObjectTreeElement component
-    // parentObj is the parent of the node, key is the path key of the node, type is where the object belongs to (props, env, instance, ...),
-    // oldBranch is supposedly the same final node in the previous version of the tree and oldTree is the complete old component details
     serializeObjectChild(parentObj, key, depth, type, path, oldBranch, oldTree) {
       let obj;
       let child = {
@@ -1018,7 +917,6 @@
       return child;
     }
 
-    // returns the serialized node corresponding to its path in the serialized tree
     getObjectInOldTree(oldTree, completePath, objType) {
       const objPathIndex = completePath.findIndex((key) => typeof key !== "string");
       let path = completePath.slice(objPathIndex);
@@ -1030,11 +928,9 @@
         ).target;
         path = path.slice(3);
       } else {
-        // OWL 2 non-app paths have a "component" intermediate key to skip; OWL 3 props paths do not.
         if (objPathIndex > 1 && path[0]?.value === "component") {
           path.shift();
         }
-        // the value is either "props" or "env" here
         if (objType === "instance") {
           obj = oldTree.instance.children;
         } else if (objType === "reactiveValue") {
@@ -1043,25 +939,20 @@
           obj = oldTree.hooks.children;
           path.shift();
         } else if (objType === "props") {
-          // Always use oldTree.props: OWL 3 may use "defaultProps" as the path key but all
-          // props are stored together under oldTree.props in the serialized tree.
           obj = oldTree.props.children;
           path.shift();
         } else {
           obj = oldTree[path[0].value].children;
           path.shift();
         }
-        // the first element here is directly in an array instead of a children array
         obj = obj[path[0].childIndex];
         path.shift();
       }
-      // just follow the indexes in the rest of the path
       for (const key of path) {
         obj = obj.children[key.childIndex];
       }
       return obj;
     }
-    // Returns a serialized version of the children properties of the specified component's property given its path.
     loadObjectChildren(path, depth, contentType, objType, oldTree) {
       const children = [];
       depth = depth + 1;
@@ -1255,16 +1146,12 @@
       }
       return children;
     }
-    // Returns the Component node given its path and the root component node
     getComponentNode(path) {
-      // All paths that consists in an array containing a single stringified number lead to an app
       if (path.length === 1 && !isNaN(path[0])) {
         return [...this.apps][path[0]];
       }
       let node;
-      // If the path is longer and its first item is indeed an app number, it is a regular path
       if (!isNaN(path[0])) {
-        // The second element in the path is the root index
         const app = [...this.apps][path[0]];
         if (!app) return null;
         const roots = this.getRoots(app);
@@ -1273,7 +1160,6 @@
           return null;
         }
         for (let i = 2; i < path.length; i++) {
-          // From this point onwards, it is an object path inside the component node
           if (typeof path[i] !== "string") {
             break;
           }
@@ -1283,8 +1169,6 @@
             return null;
           }
         }
-        // If the first path item is a more complex string, it is a simplified path where elements
-        // are a series of component names and indexes separated by slashes
       } else {
         const simplifiedPathArray = path[0].split("/");
         const app = [...this.apps][simplifiedPathArray[0]];
@@ -1305,12 +1189,10 @@
       }
       return node;
     }
-    // Apply manual render to the specified component
     refreshComponent(path) {
       const componentNode = this.getComponentNode(path);
       componentNode.render();
     }
-    // Returns the component's details given its path
     getComponentDetails(path = null, oldTree = null) {
       let component = {};
       if (!path) {
@@ -1319,7 +1201,6 @@
       component.path = path;
       let node = this.getComponentNode(path);
       if (!node) {
-        // Fallback: find the first available root
         for (const app of this.apps) {
           const roots = this.getRoots(app);
           if (roots.length > 0) {
@@ -1331,12 +1212,10 @@
       if (!node) {
         return null;
       }
-      // A path with only the app index indicates that the component is an App instead
       const isApp = path.length === 1;
       if (isApp) {
         component.version = this.getAppVersion(node);
       }
-      // Load props of the component
       component.props = { toggled: oldTree ? oldTree.props.toggled : true, children: [] };
       component.name = isApp
         ? node?.name
@@ -1346,8 +1225,6 @@
       const appVersion = this.getAppVersion([...this.apps][path[0]]);
       const isOwl3 = appVersion.startsWith("3");
       if (isOwl3) {
-        // In Owl 3, component.props uses getters that wrap node.props/defaultProps. Read the raw
-        // values directly from the ComponentNode so they display as plain values, not functions.
         const rawProps = node.props || {};
         const defaults = node.defaultProps || {};
         const allPropKeys = [
@@ -1396,7 +1273,6 @@
           });
       }
       let obj;
-      // Load env of the component
       const env = isApp ? node.env : node.component.env;
       if (env) {
         component.env = { toggled: oldTree ? oldTree.env.toggled : false, children: [] };
@@ -1420,7 +1296,6 @@
               component.env.children.push(envElement);
             }
           });
-        // Load env getters
         let obj = Object.getPrototypeOf(env);
         Reflect.ownKeys(obj).forEach((key) => {
           if (
@@ -1455,7 +1330,6 @@
         );
         component.env.children.push(envPrototype);
       }
-      // Load instance of the component
       const instance = isApp ? node : node.component;
       component.instance = { toggled: oldTree ? oldTree.instance.toggled : true, children: [] };
       const instancePath = isApp ? path : [...path, { type: "item", value: "component" }];
@@ -1478,7 +1352,6 @@
             }
           }
         });
-      // Load instance getters
       obj = Object.getPrototypeOf(instance);
       while (obj) {
         Reflect.ownKeys(obj).forEach((key) => {
@@ -1520,7 +1393,6 @@
       );
       component.instance.children.push(instancePrototype);
 
-      // Load reactive values of the component (owl v3 only): signals, computed, and reactive proxies
       component.reactiveValues = {
         toggled: oldTree ? (oldTree.reactiveValues?.toggled ?? true) : true,
         children: [],
@@ -1601,7 +1473,6 @@
           });
       }
       if (isApp || isOwl3) {
-        // OWL 3 does not have node.subscriptions
         component.subscriptions = {
           toggled: oldTree ? oldTree.subscriptions?.toggled : true,
           children: [],
@@ -1673,7 +1544,6 @@
           component.subscriptions.children.push(subscription);
         });
       }
-      // Load hooks of the component
       if (!isApp) {
         component.hooks = { toggled: oldTree ? oldTree.hooks.toggled : true, children: [] };
         const hooksList = [
@@ -1708,7 +1578,6 @@
       }
       return component;
     }
-    // Replace the content of a parsed getter object with the result of the corresponding get method
     loadGetterContent(getter) {
       let obj = this.getObjectProperty(getter.path);
       if (obj == null) {
@@ -1751,9 +1620,6 @@
       }
       return getter;
     }
-    // Gives the DOM elements which are rendered by the given component node.
-    // A component which currently renders nothing (root t-if being false, root t-foreach
-    // on an empty collection, ...) yields an empty array.
     getDOMElementsRecursive(node) {
       if (node.hasOwnProperty("bdom")) {
         return this.getDOMElementsRecursive(node.bdom);
@@ -1780,9 +1646,7 @@
       }
       return [];
     }
-    // Triggers the highlight effect around the specified component.
     highlightComponent(path) {
-      // Try to highlight the first root component of the app if function called on an app
       if (path.length === 1) {
         path.push("0");
       }
@@ -1793,7 +1657,6 @@
       const elements = this.getDOMElementsRecursive(component);
       this.highlightElements(elements, component.component.constructor.name);
     }
-    // Edit a reactive state property with the provided value of the given component (path) and the subscription path
     editObject(path, value, objectType) {
       if (value === "undefined") {
         value = undefined;
@@ -1832,8 +1695,6 @@
         }
       }
     }
-    // Recursively checks if the given html element corresponds to a component in the components tree.
-    // Immediatly returns the path of the first component which matches the element
     searchElement(node, path, element) {
       if (!node?.bdom) {
         return null;
@@ -1855,12 +1716,10 @@
             return result;
           }
         }
-        // Element is inside this component's DOM but not owned by any child component.
         return path;
       }
       return null;
     }
-    // Returns the path to the component which is currently being inspected
     getElementPath(element) {
       if (element) {
         const appsArray = [...this.apps];
@@ -1875,7 +1734,6 @@
           }
         }
       }
-      // If nothing was found, return the path of the first root component found in the apps
       const appsArray = [...this.apps];
       for (const [appIndex, app] of appsArray.entries()) {
         if (this.getRoots(app).length > 0) {
@@ -1884,8 +1742,6 @@
       }
       return ["0", "0"];
     }
-    // Returns the tree of components of the inspected page in a parsed format
-    // Use inspectedPath to specify the path of the selected component
     getComponentsTree(inspectedPath = null, oldTrees = null, oldDetails = null) {
       const appsArray = [...this.apps];
       if (inspectedPath && !this.getComponentNode(inspectedPath)) {
@@ -1911,7 +1767,6 @@
         if (oldTree) {
           appNode.toggled = oldTree.toggled;
         }
-        // If no path is provided, it defaults to the target of the inspect element action
         if (!inspectedPath) {
           inspectedPath = this.getElementPath($0);
         }
@@ -1947,7 +1802,6 @@
       const component = this.getComponentDetails(inspectedPath, oldDetails);
       return trees ? [trees, component] : [];
     }
-    // Recursively fills the components tree as a parsed version
     fillTree(appNode, treeNode, inspectedPathString, oldBranch) {
       const children = [];
       for (const [key, appChild] of Object.entries(appNode.children)) {
@@ -2000,7 +1854,6 @@
           const componentNode = this.getComponentNode(
             index <= 1 ? [path[0]] : path.slice(0, index)
           );
-          // For subscription targets the key is always "target"; use targetName for a meaningful name
           if (result.name === "target" && parent?.keys !== undefined && componentNode) {
             result.name = this.targetName(parent.target, componentNode);
           }
@@ -2016,7 +1869,6 @@
       }
       return res;
     }
-    // Returns the path of the given component node
     getComponentPath(componentNode) {
       let path = [];
       if (componentNode.parentKey) {
@@ -2026,7 +1878,6 @@
           path.unshift(componentNode.parentKey);
         }
       }
-      // Walk to the root node (the one with no parent or whose parent has no parentKey)
       let rootNode = componentNode.parent || componentNode;
       const app = rootNode.app;
       const roots = this.getRoots(app);
@@ -2037,12 +1888,10 @@
       path.unshift(index.toString());
       return path;
     }
-    // Returns the display name of a component node, compatible with both owl v2 and v3
     getNodeName(node) {
       return node.component?.constructor?.name ?? node.name ?? "";
     }
 
-    // Returns the simplified path of the given component node (using component names and indexes)
     getComponentSimplifiedPath(componentNode) {
       let path = this.getNodeName(componentNode);
       if (componentNode.parentKey) {
@@ -2054,7 +1903,6 @@
           ).indexOf(previousKey)}/${path}`;
         }
       }
-      // Walk to the root and find its index
       let rootNode = componentNode.parent || componentNode;
       const app = rootNode.app;
       const roots = this.getRoots(app);
@@ -2064,7 +1912,6 @@
       path = appIndex.toString() + "/" + rootIndex.toString() + (path.length ? `/${path}` : "");
       return path;
     }
-    // Store the object into a temp window variable and log it to the console
     sendObjectToConsole(path) {
       const obj = this.getObjectProperty(path);
       let index = 1;
@@ -2074,7 +1921,6 @@
       window["temp" + index] = obj;
       console.log("temp" + index + " = ", window["temp" + index]);
     }
-    // Inspect the DOM of the component in the elements tab of the devtools
     inspectComponentDOM(path) {
       const componentNode = this.getComponentNode(path);
       const elements = this.getDOMElementsRecursive(componentNode);
@@ -2087,7 +1933,6 @@
         inspect(elements[0]);
       }
     }
-    // Inspect the DOM of the component in the elements tab of the devtools
     inspectComponentCompiledTemplate(path) {
       const componentNode = this.getComponentNode(path);
       const template = componentNode.component.constructor.template;
@@ -2097,14 +1942,12 @@
         inspect(componentNode.app.templates[template]);
       }
     }
-    // Inspect source code of the component (corresponds to inspecting its constructor)
     inspectComponentRawTemplate(path) {
       const componentNode = this.getComponentNode(path);
       const template = componentNode.component.constructor.template;
       const templateNode = componentNode.app.rawTemplates[template];
       console.log(templateNode);
     }
-    // Inspect source code of the function given by its path
     inspectFunctionSource(path) {
       const obj = this.getObjectProperty(path);
       if (IS_FIREFOX) {
@@ -2116,8 +1959,6 @@
 
     injectBreakpoint(hook, path, instanceOnly, condition) {
       const componentNode = this.getObjectProperty(path);
-      // a node's hook list may be a shared frozen empty array until its first
-      // hook (OWL 3): a new list is assigned instead of pushed into
       const injectFunctionInHook = (comp, hook, fn) => {
         comp[hook] = [...comp[hook], fn];
       };
@@ -2165,14 +2006,12 @@
     }
 
     targetName(target, node) {
-      // check on component
       const { component } = node;
       for (const [key, value] of Object.entries(component)) {
         if (target === this.toRaw(value)) {
           return key;
         }
       }
-      // check on props
       for (const [key, value] of Object.entries(component.props)) {
         if (target === this.toRaw(value)) {
           return `props.${key}`;
@@ -2181,14 +2020,6 @@
       return "[unknown]";
     }
 
-    /**
-     * Removes subscriptions that are a direct child of another subscription:
-     * they will be reachable from the top level by expanding observed keys.
-     *
-     * @param {ComponentNode} node
-     * @returns {{ keys: PropertyKey[], target: unknown}[]} the top level
-     *  subscriptions of the node
-     */
     topLevelSubscriptions(node) {
       const subscriptions = node.subscriptions.map((s, index) => ({ ...s, index }));
       const topLevelValues = new Set(Object.values(node.component).map((o) => this.toRaw(o)));
@@ -2205,7 +2036,6 @@
       const subscriptionIndex = path.findIndex((item) => typeof item !== "string");
       if (path[subscriptionIndex]?.value === "subscriptions") {
         const node = this.getComponentNode(path.slice(0, subscriptionIndex));
-        // Add observed keys
         const targetToKeys = new Map(node.subscriptions.map(({ keys, target }) => [target, keys]));
         const target = this.getObjectProperty(child.path);
         child.keys = targetToKeys.get(target)?.map((k) => String(k));
@@ -2218,11 +2048,11 @@
     const isSymbolB = typeof b === "symbol";
 
     if (isSymbolA && !isSymbolB) {
-      return 1; // Place Symbols at the end
+      return 1;
     } else if (!isSymbolA && isSymbolB) {
-      return -1; // Place non-Symbols at the beginning
+      return -1;
     } else {
-      return String(a).localeCompare(String(b), undefined, { numeric: true }); // Sort other keys alphabetically
+      return String(a).localeCompare(String(b), undefined, { numeric: true });
     }
   }
 
@@ -2232,7 +2062,6 @@
       if (window.__OWL_DEVTOOLS__ || window.owl?.App) {
         owlStatus = 1;
       } else {
-        // It seems that sending a 0 results in undefined at the other end for some reason
         owlStatus = -1;
       }
     }
@@ -2262,8 +2091,6 @@
         checkOwlStatus();
       },
     });
-    // Do note that the reload message is not sent on the top window so that it is not intercepted when originating
-    // from an iframe
     window.postMessage({ source: "owl-devtools", type: "Reload" });
   } else if (
     window.__OWL_DEVTOOLS__?.Fiber !== undefined &&
@@ -2272,7 +2099,6 @@
     window.__OWL__DEVTOOLS_GLOBAL_HOOK__ = new OwlDevtoolsGlobalHook();
     window.postMessage({ source: "owl-devtools", type: "Reload" });
   }
-  // Listener that checks whether owl is available on the page and if it has the right version
   window.addEventListener(
     "message",
     function (event) {
@@ -2283,6 +2109,5 @@
     false
   );
   checkOwlStatus();
-  // Indicates whether the scripts loaded successfully or not (only useful when loaded with eval in iframes)
   return window.__OWL__DEVTOOLS_GLOBAL_HOOK__ !== undefined;
 })();

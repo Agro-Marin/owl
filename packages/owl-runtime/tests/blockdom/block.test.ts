@@ -1,9 +1,6 @@
 import { createBlock, mount, patch, remove, text } from "../../src/blockdom";
 import { makeTestFixture } from "./helpers";
 
-//------------------------------------------------------------------------------
-// Setup and helpers
-//------------------------------------------------------------------------------
 
 let fixture: HTMLElement;
 

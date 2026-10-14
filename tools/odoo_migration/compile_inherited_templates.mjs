@@ -1,13 +1,3 @@
-// Compiles every Odoo template after applying its inheritance (Odoo's own
-// web/static/src/core/template_inheritance.js), with two owl builds, and
-// reports the templates the new build rejects and the old one accepted.
-// compile_templates.mjs compiles template files as written: a directive an
-// inheriting template adds (a t-if on a t-else node) is invisible to it.
-// The files are those under the roots given as arguments, or listed on stdin
-// (template_files.mjs).
-//
-//   OWL=<owl checkout> OLD=<old owl.es.js> WEB=<odoo>/addons/web \
-//     node compile_inherited_templates.mjs <repo> ...
 import fs from "node:fs";
 import { createRequire } from "node:module";
 import customDirectives from "./custom_directives.mjs";
@@ -25,9 +15,6 @@ for (const k of Object.getOwnPropertyNames(dom.window)) {
   }
 }
 globalThis.odoo = { debug: "" };
-// jsdom's XPath engine departs from the browser's (as Odoo's own precompiler,
-// odoo/tools/assets/js/owl_precompile.mjs, notes): evaluate the extensions'
-// xpaths with the `xpath` package, as that precompiler does
 const xpath = require(process.env.WEB + "/../../node_modules/xpath");
 dom.window.Document.prototype.createExpression = function createExpression(expression) {
   const parsed = xpath.parse(expression);
@@ -62,9 +49,6 @@ const config = {
 const base = new Map();
 const primary = new Map();
 const extensions = new Map();
-// Odoo applies a template's extensions in module load order: a module after
-// the modules it depends on. Files are visited by their module's rank in a
-// dependency-first order (from each __manifest__.py's `depends`), then path.
 function moduleOf(file) {
   const at = file.indexOf("/static/");
   return at < 0 ? null : file.slice(0, at);
@@ -243,11 +227,6 @@ if (regressions.length || xmlFailures) {
   process.exitCode = 1;
 }
 
-// FREE_NAMES=1: a component's own template reads a context name nothing in it
-// sets — not `this.x`, not a t-set, t-as, slot scope or arrow parameter — so
-// it is undefined at run time (a template a t-call names is skipped: its
-// caller provides its names). Component templates are the names some
-// module's JavaScript gives as `static template = "..."`.
 if (process.env.FREE_NAMES) {
   const componentTemplates = new Set();
   const moduleRoots = new Set([...moduleDirs.values()]);

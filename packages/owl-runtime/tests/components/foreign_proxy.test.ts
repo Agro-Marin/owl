@@ -45,7 +45,6 @@ describe.each(listKinds)("t-foreach over $name", ({ make, mapped }) => {
     list.list.length = 0;
     await nextTick();
     expect(fixture.innerHTML).toBe("");
-    // the item write re-renders its row only
     expect(list.renders).toBe(5);
   });
 

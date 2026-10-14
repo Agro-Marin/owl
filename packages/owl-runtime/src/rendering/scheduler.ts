@@ -2,9 +2,6 @@ import { debug, debugLog } from "@odoo/owl-core";
 import { fibersInError } from "./error_handling";
 import { APPLIED_TO_DOM, Fiber, RootFiber } from "./fibers";
 
-// -----------------------------------------------------------------------------
-//  Scheduler
-// -----------------------------------------------------------------------------
 
 function captureAnimationFrame(): Window["requestAnimationFrame"] {
   return typeof window === "undefined"
@@ -12,17 +9,10 @@ function captureAnimationFrame(): Window["requestAnimationFrame"] {
     : window.requestAnimationFrame.bind(window);
 }
 
-// captured when the module is evaluated, not when a scheduler is made: a test
-// framework (Odoo's HOOT) replaces window.requestAnimationFrame with its mocked
-// clock after it imported owl, and owl must keep rendering on the real frames.
-// Pure: a bundle that keeps no Scheduler drops it, one that keeps it evaluates
-// it with the module, as before.
-const requestAnimationFrame = /* @__PURE__ */ captureAnimationFrame();
+const requestAnimationFrame =   captureAnimationFrame();
 
 export class Scheduler {
   static requestAnimationFrame = requestAnimationFrame;
-  // the schedulers that may hold a task: a node's ancestor may belong to
-  // another app, whose render then delays it
   static active: Set<Scheduler> = new Set();
   tasks: Set<RootFiber> = new Set();
   requestAnimationFrame: Window["requestAnimationFrame"];
@@ -45,9 +35,6 @@ export class Scheduler {
     Scheduler.active.add(this);
   }
 
-  /**
-   * Drops the pass of a component destroyed before its commit.
-   */
   forget(fiber: RootFiber) {
     if (this.tasks.delete(fiber)) {
       if (debug.scheduler) {
@@ -59,10 +46,6 @@ export class Scheduler {
     }
   }
 
-  /**
-   * Process all current tasks. This only applies to the fibers that are ready.
-   * Other tasks are left unchanged.
-   */
   flush() {
     if (this.delayedRenders.length) {
       let renders = this.delayedRenders;
@@ -105,8 +88,6 @@ export class Scheduler {
           this.tasks.delete(fiber);
           continue;
         }
-        // superseded: another render (a slot of this app rendered by a
-        // component of another one) patched the node and cleared its fiber
         if (fiber.node.fiber !== fiber) {
           if (debug.scheduler) {
             debugLog("scheduler", `drop ${fiber.node.componentName}: superseded`);
@@ -114,8 +95,6 @@ export class Scheduler {
           this.tasks.delete(fiber);
           continue;
         }
-        // a failed pass never completes; its node keeps the fiber, so the next
-        // render reuses it and schedules it again
         if (fibersInError.has(fiber)) {
           if (debug.scheduler) {
             debugLog("scheduler", `drop ${fiber.node.componentName}: failed`);
@@ -126,11 +105,6 @@ export class Scheduler {
         }
         if (fiber.counter === 0) {
           fiber.complete();
-          // at this point, the fiber should have been applied to the DOM, so we can
-          // remove it from the task list. If it is not the case, it means that there
-          // was an error and an error handler triggered a new rendering that recycled
-          // the fiber, so in that case, we actually want to keep the fiber around,
-          // otherwise it will just be ignored.
           if (fiber.renderState & APPLIED_TO_DOM) {
             this.tasks.delete(fiber);
           }
@@ -142,8 +116,6 @@ export class Scheduler {
         }
       }
       if (failed) {
-        // a frame after the failure, the handlers had their chance to re-render
-        // around it: the renders the failed pass delayed go on
         this.flush();
       }
       if (!this.tasks.size) {

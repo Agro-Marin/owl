@@ -1,8 +1,5 @@
 import { renderToString, snapshotTemplate, getConsoleOutput } from "../helpers";
 
-// -----------------------------------------------------------------------------
-// debugging
-// -----------------------------------------------------------------------------
 
 describe("debugging", () => {
   test("t-debug", () => {

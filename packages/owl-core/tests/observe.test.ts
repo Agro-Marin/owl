@@ -210,8 +210,6 @@ describe("observe", () => {
     const view = observe(new OrderView(), () => calls++);
     expect(view.hasCash).toBe(false);
     expect(recomputes).toBe(1);
-    // a line is pushed before its method is set, as a record is built field by
-    // field: recomputing here would read `undefined.cash`
     order.lines.push({});
     expect(calls).toBe(1);
     expect(recomputes).toBe(1);

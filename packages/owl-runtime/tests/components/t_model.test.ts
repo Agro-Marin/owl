@@ -26,7 +26,6 @@ describe("t-model directive", () => {
       static template = xml`<Child/>`;
       static components = { Child };
       setup() {
-        // the child is destroyed here, its dom still in the document
         onWillDestroy(() => {
           for (const input of fixture.querySelectorAll("input")) {
             input.value = "late";
@@ -802,16 +801,13 @@ describe("t-model directive", () => {
     }
 
     const comp = await mount(Test, fixture);
-    // check that we have a value of 2 selected
     expect(fixture.querySelector("select")!.value).toEqual("2");
     expect(comp.value()).toBe(2);
 
-    // emulate a click on the option=3 element
     fixture.querySelectorAll("option")[2].selected = true;
     fixture.querySelector("select")!.dispatchEvent(new Event("change"));
 
     await nextTick();
-    // check that we have now selected the number 3 (and not the string)
     expect(fixture.querySelector("select")!.value).toEqual("3");
     expect(comp.value()).toBe(3);
   });
@@ -1086,7 +1082,6 @@ describe("t-model.proxy directive", () => {
     input.value = "hello";
     input.dispatchEvent(new Event("input"));
     await nextTick();
-    // .lazy means only change event triggers update
     expect(comp.state.text).toBe("");
 
     input.dispatchEvent(new Event("change"));

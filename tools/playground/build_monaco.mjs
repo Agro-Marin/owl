@@ -15,11 +15,6 @@ const outputFile = path.resolve(
   "libs/monaco/monaco.bundle.js"
 );
 
-// monaco-vim's ESM build imports monaco-editor submodules (e.g.
-// "monaco-editor/esm/vs/editor/editor.api") without a ".js" extension.
-// monaco-editor's package.json "exports" map ("./*": "./*") only matches
-// literal file paths, so esbuild can't resolve those on its own — add the
-// extension back ourselves.
 const monacoEsmExtensionPlugin = {
   name: "monaco-editor-esm-js-extension",
   setup(build) {
@@ -91,10 +86,6 @@ try {
     format: "esm",
     minify: true,
     target: "es2022",
-    // monaco-vim's "exports" map picks its standalone UMD build under the
-    // "browser" condition, which bundles its own separate copy of
-    // monaco-editor's internals. Alias straight to its ESM build instead,
-    // so it shares this bundle's single monaco-editor module graph.
     alias: {
       "monaco-vim": path.resolve(
         rootDir,

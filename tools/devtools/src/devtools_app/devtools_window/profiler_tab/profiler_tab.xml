@@ -20,7 +20,6 @@
             <input type="checkbox" class="form-check-input me-1 pointer-icon" t-att-checked="this.profiler.traceSubscriptions()" t-on-input="() => this.profiler.toggleSubscriptionTracing()"/> Trace Subscriptions
           </label>
         </t>
-        <!-- <EventSearchBar/> -->
       </div>
       <div class="events-container h-100 font-monospace">
         <t t-if="this.showHelp()">

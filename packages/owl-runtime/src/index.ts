@@ -1,4 +1,4 @@
-/// <reference path="./build-env.d.ts" />
+import type {} from "./build-env";
 import { version } from "./version";
 import {
   config,
@@ -16,11 +16,9 @@ export { Resource, Registry } from "@odoo/owl-core";
 
 export const blockDom = {
   config,
-  // bdom entry points
   mount: blockMount,
   patch,
   remove,
-  // bdom block types
   list,
   multi,
   text,
@@ -37,11 +35,6 @@ export { ErrorBoundary } from "./error_boundary";
 export { Portal } from "./portal";
 export { Suspense } from "./suspense";
 export { useProps, props } from "./props";
-// `isProps` is a phantom (declare const) brand symbol referenced by the public
-// `Props`/`PropsWithDefaults`/`GetProps` types. It must be exported from the
-// package's type surface so downstream projects can name it when emitting their
-// own declaration files (see owl#1958). Type-only export: it has no runtime
-// value, so this adds nothing to the JS bundle.
 export type { GetProps, isProps } from "./props";
 export { status } from "./status";
 export {
@@ -79,9 +72,6 @@ export {
   onError,
 } from "./lifecycle_hooks";
 export { applyDefaults, assertType, getDefault, validateType } from "@odoo/owl-core";
-// `t` is the documented short alias of `types`. Both must point to the
-// runtime namespace (which extends the core one with `component`), so do not
-// re-export them from @odoo/owl-core.
 export { types, types as t } from "./types";
 export type {
   hasDefault,

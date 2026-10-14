@@ -1,4 +1,3 @@
-// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`Reactivity: proxy > a local render waits for an ancestor's pending shared-state props 1`] = `
 "function anonymous(app, bdom, helpers

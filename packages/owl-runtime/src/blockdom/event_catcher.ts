@@ -6,21 +6,10 @@ import type { VNode } from "./index";
 
 type EventsSpec = { [name: string]: number };
 
-// a catcher's handlers are static, given with the spec; what a render gives
-// it is its child and the context of its handlers
 type Catcher = (child: VNode, ctx: any) => VNode;
 
 type EventHandler = ReturnType<typeof createEventHandler>;
 
-// A catcher listens on its parent element, which outlives it, with one
-// listener per kind of listener (event name, capture, passive, synthetic) per
-// parent, however many catchers of however many sites (createCatcher calls) and
-// event keys that parent holds: a t-foreach of components with t-on costs one
-// listener, and the catchers of every site are dispatched by one walk,
-// innermost first, as the event would bubble through their elements, whatever
-// .stop, .prevent or .self their keys add (those apply per handler). At
-// dispatch, the catcher owning the target is found from the end anchors of the
-// parent's children.
 interface ParentListener {
   handler: EventHandler;
   count: number;
@@ -28,16 +17,10 @@ interface ParentListener {
 
 const listenersByParent = new WeakMap<Node, Map<string, ParentListener>>();
 
-// the catcher whose child ends at an end anchor, of any site
 const byEnd = new WeakMap<Node, VCatcherBase>();
 
-// the catchers whose mount or patch is running: one mounted meanwhile in the
-// same parent element is nested in the innermost of them (a component with
-// several roots holding another one)
 const updating: VCatcherBase[] = [];
 
-// the listener an event key needs: the modifiers a native or synthetic
-// listener is created with, in a fixed order
 function listenerKey(key: string): string {
   const mods = key.split(".");
   let id = mods[0];
@@ -55,25 +38,16 @@ interface CatcherHandler {
 }
 
 interface VCatcherBase {
-  // listener key -> the handlers it dispatches to
   groups: Map<string, CatcherHandler[]>;
   ctx: any;
   parentEl?: HTMLElement;
-  // the catcher enclosing this one in the same parent element, of any site;
-  // undefined until found (see outerOf)
   outer: VCatcherBase | null | undefined;
   child: VNode;
   afterNode: Text | null;
 }
 
-// A catcher mounted by a render of its own (a component re-rendering alone)
-// has no enclosing catcher in the mounts running: it finds it from the DOM at
-// its first dispatch. Not at mount: that render is still patching the
-// enclosing catcher's child (the branch holding this catcher is not all in it
-// yet), so the first node of that child cannot be read.
 function outerOf(catcher: VCatcherBase): VCatcherBase | null {
   if (catcher.outer === undefined) {
-    // the enclosing catcher, from the nodes around it
     const first = catcher.child.firstNode();
     catcher.outer = first ? ownerOf(first, catcher.afterNode!.nextSibling) : null;
     if (debug.event) {
@@ -83,11 +57,6 @@ function outerOf(catcher: VCatcherBase): VCatcherBase | null {
   return catcher.outer;
 }
 
-// Each listener reads the latest handler data at dispatch, and applies its
-// modifiers only to an event from inside a child: the listener sits on the
-// parent, which the children share with their siblings. The child's root node
-// holding the target stands for the current target (what .self compares the
-// target with): the parent is not the child's.
 function dispatch(key: string, parent: Node, ev: Event) {
   let node = ev.target as Node | null;
   while (node && node.parentNode !== parent) {
@@ -106,9 +75,6 @@ function dispatch(key: string, parent: Node, ev: Event) {
   }
 }
 
-// The first end anchor after the node closes the innermost catcher holding it,
-// or one that starts after it, nested in the same catchers as the node: then
-// its first enclosing catcher holding the node is the one.
 function ownerOf(node: Node, from: Node | null): VCatcherBase | null {
   for (let n = from; n; n = n.nextSibling) {
     let catcher = byEnd.get(n) || null;
@@ -123,7 +89,6 @@ function ownerOf(node: Node, from: Node | null): VCatcherBase | null {
 }
 
 function holds(catcher: VCatcherBase, node: Node): boolean {
-  // the end anchor bounds it: only its start is compared
   const first = catcher.child.firstNode();
   return (
     !!first &&
@@ -143,7 +108,6 @@ function listen(keys: string[], parent: HTMLElement) {
       continue;
     }
     const handler = createEventHandler(key, { fn: 0, ctx: 0, arg: -1 });
-    // the parent is the context: the runtime handler passes it on
     handler.setup.call(parent, {
       data: [parent],
       handlers: [(p: Node, ev: Event) => dispatch(key, p, ev)],

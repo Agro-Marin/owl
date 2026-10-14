@@ -1,4 +1,3 @@
-/* Inspired from https://github.com/pieterjanv/monaco-editor-module-auto-import-demo */
 
 const customTSWorkerFactory = (TypeScriptWorker) => {
   return class MyTypeScriptWorker extends TypeScriptWorker {

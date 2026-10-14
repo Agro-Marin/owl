@@ -246,7 +246,7 @@ describe("function", () => {
     ]);
     expect(validateType(() => {}, t.function())).toEqual([]);
     expect(validateType(function () {}, t.function())).toEqual([]);
-    expect(validateType(A, t.function())).toEqual([]); // Should return an issue
+    expect(validateType(A, t.function())).toEqual([]);
   });
 
   test("parameters and return types are not checked", () => {
@@ -593,7 +593,6 @@ test("record", () => {
 });
 
 test("ref", () => {
-  // requires a DOM: throws when HTMLElement is not defined
   expect(() => t.ref()).toThrow("Cannot use ref in a non-DOM environment");
 
   class FakeHTMLElement {}
@@ -602,7 +601,6 @@ test("ref", () => {
     class FakeHTMLDivElement extends FakeHTMLElement {}
     const el = new FakeHTMLElement();
 
-    // no argument: accepts null or any HTMLElement (or subclass)
     expect(validateType(null, t.ref())).toEqual([]);
     expect(validateType(el, t.ref())).toEqual([]);
     expect(validateType(new FakeHTMLDivElement(), t.ref())).toEqual([]);
@@ -618,7 +616,6 @@ test("ref", () => {
       },
     ]);
 
-    // with a constructor: narrows to that element type
     expect(validateType(null, t.ref(FakeHTMLDivElement as any))).toEqual([]);
     expect(validateType(new FakeHTMLDivElement(), t.ref(FakeHTMLDivElement as any))).toEqual([]);
     expect(validateType(el, t.ref(FakeHTMLDivElement as any))).toEqual([
@@ -798,8 +795,6 @@ test("or", () => {
 });
 
 test("union of a nested union and an array", () => {
-  // a nested union failing must not stop the outer union from trying its
-  // remaining members: its probe failures are not deep failures
   const nullable = t.or([t.literal(false), t.literal(null)]);
   const type = t.or([nullable, t.array(nullable)]);
   expect(validateType(false, type)).toEqual([]);
@@ -825,8 +820,6 @@ test("union of a nested union and an array", () => {
       ],
     },
   ]);
-  // an element failing inside the array is a deep failure: it is reported
-  // directly, as the best matching member
   expect(validateType([1], type)).toEqual([
     {
       message: "value does not match union type",
@@ -1260,7 +1253,6 @@ describe("toShape", () => {
     const b = t.object({ title: t.string().optional("x") });
     const shape = t.and([a, b]).toShape();
     expect(Object.keys(shape)).toEqual(["label", "title"]);
-    // the merged shape reuses the members' type validators (defaults preserved)
     expect(shape.label).toBe(a.toShape().label);
     expect(shape.title).toBe(b.toShape().title);
     expect(getDefault(shape.title)!()).toBe("x");
@@ -1273,7 +1265,6 @@ describe("toShape", () => {
 
   test("t.and skips a key-list member (no per-key types to merge)", () => {
     const shape = t.and([t.object(["a", "b"]), t.object({ c: t.string() })]).toShape();
-    // the key list ["a", "b"] must not leak numeric index keys into the shape
     expect(Object.keys(shape)).toEqual(["c"]);
   });
 

@@ -191,14 +191,12 @@ describe("event handling", () => {
 
     fixture.querySelector("input")!.focus();
     await nextMicroTick();
-    // to unfocus input
     fixture.querySelector("textarea")!.focus();
     expect(["blur"]).toBeLogged();
 
     fixture.querySelector("input")!.focus();
     parent.state.cond = false;
     await nextTick();
-    // input is removed when component is destroyed => nothing should happen
     expect([]).toBeLogged();
   });
 

@@ -28,7 +28,6 @@ a:hover {
   padding: 0 24px;
 }
 
-/* ---- Hero ---- */
 
 header {
   padding: 40px 24px 44px;
@@ -105,7 +104,6 @@ header .subtitle a {
   text-decoration: none;
 }
 
-/* ---- Features ---- */
 
 .features {
   padding: 40px 0;
@@ -137,7 +135,6 @@ header .subtitle a {
   line-height: 1.6;
 }
 
-/* ---- Example ---- */
 
 .example {
   padding: 40px 0;
@@ -215,7 +212,6 @@ header .subtitle a {
   min-height: 120px;
 }
 
-/* ---- Counter demo styles ---- */
 
 .counter {
   display: flex;
@@ -247,7 +243,6 @@ header .subtitle a {
   transform: scale(0.95);
 }
 
-/* ---- Tutorials ---- */
 
 .tutorials {
   padding: 40px 0;
@@ -310,7 +305,6 @@ header .subtitle a {
   color: #a8a4d4;
 }
 
-/* ---- Footer ---- */
 
 footer {
   text-align: center;
@@ -324,7 +318,6 @@ footer a {
   color: #6b7280;
 }
 
-/* SITE NAVBAR ****************************************/
 .site-nav {
   position: sticky;
   top: 0;

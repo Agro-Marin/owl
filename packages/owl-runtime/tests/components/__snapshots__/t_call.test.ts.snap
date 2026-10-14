@@ -1,4 +1,3 @@
-// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`t-call > a dynamic t-call in a loop keeps the components of two items apart 1`] = `
 "function anonymous(app, bdom, helpers

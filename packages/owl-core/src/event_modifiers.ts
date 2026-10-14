@@ -1,10 +1,5 @@
 import { OwlError } from "./owl_error";
 
-// The modifiers of a t-on handler, as a bitmask the runtime's event handler
-// reads: blockdom computes it from the handler's key (`click.stop.prevent`)
-// once per block or catcher, and passes it with the handler. `.prevent` /
-// `.stop` written before `.self` apply to every event (the *_ANY bits),
-// written after it or without it only to an event the element itself received.
 export const EventModifier = {
   PREVENT_ANY: 1,
   STOP_ANY: 2,
@@ -13,7 +8,6 @@ export const EventModifier = {
   STOP: 16,
 } as const;
 
-// capture, passive and synthetic choose the listener, not what it does
 const LISTENER_MODIFIERS = ["capture", "passive", "synthetic"];
 
 export function eventModifierMask(key: string): number {

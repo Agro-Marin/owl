@@ -434,7 +434,6 @@ describe("basics", () => {
     expect(fixture.innerHTML).toBe("<div>1<button>Inc</button></div>");
   });
 
-  // TODO: rename
   test("rerendering a widget with a sub widget", async () => {
     class Counter extends Component {
       static template = xml`
@@ -565,8 +564,6 @@ describe("basics", () => {
   });
 
   test("reconciliation alg is not confused in some specific situation", async () => {
-    // in this test, we set t-key to 4 because it was in conflict with the
-    // template id corresponding to the first child.
     class Child extends Component {
       static template = xml`<span>child</span>`;
     }
@@ -732,7 +729,6 @@ describe("basics", () => {
   });
 
   test("sub components between t-ifs", async () => {
-    // this confuses the patching algorithm...
     class Child extends Component {
       static template = xml`<span>child</span>`;
     }
@@ -779,11 +775,7 @@ describe("basics", () => {
     await mount(Parent, fixture);
     expect(fixture.innerHTML).toBe("<div><div><span>asdf</span><span>asdf</span></div></div>");
   });
-  // TODO: rename
   test("updating widget immediately", async () => {
-    // in this situation, we protect against a bug that occurred: because of the
-    // interplay between components and vnodes, a sub widget vnode was patched
-    // twice.
     class Child extends Component {
       static template = xml`<span>abc<t t-if="this.props.flag">def</t></span>`;
       props = props();
@@ -812,7 +804,6 @@ describe("basics", () => {
     expect(fixture.innerHTML).toBe("<span>42</span>");
   });
 
-  // Depends on t-props
   test("update props of component without concrete own node", async () => {
     class Custom extends Component {
       static template = xml`
@@ -845,7 +836,6 @@ describe("basics", () => {
     const parent = await mount(Parent, fixture);
     expect(fixture.textContent!.trim()).toBe("1__1");
 
-    // First step: change the Custom's instance
     Object.assign(parent.childProps, {
       subKey: 2,
     });
@@ -853,7 +843,6 @@ describe("basics", () => {
     await nextTick();
     expect(fixture.textContent!.trim()).toBe("1__2");
 
-    // Second step, change both Child's and Custom's instance
     Object.assign(parent.childProps, {
       key: 2,
       subKey: 3,
@@ -899,7 +888,6 @@ describe("basics", () => {
   });
 
   test("component children doesn't leak (t-key case)", async () => {
-    // This test should encompass the t-foreach and t-call cases too (because they also use a flavor of some key)
     class Child extends Component {
       static template = xml`<div />`;
       setup() {

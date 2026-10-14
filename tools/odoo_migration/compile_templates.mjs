@@ -1,7 +1,3 @@
-// Compiles every Odoo template file as written with one owl build: the files
-// under the roots given as arguments, or listed on stdin (template_files.mjs).
-//
-//   OWL=<owl checkout> node compile_templates.mjs <repo> ...
 import fs from "node:fs";
 import { createRequire } from "node:module";
 import customDirectives from "./custom_directives.mjs";
@@ -18,7 +14,6 @@ for (const k of Object.getOwnPropertyNames(dom.window)) {
     } catch {}
   }
 }
-// a 3.0 monorepo checkout builds packages/owl/dist/owl.es.js, a 2.8 one dist/owl.es.js
 const build = ["/packages/owl/dist/owl.es.js", "/dist/owl.es.js"]
   .map((path) => process.env.OWL + path)
   .find((path) => fs.existsSync(path));
@@ -34,8 +29,6 @@ const config = {
   customDirectives,
   globalValues: { click() {} },
 };
-// jsdom refuses a prefixed attribute (xmlns:xlink) a browser accepts: such a
-// template is reported apart, not counted as a failure
 const JSDOM_ONLY = /Invalid attribute localName|Failed to serialize XML/;
 const files = await templateFiles();
 let total = 0,

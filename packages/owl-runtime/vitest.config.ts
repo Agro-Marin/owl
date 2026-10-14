@@ -1,6 +1,14 @@
 import { defineConfig } from "vitest/config";
 import { fileURLToPath } from "url";
 
+const NODE_TESTS = ["tests/no_dom.test.ts"];
+const test = {
+  root: ".",
+  setupFiles: ["./tests/setup.ts"],
+  globals: true,
+  testTimeout: 10000,
+};
+
 export default defineConfig({
   define: {
     __BUILD_DATE__: JSON.stringify("dev"),
@@ -23,11 +31,21 @@ export default defineConfig({
     },
   },
   test: {
-    environment: "jsdom",
-    root: ".",
-    include: ["tests/**/*.test.ts"],
-    setupFiles: ["./tests/setup.ts"],
-    globals: true,
-    testTimeout: 10000,
+    projects: [
+      {
+        extends: true,
+        test: {
+          ...test,
+          name: "dom",
+          environment: "jsdom",
+          include: ["tests/**/*.test.ts"],
+          exclude: NODE_TESTS,
+        },
+      },
+      {
+        extends: true,
+        test: { ...test, name: "node", environment: "node", include: NODE_TESTS },
+      },
+    ],
   },
 });

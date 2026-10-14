@@ -1,4 +1,3 @@
-// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`t-key > can use t-key directive on a node 1`] = `
 "function anonymous(app, bdom, helpers

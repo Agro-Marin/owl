@@ -11,14 +11,6 @@ import {
 } from "../../src";
 import { makeTestFixture, nextMicroTick, nextTick } from "../helpers";
 
-// Random sequences of state changes, slow onWillUpdateProps hooks resolved in
-// any order, and ticks, against a small tree: once everything settles, the DOM
-// must be the render of the final state, every live component mounted and
-// tracked by its parent, no onWillUpdateProps hook may run again for props
-// whose hooks already settled, and a click on any element must run the
-// handlers of that element and its ancestors, with their latest context (the
-// t-on of a component in a loop, of an element in a slot, a memoized item's),
-// the synthetic ones (replayed from the document) after the native ones.
 
 function prng(seed: number) {
   let s = seed;
@@ -33,13 +25,9 @@ interface World {
   clicks: string[];
   violations: string[];
   live: Set<Component>;
-  // whether the bomb's render threw: its boundary shows the fallback from then on
   threw: boolean;
 }
 
-// a grid keyed by row then column, whose keys join into one string across
-// the two loops (a__b then c, a then b__c) or share a string form (1, "1"):
-// a component key that is not exact gives two cells one key
 const ROWS: unknown[] = ["a__b", "a", "a\u0002:b", "b", "1", 1];
 const COLUMNS = new Map<unknown, unknown[]>([
   ["a__b", ["c", "x"]],
@@ -51,8 +39,6 @@ const COLUMNS = new Map<unknown, unknown[]>([
 ]);
 
 function makeApp(world: World) {
-  // a hook call for the props the component already holds is a violation:
-  // node.props only ever receives props whose hooks have settled
   function slowUpdates(component: any, describe: (p: any) => string) {
     onWillUpdateProps((next: any) => {
       const incoming = describe(next);
@@ -188,10 +174,6 @@ function expectedHtml(state: any, itemStates: Map<string, number>, threw: boolea
   return `<div><b>${state.value}</b><ul>${items("u")}</ul><ol>${items("o")}</ol><section><i>${state.value}</i></section>${guard}${extra}<p><u></u></p><a></a><dl>${cells}</dl></div>`;
 }
 
-// the handlers a click on the element runs, by its place in expectedHtml: its
-// own, then for an Item's li, its parent's t-on on the Item (with the loop id
-// and index: a stale context gets the index wrong after a reorder), then the
-// ancestors'; then the synthetic ones in the same order
 function expectedClicks(target: Element): string[] {
   const ran: string[] = [];
   const synthetic: string[] = [];
@@ -201,8 +183,6 @@ function expectedClicks(target: Element): string[] {
       case "LI": {
         const [, list, id] = text.match(/^([uo])(\d+):/)!;
         const index = [...el.parentElement!.children].indexOf(el);
-        // a memoized item keeps the context it was rendered with: its index
-        // may be an old one
         ran.push(`li:${list}${id}`, list === "u" ? `u:${id}@${index}` : `o:${id}`);
         synthetic.push(`sli:${list}${id}`, ...(list === "u" ? [`su:${id}@${index}`] : []));
         break;
@@ -247,8 +227,6 @@ async function runScenario(seed: number, steps: number) {
   const Parent = makeApp(world);
   const parent: any = await mount(Parent, fixture);
   const random = prng(seed);
-  // the grid's changes draw from a stream of their own: the other changes
-  // are those the seed drew before the grid
   const gridRandom = prng(seed * 7919);
   let nextId = 4;
   const itemComponents = () =>
@@ -316,7 +294,6 @@ async function runScenario(seed: number, steps: number) {
       trace.push(`tick`);
     }
   }
-  // settle: resolve whatever is pending until nothing new appears
   for (let round = 0; round < 50; round++) {
     while (world.pending.length) {
       world.pending.shift()!.resolve();

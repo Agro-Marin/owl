@@ -1,9 +1,3 @@
-// This example shows all the possible lifecycle hooks
-//
-// The root component controls a sub component (DemoComponent). It logs all its lifecycle
-// methods in the console.  Try modifying its state by clicking on it, or by
-// clicking on the two main buttons, and look into the console to see what
-// happens.
 import {
     Component,
     useState,

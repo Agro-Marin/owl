@@ -2,9 +2,6 @@ import { renderToString, snapshotEverything } from "../helpers";
 
 snapshotEverything();
 
-// -----------------------------------------------------------------------------
-// white space
-// -----------------------------------------------------------------------------
 
 describe("white space handling", () => {
   test("white space only text nodes are condensed into a single space", () => {

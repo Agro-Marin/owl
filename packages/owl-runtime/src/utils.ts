@@ -2,10 +2,6 @@ import { OwlError } from "@odoo/owl-core";
 
 export { batched, EventBus, htmlEscape, Markup, markup, shallowEqual } from "@odoo/owl-core";
 
-/**
- * Determine whether the given element is contained in a specific root documnet:
- * either directly or with a shadow root in between or in an iframe.
- */
 function isAttachedToDocument(
   element: HTMLElement | ShadowRoot,
   documentElement: Document
@@ -31,7 +27,6 @@ export function validateTarget(
   target: HTMLElement | ShadowRoot,
   { attached = true }: { attached?: boolean } = {}
 ) {
-  // Get the document and HTMLElement corresponding to the target to allow mounting in iframes
   const document = target && target.ownerDocument;
   if (document) {
     if (!document.defaultView) {

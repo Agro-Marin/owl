@@ -9,7 +9,6 @@ export class EventSearchBar extends Component {
     this.store = plugin(StorePlugin);
   }
 
-  // On keyup
   updateSearch(event) {
     if (!(event.keyCode === 13)) {
       const search = event.target.value;

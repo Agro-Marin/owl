@@ -90,7 +90,7 @@ describe("reactivity in lifecycle", () => {
     comp.state.b = 13;
     await nextTick();
     expect(fixture.innerHTML).toBe("<div>11</div>");
-    expect(n).toBe(2); // no new rendering occured: b was never read via state!
+    expect(n).toBe(2);
   });
 
   test("can use a state hook on Map", async () => {
@@ -145,36 +145,10 @@ describe("reactivity in lifecycle", () => {
     expect(fixture.innerHTML).toBe("<div><span>12</span></div>");
     parent.state.flag = false;
     await nextTick();
-    // we make sure here that no call to __render is done
     expect(steps).toEqual(["render", "willUnmount"]);
   });
 
   test("change state just before mounting component", async () => {
-    // const steps: number[] = [];
-    // class TestWidget extends Component {
-    //   static template = xml`
-    //       <div><t t-out="state.val"/></div>
-    //     `;
-    //   state = proxy({ val: 1 });
-    //   __render(f) {
-    //     steps.push(this.state.val);
-    //     return super.__render(f);
-    //   }
-    // }
-    // TestWidget.prototype.__render = vi.fn(TestWidget.prototype.__render);
-    // const widget = new TestWidget();
-    // widget.state.val = 2;
-    // await widget.mount(fixture);
-    // expect(fixture.innerHTML).toBe("<div>2</div>");
-    // expect(TestWidget.prototype.__render).toHaveBeenCalledTimes(1);
-    // // unmount and re-mount, as in this case, willStart won't be called, so it's
-    // // slightly different
-    // widget.unmount();
-    // widget.state.val = 3;
-    // await widget.mount(fixture);
-    // expect(fixture.innerHTML).toBe("<div>3</div>");
-    // expect(TestWidget.prototype.__render).toHaveBeenCalledTimes(2);
-    // expect(steps).toEqual([2, 3]);
   });
 
   test("change state while mounting component", async () => {
@@ -196,8 +170,6 @@ describe("reactivity in lifecycle", () => {
     const prom = mount(Comp, fixture);
     (STATE as any).val = 2;
     await prom;
-    // The first render happens synchronously (fast path, no willStart),
-    // so the template executes with val=1. Then val=2 triggers a re-render.
     expect(steps).toEqual([1, 2]);
     expect(fixture.innerHTML).toBe("<div>2</div>");
   });
@@ -269,27 +241,17 @@ describe("reactivity in lifecycle", () => {
     const comp = await mount(Parent, fixture);
     expect([parentRenderCount, childRenderCount]).toEqual([1, 1]);
     expect(fixture.innerHTML).toBe("12");
-    comp.obj.a = 3; // non proxy object, shouldn't cause render
+    comp.obj.a = 3;
     await nextTick();
     expect([parentRenderCount, childRenderCount]).toEqual([1, 1]);
     expect(fixture.innerHTML).toBe("12");
     comp.proxyObj.b = 4;
     await nextTick();
-    // Only child should be rendered: the parent never read the b key in proxyObj
     expect([parentRenderCount, childRenderCount]).toEqual([1, 2]);
     expect(fixture.innerHTML).toBe("34");
   });
 
   test("child re-renders when shared atom changes while parent has an in-flight fiber", async () => {
-    // Repro of a race condition: parent and child both observe atom `a`. After a
-    // parent-only update (via `b`) leaves a pending root fiber on the parent (and
-    // a corresponding child fiber from a prop update), a write to `a` queues both
-    // computations. When the child's computation runs first in processEffects,
-    // its render() recycles the existing child fiber and clears its bdom. Then
-    // the parent's render() cancels its children (including the child fiber),
-    // but with bdom now null, cancelFibers used to skip forceNextRender — so the
-    // parent then skipped the child as well (props unchanged), leaving the child
-    // visually stale and signalComputation.sources empty.
     const a = signal(0);
     const b = signal(0);
     let childRenderCount = 0;
@@ -309,8 +271,6 @@ describe("reactivity in lifecycle", () => {
 
     class Root extends Component {
       static components = { Child };
-      // Child is rendered before parent reads `a`, so child.sc ends up first in
-      // a.observers — which is required for the bug to trigger.
       static template = xml`<Child bv="this.b()"/>parent:a=<t t-out="this.a()"/>:b=<t t-out="this.b()"/>`;
       a = a;
       b = b;
@@ -320,10 +280,6 @@ describe("reactivity in lifecycle", () => {
     expect(fixture.innerHTML).toBe("child:bv=0:a=0parent:a=0:b=0");
     expect(childRenderCount).toBe(1);
 
-    // Trigger a parent-only re-render that updates the child's prop. Wait
-    // until the child's renderFn has actually run (notify() resolves the
-    // deferred on its second invocation) — but stop before requestAnimationFrame
-    // fires, so processTasks doesn't run and node.fiber stays set on both.
     b.set(1);
     await secondRender;
     expect(childRenderCount).toBe(2);
@@ -439,7 +395,6 @@ test("reading reactive state in setup should work as expected", async () => {
     c = computed(() => s() + 1);
 
     setup() {
-      // we read the content of the signal s in setup, not in render
       steps.push(`setup: ${this.c()}`);
     }
   }
@@ -476,16 +431,12 @@ describe("reactive cleanup on component destruction", () => {
     const parent = await mount(Parent, fixture);
     expect(fixture.innerHTML).toBe("<div><span>false</span></div>");
 
-    // The child's isSelected computed should be in selectedId's observers
     expect(observersOf(selectedIdAtom).length).toBe(1);
 
-    // Destroy the child by toggling show
     parent.show.set(false);
     await nextTick();
     expect(fixture.innerHTML).toBe("<div></div>");
 
-    // After child destruction, isSelected computed should be cleaned up
-    // from selectedId's observers
     expect(observersOf(selectedIdAtom).length).toBe(0);
   });
 
@@ -516,20 +467,16 @@ describe("reactive cleanup on component destruction", () => {
       "<div><span>false</span><span>false</span><span>false</span></div>"
     );
 
-    // 3 row computeds should be in selectedId's observers
     expect(observersOf(selectedIdAtom).length).toBe(3);
 
-    // Clear all rows
     parent.rows.set([]);
     await nextTick();
     expect(fixture.innerHTML).toBe("<div></div>");
 
-    // All computeds should be cleaned up
     expect(observersOf(selectedIdAtom).length).toBe(0);
   });
 
   test("benchmark-like scenario: signal.Array rows with computed isSelected", async () => {
-    // This closely mimics the benchmark's owl3_signal setup
     const selectedId = signal(0);
     const selectedIdAtom: Atom = (selectedId as any)[atomSymbol];
 
@@ -567,18 +514,15 @@ describe("reactive cleanup on component destruction", () => {
     const root = await mount(Root, fixture);
     expect(observersOf(selectedIdAtom).length).toBe(0);
 
-    // Create rows
     root.rows.set(buildRows(10));
     await nextTick();
     expect(observersOf(selectedIdAtom).length).toBe(10);
 
-    // Clear rows - this should clean up all computed observers
     root.rows.set([]);
     await nextTick();
     expect(fixture.querySelector("tbody")!.innerHTML).toBe("");
     expect(observersOf(selectedIdAtom).length).toBe(0);
 
-    // Create again and clear again - should not accumulate
     root.rows.set(buildRows(5));
     await nextTick();
     expect(observersOf(selectedIdAtom).length).toBe(5);
@@ -687,8 +631,6 @@ describe("computed with equals in components", () => {
     expect(fixture.innerHTML).toBe("<ul><li>a</li></ul>");
     expect(renders).toBe(1);
 
-    // the computed re-runs (the array structure changed), but its result has
-    // the same contents: the component must not re-render
     list.todos.push({ id: 3, text: "c", done: true });
     await nextTick();
     expect(fixture.innerHTML).toBe("<ul><li>a</li></ul>");
@@ -827,7 +769,6 @@ describe("ownership of the effects a component creates", () => {
     await nextTick();
     expect(fixture.innerHTML).toBe("<div>1</div><span></span>");
     parent.__owl__.app.destroy();
-    // a plain effect() in setup belongs to nothing (useEffect binds it)
     expect(live).toBe(1);
     disposeChildEffect!();
     expect(live).toBe(0);

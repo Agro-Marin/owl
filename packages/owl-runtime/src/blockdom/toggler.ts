@@ -1,21 +1,10 @@
 import { nodeInsertBefore, nodeRemoveChild } from "./dom";
 import type { VNode } from "./index";
 
-// -----------------------------------------------------------------------------
-// Toggler node
-// -----------------------------------------------------------------------------
 
-// Shared anchor text node, reused across togglers. Accessed through
-// `globalThis` and optional-chained so that merely importing owl does not
-// crash without a `document`: this lets the non-rendering APIs (reactivity,
-// type system, ...) run in environments such as Node.js. It is only ever read
-// in `patch`, which runs while rendering into a real DOM, so the `!` holds.
-const txt = /* @__PURE__ */ globalThis.document?.createTextNode("")!;
+const txt =   globalThis.document?.createTextNode("")!;
 
 class VToggler {
-  // not `key`: a toggler in a keyed list gets its list key written there.
-  // Children of one kind patch each other: a string, or the function a
-  // t-set body renders with
   kind: unknown;
   child: VNode;
 
@@ -46,14 +35,11 @@ class VToggler {
       child1.patch(child2, withBeforeRemove);
     } else {
       const firstNode = child1.firstNode()!;
-      // a ShadowRoot parent is a node, not an element
       const parent = firstNode.parentNode as HTMLElement;
       nodeInsertBefore.call(parent, txt, firstNode);
       if (withBeforeRemove) {
         child1.beforeRemove();
       }
-      // remove before mounting: a ref the new child sets must not be cleared by
-      // the old child's removal
       child1.remove();
       child2.mount(parent, txt);
       nodeRemoveChild.call(parent, txt);

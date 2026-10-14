@@ -1,8 +1,5 @@
-// Compile-time checks for schema defaults (.optional(value)). This file is
-// only typechecked (npm run test:types); it is not executed.
 import { config, props, Registry, Resource, t, type GetProps, type StripBrands } from "../src";
 
-// A call to assertEq<A, B>() only typechecks if A and B are mutually assignable
 type Eq<A, B> = [A] extends [B] ? ([B] extends [A] ? true : false) : false;
 declare function assertEq<A, B>(...args: Eq<A, B> extends true ? [] : [never]): void;
 
@@ -17,26 +14,18 @@ class Comp {
 declare const comp: Comp;
 void comp;
 
-// reader view: defaulted keys are required and stripped of the brand,
-// optional keys may be undefined
 assertEq<typeof comp.props.p, number>();
 assertEq<typeof comp.props.q, string>();
 assertEq<typeof comp.props.r, string>();
 assertEq<typeof comp.props.s, boolean | undefined>();
 
-// parent view: defaulted and optional keys may be omitted
 type ParentProps = GetProps<Comp>;
 const ok1: ParentProps = { r: "x" };
 const ok2: ParentProps = { r: "x", p: 1, q: "y", s: true };
-// @ts-expect-error r is mandatory
 const ko1: ParentProps = { p: 1 };
-// @ts-expect-error p must be a number
 const ko2: ParentProps = { r: "x", p: "nope" };
-// @ts-expect-error s must be a boolean
 const ko3: ParentProps = { r: "x", s: 1 };
 
-// without defaults, the reader and parent views coincide (and the props type
-// displays as a plain flat object)
 class OnlyOptionals {
   props = props({
     className: t.string().optional(),
@@ -49,20 +38,14 @@ assertEq<typeof onlyOptionals.props.className, string | undefined>();
 type OptParentProps = GetProps<OnlyOptionals>;
 const ok3: OptParentProps = {};
 const ok4: OptParentProps = { className: "a" };
-// @ts-expect-error className must be a string
 const ko4: OptParentProps = { className: 4 };
 
-// defaults must match the declared type, as a plain value or a factory
 props({ p: t.number().optional(4) });
 props({ p: t.number().optional(() => 4) });
-// @ts-expect-error default must be a number
 props({ p: t.number().optional("4") });
-// a default for a function type must use the factory form
 props({ cb: t.function().optional(() => () => {}) });
-// @ts-expect-error a plain function default is rejected (factory form only)
 props({ cb: t.function().optional(() => {}) });
 
-// props.static: schema default strips to the value type, optional adds undefined
 function _staticPropCheck() {
   const label = props.static("label", t.string().optional("fallback"));
   assertEq<typeof label, string>();
@@ -73,7 +56,6 @@ function _staticPropCheck() {
   void [label, plain, opt];
 }
 
-// config: schema default strips to the value type, optional adds undefined
 function _configCheck() {
   const delay = config("delay", t.number().optional(500));
   assertEq<typeof delay, number>();
@@ -84,27 +66,21 @@ function _configCheck() {
   void [delay, plain, opt];
 }
 
-// Registry / Resource: the validation type describes the item value type
 function _registryCheck() {
   const registry = new Registry({ validation: t.string() });
   registry.add("key", "some value");
   const value = registry.get("key");
   assertEq<typeof value, string>();
   assertEq<ReturnType<typeof registry.items>, string[]>();
-  // @ts-expect-error a number is not a string
   registry.add("other", 42);
 
   const resource = new Resource({ validation: t.number() });
   resource.add(5);
   assertEq<ReturnType<typeof resource.items>, number[]>();
-  // @ts-expect-error a string is not a number
   resource.add("nope");
   void value;
 }
 
-// schema.toShape(): a reusable object schema drives props with the same reader
-// view as passing the shape inline (defaulted keys required, optionals may be
-// undefined).
 const NotificationShape = {
   message: t.string(),
   className: t.string().optional("card"),
@@ -118,7 +94,6 @@ assertEq<typeof fromObjectSchema.props.message, string>();
 assertEq<typeof fromObjectSchema.props.className, string>();
 assertEq<typeof fromObjectSchema.props.sticky, boolean | undefined>();
 
-// t.and(...).toShape() merges the members' shapes into a single props shape
 const ComposedSchema = t.and([
   t.object({ message: t.string() }),
   t.object({ autocloseDelay: t.number().optional(4000), sticky: t.boolean().optional() }),
@@ -134,18 +109,13 @@ assertEq<typeof fromComposedSchema.props.sticky, boolean | undefined>();
 void [ok1, ok2, ok3, ok4, ko1, ko2, ko3, ko4, _staticPropCheck, _configCheck, _registryCheck];
 void [fromObjectSchema, fromComposedSchema];
 
-// t.and over an optional member intersects the members' values; the optional
-// member's `undefined` does not turn the intersection into never
 const WithOptional = t.and([t.object({ a: t.number() }).optional(), t.object({ b: t.string() })]);
 assertEq<StripBrands<typeof WithOptional>, { a: number } & { b: string }>();
 
-// t.object<Shape>() validates an object without checking its keys: it carries
-// no shape, and toShape() says so
 const Unchecked = t.object<{ a: ReturnType<typeof t.number> }>();
 assertEq<ReturnType<typeof Unchecked.toShape>, {}>();
 void WithOptional;
 
-// t.and([]) checks nothing: its value is unknown
 const Empty = t.and([]);
 assertEq<StripBrands<typeof Empty>, unknown>();
 void Empty;

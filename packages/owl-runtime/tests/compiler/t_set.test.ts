@@ -14,9 +14,6 @@ beforeEach(() => {
   fixture = makeTestFixture();
 });
 
-// -----------------------------------------------------------------------------
-// t-set
-// -----------------------------------------------------------------------------
 
 describe("t-set", () => {
   test("a variable may be named await or async", () => {
@@ -213,7 +210,6 @@ describe("t-set", () => {
           <t t-out="v2"/>
         </div>`;
 
-    // the values at the t-set, as OWL 2 read them
     expect(renderToString(template)).toBe("<div><span>before</span></div>");
   });
 
@@ -230,7 +226,6 @@ describe("t-set", () => {
           <t t-out="v2"/>
         </div>`;
 
-    // the values at the t-set, as OWL 2 read them
     expect(renderToString(template)).toBe("<div><span>before</span></div>");
   });
 
@@ -438,8 +433,6 @@ describe("t-set", () => {
   });
 
   test("an attribute of a t-set body holding only text is that text", () => {
-    // what Odoo writes: <t t-set="label"><t t-if="c">Relation to follow</t>...</t>
-    // then t-att-aria-label="label", or a cell value passed on as a label
     const y = `R&D <x> "q"\u00a0z`;
     const attrs = (template: string) => {
       const div = document.createElement("div");
@@ -454,7 +447,6 @@ describe("t-set", () => {
       "A & B",
       "L: A & B",
     ]);
-    // a body holding elements still stringifies to its markup
     expect(attrs(`<t t-set="x"><b t-out="y"/></t>${use}`)[0]).toBe(
       '<b>R&amp;D &lt;x&gt; "q"&nbsp;z</b>'
     );
@@ -480,8 +472,6 @@ describe("t-set", () => {
 });
 
 describe("a site outputting one body, then another", () => {
-  // the same t-out shows the body a t-set in a branch set: each body makes
-  // blocks of its own, which the other's must not be patched with
   test.each([
     [
       "a list, then an element",

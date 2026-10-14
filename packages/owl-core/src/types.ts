@@ -4,78 +4,34 @@ import { ValidationContext, ValidationIssue } from "./validation";
 
 export type Constructor<T = any> = { new (...args: any[]): T };
 
-// Runtime metadata attached to validators by `.optional(value)`. The default
-// is normalized to a factory: an explicit factory produces a fresh value per
-// consumer, a plain value is wrapped in a constant factory (so it is shared).
 const defaultSymbol = Symbol("default");
-// The wrapped type, so that `applyDefaults` can recurse through a default.
 const innerTypeSymbol = Symbol("innerType");
-// Attached to object/tuple validators, so that `applyDefaults` can walk them.
 const shapeSymbol = Symbol("shape");
-// Attached to array validators, so that `applyDefaults` can visit elements.
 const elementTypeSymbol = Symbol("elementType");
-// Attached to validators created by `.optional()`: an object key with an
-// optional type may be omitted.
 const optionalSymbol = Symbol("optional");
-// Attached to intersection validators (`and`), so that `applyDefaults` can
-// fold defaults from every member type into the value.
 const intersectionSymbol = Symbol("intersection");
 
-// Type-level brand carried by `.optional(value)`. It is phantom (declare):
-// nothing exists at runtime under this key. The brand stores the wrapped type
-// so it can be recovered with `infer`. Exported so that dependent
-// declarations (e.g. a `Resource<T>` field) can be emitted across modules.
 export declare const hasDefault: unique symbol;
 export type WithDefault<T> = T & { [hasDefault]: T };
 
-// Type-level brand carried by `.optional()`, phantom like `hasDefault`.
 export declare const isOptional: unique symbol;
 export type Optional<T> = T & { [isOptional]: T };
 
-// Type-level brand carried by every type built by the `types` factories. It
-// is phantom: at runtime, only the `optional` method exists on the validator.
 export declare const typeBrand: unique symbol;
 export type Type<T> = T & {
   [typeBrand]: T;
-  /**
-   * Marks the type as optional: `undefined` passes validation, and an object
-   * key with an optional type may be omitted.
-   */
   optional(): Optional<T>;
-  /**
-   * Marks the type as optional, with a default value to fill it: the reader
-   * of the value always gets one (the default replaces an omitted value). The
-   * default can be given as a factory (`() => value`), which is called once
-   * per consumer, so mutable defaults ([], {}) are not shared. A default for
-   * a function type must use the factory form.
-   */
   optional(value: T extends Function ? () => T : T | (() => T)): WithDefault<T>;
 
   type: T;
 };
 
-/**
- * A {@link Type} that also carries the object shape it was built from, exposed
- * through `toShape()`: `t.object`/`t.strictObject` return their own shape, and
- * `t.and` merges the shapes of the members that have one. The shape is the
- * `{ key: type }` map (with `.optional()` brands intact), so it can be reused —
- * most notably to drive component props: `props(schema.toShape())`.
- */
 export type ShapeType<Shape, T> = Type<T> & {
   toShape(): Shape;
 };
 
-// The shape carried by an intersection member, or `never` if it has none (only
-// object/intersection types expose `toShape`).
 type MemberShape<M> = M extends { toShape(): infer S } ? S : never;
-// Merges the shapes of the members of an intersection that carry one, so
-// `t.and(...)` exposes a single shape like a plain object schema. Overlapping
-// keys intersect at the type level (the runtime merge lets later members win).
 type MergedShape<T extends any[]> = UnionToIntersection<MemberShape<T[number]>>;
-// The value of an intersection: each member's value, intersected. A member's
-// value is boxed first, or UnionToIntersection would also split the member's
-// own union - an optional member's `V | undefined` - and yield never. No
-// member constrains nothing.
 type IntersectionValue<T extends any[]> = [T[number]] extends [never]
   ? unknown
   : UnionToIntersection<
@@ -90,14 +46,9 @@ type IsOptional<T> = IsAny<T> extends true ? false : T extends { [isOptional]: a
 type StripDefault<T> = T extends { [hasDefault]: infer U } ? U : T;
 type StripOptional<T> = T extends { [isOptional]: infer U } ? U | undefined : T;
 type StripType<T> = T extends { [typeBrand]: infer U } ? U : T;
-// Recovers the value type carried by a validator: brands are removed, and an
-// optional type resolves to `T | undefined`.
 export type StripBrands<T> = StripType<StripDefault<StripOptional<T>>>;
 type StripBrandsAll<T extends any[]> = { [K in keyof T]: StripBrands<T[K]> };
 
-// Keys whose type carries a default. The distributive conditional makes the
-// union resolve eagerly, so editors display the plain union of key names
-// (`"p" | "q"`) instead of the unevaluated alias.
 export type GetDefaultedKeys<T> = keyof T extends infer K
   ? K extends keyof T
     ? HasDefault<T[K]> extends true
@@ -125,10 +76,6 @@ export type ResolveOptionalEntries<T> = PrettifyShape<
   GetRequiredEntries<T> & GetOptionalEntries<T>
 >;
 
-// Object type as seen by the reader of the values once defaults are applied:
-// defaulted keys are required (the default fills them), only optional keys
-// may be absent. Resolves to a flat object type, so editors display it
-// expanded.
 export type ResolveReaderObjectType<T> = PrettifyShape<
   {
     [K in keyof T as IsOptional<T[K]> extends true ? never : K]: StripBrands<T[K]>;
@@ -152,19 +99,10 @@ export type UnionToIntersection<U> = (U extends any ? (_: U) => any : never) ext
   ? I
   : never;
 
-/**
- * Returns the default value factory attached to a type by `.optional(value)`,
- * if any. This is how consumers (props, config, ...) resolve defaults at
- * runtime: validation only runs in dev mode, so defaults are metadata on the
- * schema, not a validation side-effect.
- */
 export function getDefault(type: any): (() => any) | undefined {
   return typeof type === "function" ? type[defaultSymbol] : undefined;
 }
 
-// Runtime implementation of the `optional` method declared on `Type`. With a
-// `value` argument, the type also carries a default: it fills the value for
-// the reader when it is omitted.
 function makeOptional(type: any, value?: any): any {
   const validate = function validateOptional(context: ValidationContext) {
     if (context.value === undefined) {
@@ -177,8 +115,6 @@ function makeOptional(type: any, value?: any): any {
   if (value !== undefined) {
     validate[defaultSymbol] = typeof value === "function" ? value : () => value;
   }
-  // re-declaring an optional type (a subclass extending its parent's prop)
-  // keeps the inner type, and the parent's default unless it gives its own
   validate.optional = (newValue?: any) =>
     makeOptional(type, newValue !== undefined ? newValue : validate[defaultSymbol]);
   return validate;
@@ -188,22 +124,11 @@ function isOptionalType(type: any): boolean {
   return typeof type === "function" && optionalSymbol in type;
 }
 
-// Attaches the `optional` method to a validator: every `types` factory
-// funnels its validator through this.
 function makeType(validate: (context: ValidationContext) => void): any {
   (validate as any).optional = (value?: any) => makeOptional(validate, value);
   return validate;
 }
 
-/**
- * Returns `value` with defaults from the schema filled in, at any depth: a
- * default fires when the value at its schema position is `undefined`. The
- * input is never mutated; objects are copied along the changed paths only, so
- * if nothing is filled in, `value` is returned as is.
- *
- * Note that this only recurses through object shapes, tuples and arrays
- * (unions are ambiguous, records have no fixed keys).
- */
 export function applyDefaults<T>(value: unknown, type: T): StripBrands<T> {
   return applyDefaultsRec(value, type);
 }
@@ -333,7 +258,6 @@ function customValidator<T>(
   validator: (value: StripBrands<T>) => boolean,
   errorMessage: string = "value does not match custom validation"
 ): Type<StripBrands<T>> {
-  // wrapping an optional type, it is optional too, with the type's default
   const isOptional = isOptionalType(type);
   const validate = makeType(function validateCustom(context: ValidationContext) {
     if (isOptional && context.value === undefined) {
@@ -393,11 +317,6 @@ function intersection<T extends any[]>(types: T): ShapeType<MergedShape<T>, Inte
     }
   });
   validate[intersectionSymbol] = types;
-  // Merge the members that carry a keyed shape (`t.object`/`t.strictObject`/
-  // `t.and`), so the intersection exposes one shape usable by `props()`. Later
-  // members win, mirroring `applyDefaults` folding defaults in order. The
-  // key-list form (`t.object(["a"])`) exposes its keys as an array, which has
-  // no per-key types to merge, so it is skipped.
   validate.toShape = () => {
     const shape: Record<string, any> = {};
     for (const member of types as any[]) {
@@ -426,8 +345,6 @@ function literalSelection<const T extends LiteralTypes>(literals: T[]): Type<T> 
   return union(literals.map(literalType)) as any;
 }
 
-// The validator of an object schema: a shape (`{ key: type }`) or a key list.
-// Its keys are read once, not on every validation.
 function objectValidator(schema: any, isStrict: boolean) {
   const isShape = schema && !Array.isArray(schema);
   const keys: string[] = !schema ? [] : isShape ? Object.keys(schema) : schema;
@@ -444,7 +361,6 @@ function objectValidator(schema: any, isStrict: boolean) {
     const missingKeys: string[] = [];
     for (const key of keys) {
       if (value[key] === undefined) {
-        // optional keys (with or without a default) may be omitted
         if (!isShape || !isOptionalType(schema[key])) {
           missingKeys.push(key);
         }
@@ -555,9 +471,6 @@ function tuple<const T extends unknown[]>(types: T): Type<StripBrandsAll<T>> {
 
 function union<T extends unknown[]>(types: T): Type<StripBrands<T[number]>> {
   return makeType(function validateUnion(context: ValidationContext) {
-    // Every member is tried: one failing inside the value (a key, an item)
-    // does not rule out a later one. When all fail, the member that got
-    // deepest into the value explains the failure best.
     const subIssues: ValidationIssue[] = [];
     let deepestIssues: ValidationIssue[] | null = null;
     let deepest = 0;
@@ -605,8 +518,6 @@ function ref(type?: any): any {
   return union([literalType(null), elementType(type || HTMLElement)]);
 }
 
-// instanceOf for an element that may come from another document (an iframe):
-// it is an instance of that window's class of the same name
 function elementType(constructor: Constructor): Type<HTMLElement> {
   return makeType(function validateElement(context: ValidationContext) {
     const value = context.value;
