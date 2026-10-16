@@ -515,10 +515,27 @@ function writeKey(
   atoms: Target
 ): boolean {
   const stored = shallow ? value : toRaw(value);
+  if (!hasKeyAtoms(atoms) && !debug.reactivity) {
+    return setKey(target, key, stored, receiver);
+  }
   const own = Reflect.getOwnPropertyDescriptor(target, key);
   return own !== undefined && "value" in own && !Array.isArray(target)
     ? write(target, key, stored, receiver, own, atoms)
     : batch(() => write(target, key, stored, receiver, own, atoms));
+}
+
+const plainPrototypes = new Set<object | null>([Object.prototype, Array.prototype, null]);
+
+function setKey(target: any, key: PropertyKey, stored: any, receiver: any): boolean {
+  if (
+    key !== "__proto__" &&
+    targets.get(receiver) === target &&
+    plainPrototypes.has(Object.getPrototypeOf(target)) &&
+    !(Object.hasOwn(target, key) && !("value" in Reflect.getOwnPropertyDescriptor(target, key)!))
+  ) {
+    return Reflect.set(target, key, stored);
+  }
+  return Reflect.set(target, key, stored, receiver);
 }
 
 function write(
@@ -533,7 +550,7 @@ function write(
   const length = isArray ? target.length : 0;
   const before =
     own !== undefined && "value" in own ? own.value : Reflect.get(target, key, receiver);
-  if (!Reflect.set(target, key, stored, receiver)) {
+  if (!setKey(target, key, stored, receiver)) {
     return false;
   }
   if (isArray && key === "length") {
@@ -850,7 +867,12 @@ function makeGetOrInsert(
 }
 
 function hasKeyAtoms(target: Target): boolean {
-  return allAtoms.some((atoms) => atoms.keys.has(target) || atoms.weakKeys.has(target));
+  return (
+    itemAtoms.keys.has(target) ||
+    itemAtoms.weakKeys.has(target) ||
+    presenceAtoms.keys.has(target) ||
+    presenceAtoms.weakKeys.has(target)
+  );
 }
 
 function makeClearNotifier(target: Map<any, any> | Set<any>) {

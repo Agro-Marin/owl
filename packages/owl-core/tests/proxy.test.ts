@@ -873,3 +873,84 @@ describe("array searches", () => {
     expect(calls).toBe(1);
   });
 });
+
+describe("writes nobody observes", () => {
+  test("an object written before anything reads it notifies once something does", () => {
+    const state = proxy<any>({});
+    state.a = 1;
+    state.b = { c: 2 };
+    let seen: number[] = [];
+    immediateEffect(() => {
+      seen.push(state.a + state.b.c);
+    });
+    state.a = 10;
+    state.b.c = 20;
+    expect(seen).toEqual([3, 12, 30]);
+    expect(toRaw(state).b).toBe(toRaw(state.b));
+  });
+
+  test("an own setter of a plain object still runs on the proxy", () => {
+    const state = proxy<any>({
+      _x: 0,
+      get x() {
+        return this._x;
+      },
+      set x(value: number) {
+        this._x = value;
+      },
+    });
+    const seen: number[] = [];
+    immediateEffect(() => {
+      seen.push(state._x);
+    });
+    state.x = 5;
+    expect(seen).toEqual([0, 5]);
+  });
+
+  test("a setter on a class prototype still runs on the proxy", () => {
+    class Counter {
+      _n = 0;
+      set n(value: number) {
+        this._n = value;
+      }
+    }
+    const counter = proxy(new Counter());
+    const seen: number[] = [];
+    immediateEffect(() => {
+      seen.push(counter._n);
+    });
+    counter.n = 3;
+    expect(seen).toEqual([0, 3]);
+  });
+
+  test("an array grown before anything reads it notifies once something does", () => {
+    const list = proxy<number[]>([]);
+    list.push(1, 2);
+    const seen: number[] = [];
+    immediateEffect(() => {
+      seen.push(list.length);
+    });
+    list.push(3);
+    list.length = 1;
+    expect(seen).toEqual([2, 3, 1]);
+    expect(toRaw(list)).toEqual([1]);
+  });
+
+  test("a frozen or non-writable target refuses the write as before", () => {
+    const frozen = proxy<any>(Object.freeze({ a: 1 }));
+    expect(Reflect.set(frozen, "a", 2)).toBe(false);
+    expect(Reflect.set(frozen, "b", 2)).toBe(false);
+    const locked = proxy<any>({});
+    Object.defineProperty(toRaw(locked), "k", { value: 1, writable: false });
+    expect(Reflect.set(locked, "k", 2)).toBe(false);
+    expect(toRaw(locked).k).toBe(1);
+  });
+
+  test("a write through __proto__ still sets the target's prototype", () => {
+    const proto = { inherited: true };
+    const state = proxy<any>({});
+    state.__proto__ = proto;
+    expect(Object.getPrototypeOf(toRaw(state))).toBe(proto);
+    expect(state.inherited).toBe(true);
+  });
+});
