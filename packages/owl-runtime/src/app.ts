@@ -28,7 +28,6 @@ import { Scheduler } from "./rendering/scheduler";
 import { TemplateSet, TemplateSetConfig } from "./template_set";
 import { validateTarget } from "./utils";
 
-
 interface RootConfig<P> {
   props?: P;
 }
@@ -110,8 +109,7 @@ export class App extends TemplateSet {
       } catch (error) {
         try {
           App.prototype.destroy.call(this);
-        } catch {
-        }
+        } catch {}
         throw error;
       }
     } else {
@@ -314,8 +312,7 @@ export async function mount<T extends ComponentConstructor>(
     if (!app.destroyed) {
       try {
         app.destroy();
-      } catch {
-      }
+      } catch {}
     }
     throw error;
   }

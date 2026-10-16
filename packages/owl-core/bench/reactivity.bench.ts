@@ -3,7 +3,6 @@ import * as owl from "../src";
 import { computed, effect, signal } from "../src";
 import { workloads } from "./workloads";
 
-
 async function flushMicrotasks() {
   await Promise.resolve();
   await Promise.resolve();

@@ -6,12 +6,10 @@ import { useScope, type ScopeApp } from "./scope";
 import { Signal } from "./signal";
 import { shallowEqual } from "./utils";
 
-
 export function useEffect(fn: Parameters<typeof effect>[0]): void {
   useScope();
   onWillDestroy(effect(fn));
 }
-
 
 type Cleanup = (() => void) | void;
 
@@ -33,7 +31,6 @@ export function useOnChange<T extends unknown[]>(
     return untrack(() => callback(...args));
   });
 }
-
 
 export function useListener(
   target: EventTarget | Signal<EventTarget | null>,
@@ -77,7 +74,6 @@ function makeListener(handler: EventListener): EventListener {
     handler.call(this, ev);
   };
 }
-
 
 export function useApp<TApp extends ScopeApp = ScopeApp>(): NoInfer<TApp> {
   return useScope().app as TApp;

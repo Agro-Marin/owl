@@ -5,7 +5,6 @@ import { computed, signal } from "../../src";
 
 snapshotEverything();
 
-
 describe("t-ref", () => {
   test("can get a ref on a node", () => {
     const template = `<div><span t-ref="myspan"/></div>`;

@@ -934,11 +934,6 @@ describe("Reactivity", () => {
     expectSpy(spy3, 2, [obj1]);
   });
 
-
-
-
-
-
   test("don't react to changes in subobject that has been deleted", async () => {
     const spy = vi.fn();
     const a = { k: {} } as any;
@@ -1974,7 +1969,6 @@ describe("Reactivity: proxy", () => {
     fixture = makeTestFixture();
   });
 
-
   test("very simple use, with initial value", async () => {
     const testContext = createProxy({ value: 123 });
 
@@ -2219,7 +2213,6 @@ describe("Reactivity: proxy", () => {
   test("several nodes at different levels react only to the shared keys they read", async () => {
     const testContext = createProxy({ a: 123, b: 456 });
     const steps: Set<string> = new Set();
-
 
     class L3A extends Component {
       static template = xml`<t t-set="noop" t-value="this.notify()"/><div><t t-out="this.contextObj.a"/> <t t-out="this.contextObj.b"/></div>`;

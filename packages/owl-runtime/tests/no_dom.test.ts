@@ -1,5 +1,3 @@
-
-
 import { describe, expect, test } from "vitest";
 import { App, computed, effect, proxy, signal, types as t, validateType } from "../src/index";
 

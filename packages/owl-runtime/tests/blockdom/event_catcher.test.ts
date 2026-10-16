@@ -2,7 +2,6 @@ import { createBlock, createCatcher, list, mount, multi, patch, remove } from ".
 import { setDebug, setDebugSink } from "@odoo/owl-core";
 import { makeTestFixture } from "./helpers";
 
-
 let fixture: HTMLElement;
 
 const run = (ctx: any, ev: Event) => ctx(ev);

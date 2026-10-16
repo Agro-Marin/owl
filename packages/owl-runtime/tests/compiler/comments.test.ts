@@ -2,7 +2,6 @@ import { renderToString, snapshotEverything } from "../helpers";
 
 snapshotEverything();
 
-
 describe("comments", () => {
   test("comments are ignored", () => {
     const template = `<div>hello <!-- comment-->owl</div>`;

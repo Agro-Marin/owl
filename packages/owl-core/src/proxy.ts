@@ -49,7 +49,7 @@ function reactiveValue(value: any, shallow: boolean): any {
 const skipped = new WeakSet<Target>();
 const rawPrototypes = new WeakSet<Target>();
 let hasRawPrototypes = false;
-const builtinPrototypes =   builtinPrototypeSet();
+const builtinPrototypes = /* @__PURE__ */ builtinPrototypeSet();
 
 function builtinPrototypeSet(): Set<object> {
   return new Set([
@@ -593,7 +593,7 @@ export function readArrayItems<T>(array: T[]): T[] {
 }
 
 const viewReaders = new Set<Function>();
-const replacedMethods =   replaceMethods();
+const replacedMethods = /* @__PURE__ */ replaceMethods();
 
 function replaceMethods(): Map<Function, Function> {
   const replaced = new Map<Function, Function>();
@@ -937,8 +937,8 @@ const setOperations = [
   "union",
 ];
 
-const mapMethods =   unionOf(setLikeMethods, weakMapMethods);
-const setMethods =   unionOf(setLikeMethods, ["add"], setOperations);
+const mapMethods = /* @__PURE__ */ unionOf(setLikeMethods, weakMapMethods);
+const setMethods = /* @__PURE__ */ unionOf(setLikeMethods, ["add"], setOperations);
 
 function unionOf(...lists: Iterable<PropertyKey>[]): Set<PropertyKey> {
   const union = new Set<PropertyKey>();

@@ -228,7 +228,7 @@ function asOwnError(error: unknown, compiler: TemplateCompiler): unknown {
 export const globalTemplates: { [key: string]: string | Element | TemplateFunction } =
   Object.create(null);
 
-export const xml =   Object.assign(
+export const xml = /* @__PURE__ */ Object.assign(
   function (...args: Parameters<typeof String.raw>): string {
     const name = `__template__${xml.nextId++}`;
     const value = String.raw(...args);

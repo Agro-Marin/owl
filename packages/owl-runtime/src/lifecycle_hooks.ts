@@ -1,7 +1,6 @@
 import { ComponentNode, getComponentScope } from "./component_node";
 import { nodeErrorHandlers } from "./rendering/error_handling";
 
-
 export { onWillDestroy, onWillStart } from "@odoo/owl-core";
 
 export function onWillUpdateProps(

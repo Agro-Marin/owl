@@ -9,7 +9,6 @@ import { mount, patch } from "../../src/blockdom";
 
 snapshotEverything();
 
-
 describe("t-foreach", () => {
   test("simple iteration", () => {
     const template = `<t t-foreach="[3, 2, 1]" t-as="item" t-key="item"><t t-out="item"/></t>`;

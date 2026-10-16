@@ -10,7 +10,6 @@ import {
 import { STATUS, StatusValue } from "./status";
 import type { PluginManager } from "./plugin_manager";
 
-
 export const scopeStack = setupStack as Scope[];
 
 export type ScopeMark = [willStart: number, destroyCbs: number, computations: number];

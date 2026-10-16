@@ -2,14 +2,13 @@ import { debug, debugLog } from "@odoo/owl-core";
 import { fibersInError } from "./error_handling";
 import { APPLIED_TO_DOM, Fiber, RootFiber } from "./fibers";
 
-
 function captureAnimationFrame(): Window["requestAnimationFrame"] {
   return typeof window === "undefined"
     ? (undefined as any)
     : window.requestAnimationFrame.bind(window);
 }
 
-const requestAnimationFrame =   captureAnimationFrame();
+const requestAnimationFrame = /* @__PURE__ */ captureAnimationFrame();
 
 export class Scheduler {
   static requestAnimationFrame = requestAnimationFrame;

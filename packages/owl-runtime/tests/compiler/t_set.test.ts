@@ -14,7 +14,6 @@ beforeEach(() => {
   fixture = makeTestFixture();
 });
 
-
 describe("t-set", () => {
   test("a variable may be named await or async", () => {
     const template = `<div><t t-set="await" t-value="v"/><t t-set="async" t-value="2"/><t t-out="await.x"/><t t-if="await.x and async" t-out="async"/></div>`;

@@ -765,8 +765,7 @@ describe("effect", () => {
       effect(() => {
         try {
           dispose();
-        } catch {
-        }
+        } catch {}
         spy(later());
       });
       later.set(1);

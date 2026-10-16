@@ -1,8 +1,6 @@
 import { OwlError } from "@odoo/owl-core";
 
-
-
-const RESERVED_WORDS =   wordSet(
+const RESERVED_WORDS = /* @__PURE__ */ wordSet(
   "true,false,NaN,null,undefined,debugger,console,window,in,instanceof,new,function,return,eval,void,__globals__," +
     "Math,RegExp,Array,Object,Date,Number,Boolean,String,Symbol,BigInt,Map,Set,JSON,Intl,Error," +
     "Infinity,isFinite,isNaN,parseFloat,parseInt,decodeURI,decodeURIComponent,encodeURI,encodeURIComponent"
@@ -12,12 +10,12 @@ function wordSet(words: string): Set<string> {
   return new Set(words.split(","));
 }
 
-const STATEMENT_KEYWORDS =   wordSet(
+const STATEMENT_KEYWORDS = /* @__PURE__ */ wordSet(
   "break,case,catch,class,const,continue,default,do,else,enum,export,extends,finally,for,if," +
     "import,super,switch,throw,try,var,while,with,yield"
 );
 
-const WORD_REPLACEMENT: { [key: string]: string } =   Object.assign(
+const WORD_REPLACEMENT: { [key: string]: string } = /* @__PURE__ */ Object.assign(
   Object.create(null),
   {
     and: "&&",
@@ -54,7 +52,7 @@ interface Token {
   isKeyword?: boolean;
 }
 
-const STATIC_TOKEN_MAP: { [key: string]: TKind } =   Object.assign(
+const STATIC_TOKEN_MAP: { [key: string]: TKind } = /* @__PURE__ */ Object.assign(
   Object.create(null),
   {
     "{": "LEFT_BRACE",
@@ -69,7 +67,7 @@ const STATIC_TOKEN_MAP: { [key: string]: TKind } =   Object.assign(
 );
 
 const OPERATORS =
-    "...,.,===,==,++,+,!==,!=,!,||,&&,>=,>,<=,<,??=,??,?.,?,--,-,*,/,%,typeof ,delete ,=>,=,;,in ,new ,|,&,^,~".split(
+  /* @__PURE__ */ "...,.,===,==,++,+,!==,!=,!,||,&&,>=,>,<=,<,??=,??,?.,?,--,-,*,/,%,typeof ,delete ,=>,=,;,in ,new ,|,&,^,~".split(
     ","
   );
 
@@ -150,7 +148,7 @@ function replaceInterpolations(template: string, replacer: (expr: string) => str
 }
 
 const REGEXP_PREFIX_RE = /[(,=:[!&|?{};+\-*%<>~^]/;
-const REGEXP_PREFIX_WORDS =   regexpPrefixWords();
+const REGEXP_PREFIX_WORDS = /* @__PURE__ */ regexpPrefixWords();
 
 function regexpPrefixWords(): Set<string> {
   return new Set([
@@ -352,7 +350,7 @@ const TOKENIZERS = [
   tokenizeSymbol,
   tokenizeStatic,
 ];
-const PROPERTY_TOKENIZERS =   [tokenizeProperty].concat(TOKENIZERS);
+const PROPERTY_TOKENIZERS = /* @__PURE__ */ [tokenizeProperty].concat(TOKENIZERS);
 
 export function tokenize(expr: string): Token[] {
   const result: Token[] = [];
@@ -389,7 +387,6 @@ export function tokenize(expr: string): Token[] {
   }
   return result;
 }
-
 
 const isLeftSeparator = (token: Token) =>
   token && (token.type === "LEFT_BRACE" || token.type === "COMMA");

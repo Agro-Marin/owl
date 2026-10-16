@@ -3,7 +3,6 @@ import { renderToString, snapshotEverything, TestContext } from "../helpers";
 
 snapshotEverything();
 
-
 describe("simple templates, mostly static", () => {
   test("simple string", () => {
     const template = `hello vdom`;

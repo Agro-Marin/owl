@@ -1,8 +1,7 @@
 import { nodeInsertBefore, nodeRemoveChild } from "./dom";
 import type { VNode } from "./index";
 
-
-const txt =   globalThis.document?.createTextNode("")!;
+const txt = /* @__PURE__ */ globalThis.document?.createTextNode("")!;
 
 class VToggler {
   kind: unknown;

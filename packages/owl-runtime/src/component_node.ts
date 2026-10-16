@@ -22,7 +22,6 @@ import { APPLIED_TO_DOM, Fiber, FiberPhase, makeRootFiber, RootFiber } from "./r
 import type { MemoSite } from "./rendering/memo";
 import { STATUS } from "./status";
 
-
 type LifecycleHook = Function;
 export type PropsListener = { update(): void };
 type HookKind =
@@ -33,7 +32,7 @@ type HookKind =
   | "willPatch"
   | "patched";
 
-const NO_HOOKS: LifecycleHook[] =   Object.freeze([]) as any;
+const NO_HOOKS: LifecycleHook[] = /* @__PURE__ */ Object.freeze([]) as any;
 
 export class ComponentNode extends Scope<App> implements VNode<ComponentNode> {
   declare app: App;
@@ -320,7 +319,6 @@ export class ComponentNode extends Scope<App> implements VNode<ComponentNode> {
       this._patch(true);
     }
   }
-
 
   firstNode(): Node | undefined {
     const bdom = this.bdom;

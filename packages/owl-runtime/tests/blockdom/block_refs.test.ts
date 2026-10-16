@@ -2,7 +2,6 @@ import { createBlock, mount, patch, remove } from "../../src/blockdom";
 import { logStep } from "../helpers";
 import { makeTestFixture } from "./helpers";
 
-
 let fixture: HTMLElement;
 
 beforeEach(() => {

@@ -2,7 +2,6 @@ import { snapshotEverything, TestContext } from "../helpers";
 
 snapshotEverything();
 
-
 describe("t-call (template calling)", () => {
   test("basic caller", () => {
     const context = new TestContext();
@@ -595,16 +594,13 @@ describe("t-call (template calling)", () => {
     );
 
     const context = new TestContext({ translateFn });
-    context.addTemplate(
-      "sub",
-        `<span title="title"><t t-out="title"/><t t-out="0"/></span>`
-    );
+    context.addTemplate("sub", `<span title="title"><t t-out="title"/><t t-out="0"/></span>`);
     context.addTemplate(
       "main",
-        `<t t-call="sub" title="'title'" t-translation-context-title="pt" t-translation-context="fr">game</t>`
+      `<t t-call="sub" title="'title'" t-translation-context-title="pt" t-translation-context="fr">game</t>`
     );
 
-    expect(context.renderToString("main")).toBe(  `<span title="title">titlejeu</span>`);
+    expect(context.renderToString("main")).toBe(`<span title="title">titlejeu</span>`);
   });
 
   test("t-call and translation contexts, variation", () => {
@@ -617,15 +613,12 @@ describe("t-call (template calling)", () => {
     );
 
     const context = new TestContext({ translateFn });
-    context.addTemplate(
-      "sub",
-        `<span title="title"><t t-out="title"/><t t-out="0"/></span>`
-    );
+    context.addTemplate("sub", `<span title="title"><t t-out="title"/><t t-out="0"/></span>`);
     context.addTemplate(
       "main",
-        `<t t-call="sub" title.translate="title" t-translation-context-title.translate="pt" t-translation-context="fr">game</t>`
+      `<t t-call="sub" title.translate="title" t-translation-context-title.translate="pt" t-translation-context="fr">game</t>`
     );
 
-    expect(context.renderToString("main")).toBe(  `<span title="title">titulojeu</span>`);
+    expect(context.renderToString("main")).toBe(`<span title="title">titulojeu</span>`);
   });
 });

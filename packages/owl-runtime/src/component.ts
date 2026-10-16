@@ -1,6 +1,5 @@
 import type { ComponentNode } from "./component_node";
 
-
 interface StaticComponentProperties {
   template: string;
   components?: { [componentName: string]: ComponentConstructor };

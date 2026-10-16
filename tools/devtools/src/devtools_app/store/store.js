@@ -28,7 +28,6 @@ export class StorePlugin extends Plugin {
     this._setupPortListener();
   }
 
-
   switchTab(componentName) {
     this.page.set(componentName);
     this._components.activeSelector.set(false);
@@ -42,13 +41,11 @@ export class StorePlugin extends Plugin {
     });
   }
 
-
   foldDirectChildren(element) {
     for (const child of element.children) {
       child.toggled = false;
     }
   }
-
 
   async updateIFrameList() {
     this.frameUrls.set(["top"]);
@@ -100,7 +97,6 @@ export class StorePlugin extends Plugin {
     );
   }
 
-
   toggleDarkMode() {
     this.darkMode.set(!this.darkMode());
     if (this.darkMode()) {
@@ -123,7 +119,6 @@ export class StorePlugin extends Plugin {
       window.location.reload();
     }
   }
-
 
   async _resetData() {
     await this._loadSettings();
@@ -279,7 +274,6 @@ export class StorePlugin extends Plugin {
     }
   }
 }
-
 
 export function evalFunctionInWindow(fn, args = [], frameUrl = "top") {
   const stringifiedArgs = [...args].map((arg) => JSON.stringify(arg));

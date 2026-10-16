@@ -31,7 +31,6 @@ export class ComponentsPlugin extends Plugin {
     this._store = plugin(StorePlugin);
   }
 
-
   async loadComponentsTree(fromOld) {
     if (IS_FIREFOX) {
       await evalInWindow("try { window.$0 = $0; } catch(e) {}");
@@ -154,7 +153,6 @@ export class ComponentsPlugin extends Plugin {
     }
   }
 
-
   updateSearch(search) {
     this.searchText.set(search);
     this.searchResults.set([]);
@@ -209,7 +207,6 @@ export class ComponentsPlugin extends Plugin {
     this.searchIndex.set(index);
     this.selectComponent(this.searchResults()[index]);
   }
-
 
   toggleOrSelectPrevElement(toggle) {
     if (toggle) {
@@ -281,7 +278,6 @@ export class ComponentsPlugin extends Plugin {
     }
   }
 
-
   async loadGetterContent(obj) {
     const result = await evalFunctionInWindow(
       "loadGetterContent",
@@ -313,7 +309,6 @@ export class ComponentsPlugin extends Plugin {
     evalFunctionInWindow("editObject", [path, value, objectType], this._store.activeFrame());
   }
 
-
   toggleSelector() {
     this.activeSelector.set(!this.activeSelector());
     evalFunctionInWindow(
@@ -337,7 +332,6 @@ export class ComponentsPlugin extends Plugin {
     this.selectedElement()?.scrollIntoView({ block: "center", behavior: "smooth" });
     copyToClipboard(this.activeComponent().name);
   }
-
 
   refreshComponent(path = this.activeComponent().path) {
     evalFunctionInWindow("refreshComponent", [path], this._store.activeFrame());
@@ -444,7 +438,6 @@ export class ComponentsPlugin extends Plugin {
     browserInstance.storage.local.set({ observedVariables: toRaw(this.observedVariables()) });
   }
 }
-
 
 function deselectComponent(component) {
   component.selected = false;

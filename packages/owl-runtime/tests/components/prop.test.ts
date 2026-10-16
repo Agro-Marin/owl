@@ -16,7 +16,6 @@ beforeEach(() => {
   fixture = makeTestFixture();
 });
 
-
 describe("basics", () => {
   test("reads the named prop", async () => {
     class Child extends Component {
@@ -125,7 +124,6 @@ describe("basics", () => {
     expect(fixture.innerHTML).toBe("<div><span>buy milk</span></div>");
   });
 });
-
 
 describe("dev mode", () => {
   test("validates initial type on mount (root component)", async () => {
@@ -288,7 +286,6 @@ describe("dev mode", () => {
     expect(fixture.innerHTML).toBe("<span>1</span><i>a</i>");
   });
 });
-
 
 test("throws if called outside a component scope", () => {
   let error: any;

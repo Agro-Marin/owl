@@ -2,7 +2,6 @@ import { mount, patch } from "../../src/blockdom";
 import { makeTestFixture, renderToBdom, renderToString } from "../helpers";
 import { CONTEXT, UPDATED, canonical, generator, prng, render, toXml } from "./template_fuzz_lib";
 
-
 const COUNT = Number(process.env.OWL_TEMPLATE_FUZZ || 400);
 
 test(

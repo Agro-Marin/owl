@@ -75,8 +75,7 @@ export function handleError(params: ErrorParams) {
   const finalize = () => {
     try {
       app.destroy();
-    } catch {
-    }
+    } catch {}
   };
 
   handledBy = null;

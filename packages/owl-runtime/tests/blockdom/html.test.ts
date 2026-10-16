@@ -2,7 +2,6 @@ import { markup } from "@odoo/owl-core";
 import { html, mount, patch, text } from "../../src/blockdom";
 import { makeTestFixture } from "./helpers";
 
-
 let fixture: HTMLElement;
 
 beforeEach(() => {
@@ -12,7 +11,6 @@ beforeEach(() => {
 afterEach(() => {
   fixture.remove();
 });
-
 
 describe("html block", () => {
   test("can be mounted and patched", async () => {

@@ -148,8 +148,7 @@ describe("reactivity in lifecycle", () => {
     expect(steps).toEqual(["render", "willUnmount"]);
   });
 
-  test("change state just before mounting component", async () => {
-  });
+  test("change state just before mounting component", async () => {});
 
   test("change state while mounting component", async () => {
     const steps: any[] = [];

@@ -1,7 +1,6 @@
 import { OwlError } from "./owl_error";
 import { Scope, useScope } from "./scope";
 
-
 export function onWillStart(fn: (scope: Scope) => Promise<void> | void | any) {
   const scope = useScope();
   if (!scope.collectingWillStart) {

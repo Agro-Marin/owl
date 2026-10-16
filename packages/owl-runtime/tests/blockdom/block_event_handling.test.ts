@@ -2,7 +2,6 @@ import { setDebug, setDebugSink } from "@odoo/owl-core";
 import { mount, createBlock, multi, config, patch } from "../../src/blockdom";
 import { makeTestFixture } from "./helpers";
 
-
 let fixture: HTMLElement;
 let initialHandler = config.mainEventHandler;
 

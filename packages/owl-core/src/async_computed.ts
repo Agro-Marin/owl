@@ -224,12 +224,10 @@ function toError(e: unknown): Error {
     if (e instanceof Error || Object.prototype.toString.call(e) === "[object Error]") {
       return e as Error;
     }
-  } catch {
-  }
+  } catch {}
   let message = "Async computed fetcher failed";
   try {
     message = String(e);
-  } catch {
-  }
+  } catch {}
   return new Error(message, { cause: e });
 }

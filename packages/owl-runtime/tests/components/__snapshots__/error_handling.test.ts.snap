@@ -1,3 +1,4 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`a component whose setup throws releases what the setup acquired 1`] = `
 "function anonymous(app, bdom, helpers

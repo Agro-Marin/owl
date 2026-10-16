@@ -10,7 +10,6 @@ import {
 } from "../../src";
 import { makeTestFixture, nextTick, render } from "../helpers";
 
-
 let fixture: HTMLElement;
 
 beforeEach(() => {
@@ -231,7 +230,6 @@ describe("component keys", () => {
     expect(destroyed).toHaveLength(values.length);
   });
 });
-
 
 function prng(seed: number) {
   let s = seed;

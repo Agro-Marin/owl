@@ -2,7 +2,6 @@ import { renderToString, snapshotEverything } from "../helpers";
 
 snapshotEverything();
 
-
 describe("white space handling", () => {
   test("white space only text nodes are condensed into a single space", () => {
     const template = `<div>  </div>`;

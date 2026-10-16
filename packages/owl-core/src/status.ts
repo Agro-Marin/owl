@@ -1,4 +1,3 @@
-
 export const STATUS = {
   NEW: 0,
   MOUNTED: 1,

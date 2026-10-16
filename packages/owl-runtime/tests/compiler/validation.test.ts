@@ -2,7 +2,6 @@ import { compile } from "@odoo/owl-compiler";
 import { TemplateSet } from "../../src/template_set";
 import { renderToString, snapshotTemplate, TestContext } from "../helpers";
 
-
 describe("basic validation", () => {
   test("error if no template with given name", () => {
     const context = new TemplateSet();

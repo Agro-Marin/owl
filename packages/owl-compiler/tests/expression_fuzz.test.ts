@@ -1,6 +1,5 @@
 import { compileExpr } from "../src/inline_expressions";
 
-
 function prng(seed: number) {
   let s = seed;
   return () => {

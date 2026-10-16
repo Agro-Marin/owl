@@ -22,8 +22,11 @@ assertEq<typeof comp.props.s, boolean | undefined>();
 type ParentProps = GetProps<Comp>;
 const ok1: ParentProps = { r: "x" };
 const ok2: ParentProps = { r: "x", p: 1, q: "y", s: true };
+// @ts-expect-error r is mandatory
 const ko1: ParentProps = { p: 1 };
+// @ts-expect-error p must be a number
 const ko2: ParentProps = { r: "x", p: "nope" };
+// @ts-expect-error s must be a boolean
 const ko3: ParentProps = { r: "x", s: 1 };
 
 class OnlyOptionals {
@@ -38,12 +41,15 @@ assertEq<typeof onlyOptionals.props.className, string | undefined>();
 type OptParentProps = GetProps<OnlyOptionals>;
 const ok3: OptParentProps = {};
 const ok4: OptParentProps = { className: "a" };
+// @ts-expect-error className must be a string
 const ko4: OptParentProps = { className: 4 };
 
 props({ p: t.number().optional(4) });
 props({ p: t.number().optional(() => 4) });
+// @ts-expect-error default must be a number
 props({ p: t.number().optional("4") });
 props({ cb: t.function().optional(() => () => {}) });
+// @ts-expect-error a plain function default is rejected (factory form only)
 props({ cb: t.function().optional(() => {}) });
 
 function _staticPropCheck() {
@@ -72,11 +78,13 @@ function _registryCheck() {
   const value = registry.get("key");
   assertEq<typeof value, string>();
   assertEq<ReturnType<typeof registry.items>, string[]>();
+  // @ts-expect-error a number is not a string
   registry.add("other", 42);
 
   const resource = new Resource({ validation: t.number() });
   resource.add(5);
   assertEq<ReturnType<typeof resource.items>, number[]>();
+  // @ts-expect-error a string is not a number
   resource.add("nope");
   void value;
 }

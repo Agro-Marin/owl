@@ -2,13 +2,12 @@ import { OwlError } from "@odoo/owl-core";
 import type { Setter, Updater } from "./block_compiler";
 import { fromDom } from "./dom";
 
-const elemSetAttribute =   fromDom(() => Element.prototype.setAttribute);
-const removeAttribute =   fromDom(() => Element.prototype.removeAttribute);
-const tokenListAdd =   fromDom(() => DOMTokenList.prototype.add);
-const tokenListRemove =   fromDom(() => DOMTokenList.prototype.remove);
+const elemSetAttribute = /* @__PURE__ */ fromDom(() => Element.prototype.setAttribute);
+const removeAttribute = /* @__PURE__ */ fromDom(() => Element.prototype.removeAttribute);
+const tokenListAdd = /* @__PURE__ */ fromDom(() => DOMTokenList.prototype.add);
+const tokenListRemove = /* @__PURE__ */ fromDom(() => DOMTokenList.prototype.remove);
 const isArray = Array.isArray;
 const wordRegexp = /\s+/;
-
 
 function setAttribute(this: HTMLElement, key: string, value: any) {
   switch (value) {
@@ -31,7 +30,7 @@ export function createAttrUpdater(attr: string): Setter<HTMLElement> {
   };
 }
 
-const NO_ATTRS =   Object.freeze({});
+const NO_ATTRS = /* @__PURE__ */ Object.freeze({});
 
 function toAttrs(attrs: any): { [name: string]: any } {
   if (!attrs) {
@@ -85,8 +84,8 @@ export function makeAttrsSetter(attrsUpdater: Updater<HTMLElement>): Setter<HTML
   };
 }
 
-export const attrsUpdater =   makeAttrsUpdater(updateClass, updateStyle);
-export const attrsSetter =   makeAttrsSetter(attrsUpdater);
+export const attrsUpdater = /* @__PURE__ */ makeAttrsUpdater(updateClass, updateStyle);
+export const attrsSetter = /* @__PURE__ */ makeAttrsSetter(attrsUpdater);
 
 type ClassExpr = string | number | boolean | String | ClassExpr[] | { [c: string]: any };
 
@@ -135,7 +134,6 @@ function addWords(result: { [c: string]: any }, str: string, value: any) {
   }
 }
 
-
 const CSS_PROP_CACHE: { [key: string]: string } = Object.create(null);
 
 function toKebabCase(prop: string): string {
@@ -183,20 +181,20 @@ function toStyleObj(expr: string | { [prop: string]: any }): StyleObj {
         while (i < len) {
           const c = str.charCodeAt(i);
           if (quote) {
-            if (c === 92  ) {
+            if (c === 92) {
               i += 2;
               continue;
             }
             if (c === quote) {
               quote = 0;
             }
-          } else if (c === 34   || c === 39  ) {
+          } else if (c === 34 || c === 39) {
             quote = c;
-          } else if (c === 40  ) {
+          } else if (c === 40) {
             depth++;
-          } else if (c === 41  ) {
+          } else if (c === 41) {
             if (depth > 0) depth--;
-          } else if (c === 59   && depth === 0) {
+          } else if (c === 59 && depth === 0) {
             break;
           }
           i++;
@@ -230,7 +228,6 @@ function toStyleObj(expr: string | { [prop: string]: any }): StyleObj {
       return {};
   }
 }
-
 
 export function setClass(this: HTMLElement, val: any) {
   val = toClassObj(val);
@@ -297,7 +294,6 @@ export function makeSharedClassUpdaters(staticClasses: string[]) {
   }
   return classUpdater;
 }
-
 
 export function setStyle(this: HTMLElement, val: any) {
   val = val === "" ? {} : toStyleObj(val);

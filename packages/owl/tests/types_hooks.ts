@@ -41,15 +41,18 @@ useOnChange(
 
 useOnChange(
   () => [count()],
+  // @ts-expect-error the callback cannot declare more parameters than there are
   (_c: number, _extra: string) => {}
 );
 
 useOnChange(
   () => [count()],
+  // @ts-expect-error wrong dependency type
   (_c: string) => {}
 );
 
 useOnChange(
+  // @ts-expect-error dependencies must return an array
   () => count(),
   () => {}
 );
@@ -57,11 +60,13 @@ useOnChange(
 useOnChange(
   () => [count()],
   () => {},
+  // @ts-expect-error unknown option
   { initial: false }
 );
 
 const app = useApp();
 assertEq<typeof app, App>();
+// @ts-expect-error runtime App has no arbitrary dynamic methods
 app.missingMethod();
 
 class CustomApp extends App {
@@ -71,18 +76,26 @@ class CustomApp extends App {
 }
 const customApp = useApp<CustomApp>();
 assertEq<typeof customApp, CustomApp>();
+// @ts-expect-error the runtime hook requires a complete App contract
 useApp<{ dev: boolean }>();
+// @ts-expect-error a contextual assignment cannot implicitly narrow App
 const contextualApp: CustomApp = useApp();
+// @ts-expect-error a function signature cannot implicitly narrow App
 const customAppReader: () => CustomApp = useApp;
 declare function acceptCustomApp(app: CustomApp): void;
+// @ts-expect-error an argument context cannot implicitly narrow App
 acceptCustomApp(useApp());
 const explicitAppReader: () => CustomApp = useApp<CustomApp>;
 
 const unchecked = useConfig("unchecked");
+// @ts-expect-error configuration without a schema or explicit type is unknown
 unchecked.toFixed();
 const aliasUnchecked = config("unchecked");
+// @ts-expect-error the deprecated alias must not erase the unknown return type
 aliasUnchecked.toFixed();
+// @ts-expect-error contextual assignment cannot type unchecked configuration
 const contextualConfig: number = useConfig("unchecked");
+// @ts-expect-error an alias cannot infer config types from assignments
 const contextualAliasConfig: number = config("unchecked");
 
 interface NamedConfig {
@@ -92,7 +105,9 @@ interface NamedConfig {
 const namedConfig: NamedConfig = { timeout: 1, lookup: (id) => id.length };
 new App({ config: namedConfig });
 providePlugins([], namedConfig);
+// @ts-expect-error app configuration must be an object
 new App({ config: 1 });
+// @ts-expect-error provider configuration must be an object
 providePlugins([], "config");
 
 void [

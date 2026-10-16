@@ -129,7 +129,7 @@ function plainSignal<T>(value: T, options: SignalOptions<T> = {}): Signal<T> {
   return buildSignal<T>(value, identity, options.equals);
 }
 
-export const signal =   Object.assign(plainSignal, {
+export const signal = /* @__PURE__ */ Object.assign(plainSignal, {
   trigger: triggerSignal,
   ref: signalRef,
   Array: signalArray,

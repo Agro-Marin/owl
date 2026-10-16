@@ -3,7 +3,6 @@ import { makeTestFixture, snapshotEverything } from "../helpers";
 
 snapshotEverything();
 
-
 describe("components in t-out", () => {
   let fixture: HTMLElement;
 

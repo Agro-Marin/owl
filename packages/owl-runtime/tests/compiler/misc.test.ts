@@ -11,7 +11,6 @@ import { helpers } from "../../src/rendering/template_helpers";
 
 snapshotEverything();
 
-
 describe("misc", () => {
   test("global", () => {
     const context = new TestContext();

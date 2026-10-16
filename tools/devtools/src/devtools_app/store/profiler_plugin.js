@@ -15,7 +15,6 @@ export class ProfilerPlugin extends Plugin {
     this._store = plugin(StorePlugin);
   }
 
-
   buildEventsTree() {
     let tree = [];
     for (const event of this.events()) {
@@ -162,7 +161,6 @@ export class ProfilerPlugin extends Plugin {
     evts.splice(low, 0, item);
   }
 
-
   async toggleTracing() {
     this.traceRenderings.set(
       await evalFunctionInWindow(
@@ -195,7 +193,6 @@ export class ProfilerPlugin extends Plugin {
     );
   }
 }
-
 
 function isObjectWithShape(obj, shape) {
   if (typeof obj !== "object" || Array.isArray(obj)) {

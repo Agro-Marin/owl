@@ -72,7 +72,6 @@ export function trim(str: string): string {
   return str.replace(/\s/g, "");
 }
 
-
 let shouldSnapshot = false;
 let snapshottedTemplates: Set<string> = new Set();
 

@@ -9,7 +9,6 @@ import {
   nodeSetTextContent,
 } from "./dom";
 
-
 class VList {
   children: VNode[];
   anchor: Node | undefined;

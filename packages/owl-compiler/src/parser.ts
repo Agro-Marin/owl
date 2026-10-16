@@ -2,7 +2,6 @@ import type { CustomDirectives } from ".";
 import { OwlError } from "@odoo/owl-core";
 import { parseXML } from "./parse_xml";
 
-
 export type EventHandlers = { [eventName: string]: string };
 export type Attrs = { [attrs: string]: string };
 
@@ -254,7 +253,6 @@ function parseNode(node: Node, ctx: ParsingContext): AST | null {
   );
 }
 
-
 function isTranslationContext(attribute: string): boolean {
   return attribute === "t-translation-context" || attribute.startsWith(TRANSLATION_CONTEXT_PREFIX);
 }
@@ -372,7 +370,6 @@ function parseTCustom(node: Element, ctx: ParsingContext): AST | null {
   }
   return null;
 }
-
 
 function parseTDebugLog(node: Element, ctx: ParsingContext): AST | null {
   if (node.hasAttribute("t-debug")) {
@@ -523,7 +520,6 @@ function parseDOMNode(node: Element, ctx: ParsingContext): AST | null {
   };
 }
 
-
 function parseTOutNode(node: Element, ctx: ParsingContext): AST | null {
   if (!node.hasAttribute("t-out") && !node.hasAttribute("t-esc")) {
     return null;
@@ -565,7 +561,6 @@ function parseTOutNode(node: Element, ctx: ParsingContext): AST | null {
     content: [tOut],
   };
 }
-
 
 function parseTForEach(node: Element, ctx: ParsingContext): AST | null {
   if (!node.hasAttribute("t-foreach")) {
@@ -628,7 +623,7 @@ function parseTForEach(node: Element, ctx: ParsingContext): AST | null {
   return wrapping(ast, body);
 }
 
-const UNVISITABLE: Partial<Record<ASTType, string>> =   unvisitableTypes();
+const UNVISITABLE: Partial<Record<ASTType, string>> = /* @__PURE__ */ unvisitableTypes();
 
 function unvisitableTypes(): Partial<Record<ASTType, string>> {
   return {
@@ -678,7 +673,6 @@ function parseTKey(node: Element, ctx: ParsingContext): AST | null {
   return wrapping<ASTTKey>({ type: ASTType.TKey, expr: key, content }, content);
 }
 
-
 function parseTCall(node: Element, ctx: ParsingContext): AST | null {
   if (!node.hasAttribute("t-call")) {
     return null;
@@ -718,7 +712,6 @@ function parseTCall(node: Element, ctx: ParsingContext): AST | null {
   };
 }
 
-
 function parseTCallBlock(node: Element, ctx: ParsingContext): AST | null {
   if (!node.hasAttribute("t-call-block")) {
     return null;
@@ -735,7 +728,6 @@ function parseTCallBlock(node: Element, ctx: ParsingContext): AST | null {
     name,
   };
 }
-
 
 function parseTIf(node: Element, ctx: ParsingContext): AST | null {
   if (!node.hasAttribute("t-if")) {
@@ -773,7 +765,6 @@ function parseTIf(node: Element, ctx: ParsingContext): AST | null {
   };
 }
 
-
 function parseTSetNode(node: Element, ctx: ParsingContext): AST | null {
   if (!node.hasAttribute("t-set")) {
     return null;
@@ -793,7 +784,6 @@ function parseTSetNode(node: Element, ctx: ParsingContext): AST | null {
   }
   return { type: ASTType.TSet, name, value, defaultValue, body, hasNoRepresentation: true };
 }
-
 
 const directiveErrorMap = new Map([
   [
@@ -934,7 +924,6 @@ function isOwnSlot(slotNode: Element, root: Element): boolean {
   return true;
 }
 
-
 function parseTCallSlot(node: Element, ctx: ParsingContext): AST | null {
   if (!node.hasAttribute("t-call-slot") && !node.hasAttribute("t-slot")) {
     return null;
@@ -971,7 +960,6 @@ function parseTCallSlot(node: Element, ctx: ParsingContext): AST | null {
   };
 }
 
-
 function parseWrapped(
   node: Element,
   ctx: ParsingContext,
@@ -995,7 +983,6 @@ function parseTTranslation(node: Element, ctx: ParsingContext): AST | null {
   );
 }
 
-
 function parseTTranslationContext(node: Element, ctx: ParsingContext): AST | null {
   const translationCtx = node.getAttribute("t-translation-context");
   if (!translationCtx) {
@@ -1008,7 +995,6 @@ function parseTTranslationContext(node: Element, ctx: ParsingContext): AST | nul
     )
   );
 }
-
 
 function parseChildren(node: Element, ctx: ParsingContext): AST[] {
   const children: AST[] = [];

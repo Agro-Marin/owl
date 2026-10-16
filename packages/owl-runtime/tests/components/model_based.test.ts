@@ -11,7 +11,6 @@ import {
 } from "../../src";
 import { makeTestFixture, nextMicroTick, nextTick } from "../helpers";
 
-
 function prng(seed: number) {
   let s = seed;
   return () => {

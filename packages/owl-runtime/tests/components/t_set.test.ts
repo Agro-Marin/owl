@@ -9,7 +9,6 @@ beforeEach(() => {
   fixture = makeTestFixture();
 });
 
-
 describe("t-set", () => {
   test("t-set outside modified in t-if", async () => {
     class Comp extends Component {

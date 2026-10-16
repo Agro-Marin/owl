@@ -6,4 +6,4 @@ function componentType(): Type<typeof Component> {
 }
 
 export const types: typeof coreTypes & { component: () => Type<typeof Component> } =
-    Object.assign({}, coreTypes, { component: componentType });
+  /* @__PURE__ */ Object.assign({}, coreTypes, { component: componentType });

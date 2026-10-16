@@ -1,6 +1,5 @@
 import { renderToString, snapshotTemplate, getConsoleOutput } from "../helpers";
 
-
 describe("debugging", () => {
   test("t-debug", () => {
     const template = `<div t-debug=""><t t-if="true"><span t-debug="">hey</span></t></div>`;

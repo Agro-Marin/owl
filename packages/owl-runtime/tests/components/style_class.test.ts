@@ -164,8 +164,6 @@ describe("style and class handling", () => {
     expect(fixture.innerHTML).toBe(`<span class="someclass">b</span>`);
   });
 
-
-
   test("class with extra whitespaces", async () => {
     class Child extends Component {
       static template = xml`<div t-att-class="this.props.class"/>`;

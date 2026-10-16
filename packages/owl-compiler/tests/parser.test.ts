@@ -4,7 +4,6 @@ import { ASTType, ForEachNoFlag, parse } from "../src/parser";
 import { getConsoleOutput } from "./helpers";
 
 describe("qweb parser", () => {
-
   test("simple text node", async () => {
     expect(parse("foo")).toEqual({
       type: ASTType.Text,
@@ -387,7 +386,6 @@ describe("qweb parser", () => {
     });
   });
 
-
   test("t-esc node (deprecated)", async () => {
     expect(parse(`<t t-esc="text"/>`)).toEqual({
       type: ASTType.TOut,
@@ -438,7 +436,6 @@ describe("qweb parser", () => {
       ],
     });
   });
-
 
   test("t-if", async () => {
     expect(parse(`<div><t t-if="condition">hey</t></div>`)).toEqual({
@@ -615,7 +612,6 @@ describe("qweb parser", () => {
     });
   });
 
-
   test("simple t-set expression", async () => {
     expect(parse(`<t t-set="key" t-value="value" />`)).toEqual({
       type: ASTType.TSet,
@@ -731,7 +727,6 @@ describe("qweb parser", () => {
       ],
     });
   });
-
 
   test("simple t-foreach expression, t-key mandatory", async () => {
     expect(() =>
@@ -986,7 +981,6 @@ describe("qweb parser", () => {
     );
   });
 
-
   test("simple t-call expression", async () => {
     expect(parse(`<t t-call="blabla" />`)).toEqual({
       type: ASTType.TCall,
@@ -1043,7 +1037,6 @@ describe("qweb parser", () => {
     });
   });
 
-
   test("simple t-on expression", async () => {
     expect(parse(`<button t-on-click="add">Click</button>`)).toEqual({
       type: ASTType.DomNode,
@@ -1085,7 +1078,6 @@ describe("qweb parser", () => {
       "Missing event name with t-on directive"
     );
   });
-
 
   test("t-model select", async () => {
     expect(parse(`<select t-model="state.model"><option value="1" /></select>`)).toEqual({
@@ -1162,7 +1154,6 @@ describe("qweb parser", () => {
       ns: null,
     });
   });
-
 
   test("just a plain component", async () => {
     expect(parse(`<MyComponent />`)).toEqual({
@@ -1765,7 +1756,6 @@ describe("qweb parser", () => {
     });
   });
 
-
   test("a simple t-call-slot", async () => {
     expect(parse(`<t t-call-slot="default"/>`)).toEqual({
       type: ASTType.TCallSlot,
@@ -1814,7 +1804,6 @@ describe("qweb parser", () => {
     });
   });
 
-
   test("a t-debug on a dom node", async () => {
     expect(parse(`<div t-debug="">hey</div>`)).toEqual({
       type: ASTType.TDebug,
@@ -1851,7 +1840,6 @@ describe("qweb parser", () => {
       },
     });
   });
-
 
   test("a t-ref on a dom node", async () => {
     expect(parse(`<div t-ref="name">hey</div>`)).toEqual({
@@ -1963,7 +1951,6 @@ describe("qweb parser", () => {
     });
   });
 
-
   test('t-translation-context="fr"', async () => {
     expect(parse(`<t t-translation-context="fr">word</t>`)).toEqual({
       type: ASTType.TTranslationContext,
@@ -2021,7 +2008,6 @@ describe("qweb parser", () => {
       translationCtx: "fr",
     });
   });
-
 
   test('t-translation-context="fr" and t-translation-context-title="pt" for a div attr title', async () => {
     expect(
@@ -2341,7 +2327,6 @@ describe("nested t-set-slot", () => {
       parse(`<C><t t-set-slot="a"><D><t t-set-slot="b">x</t></D></t></C>`)
     ).not.toThrow();
   });
-
 
   test("a t-set-slot's scope, handlers and translation contexts are not its attributes", async () => {
     const ast: any = parse(

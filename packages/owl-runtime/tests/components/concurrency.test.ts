@@ -1629,7 +1629,6 @@ test("concurrent renderings scenario 9", async () => {
 });
 
 test("concurrent renderings scenario 10", async () => {
-
   const defB = makeDeferred();
   const defC = makeDeferred();
   let stateB: any = null;
@@ -4156,7 +4155,6 @@ test("component destroyed just after render", async () => {
   await nextTick();
   expect(steps.splice(0)).toMatchInlineSnapshot(`[]`);
 });
-
 
 test("sibling rendering: child without willStart renders before async sibling", async () => {
   class ChildA extends Component {

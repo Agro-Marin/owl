@@ -219,10 +219,10 @@ function getKeys(node: ComponentNode): string[] {
   return keys;
 }
 
-const AtomTable =   tableClass<Atom>(Object.create(null));
+const AtomTable = /* @__PURE__ */ tableClass<Atom>(Object.create(null));
 
-const PropsTable =   tableClass<any>(
-    Object.freeze(Object.create(null))
+const PropsTable = /* @__PURE__ */ tableClass<any>(
+  /* @__PURE__ */ Object.freeze(Object.create(null))
 );
 
 function tableClass<T>(prototype: object): new () => Record<string, T> {
@@ -322,7 +322,7 @@ const viewHandler: ProxyHandler<PropsView> = {
   deleteProperty: () => false,
 };
 
-export const useProps =   Object.assign(makeProps, {
+export const useProps = /* @__PURE__ */ Object.assign(makeProps, {
   static: staticProp,
 }) as PropsFunction;
 

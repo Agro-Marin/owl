@@ -1,3 +1,4 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`a sub-root error handler runs after the root component's own onError 1`] = `
 "function anonymous(app, bdom, helpers

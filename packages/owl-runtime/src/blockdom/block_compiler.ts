@@ -56,7 +56,6 @@ function makeSyncedPropSetter(name: string): Setter<HTMLElement> {
   };
 }
 
-
 type Handlers = readonly (HandlerFn | null)[];
 
 type BlockType = (
@@ -128,7 +127,6 @@ function parseBlock(str: string): ParsedBlock {
     handlerN: context.handlers.length,
   };
 }
-
 
 interface DynamicInfo {
   idx: number;
@@ -345,7 +343,6 @@ function parentTree(tree: IntermediateTree): IntermediateTree | null {
   }
   return parent;
 }
-
 
 interface RefCollector {
   idx: number;

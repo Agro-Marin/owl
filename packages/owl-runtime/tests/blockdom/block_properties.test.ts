@@ -2,7 +2,6 @@ import { setDebug, setDebugSink } from "@odoo/owl-core";
 import { list, mount, patch, createBlock } from "../../src/blockdom";
 import { makeTestFixture } from "./helpers";
 
-
 let fixture: HTMLElement;
 
 beforeEach(() => {

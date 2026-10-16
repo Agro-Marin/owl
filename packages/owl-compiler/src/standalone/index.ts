@@ -1,4 +1,3 @@
-
 import { readdir, readFile, realpath, stat } from "fs/promises";
 import path from "path";
 import { debuglog } from "node:util";
@@ -35,7 +34,6 @@ async function getXmlFiles(paths: string[]): Promise<string[]> {
 function templateFunctionName(name: string): string {
   return `template_${name.replace(/[^\w$]/g, "_")}`;
 }
-
 
 export async function compileTemplates(paths: string[]) {
   log("discover templates under %d input path(s)", paths.length);

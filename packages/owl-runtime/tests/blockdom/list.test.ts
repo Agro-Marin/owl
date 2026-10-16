@@ -2,7 +2,6 @@ import { setDebug, setDebugSink } from "@odoo/owl-core";
 import { html, list, mount, multi, patch, text, createBlock, VNode } from "../../src/blockdom";
 import { makeTestFixture } from "./helpers";
 
-
 function withKey(vnode: VNode, key: any) {
   vnode.key = key;
   return vnode;

@@ -11,8 +11,7 @@ window.addEventListener(
             ? { type: event.data.type, data: event.data.data, origin: event.data.origin }
             : { type: event.data.type, origin: event.data.origin }
         );
-      } catch (e) {
-      }
+      } catch (e) {}
     }
   },
   false

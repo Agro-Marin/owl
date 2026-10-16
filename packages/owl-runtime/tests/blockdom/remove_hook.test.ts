@@ -1,7 +1,6 @@
 import { createBlock, mount, multi, patch } from "../../src/blockdom";
 import { makeTestFixture } from "./helpers";
 
-
 let fixture: HTMLElement;
 
 beforeEach(() => {

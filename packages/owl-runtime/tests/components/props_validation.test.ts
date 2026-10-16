@@ -15,7 +15,6 @@ beforeEach(() => {
   fixture = makeTestFixture();
 });
 
-
 describe("props validation", () => {
   test("validation is only done in dev mode", async () => {
     class SubComp extends Component {
@@ -831,7 +830,6 @@ describe("props validation", () => {
   });
 });
 
-
 describe("schema defaults", () => {
   test("default values can be declared in the schema", async () => {
     class SubComp extends Component {
@@ -953,7 +951,6 @@ describe("schema defaults", () => {
     expect(error.message).toMatch("Invalid component default props (SubComp)");
   });
 });
-
 
 describe("schema.toShape()", () => {
   test("t.object().toShape() returns the shape it was built from", () => {

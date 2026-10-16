@@ -3,7 +3,6 @@ import { makeTestFixture, renderToBdom, renderToString, snapshotEverything } fro
 
 snapshotEverything();
 
-
 describe("t-if", () => {
   test("t-else with a t-if renders as t-elif, as owl 1d588236 did", () => {
     const template = `<div><span t-if="a">A</span><span t-else="" t-if="b">B</span></div>`;

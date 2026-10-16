@@ -1,4 +1,3 @@
-
 export function prng(seed: number) {
   let s = seed;
   return () => {
@@ -515,7 +514,6 @@ export function nodeXml(n: TNode): string {
 export function escapeAttr(value: string): string {
   return value.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
 }
-
 
 export interface RHandler {
   event: string;

@@ -69,7 +69,7 @@ export interface CompileOptions {
   hasGlobalValues: boolean;
 }
 
-const xmlDoc: Document =   makeXmlDocument();
+const xmlDoc: Document = /* @__PURE__ */ makeXmlDocument();
 
 function makeXmlDocument(): Document {
   return typeof document === "undefined"
@@ -111,7 +111,6 @@ function propKey(name: string): string {
 function toStringExpression(str: string) {
   return `\`${escapeTemplateString(str)}\``;
 }
-
 
 class BlockDescription {
   varName: string;
@@ -189,7 +188,6 @@ class BlockDescription {
     return t.innerHTML;
   }
 }
-
 
 interface Context {
   block: BlockDescription | null;

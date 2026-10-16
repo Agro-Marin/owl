@@ -13,7 +13,6 @@ import { Component, mount as mountComponent, xml } from "../../src";
 
 snapshotEverything();
 
-
 describe("t-out", () => {
   let fixture: HTMLElement;
 
