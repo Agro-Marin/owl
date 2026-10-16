@@ -41,7 +41,7 @@ useOnChange(
 
 useOnChange(
   () => [count()],
-  // @ts-expect-error the callback cannot declare more parameters than there are
+  // @ts-expect-error the callback cannot declare more parameters than there are dependencies
   (_c: number, _extra: string) => {}
 );
 
