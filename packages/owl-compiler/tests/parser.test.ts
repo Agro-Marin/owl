@@ -1503,6 +1503,76 @@ describe("qweb parser", () => {
     );
   });
 
+  test("a <t> rejects a directive it would drop", async () => {
+    expect(() => parse(`<t t-raw="h"/>`)).toThrow("Unsupported directive 't-raw' on a <t>");
+    expect(() => parse(`<t t-on-click="f">x</t>`)).toThrow(
+      "Unsupported directive 't-on-click' on a <t>"
+    );
+    expect(() => parse(`<t t-att-class="c">x</t>`)).toThrow(
+      "Unsupported directive 't-att-class' on a <t>"
+    );
+    expect(() => parse(`<t t-if="a" t-att-class="c">x</t>`)).toThrow(
+      "Unsupported directive 't-att-class' on a <t>"
+    );
+    expect(() => parse(`<t t-foreach="l" t-as="i" t-key="i" t-index="n">x</t>`)).toThrow(
+      "Unsupported directive 't-index' on a <t>"
+    );
+    expect(() => parse(`<t t-if="a">A</t><t t-esle="">B</t>`)).toThrow(
+      "Unsupported directive 't-esle' on a <t>"
+    );
+    expect(() => parse(`<t t-name="n" t-inherit_mode="primary">x</t>`)).toThrow(
+      "Unsupported directive 't-inherit_mode' on a <t>"
+    );
+    expect(() => parse(`<t t-custom-foo="x">x</t>`)).toThrow(
+      'Custom directive "foo" is not defined'
+    );
+  });
+
+  test("a <t> keeps the attributes a template root carries", async () => {
+    for (const attrs of [
+      `t-name="n"`,
+      `t-name="n" t-inherit="p" t-inherit-mode="primary"`,
+      `t-name="n" owl="1"`,
+      `t-name="n" t-translation-context="web"`,
+      `t-name="n" t-translation-context-title="web"`,
+      `t-name="n" xml:space="preserve"`,
+    ]) {
+      expect(() => parse(`<t ${attrs}>x</t>`)).not.toThrow();
+    }
+  });
+
+  test("a t-set rejects a directive it would drop", async () => {
+    expect(() => parse(`<t t-set="v" t-valuef="1"/>`)).toThrow(
+      "Unsupported directive 't-valuef' on a t-set node"
+    );
+    expect(() => parse(`<t t-set="v" t-value="1" t-on-click="f"/>`)).toThrow(
+      "Unsupported directive 't-on-click' on a t-set node"
+    );
+    expect(() => parse(`<t t-set="v" t-value="1" t-translation-context="mod"/>`)).not.toThrow();
+  });
+
+  test("t-call-block and t-call-slot go on a <t>, and t-call-block takes no content", async () => {
+    expect(() => parse(`<div t-call-block="b">x</div>`)).toThrow(
+      "Directive 't-call-block' can only be used on <t> nodes (used on a <div>)"
+    );
+    expect(() => parse(`<t t-call-block="b"><div/></t>`)).toThrow(
+      "Directive 't-call-block' takes no content"
+    );
+    expect(() => parse(`<t t-call-block="b"> <!-- c --> </t>`)).not.toThrow();
+    expect(() => parse(`<div t-call-slot="s" class="c"/>`)).toThrow(
+      "Directive 't-call-slot' can only be used on <t> nodes (used on a <div>)"
+    );
+  });
+
+  test("a t-set-slot's arguments are the attributes no directive on it consumed", async () => {
+    const ast: any = parse(
+      `<MyComponent><t t-set-slot="a" t-call="sub" x="1"/><t t-set-slot="b" y="2">b</t></MyComponent>`
+    );
+    expect(ast.slots.a.attrs).toBe(null);
+    expect(ast.slots.a.content.attrs).toEqual({ x: "1" });
+    expect(ast.slots.b.attrs).toEqual({ y: "2" });
+  });
+
   test("a named slot under a directive inside a component throws", async () => {
     expect(() =>
       parse(`<MyComponent><t t-if="cond"><t t-set-slot="a">foo</t></t></MyComponent>`)

@@ -258,7 +258,26 @@ function isTranslationContext(attribute: string): boolean {
 }
 
 function unsupportedDirectiveError(directive: string, where: string): OwlError {
+  if (directive.startsWith("t-custom-") && directive.length > 9) {
+    return new OwlError(`Custom directive "${directive.split(".")[0].slice(9)}" is not defined`);
+  }
   return new OwlError(`Unsupported directive '${directive}' on ${where}`);
+}
+
+const TEMPLATE_ROOT_ATTRS = new Set(["t-name", "t-inherit", "t-inherit-mode"]);
+
+function rejectDirectives(node: Element, where: string, allowed?: Set<string>) {
+  for (const attr of node.getAttributeNames()) {
+    if (attr.startsWith("t-") && !isTranslationContext(attr) && !allowed?.has(attr)) {
+      throw unsupportedDirectiveError(attr, where);
+    }
+  }
+}
+
+function tOnlyError(directive: string, node: Element): OwlError {
+  return new OwlError(
+    `Directive '${directive}' can only be used on <t> nodes (used on a <${node.tagName}>)`
+  );
 }
 
 function tRefError(node: Element): OwlError {
@@ -322,6 +341,7 @@ function parseTNode(node: Element, ctx: ParsingContext): AST | null {
   if (node.hasAttribute("t-ref")) {
     throw tRefError(node);
   }
+  rejectDirectives(node, "a <t>", TEMPLATE_ROOT_ATTRS);
   return parseChildNodes(node, ctx);
 }
 
@@ -678,9 +698,7 @@ function parseTCall(node: Element, ctx: ParsingContext): AST | null {
     return null;
   }
   if (node.tagName !== "t") {
-    throw new OwlError(
-      `Directive 't-call' can only be used on <t> nodes (used on a <${node.tagName}>)`
-    );
+    throw tOnlyError("t-call", node);
   }
   const subTemplate = node.getAttribute("t-call")!;
   const context = exprAttr(node, "t-call-context");
@@ -699,6 +717,7 @@ function parseTCall(node: Element, ctx: ParsingContext): AST | null {
     }
     attrs = attrs || {};
     attrs[attributeName] = value;
+    node.removeAttribute(attributeName);
   }
 
   const body = parseChildNodes(node, ctx);
@@ -717,16 +736,30 @@ function parseTCallBlock(node: Element, ctx: ParsingContext): AST | null {
     return null;
   }
   const name = exprAttr(node, "t-call-block")!;
-  const directive = node
-    .getAttributeNames()
-    .find((a) => a.startsWith("t-") && a !== "t-call-block" && !isTranslationContext(a));
-  if (directive) {
-    throw unsupportedDirectiveError(directive, "a t-call-block node");
+  if (node.tagName !== "t") {
+    throw tOnlyError("t-call-block", node);
+  }
+  node.removeAttribute("t-call-block");
+  rejectDirectives(node, "a t-call-block node");
+  if (hasContent(node)) {
+    throw new OwlError("Directive 't-call-block' takes no content");
   }
   return {
     type: ASTType.TCallBlock,
     name,
   };
+}
+
+function hasContent(node: Element): boolean {
+  for (const child of node.childNodes) {
+    if (
+      child.nodeType === Node.ELEMENT_NODE ||
+      (child.nodeType !== Node.COMMENT_NODE && child.textContent!.trim())
+    ) {
+      return true;
+    }
+  }
+  return false;
 }
 
 function parseTIf(node: Element, ctx: ParsingContext): AST | null {
@@ -771,6 +804,9 @@ function parseTSetNode(node: Element, ctx: ParsingContext): AST | null {
   }
   const name = node.getAttribute("t-set")!;
   const value = node.getAttribute("t-value") || null;
+  node.removeAttribute("t-set");
+  node.removeAttribute("t-value");
+  rejectDirectives(node, "a t-set node");
   const isText = [...node.childNodes].every(
     (n) => n.nodeType === Node.TEXT_NODE || n.nodeType === Node.COMMENT_NODE
   );
@@ -833,6 +869,7 @@ function parseComponent(node: Element, ctx: ParsingContext): AST | null {
     }
     props = props || {};
     props[name] = value;
+    node.removeAttribute(name);
   }
 
   let slots: ASTComponent["slots"] | null = null;
@@ -931,6 +968,9 @@ function parseTCallSlot(node: Element, ctx: ParsingContext): AST | null {
   if (node.hasAttribute("t-slot")) {
     console.warn(`t-slot has been renamed t-call-slot.`);
   }
+  if (node.tagName !== "t") {
+    throw tOnlyError(node.hasAttribute("t-slot") ? "t-slot" : "t-call-slot", node);
+  }
   const name = (node.getAttribute("t-call-slot") || node.getAttribute("t-slot"))!;
   node.removeAttribute("t-call-slot");
   node.removeAttribute("t-slot");
@@ -948,6 +988,7 @@ function parseTCallSlot(node: Element, ctx: ParsingContext): AST | null {
     }
     attrs = attrs || {};
     attrs[attributeName] = value;
+    node.removeAttribute(attributeName);
   }
   return {
     type: ASTType.TCallSlot,

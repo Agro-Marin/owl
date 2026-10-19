@@ -408,6 +408,14 @@ plugins: [] })` rendered asynchronously); a resource-driven start belongs to
   slot of another render function (a forwarded slot that comes, goes or is
   swapped), is mounted in place of the previous one. Upstream patched one into
   the other (a text into a `<div>` block rendered an empty `<div>`).
+- **A directive Owl would drop throws**: a `<t>` left bare (also by `t-if`,
+  `t-foreach`, …) takes no `t-*` attribute but a template root's `t-name`,
+  `t-inherit`, `t-inherit-mode` and translation contexts, a `t-set` none but
+  `t-value`; `t-call-block` and `t-call-slot` go on a `<t>`, and `t-call-block`
+  takes no content. A `t-set-slot`'s arguments are the attributes no directive
+  on it consumed (a `t-call` there keeps its own). Upstream ignored them
+  (`t-raw`, a typo such as `t-esle`, `t-att-class` on a `<t>`, a `t-set-slot`
+  outside a component).
 - **A directive that needs an expression throws on an empty one**, naming it;
   a `t-set-slot` nested directly in another throws.
 - **`t-model.number`** checks the radio, or selects the static option, whose
