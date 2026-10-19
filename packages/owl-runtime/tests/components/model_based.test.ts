@@ -10,14 +10,7 @@ import {
   xml,
 } from "../../src";
 import { makeTestFixture, nextMicroTick, nextTick } from "../helpers";
-
-function prng(seed: number) {
-  let s = seed;
-  return () => {
-    s = (s * 16807) % 2147483647;
-    return (s - 1) / 2147483646;
-  };
-}
+import { prng } from "../../../../tools/testing/helpers";
 
 interface World {
   pending: { resolve: () => void }[];

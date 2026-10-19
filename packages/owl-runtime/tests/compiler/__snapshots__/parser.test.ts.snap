@@ -1,2 +1,0 @@
-
-exports[`qweb parser > simple t-foreach expression, t-key mandatory 1`] = `[Error: "Directive t-foreach should always be used with a t-key!" (expression: t-foreach="list" t-as="item")]`;

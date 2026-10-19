@@ -16,12 +16,7 @@ import {
   observersOf,
   sourcesOf,
 } from "../src/computations";
-import { captureUnhandledRejections, expectSpy, nextMicroTick, spyEffect } from "./helpers";
-
-async function waitScheduler() {
-  await nextMicroTick();
-  await nextMicroTick();
-}
+import { captureUnhandledRejections, expectSpy, spyEffect, waitScheduler } from "./helpers";
 
 export type SpyComputed<T> = ReactiveValue<T> & { spy: Mock };
 export function spyComputed<T>(fn: () => T): SpyComputed<T> {

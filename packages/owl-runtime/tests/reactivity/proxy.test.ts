@@ -22,15 +22,11 @@ import {
   snapshotEverything,
   steps,
   useLogLifecycle,
+  waitScheduler,
 } from "../helpers";
 
 function createProxy(value: any) {
   return proxy(value);
-}
-
-async function waitScheduler() {
-  await nextMicroTick();
-  return Promise.resolve();
 }
 
 function expectSpy(spy: Mock, callTime: number, args: any[]): void {

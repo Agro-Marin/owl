@@ -10,12 +10,7 @@ import {
   signal,
   untrack,
 } from "../src";
-import { captureUnhandledRejections, expectSpy, nextMicroTick, TestScope } from "./helpers";
-
-async function waitScheduler() {
-  await nextMicroTick();
-  return Promise.resolve();
-}
+import { captureUnhandledRejections, expectSpy, TestScope, waitScheduler } from "./helpers";
 
 describe("effect", () => {
   test("effect runs directly", () => {

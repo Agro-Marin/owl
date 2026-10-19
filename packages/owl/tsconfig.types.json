@@ -1,12 +1,6 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
-    "types": ["node", "../../types/target_lib"],
-    "baseUrl": ".",
-    "paths": {
-      "@odoo/owl-core": ["../owl-core/src/index.ts"],
-      "@odoo/owl-compiler": ["../owl-compiler/src/index.ts"],
-      "@odoo/owl-runtime": ["../owl-runtime/src/index.ts"]
-    }
+    "types": ["node", "../../types/target_lib"]
   }
 }

@@ -1,11 +1,6 @@
 import { compile } from "@odoo/owl-compiler";
 import { App, Component, xml } from "../src/runtime";
-
-function makeFixture() {
-  const fixture = document.createElement("div");
-  document.body.appendChild(fixture);
-  return fixture;
-}
+import { makeTestFixture } from "../../../tools/testing/helpers";
 
 test("the runtime build mounts precompiled templates", async () => {
   class Hello extends Component {
@@ -20,7 +15,7 @@ test("the runtime build mounts precompiled templates", async () => {
       }),
     },
   });
-  const fixture = makeFixture();
+  const fixture = makeTestFixture();
   await app.createRoot(Hello).mount(fixture);
   expect(fixture.innerHTML).toBe("<div>Hello world!</div>");
   app.destroy();
@@ -31,7 +26,7 @@ test("the runtime build refuses a template it would have to compile", async () =
     static template = xml`<div>Hello</div>`;
   }
   const app = new App();
-  await expect(app.createRoot(Hello).mount(makeFixture())).rejects.toThrow(
+  await expect(app.createRoot(Hello).mount(makeTestFixture())).rejects.toThrow(
     "Unable to compile a template: load the compiler module (@odoo/owl/compiler) of this runtime's build or use the full build"
   );
   app.destroy();

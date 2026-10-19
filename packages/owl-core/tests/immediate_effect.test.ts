@@ -1,10 +1,5 @@
 import { computed, immediateEffect, effect, proxy, signal, untrack } from "../src";
-import { expectSpy, nextMicroTick } from "./helpers";
-
-async function waitScheduler() {
-  await nextMicroTick();
-  return Promise.resolve();
-}
+import { expectSpy, waitScheduler } from "./helpers";
 
 describe("immediateEffect", () => {
   test("immediateEffect runs directly", () => {

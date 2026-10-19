@@ -9,6 +9,7 @@ import {
   xml,
 } from "../../src";
 import { makeTestFixture, nextTick, render } from "../helpers";
+import { prng } from "../../../../tools/testing/helpers";
 
 let fixture: HTMLElement;
 
@@ -230,14 +231,6 @@ describe("component keys", () => {
     expect(destroyed).toHaveLength(values.length);
   });
 });
-
-function prng(seed: number) {
-  let s = seed;
-  return () => {
-    s = (s * 16807) % 2147483647;
-    return (s - 1) / 2147483646;
-  };
-}
 
 const OBJ1 = { o: 1 };
 const OBJ2 = { o: 2 };

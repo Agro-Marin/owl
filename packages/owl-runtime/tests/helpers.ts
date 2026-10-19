@@ -1,5 +1,3 @@
-import { type Mock } from "vitest";
-
 export { getConsoleOutput } from "../../../tools/testing/console";
 import { diff } from "@vitest/utils/diff";
 import {
@@ -20,29 +18,16 @@ import { TemplateSet, globalTemplates } from "../src/template_set";
 import { BDom } from "../src/blockdom";
 import { compile } from "@odoo/owl-compiler";
 import { OwlError } from "@odoo/owl-core";
+import {
+  expectSpy,
+  makeTestFixture,
+  nextMicroTick,
+  waitScheduler,
+} from "../../../tools/testing/helpers";
+
+export { expectSpy, makeTestFixture, nextMicroTick, waitScheduler };
 
 const mount = blockDom.mount;
-
-export function nextMicroTick(): Promise<void> {
-  return Promise.resolve();
-}
-
-export async function waitScheduler() {
-  await nextMicroTick();
-  await nextMicroTick();
-}
-
-let lastFixture: any = null;
-
-export function makeTestFixture() {
-  let fixture = document.createElement("div");
-  document.body.appendChild(fixture);
-  if (lastFixture) {
-    lastFixture.remove();
-  }
-  lastFixture = fixture;
-  return fixture;
-}
 
 beforeEach(() => {
   xml.nextId = 999;
@@ -219,16 +204,6 @@ export async function editInput(input: HTMLInputElement | HTMLTextAreaElement, v
   input.dispatchEvent(new Event("input"));
   input.dispatchEvent(new Event("change"));
   return nextTick();
-}
-
-export function expectSpy(
-  spy: Mock,
-  count: number,
-  opt: { args?: any[]; result?: any } = {}
-): void {
-  expect(spy).toHaveBeenCalledTimes(count);
-  if ("args" in opt) expect(spy).toHaveBeenLastCalledWith(...opt.args!);
-  if ("result" in opt) expect(spy).toHaveReturnedWith(opt.result);
 }
 
 afterEach(() => {
