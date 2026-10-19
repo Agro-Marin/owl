@@ -1,22 +1,10 @@
 import fs from "node:fs";
-import { createRequire } from "node:module";
+import { installDom, owlBuild, require } from "./checker_env.mjs";
 import customDirectives from "./custom_directives.mjs";
 import { templateFiles } from "./template_files.mjs";
 
-const require = createRequire(import.meta.url);
-const { JSDOM } = require(process.env.OWL + "/node_modules/jsdom");
-const dom = new JSDOM("<!doctype html><html><body></body></html>", { pretendToBeVisual: true });
-globalThis.window = dom.window;
-for (const k of Object.getOwnPropertyNames(dom.window)) {
-  if (!(k in globalThis)) {
-    try {
-      globalThis[k] = dom.window[k];
-    } catch {}
-  }
-}
-const build = ["/packages/owl/dist/owl.es.js", "/dist/owl.es.js"]
-  .map((path) => process.env.OWL + path)
-  .find((path) => fs.existsSync(path));
+installDom();
+const build = owlBuild();
 const owl = await import(build);
 if (process.env.OWL_DEBUG && owl.setDebug) {
   owl.setDebug(process.env.OWL_DEBUG);
@@ -60,7 +48,7 @@ for (const file of files) {
       if (process.env.LOCATE && /missing \)|Unexpected|Invalid or unexpected/.test(full)) {
         const code = full.slice(full.indexOf("function("));
         try {
-          require(process.env.OWL + "/node_modules/acorn").parse("(" + code + ")", {
+          require("acorn").parse("(" + code + ")", {
             ecmaVersion: 2022,
           });
         } catch (pe) {
@@ -77,7 +65,10 @@ for (const file of files) {
         console.log("JSDOM", file, name, "::", msg.slice(0, 160));
         bad--;
         jsdomOnly++;
-      } else if (!/Missing template|not defined|Cannot find/i.test(msg))
+      } else if (
+        /^Custom directive /.test(msg) ||
+        !/Missing template|not defined|Cannot find/i.test(msg)
+      )
         console.log("FAIL", file, name, "::", msg.slice(0, 160));
       else {
         console.log("UNAVAILABLE", file, name, "::", msg.slice(0, 160));

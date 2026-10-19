@@ -1,11 +1,25 @@
-import { spawnSync } from "node:child_process";
-import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
+import { execFileSync, spawnSync } from "node:child_process";
+import { mkdir, rm, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
+import { scratchDir } from "../workspace.mjs";
+
+const root = resolve(__dirname, "../..");
+let OWL: string;
+let BUILD: string;
+
+beforeAll(() => {
+  OWL = scratchDir("owl-checker-build");
+  BUILD = join(OWL, "packages/owl/dist/owl.es.js");
+  execFileSync(process.execPath, ["build.mjs", "--outdir", join(OWL, "packages/owl/dist")], {
+    cwd: join(root, "packages/owl"),
+    stdio: "pipe",
+  });
+}, 60000);
+
+afterAll(() => rm(OWL, { recursive: true, force: true }));
 
 test("the Odoo template checker releases every temporary app, including failures", async () => {
-  const root = resolve(__dirname, "../..");
-  const scratch = await mkdtemp(join(tmpdir(), "owl-template-check-"));
+  const scratch = scratchDir("owl-template-check");
   try {
     const templates = join(scratch, "static/src");
     await mkdir(templates, { recursive: true });
@@ -22,14 +36,14 @@ test("the Odoo template checker releases every temporary app, including failures
       probe,
       `
       await import(${JSON.stringify(join(root, "tools/odoo_migration/compile_templates.mjs"))});
-      const { App } = await import(${JSON.stringify(join(root, "packages/owl/dist/owl.es.js"))});
+      const { App } = await import(${JSON.stringify(BUILD)});
       console.debug("[owl:integration] temporary apps retained:", App.apps.size);
       if (App.apps.size !== 0) throw new Error("temporary apps retained");
     `
     );
     const run = spawnSync(process.execPath, [probe, scratch], {
       encoding: "utf8",
-      env: { ...process.env, OWL: root, OWL_DEBUG: "template,lifecycle,scope" },
+      env: { ...process.env, OWL, OWL_DEBUG: "template,lifecycle,scope" },
     });
     expect(run.stdout).toContain("compiled 3 templates, 1 failures");
     expect(run.stdout).toContain("[owl:integration] temporary apps retained: 0");
@@ -44,8 +58,7 @@ test("the Odoo template checker releases every temporary app, including failures
 test.each([false, true])(
   "the raw checker reports its status for valid or malformed XML (malformed=%s)",
   async (malformed) => {
-    const root = resolve(__dirname, "../..");
-    const scratch = await mkdtemp(join(tmpdir(), "owl-raw-status-"));
+    const scratch = scratchDir("owl-raw-status");
     try {
       const templates = join(scratch, "static/src");
       await mkdir(templates, { recursive: true });
@@ -59,7 +72,7 @@ test.each([false, true])(
         {
           encoding: "utf8",
           timeout: 10000,
-          env: { ...process.env, OWL: root, OWL_DEBUG: "template,lifecycle,scope" },
+          env: { ...process.env, OWL, OWL_DEBUG: "template,lifecycle,scope" },
         }
       );
       console.debug("[owl:raw-checker-status]", run.status, run.stdout, run.stderr);
@@ -75,8 +88,7 @@ test.each([false, true])(
 test.each(["regression", "coverage"] as const)(
   "the inherited checker exposes %s and releases both builds' apps",
   async (scenario) => {
-    const root = resolve(__dirname, "../..");
-    const scratch = await mkdtemp(join(tmpdir(), "owl-inherited-check-"));
+    const scratch = scratchDir("owl-inherited-check");
     try {
       const templates = join(scratch, "input/static/src");
       const web = join(scratch, "odoo/addons/web");
@@ -100,7 +112,7 @@ test.each(["regression", "coverage"] as const)(
           : '<templates><t t-name="good"><p/></t><t t-name="missing_primary" t-inherit="missing" t-inherit-mode="primary"/><t t-inherit="absent" t-inherit-mode="extension"/></templates>';
       await writeFile(join(templates, "templates.xml"), source);
       if (scenario === "coverage") await writeFile(join(templates, "broken.xml"), "<templates><t>");
-      const bundle = JSON.stringify(join(root, "packages/owl/dist/owl.es.js"));
+      const bundle = JSON.stringify(BUILD);
       const oldBuild = join(scratch, "old.mjs");
       await writeFile(
         oldBuild,
@@ -130,7 +142,7 @@ test.each(["regression", "coverage"] as const)(
         timeout: 10000,
         env: {
           ...process.env,
-          OWL: root,
+          OWL,
           OLD: oldBuild,
           WEB: web,
           OWL_DEBUG: "template,lifecycle,scope",
@@ -157,3 +169,74 @@ test.each(["regression", "coverage"] as const)(
     }
   }
 );
+
+async function runRaw(source: string, env: Record<string, string>) {
+  const scratch = scratchDir("owl-raw-check");
+  try {
+    await mkdir(join(scratch, "static/src"), { recursive: true });
+    await writeFile(join(scratch, "static/src/templates.xml"), source);
+    return spawnSync(
+      process.execPath,
+      [join(root, "tools/odoo_migration/compile_templates.mjs"), scratch],
+      { encoding: "utf8", timeout: 10000, env: { ...process.env, ...env } }
+    );
+  } finally {
+    await rm(scratch, { recursive: true, force: true });
+  }
+}
+
+test("the raw checker counts an unknown custom directive as a failure, a missing template not", async () => {
+  const run = await runRaw(
+    `<templates>
+      <t t-name="unknown"><p t-custom-nope="1"/></t>
+      <t t-name="calls"><t t-call="elsewhere"/></t>
+    </templates>`,
+    { OWL }
+  );
+  console.debug("[owl:raw-checker-directive]", run.status, run.stdout, run.stderr);
+  expect(run.stdout).toMatch(/^FAIL .* unknown :: Custom directive "nope" is not defined$/m);
+  expect(run.stdout).toContain("compiled 2 templates, 1 failures");
+  expect(run.status).toBe(1);
+});
+
+test("the raw checker names the build it needs when OWL has none", async () => {
+  const empty = scratchDir("owl-no-build");
+  try {
+    const run = await runRaw('<templates><t t-name="good"><p/></t></templates>', { OWL: empty });
+    expect(run.status).toBe(2);
+    expect(run.stderr).toContain(`no Owl build in ${empty}`);
+    expect(run.stderr).toContain("run `npm run build` there");
+  } finally {
+    await rm(empty, { recursive: true, force: true });
+  }
+});
+
+test("the inherited checker names WEB when it is not Odoo's web addon, and OLD when it is missing", async () => {
+  const scratch = scratchDir("owl-inherited-env");
+  try {
+    const web = join(scratch, "odoo/addons/web");
+    await mkdir(join(scratch, "input/static/src"), { recursive: true });
+    await writeFile(join(scratch, "input/static/src/t.xml"), "<templates/>");
+    const run = (env: Record<string, string>) =>
+      spawnSync(
+        process.execPath,
+        [
+          join(root, "tools/odoo_migration/compile_inherited_templates.mjs"),
+          join(scratch, "input"),
+        ],
+        { encoding: "utf8", timeout: 10000, env: { ...process.env, OWL, ...env } }
+      );
+    const noWeb = run({ WEB: web });
+    expect(noWeb.status).toBe(2);
+    expect(noWeb.stderr).toContain(`${web} is not Odoo's web addon`);
+    await mkdir(join(web, "static/src/core"), { recursive: true });
+    await writeFile(join(web, "static/src/core/template_inheritance.js"), "export {};");
+    await mkdir(join(scratch, "odoo/node_modules/xpath"), { recursive: true });
+    await writeFile(join(scratch, "odoo/node_modules/xpath/index.js"), "");
+    const noOld = run({ WEB: web });
+    expect(noOld.status).toBe(2);
+    expect(noOld.stderr).toContain(`${join(web, "static/lib/owl/owl.es.js")} not found: set OLD`);
+  } finally {
+    await rm(scratch, { recursive: true, force: true });
+  }
+});

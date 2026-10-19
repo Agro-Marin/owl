@@ -3,6 +3,10 @@ import { join } from "node:path";
 
 export async function templateFiles(roots = process.argv.slice(2)) {
   if (!roots.length) {
+    if (process.stdin.isTTY) {
+      console.error("usage: <checker> <module roots...>, or the template files' paths on stdin");
+      process.exit(2);
+    }
     return fs.readFileSync(0, "utf8").split("\n").filter(Boolean);
   }
   const files = [];

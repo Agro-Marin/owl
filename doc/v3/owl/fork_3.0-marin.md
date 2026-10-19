@@ -354,12 +354,24 @@ snapshot of the committed children; `App.version` + `__info__.hash` scope the te
 
 ## Checks before re-vendoring into Odoo
 
-1. `tools/odoo_migration/compile_templates.mjs <roots>`: every Odoo template
-   file compiles with the new build.
-2. `tools/odoo_migration/compile_inherited_templates.mjs`: every template
-   compiles after Odoo's own template inheritance, with the new and the old
-   build; it must print no `REGRESSION` line. `FREE_NAMES=1` also lists the
-   component templates reading a context name nothing sets.
+1. `node tools/odoo_migration/compile_templates.mjs <roots>` (the module
+   roots, e.g. Odoo's `addons` and `odoo/addons`, `l10n`, `agromarin`,
+   `design-themes`; or file paths on stdin): every Odoo template file compiles
+   with the new build. An unknown custom directive is a failure; a missing
+   called template is an unavailable context.
+2. `node tools/odoo_migration/compile_inherited_templates.mjs <roots>`: every
+   template compiles after Odoo's own template inheritance, with the new and
+   the old build; it must print no `REGRESSION` line. `FREE_NAMES=1` also
+   lists the component templates reading a context name nothing sets.
+
+   Both take the new build from `OWL` (an Owl checkout; default the one the
+   script is in), at its `packages/owl/dist/owl.es.js`, so `npm run build`
+   first. The second also reads `WEB`, Odoo's `addons/web` (default: in
+   `../odoo` beside the Owl checkout, else `/home/marin/Odoo/odoo`), its
+   `template_inheritance.js` and the Odoo checkout's `node_modules/xpath`, and
+   `OLD`, the old build's `owl.es.js` (default: the one vendored in `WEB`). A
+   missing build, `WEB` or `OLD` exits 2 naming it.
+
 3. The `@web` HOOT suites (`WebSuite`, `MobileWebSuite`) and `@mail`'s
    (`MailSuite`, `MobileMailSuite`) with the old and the new build, compared
    test by test. Vendor the three files together (`owl.es.js`,

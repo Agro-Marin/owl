@@ -1,21 +1,12 @@
 import fs from "node:fs";
-import { createRequire } from "node:module";
+import { installDom, oldBuild, owlBuild, requireFromOdoo, webAddon } from "./checker_env.mjs";
 import customDirectives from "./custom_directives.mjs";
 import { templateFiles } from "./template_files.mjs";
 
-const require = createRequire(import.meta.url);
-const { JSDOM } = require(process.env.OWL + "/node_modules/jsdom");
-const dom = new JSDOM("<!doctype html><html><body></body></html>", { pretendToBeVisual: true });
-globalThis.window = dom.window;
-for (const k of Object.getOwnPropertyNames(dom.window)) {
-  if (!(k in globalThis)) {
-    try {
-      globalThis[k] = dom.window[k];
-    } catch {}
-  }
-}
+const dom = installDom();
 globalThis.odoo = { debug: "" };
-const xpath = require(process.env.WEB + "/../../node_modules/xpath");
+const WEB = webAddon();
+const xpath = requireFromOdoo(WEB, "xpath");
 dom.window.Document.prototype.createExpression = function createExpression(expression) {
   const parsed = xpath.parse(expression);
   return {
@@ -29,11 +20,12 @@ dom.window.Document.prototype.createExpression = function createExpression(expre
   };
 };
 
-const { applyInheritance } = await import(
-  process.env.WEB + "/static/src/core/template_inheritance.js"
-);
-const newOwl = await import(process.env.OWL + "/packages/owl/dist/owl.es.js");
-const oldOwl = await import(process.env.OLD);
+const { applyInheritance } = await import(WEB + "/static/src/core/template_inheritance.js");
+const newBuild = owlBuild();
+const previousBuild = oldBuild(WEB);
+const newOwl = await import(newBuild);
+const oldOwl = await import(previousBuild);
+console.log(`owl build: ${newBuild}, compared with ${previousBuild}`);
 if (process.env.OWL_DEBUG) {
   newOwl.setDebug(process.env.OWL_DEBUG);
   oldOwl.setDebug?.(process.env.OWL_DEBUG);
