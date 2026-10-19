@@ -145,8 +145,8 @@ interface DynamicInfo {
   withoutAnchor?: boolean;
   name?: string;
   event?: string;
-  sharedClass?: Updater<HTMLElement>;
-  sharedStyle?: Updater<HTMLElement>;
+  sharedClass?: Snapshotter<HTMLElement>;
+  sharedStyle?: Snapshotter<HTMLElement>;
 }
 
 interface IntermediateTree {
@@ -354,6 +354,7 @@ export type RefCallback = (el: HTMLElement | null, previousEl: HTMLElement | nul
 
 export type Setter<T = any> = (this: T, value: any) => void;
 export type Updater<T = any> = (this: T, value: any, oldVal: any) => void;
+export type Snapshotter<T = any> = (this: T, value: any, snap: any) => any;
 
 interface Location {
   refIdx: number;
@@ -361,6 +362,7 @@ interface Location {
   updateData: Updater;
   late?: boolean;
   sync?: boolean;
+  snap?: boolean;
 }
 
 interface IndexedLocation extends Location {
@@ -471,6 +473,7 @@ function updateCtx(ctx: BlockCtx, tree: IntermediateTree) {
         const refIdx = info.refIdx!;
         let updater: any;
         let setter: any;
+        let snap = true;
         if (info.sharedClass) {
           setter = updater = info.sharedClass;
         } else if (info.sharedStyle) {
@@ -484,12 +487,14 @@ function updateCtx(ctx: BlockCtx, tree: IntermediateTree) {
         } else {
           setter = createAttrUpdater(info.name!);
           updater = setter;
+          snap = false;
         }
         ctx.locations.push({
           idx: info.idx,
           refIdx,
           setData: setter,
           updateData: updater,
+          snap,
         });
         break;
       }
@@ -503,6 +508,7 @@ function updateCtx(ctx: BlockCtx, tree: IntermediateTree) {
           refIdx: info.refIdx!,
           setData: shared ? makeAttrsSetter(shared) : attrsSetter,
           updateData: shared || attrsUpdater,
+          snap: true,
         });
         break;
       }
@@ -576,6 +582,8 @@ function createBlockClass(template: HTMLElement, ctx: BlockCtx, str: string): Bl
       createEventHandler(h.event, { fn: n, ctx: h.idx, arg: ctx.handlerArgs[h.idx] ?? -1 }).setup
   );
   const locSync: boolean[] = locations.map((l) => !!l.sync);
+  let snapN = 0;
+  const locSnap: number[] = locations.map((l) => (l.snap ? snapN++ : -1));
   const lateLocs: number[] = [];
   const earlyLocs: number[] = [];
   locations.forEach((l, i) => (l.late ? lateLocs : earlyLocs).push(i));
@@ -601,6 +609,7 @@ function createBlockClass(template: HTMLElement, ctx: BlockCtx, str: string): Bl
     declare handlers: Handlers;
     children?: (VNode | undefined)[];
     refs: Node[] | undefined;
+    snaps: any[] | undefined;
 
     constructor(data: any[] | undefined, handlers: Handlers) {
       this.data = data;
@@ -659,13 +668,24 @@ function createBlockClass(template: HTMLElement, ctx: BlockCtx, str: string): Bl
       }
 
       const data = this.data!;
+      const snaps = snapN ? (this.snaps = new Array(snapN)) : undefined;
       if (lateN) {
         for (const i of earlyLocs) {
-          locSetters[i].call(refs[locRefIdxs[i]], data[i]);
+          const s = locSnap[i];
+          if (s < 0) {
+            locSetters[i].call(refs[locRefIdxs[i]], data[i]);
+          } else {
+            snaps![s] = locSetters[i].call(refs[locRefIdxs[i]], data[i]);
+          }
         }
       } else {
         for (let i = 0; i < locN; i++) {
-          locSetters[i].call(refs[locRefIdxs[i]], data[i]);
+          const s = locSnap[i];
+          if (s < 0) {
+            locSetters[i].call(refs[locRefIdxs[i]], data[i]);
+          } else {
+            snaps![s] = locSetters[i].call(refs[locRefIdxs[i]], data[i]);
+          }
         }
       }
       if (handlerN) {
@@ -717,20 +737,31 @@ function createBlockClass(template: HTMLElement, ctx: BlockCtx, str: string): Bl
       const refs = this.refs!;
       const data1 = this.data!;
       const data2 = other.data!;
+      const snaps = this.snaps;
       if (indexed) {
         for (const i of earlyLocs) {
           const val1 = data1[i];
           const val2 = data2[i];
-          if (val1 !== val2 || locSync[i]) {
-            locUpdaters[i].call(refs[locRefIdxs[i]], val2, val1);
+          const s = locSnap[i];
+          if (s < 0) {
+            if (val1 !== val2 || locSync[i]) {
+              locUpdaters[i].call(refs[locRefIdxs[i]], val2, val1);
+            }
+          } else if (val1 !== val2 || (typeof val2 === "object" && val2 !== null)) {
+            snaps![s] = locUpdaters[i].call(refs[locRefIdxs[i]], val2, snaps![s]);
           }
         }
       } else {
         for (let i = 0; i < locN; i++) {
           const val1 = data1[i];
           const val2 = data2[i];
-          if (val1 !== val2) {
-            locUpdaters[i].call(refs[locRefIdxs[i]], val2, val1);
+          const s = locSnap[i];
+          if (s < 0) {
+            if (val1 !== val2) {
+              locUpdaters[i].call(refs[locRefIdxs[i]], val2, val1);
+            }
+          } else if (val1 !== val2 || (typeof val2 === "object" && val2 !== null)) {
+            snaps![s] = locUpdaters[i].call(refs[locRefIdxs[i]], val2, snaps![s]);
           }
         }
       }

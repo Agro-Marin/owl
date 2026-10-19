@@ -285,6 +285,13 @@ plugins: [] })` rendered asynchronously); a resource-driven start belongs to
   flag only when the element differs); upstream wraps each in a new
   `String`/`Boolean` per render. `t-model`'s property is set only when the
   model changes.
+- **A `class`, `style` or `t-att` object is applied at every patch**, diffed
+  against a normalized copy of what its slot last wrote, so one changed in
+  place shows; upstream skips a value identical to the previous one and diffs
+  against that value, mutated too. A string equal to the last one is skipped.
+  A class whose value is truthy but not `true` is not written again; the
+  classes of an element without a static one are written in one
+  `setAttribute` on mount.
 - **A block string has one block type**, given its handlers at each call
   (`type(data, children, handlers)`, the list checked by
   `createBlock(str, list)`; a missing list throws at mount), so making an
@@ -339,8 +346,9 @@ plugins: [] })` rendered asynchronously); a resource-driven start belongs to
   (which it would create and never mount); a text node stringifies to its text,
   a bigint to its digits (`0n` included), a symbol to its description.
 - **`t-tag` rejects prefixed and `block-` names**; a malformed block string and
-  a `t-att` given a string or number throw an OwlError. A dynamic `t-call` key
-  cannot collide across loop items, and symbols are valid `t-key`s.
+  a `t-att` given a string (a `Markup` included) or a number throw an
+  OwlError. A dynamic `t-call` key cannot collide across loop items, and
+  symbols are valid `t-key`s.
 
 ### Templates
 

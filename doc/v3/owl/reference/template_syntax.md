@@ -391,6 +391,9 @@ String values are supported as well:
 <div t-att-style="'color: red; font-size: 20px;'"/>
 ```
 
+A class, style or `t-att` object is read again each time its element is
+patched, so one changed in place since the last render shows at the next one.
+
 ### Dynamic tag names
 
 When writing generic components or templates, the specific concrete tag for an

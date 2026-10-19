@@ -512,4 +512,25 @@ describe("style and class handling", () => {
     expect(fixture.innerHTML).toBe("");
     expect(getConsoleOutput()).toEqual([]);
   });
+
+  test("a class, style or t-att object changed in place shows at the next render", async () => {
+    class Test extends Component {
+      static template = xml`<div t-att-class="this.state.cls" t-att-style="this.state.st" t-att="this.state.attrs"><t t-out="this.state.n"/></div>`;
+      state = proxy({
+        cls: { a: true, b: false } as any,
+        st: { color: "red" } as any,
+        attrs: { "data-x": "1" } as any,
+        n: 0,
+      });
+    }
+    const test = await mount(Test, fixture);
+    expect(fixture.innerHTML).toBe(`<div class="a" style="color: red;" data-x="1">0</div>`);
+    const raw = { cls: test.state.cls, st: test.state.st, attrs: test.state.attrs };
+    Object.assign(raw.cls, { a: false, b: true });
+    raw.st.color = "blue";
+    raw.attrs["data-x"] = "2";
+    test.state.n++;
+    await nextTick();
+    expect(fixture.innerHTML).toBe(`<div class="b" style="color: blue;" data-x="2">1</div>`);
+  });
 });

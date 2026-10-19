@@ -423,3 +423,121 @@ test("t-att given a string or a number is an error naming it", () => {
   mount(tree, fixture);
   expect(() => patch(tree, block([3]))).toThrow("Invalid t-att value '3'");
 });
+
+test("t-att given a string object is an error", () => {
+  const block = createBlock('<div block-attributes="0"></div>');
+  expect(() => mount(block([new String("a=1")]), fixture)).toThrow(
+    "Invalid t-att value 'a=1': expected an object or a [name, value] pair"
+  );
+});
+
+describe("a value changed in place", () => {
+  test("a class object changed in place is applied again", () => {
+    const block = createBlock('<div block-attribute-0="class"></div>');
+    const cls: any = { a: true, b: false };
+    const tree = block([cls]);
+    mount(tree, fixture);
+    const div = fixture.firstChild as HTMLElement;
+    expect(div.className).toBe("a");
+    cls.a = false;
+    cls.b = true;
+    patch(tree, block([cls]));
+    expect(div.className).toBe("b");
+    delete cls.b;
+    cls.c = 1;
+    patch(tree, block([cls]));
+    expect(div.className).toBe("c");
+  });
+
+  test("a class array changed in place is applied again", () => {
+    const block = createBlock('<div class="s" block-attribute-0="class"></div>');
+    const cls: any[] = ["a"];
+    const tree = block([cls]);
+    mount(tree, fixture);
+    const div = fixture.firstChild as HTMLElement;
+    cls.push("b");
+    patch(tree, block([cls]));
+    expect(div.className).toBe("s a b");
+    cls.length = 0;
+    patch(tree, block([cls]));
+    expect(div.className).toBe("s");
+  });
+
+  test("a style object changed in place is applied again", () => {
+    const block = createBlock('<div block-attribute-0="style"></div>');
+    const st: any = { color: "red" };
+    const tree = block([st]);
+    mount(tree, fixture);
+    const div = fixture.firstChild as HTMLElement;
+    st.color = "blue";
+    st.width = "1px";
+    patch(tree, block([st]));
+    expect(div.getAttribute("style")).toBe("color: blue; width: 1px;");
+    delete st.color;
+    patch(tree, block([st]));
+    expect(div.getAttribute("style")).toBe("width: 1px;");
+  });
+
+  test("a style object beside a static style changed in place is applied again", () => {
+    const block = createBlock('<div style="margin: 0px" block-attribute-0="style"></div>');
+    const st: any = { color: "red" };
+    const tree = block([st]);
+    mount(tree, fixture);
+    const div = fixture.firstChild as HTMLElement;
+    st.color = "blue";
+    patch(tree, block([st]));
+    expect(div.getAttribute("style")).toBe("margin: 0px; color: blue;");
+  });
+
+  test("a t-att object changed in place is applied again", () => {
+    const block = createBlock('<div block-attributes="0"></div>');
+    const attrs: any = { "data-x": "1", class: { a: true }, style: { color: "red" } };
+    const tree = block([attrs]);
+    mount(tree, fixture);
+    const div = fixture.firstChild as HTMLElement;
+    attrs["data-x"] = "2";
+    attrs.class.a = false;
+    attrs.class.b = true;
+    attrs.style.color = "blue";
+    attrs.title = "t";
+    patch(tree, block([attrs]));
+    expect(div.outerHTML).toBe(`<div data-x="2" class="b" style="color: blue;" title="t"></div>`);
+    delete attrs["data-x"];
+    patch(tree, block([attrs]));
+    expect(div.outerHTML).toBe(`<div class="b" style="color: blue;" title="t"></div>`);
+  });
+});
+
+function mutationsOf(el: Element, fn: () => void): MutationRecord[] {
+  const observer = new MutationObserver(() => {});
+  observer.observe(el, { attributes: true, subtree: true });
+  fn();
+  const records = observer.takeRecords();
+  observer.disconnect();
+  return records;
+}
+
+test("an unchanged class whose value is truthy but not true is not written again", () => {
+  const block = createBlock('<div block-attribute-0="class"></div>');
+  const tree = block([{ o_a: true, "o_c d": 1 }]);
+  mount(tree, fixture);
+  const records = mutationsOf(fixture, () => {
+    for (let i = 0; i < 10; i++) {
+      patch(tree, block([{ o_a: true, "o_c d": i & 1 ? 1 : 2 }]));
+    }
+  });
+  expect(records.length).toBe(0);
+  expect((fixture.firstChild as HTMLElement).className).toBe("o_a o_c d");
+});
+
+test("an unchanged class beside a static one is not written again", () => {
+  const block = createBlock('<div class="s" block-attribute-0="class"></div>');
+  const tree = block([{ o_a: "yes" }]);
+  mount(tree, fixture);
+  const records = mutationsOf(fixture, () => {
+    for (let i = 0; i < 10; i++) {
+      patch(tree, block([{ o_a: i + 1 }]));
+    }
+  });
+  expect(records.length).toBe(0);
+});

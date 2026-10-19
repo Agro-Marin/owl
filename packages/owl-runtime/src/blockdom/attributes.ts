@@ -1,5 +1,5 @@
 import { OwlError } from "@odoo/owl-core";
-import type { Setter, Updater } from "./block_compiler";
+import type { Setter, Snapshotter } from "./block_compiler";
 import { fromDom } from "./dom";
 
 const elemSetAttribute = /* @__PURE__ */ fromDom(() => Element.prototype.setAttribute);
@@ -39,7 +39,7 @@ function toAttrs(attrs: any): { [name: string]: any } {
   if (isArray(attrs)) {
     return { [attrs[0]]: attrs[1] };
   }
-  if (typeof attrs !== "object") {
+  if (typeof attrs !== "object" || attrs instanceof String) {
     throw new OwlError(
       `Invalid t-att value '${String(attrs)}': expected an object or a [name, value] pair`
     );
@@ -47,40 +47,75 @@ function toAttrs(attrs: any): { [name: string]: any } {
   return attrs;
 }
 
-export function makeAttrsUpdater(
-  updateClassFn: Updater<HTMLElement>,
-  updateStyleFn: Updater<HTMLElement>
-): Updater<HTMLElement> {
-  function updateAttr(el: HTMLElement, name: string, val: any, oldVal: any) {
-    if (name === "class") {
-      updateClassFn.call(el, val, oldVal);
-    } else if (name === "style") {
-      updateStyleFn.call(el, val, oldVal);
-    } else {
-      setAttribute.call(el, name, val);
-    }
+function toAttrValue(value: any): string | null {
+  switch (value) {
+    case false:
+    case null:
+    case undefined:
+      return null;
+    case true:
+      return "";
+    default:
+      return typeof value === "string" ? value : String(value);
   }
-  function attrsUpdater(this: HTMLElement, attrs: any, oldAttrs: any) {
+}
+
+type AttrsSnap = { [name: string]: any };
+
+function nullProtoClass(): new () => AttrsSnap {
+  function Snap() {}
+  Snap.prototype = Object.create(null);
+  return Snap as any;
+}
+
+const AttrsSnap = /* @__PURE__ */ nullProtoClass();
+
+const NO_ATTRS_SNAP = /* @__PURE__ */ Object.freeze(new AttrsSnap());
+
+export function makeAttrsUpdater(
+  updateClassFn: Snapshotter<HTMLElement>,
+  updateStyleFn: Snapshotter<HTMLElement>
+): Snapshotter<HTMLElement> {
+  function attrsUpdater(this: HTMLElement, attrs: any, prev: AttrsSnap = NO_ATTRS_SNAP): AttrsSnap {
     const next = toAttrs(attrs);
-    const prev = toAttrs(oldAttrs);
-    for (const name in prev) {
-      if (!(name in next)) {
-        updateAttr(this, name, undefined, prev[name]);
-      }
-    }
+    const snap = new AttrsSnap();
     for (const name in next) {
       const val = next[name];
-      if (val !== prev[name]) {
-        updateAttr(this, name, val, prev[name]);
+      if (name === "class") {
+        snap.class = updateClassFn.call(this, val, prev.class);
+      } else if (name === "style") {
+        snap.style = updateStyleFn.call(this, val, prev.style);
+      } else {
+        const value = toAttrValue(val);
+        if (value !== prev[name]) {
+          if (value === null) {
+            removeAttribute.call(this, name);
+          } else {
+            elemSetAttribute.call(this, name, value);
+          }
+        }
+        snap[name] = value;
       }
     }
+    for (const name in prev) {
+      if (snap[name] === undefined) {
+        if (name === "class") {
+          updateClassFn.call(this, undefined, prev.class);
+        } else if (name === "style") {
+          updateStyleFn.call(this, undefined, prev.style);
+        } else if (prev[name] !== null) {
+          removeAttribute.call(this, name);
+        }
+      }
+    }
+    return snap;
   }
   return attrsUpdater;
 }
 
-export function makeAttrsSetter(attrsUpdater: Updater<HTMLElement>): Setter<HTMLElement> {
+export function makeAttrsSetter(attrsUpdater: Snapshotter<HTMLElement>): Setter<HTMLElement> {
   return function attrsSetter(this: HTMLElement, attrs: any) {
-    attrsUpdater.call(this, attrs, NO_ATTRS);
+    return attrsUpdater.call(this, attrs, NO_ATTRS_SNAP);
   };
 }
 
@@ -89,19 +124,28 @@ export const attrsSetter = /* @__PURE__ */ makeAttrsSetter(attrsUpdater);
 
 type ClassExpr = string | number | boolean | String | ClassExpr[] | { [c: string]: any };
 
-function toClassObj(expr: ClassExpr | null | undefined): { [c: string]: any } {
-  const result: { [c: string]: any } = {};
+const SOURCE = /* @__PURE__ */ Symbol("source");
+
+type ClassSnap = { [c: string]: true; [SOURCE]?: string };
+
+const NO_CLASSES: ClassSnap = /* @__PURE__ */ Object.freeze({}) as ClassSnap;
+
+function toClassObj(expr: ClassExpr | null | undefined): ClassSnap {
+  const result: ClassSnap = {};
+  if (typeof expr === "string") {
+    result[SOURCE] = expr;
+  }
   addClasses(result, expr);
   return result;
 }
 
-function addClasses(result: { [c: string]: any }, expr: ClassExpr | null | undefined) {
+function addClasses(result: ClassSnap, expr: ClassExpr | null | undefined) {
   if (expr === false || expr === null || expr === undefined) {
     return;
   }
   switch (typeof expr) {
     case "string":
-      addWords(result, expr, true);
+      addWords(result, expr);
       return;
     case "object":
       if (isArray(expr)) {
@@ -109,12 +153,11 @@ function addClasses(result: { [c: string]: any }, expr: ClassExpr | null | undef
           addClasses(result, item);
         }
       } else if (expr instanceof String) {
-        addWords(result, expr.valueOf(), true);
+        addWords(result, expr.valueOf());
       } else {
         for (const key in expr) {
-          const value = expr[key];
-          if (value) {
-            addWords(result, key, value);
+          if (expr[key]) {
+            addWords(result, key);
           }
         }
       }
@@ -124,12 +167,12 @@ function addClasses(result: { [c: string]: any }, expr: ClassExpr | null | undef
   }
 }
 
-function addWords(result: { [c: string]: any }, str: string, value: any) {
+function addWords(result: ClassSnap, str: string) {
   str = str.trim();
   if (str) {
     const words = str.split(wordRegexp);
     for (let i = 0, l = words.length; i < l; i++) {
-      result[words[i]] = value;
+      result[words[i]] = true;
     }
   }
 }
@@ -149,7 +192,7 @@ function toKebabCase(prop: string): string {
 
 const IMPORTANT_RE = /\s*!\s*important\s*$/i;
 
-type StyleObj = { [prop: string]: string };
+type StyleObj = { [prop: string]: string; [SOURCE]?: string };
 
 function holdsStyleProp(style: CSSStyleDeclaration, prop: string, value: string): boolean {
   const important = IMPORTANT_RE.test(value);
@@ -172,6 +215,7 @@ function toStyleObj(expr: string | { [prop: string]: any }): StyleObj {
   switch (typeof expr) {
     case "string": {
       const str = expr;
+      result[SOURCE] = str;
       const len = str.length;
       let i = 0;
       while (i < len) {
@@ -217,6 +261,9 @@ function toStyleObj(expr: string | { [prop: string]: any }): StyleObj {
       return result;
     }
     case "object":
+      if (expr instanceof String) {
+        return toStyleObj(expr.valueOf());
+      }
       for (let prop in expr as any) {
         const value = (expr as any)[prop];
         if (value || value === 0) {
@@ -229,26 +276,35 @@ function toStyleObj(expr: string | { [prop: string]: any }): StyleObj {
   }
 }
 
-export function setClass(this: HTMLElement, val: any) {
-  val = toClassObj(val);
-  for (let k in val) {
-    tokenListAdd.call(this.classList, k);
+export function setClass(this: HTMLElement, val: any): ClassSnap {
+  const next = toClassObj(val);
+  let str = "";
+  for (const k in next) {
+    str = str ? str + " " + k : k;
   }
+  if (str) {
+    elemSetAttribute.call(this, "class", str);
+  }
+  return next;
 }
 
-export function updateClass(this: HTMLElement, val: any, oldVal: any) {
-  oldVal = toClassObj(oldVal);
-  val = toClassObj(val);
-  for (let k in oldVal) {
-    if (!(k in val)) {
-      tokenListRemove.call(this.classList, k);
+export function updateClass(this: HTMLElement, val: any, prev: ClassSnap = NO_CLASSES): ClassSnap {
+  if (typeof val === "string" && prev[SOURCE] === val) {
+    return prev;
+  }
+  const next = toClassObj(val);
+  const classList = this.classList;
+  for (const k in prev) {
+    if (next[k] !== true) {
+      tokenListRemove.call(classList, k);
     }
   }
-  for (let k in val) {
-    if (val[k] !== oldVal[k]) {
-      tokenListAdd.call(this.classList, k);
+  for (const k in next) {
+    if (prev[k] !== true) {
+      tokenListAdd.call(classList, k);
     }
   }
+  return next;
 }
 
 const classCounts = new WeakMap<Element, Map<string, number>>();
@@ -265,13 +321,15 @@ export function makeSharedClassUpdaters(staticClasses: string[]) {
     }
     return counts;
   }
-  function classUpdater(this: HTMLElement, val: any, oldVal: any) {
-    const prev = toClassObj(oldVal);
+  function classUpdater(this: HTMLElement, val: any, prev: ClassSnap = NO_CLASSES): ClassSnap {
+    if (typeof val === "string" && prev[SOURCE] === val) {
+      return prev;
+    }
     const next = toClassObj(val);
     const classList = this.classList;
     let counts: Map<string, number> | undefined;
     for (const k in prev) {
-      if (!(k in next)) {
+      if (next[k] !== true) {
         counts ||= getCounts(this);
         const count = counts.get(k)! - 1;
         if (count) {
@@ -283,28 +341,35 @@ export function makeSharedClassUpdaters(staticClasses: string[]) {
       }
     }
     for (const k in next) {
-      if (!(k in prev)) {
+      if (prev[k] !== true) {
         counts ||= getCounts(this);
         counts.set(k, (counts.get(k) || 0) + 1);
         tokenListAdd.call(classList, k);
-      } else if (next[k] !== prev[k]) {
-        tokenListAdd.call(classList, k);
       }
     }
+    return next;
   }
   return classUpdater;
 }
 
-export function setStyle(this: HTMLElement, val: any) {
-  val = val === "" ? {} : toStyleObj(val);
+const NO_STYLE: StyleObj = /* @__PURE__ */ Object.freeze({}) as StyleObj;
+
+export function setStyle(this: HTMLElement, val: any): StyleObj {
+  const next = toStyleObj(val);
   const style = this.style;
-  for (let prop in val) {
-    setStyleProp(style, prop, val[prop]);
+  for (const prop in next) {
+    setStyleProp(style, prop, next[prop]);
   }
+  return next;
 }
 
-export function updateStyle(this: HTMLElement, val: any, oldVal: any) {
-  patchStyle(this, oldVal === "" ? {} : toStyleObj(oldVal), val === "" ? {} : toStyleObj(val));
+export function updateStyle(this: HTMLElement, val: any, prev: StyleObj = NO_STYLE): StyleObj {
+  if (typeof val === "string" && prev[SOURCE] === val) {
+    return prev;
+  }
+  const next = toStyleObj(val);
+  patchStyle(this, prev, next);
+  return next;
 }
 
 function patchStyle(el: HTMLElement, oldVal: StyleObj, val: StyleObj) {
@@ -336,7 +401,7 @@ function patchStyle(el: HTMLElement, oldVal: StyleObj, val: StyleObj) {
 
 const styleLayers = new WeakMap<Element, { layers: StyleObj[]; applied: StyleObj }>();
 
-export function makeSharedStyleUpdaters(staticStyle: string): () => Updater<HTMLElement> {
+export function makeSharedStyleUpdaters(staticStyle: string): () => Snapshotter<HTMLElement> {
   const base = toStyleObj(staticStyle);
   let sources = 0;
   return () => {
@@ -348,7 +413,7 @@ export function makeSharedStyleUpdaters(staticStyle: string): () => Updater<HTML
         styleLayers.set(this, state);
       }
       const layers = state.layers;
-      layers[layer] = toStyleObj(val);
+      const next = (layers[layer] = toStyleObj(val));
       const merged: StyleObj = {};
       for (let i = 0; i < layers.length; i++) {
         const props = layers[i];
@@ -359,6 +424,7 @@ export function makeSharedStyleUpdaters(staticStyle: string): () => Updater<HTML
       }
       patchStyle(this, state.applied, merged);
       state.applied = merged;
+      return next;
     };
   };
 }

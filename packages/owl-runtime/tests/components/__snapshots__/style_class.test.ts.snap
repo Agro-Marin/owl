@@ -1,5 +1,23 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`style and class handling > a class, style or t-att object changed in place shows at the next render 1`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { attrValue, attrsValue, safeOutput } = helpers;
+  
+  let block1 = createBlock(\`<div block-attribute-0="class" block-attribute-1="style" block-attributes="2"><block-child-0/></div>\`);
+  
+  return function template(ctx, node, key = "") {
+    let attr1 = attrValue(ctx['this'].state.cls);
+    let attr2 = attrValue(ctx['this'].state.st);
+    let attr3 = attrsValue(ctx['this'].state.attrs);
+    const b2 = safeOutput(ctx['this'].state.n, node, key, "\\u00021");
+    return block1([attr1, attr2, attr3], [b2]);
+  }
+}"
+`;
+
 exports[`style and class handling > can set class on multi root component 1`] = `
 "function anonymous(app, bdom, helpers
 ) {
