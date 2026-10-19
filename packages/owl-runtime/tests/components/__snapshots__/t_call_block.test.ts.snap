@@ -1,14 +1,30 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`t-call-block > simple t-call-block with static text 1`] = `
+exports[`t-call-block > a block of another kind replaces the previous one 1`] = `
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { callBlock } = helpers;
   
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   
   return function template(ctx, node, key = "") {
-    const b2 = ctx['this'].myBlock();
+    const b2 = callBlock(ctx['this'].myBlock());
+    return block1([], [b2]);
+  }
+}"
+`;
+
+exports[`t-call-block > simple t-call-block with static text 1`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { callBlock } = helpers;
+  
+  let block1 = createBlock(\`<div><block-child-0/></div>\`);
+  
+  return function template(ctx, node, key = "") {
+    const b2 = callBlock(ctx['this'].myBlock());
     return block1([], [b2]);
   }
 }"

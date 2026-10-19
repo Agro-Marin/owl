@@ -3790,6 +3790,105 @@ exports[`the context a slot renders in > a child whose onWillStart waits renders
 }"
 `;
 
+exports[`the context a slot renders in > a forwarded slot replaced by another slot of the same name replaces its content 1`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { createComponent } = helpers;
+  const comp1 = createComponent(app, \`Middle\`, true, true, false, ["first"]);
+  
+  let block1 = createBlock(\`<b>A</b>\`);
+  let block2 = createBlock(\`<i>B</i>\`);
+  
+  function slot1(ctx, node, key = "") {
+    return block1();
+  }
+  
+  function slot2(ctx, node, key = "") {
+    return block2();
+  }
+  
+  return function template(ctx, node, key = "") {
+    return comp1({first: ctx['this'].state.first,slots: {"a": {__render: slot1, __ctx: ctx, __owner: this}, "b": {__render: slot2, __ctx: ctx, __owner: this}}}, key + \`\\u00021\`, node, this, null);
+  }
+}"
+`;
+
+exports[`the context a slot renders in > a forwarded slot replaced by another slot of the same name replaces its content 2`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { createComponent } = helpers;
+  const comp1 = createComponent(app, \`Child\`, true, false, false, ["slots"]);
+  
+  return function template(ctx, node, key = "") {
+    return comp1({slots: {a:ctx['this'].props.first?ctx['this'].props.slots.a:ctx['this'].props.slots.b}}, key + \`\\u00021\`, node, this, null);
+  }
+}"
+`;
+
+exports[`the context a slot renders in > a forwarded slot replaced by another slot of the same name replaces its content 3`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { callSlot } = helpers;
+  
+  let block1 = createBlock(\`<div><block-child-0/></div>\`);
+  
+  return function template(ctx, node, key = "") {
+    const b2 = callSlot(ctx, node, key + \`\\u00021\`, "a", false, null);
+    return block1([], [b2]);
+  }
+}"
+`;
+
+exports[`the context a slot renders in > a forwarded slot that comes and goes replaces the empty content, and is replaced by it 1`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { createComponent } = helpers;
+  const comp1 = createComponent(app, \`Middle\`, true, true, false, ["on"]);
+  
+  let block1 = createBlock(\`<b>A</b>\`);
+  
+  function slot1(ctx, node, key = "") {
+    return block1();
+  }
+  
+  return function template(ctx, node, key = "") {
+    return comp1({on: ctx['this'].state.on,slots: {"a": {__render: slot1, __ctx: ctx, __owner: this}}}, key + \`\\u00021\`, node, this, null);
+  }
+}"
+`;
+
+exports[`the context a slot renders in > a forwarded slot that comes and goes replaces the empty content, and is replaced by it 2`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { createComponent } = helpers;
+  const comp1 = createComponent(app, \`Child\`, true, false, false, ["slots"]);
+  
+  return function template(ctx, node, key = "") {
+    return comp1({slots: ctx['this'].props.on?ctx['this'].props.slots:{}}, key + \`\\u00021\`, node, this, null);
+  }
+}"
+`;
+
+exports[`the context a slot renders in > a forwarded slot that comes and goes replaces the empty content, and is replaced by it 3`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { callSlot } = helpers;
+  
+  let block1 = createBlock(\`<div><block-child-0/></div>\`);
+  
+  return function template(ctx, node, key = "") {
+    const b2 = callSlot(ctx, node, key + \`\\u00021\`, "a", false, null);
+    return block1([], [b2]);
+  }
+}"
+`;
+
 exports[`the context a slot renders in > a loop item's slot keeps the value an outer variable had at its item 1`] = `
 "function anonymous(app, bdom, helpers
 ) {

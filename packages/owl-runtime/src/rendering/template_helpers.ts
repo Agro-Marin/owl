@@ -63,13 +63,17 @@ function callSlot(
     let child1: BDom | undefined = undefined;
     let child2: BDom | undefined = undefined;
     if (slotBDom) {
-      child1 = dynamic ? toggler(name, slotBDom) : slotBDom;
+      child1 = toggler(dynamic ? name : slot.__render, slotBDom);
     } else {
       child2 = defaultContent.call(owner, ctx, parent, key + MARK + "d" + segment);
     }
     return multi([child1, child2]);
   }
-  return slotBDom || text("");
+  return slotBDom ? toggler(slot.__render, slotBDom) : toggler(null, text(""));
+}
+
+function callBlock(bdom: BDom | null | undefined): BDom {
+  return bdom ? toggler(bdom.constructor, bdom) : toggler(null, text(""));
 }
 
 const MARK = "\u0002";
@@ -665,6 +669,7 @@ export const helpers = {
   slotContext,
   callContext,
   callSlot,
+  callBlock,
   withKey,
   keyOf,
   listKey,

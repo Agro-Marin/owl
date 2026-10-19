@@ -2280,4 +2280,53 @@ describe("the context a slot renders in", () => {
     await nextTick();
     expect(fixture.innerHTML).toBe("<div><b>1:<i>zero</i></b></div>");
   });
+
+  test("a forwarded slot that comes and goes replaces the empty content, and is replaced by it", async () => {
+    class Child extends Component {
+      static template = xml`<div><t t-call-slot="a"/></div>`;
+    }
+    class Middle extends Component {
+      static template = xml`<Child slots="this.props.on ? this.props.slots : {}"/>`;
+      static components = { Child };
+      props = props();
+    }
+    class Parent extends Component {
+      static template = xml`<Middle on="this.state.on"><t t-set-slot="a"><b>A</b></t></Middle>`;
+      static components = { Middle };
+      state = proxy({ on: false });
+    }
+    const parent = await mount(Parent, fixture);
+    expect(fixture.innerHTML).toBe("<div></div>");
+    parent.state.on = true;
+    await nextTick();
+    expect(fixture.innerHTML).toBe("<div><b>A</b></div>");
+    parent.state.on = false;
+    await nextTick();
+    expect(fixture.innerHTML).toBe("<div></div>");
+  });
+
+  test("a forwarded slot replaced by another slot of the same name replaces its content", async () => {
+    class Child extends Component {
+      static template = xml`<div><t t-call-slot="a"/></div>`;
+    }
+    class Middle extends Component {
+      static template = xml`<Child slots="{ a: this.props.first ? this.props.slots.a : this.props.slots.b }"/>`;
+      static components = { Child };
+      props = props();
+    }
+    class Parent extends Component {
+      static template = xml`
+        <Middle first="this.state.first">
+          <t t-set-slot="a"><b>A</b></t>
+          <t t-set-slot="b"><i>B</i></t>
+        </Middle>`;
+      static components = { Middle };
+      state = proxy({ first: true });
+    }
+    const parent = await mount(Parent, fixture);
+    expect(fixture.innerHTML).toBe("<div><b>A</b></div>");
+    parent.state.first = false;
+    await nextTick();
+    expect(fixture.innerHTML).toBe("<div><i>B</i></div>");
+  });
 });

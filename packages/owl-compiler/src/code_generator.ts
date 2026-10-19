@@ -1322,7 +1322,8 @@ export class CodeGenerator {
   compileTCallBlock(ast: ASTTCallBlock, ctx: Context): string {
     let { block } = ctx;
     block = this.createBlock(block, "multi");
-    this.insertBlock(block, ctx, compileExpr(ast.name));
+    this.helpers.add("callBlock");
+    this.insertBlock(block, ctx, `callBlock(${compileExpr(ast.name)})`);
     return block.varName;
   }
 

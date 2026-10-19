@@ -400,6 +400,11 @@ plugins: [] })` rendered asynchronously); a resource-driven start belongs to
   in a branch) replaces the content: upstream patched one body's blocks with
   the other's, which crashed when one was a list, and else kept showing the
   first.
+- **A `t-call-block`'s block and a slot output without default content are
+  replaced when their kind changes**: a block of another constructor, or a
+  slot of another render function (a forwarded slot that comes, goes or is
+  swapped), is mounted in place of the previous one. Upstream patched one into
+  the other (a text into a `<div>` block rendered an empty `<div>`).
 - **A directive that needs an expression throws on an empty one**, naming it;
   a `t-set-slot` nested directly in another throws.
 - **`t-model.number`** checks the radio, or selects the static option, whose
