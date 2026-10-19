@@ -383,15 +383,18 @@ plugins: [] })` rendered asynchronously); a resource-driven start belongs to
 ### Templates
 
 - **What is read later sees the values at its place**: an event handler, a
-  slot's content, a called template's context and a `t-set` body read the
-  variables as they were where the template gives them, as OWL 2 did
+  slot's content, a called template's context, a `t-set` body and an arrow
+  function given as a prop, a `t-props` value, a `t-call` argument or a slot
+  argument read the variables as they were where the template gives them, as
+  OWL 2 did
   (upstream OWL 3 read them when the event fires, or when the child renders
   its slot on its own: a later `t-set`, or a later loop item writing a
   variable of an enclosing scope, showed through). The compiler copies the
   context there only when a later `t-set` of the same template can write a
   variable that code reads (a called template's reads are not known: any);
-  else it is kept as it is. In Odoo's 3494 templates, 131 places in 51
-  templates are copied. A `t-set` body reads its variables at its `t-set`
+  else it is kept as it is. Handlers and arrow functions with no `t-set`
+  between them share one copy. In Odoo's 3491 templates (2026-10-18), 134
+  places in 56 templates are copied. A `t-set` body reads its variables at its `t-set`
   (upstream: at its output), as QWeb in Python does.
 - **Scoping as QWeb's**, documented as it works: a `t-if` or an element opens
   no scope; a loop item does, and writes a variable `t-set` earlier outside

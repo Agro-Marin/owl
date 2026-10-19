@@ -222,7 +222,8 @@ Where a variable is visible, as Odoo's QWeb does it:
 
 What is read later sees the values at its place in the template, as if read
 there: an event handler, a slot's content (rendered by the child, also on its
-own when its state changes), a called template's slots, a `t-set` body. A
+own when its state changes), a called template's slots, a `t-set` body, an
+arrow function given as a prop or as a `t-call` or slot argument. A
 `t-set` after it, or a later loop item writing a variable of an enclosing
 scope, does not change what it reads:
 

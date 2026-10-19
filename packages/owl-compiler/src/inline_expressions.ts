@@ -415,11 +415,12 @@ function render(tokens: Token[]): string {
   return code;
 }
 
-interface ProcessedExpr {
+export interface ProcessedExpr {
   expr: string;
   freeVariables: string[] | null;
   variables: string[];
   arrow: { isAsync: boolean; params: string; body: string } | null;
+  hasArrow: boolean;
 }
 
 const LEFT_GROUPS = new Set<TKind>(["LEFT_BRACE", "LEFT_BRACKET", "LEFT_PAREN"]);
@@ -576,7 +577,8 @@ function collectVariables(tokens: Token[], start: number): string[] {
 export function processExpr(
   expr: string,
   seededLocals?: Set<string>,
-  inAsyncArrow: boolean = false
+  inAsyncArrow: boolean = false,
+  ctxName: string = "ctx"
 ): ProcessedExpr {
   const scopeStack: { vars: Set<string>; depth: number; ternaries: number; isAsync?: boolean }[] =
     [];
@@ -595,6 +597,7 @@ export function processExpr(
   const stack: (TKind | "BLOCK")[] = [];
   let topLevelArrowIndex = -1;
   let topLevelParams: [number, number] | null = null;
+  let hasArrow = false;
 
   function isLocal(name: string) {
     return scopeStack.some((s) => s.vars.has(name));
@@ -716,14 +719,16 @@ export function processExpr(
       const templateVars: string[] = [];
       token.value = token.replace!((expr: any) => {
         const isAsync = !!scopeStack[scopeStack.length - 1]?.isAsync;
-        const processed = processExpr(expr, currentLocals, isAsync);
+        const processed = processExpr(expr, currentLocals, isAsync, ctxName);
         templateVars.push(...processed.variables);
+        hasArrow ||= processed.hasArrow;
         return processed.expr;
       });
       token.templateVars = templateVars;
     }
 
     if (nextToken && nextToken.type === "OPERATOR" && nextToken.value === "=>") {
+      hasArrow = true;
       const newScope = new Set<string>();
       let paramStart = i;
       let params: [number, number] = [i, i + 1];
@@ -744,7 +749,7 @@ export function processExpr(
     if (isVar) {
       token.varName = token.value;
       if (!isLocal(token.value)) {
-        token.value = `ctx['${token.value}']`;
+        token.value = `${ctxName}['${token.value}']`;
       } else {
         token.value = `_${token.value}`;
         token.isLocal = true;
@@ -771,6 +776,7 @@ export function processExpr(
     freeVariables,
     variables: collectVariables(tokens, 0),
     arrow,
+    hasArrow,
   };
 }
 

@@ -790,6 +790,143 @@ exports[`basics > accept ES6-like syntax for props (with getters) 2`] = `
 }"
 `;
 
+exports[`basics > an arrow function given to a called template or a slot reads the variables at its place 1`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { zero, callTemplate, createComponent, slotContext, callContext } = helpers;
+  const hdlr_fn1 = (ctx)=>ctx['this'].record(ctx['scope'].fn());
+  const comp1 = createComponent(app, \`Child\`, true, true, false, []);
+  
+  const block3_handlers = [hdlr_fn1];
+  let block3 = createBlock(\`<p block-handler-0="click"/>\`, block3_handlers);
+  
+  function slot1(ctx, node, key = "") {
+    return block3([ctx], null, block3_handlers);
+  }
+  
+  return function template(ctx, node, key = "") {
+    ctx = Object.create(ctx);
+    ctx["v"] = 1;
+    const hctx1 = slotContext(ctx);
+    const ctx1 = callContext(ctx);
+    ctx1["fn"] = ()=>hctx1['v'];
+    ctx1[zero] = null;
+    const b2 = callTemplate(\`__template__1000\`, this, app, ctx1, node, key + \`\\u00021\`);
+    ctx["v"] = 2;
+    const b4 = comp1({slots: {"default": {__render: slot1, __ctx: ctx, __owner: this, __scope: "scope"}}}, key + \`\\u00022\`, node, this, null);
+    return multi([b2, b4]);
+  }
+}"
+`;
+
+exports[`basics > an arrow function given to a called template or a slot reads the variables at its place 2`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  const hdlr_fn1 = (ctx)=>ctx['this'].record(ctx['fn']());
+  
+  const block1_handlers = [hdlr_fn1];
+  let block1 = createBlock(\`<button block-handler-0="click"/>\`, block1_handlers);
+  
+  return function template(ctx, node, key = "") {
+    return block1([ctx], null, block1_handlers);
+  }
+}"
+`;
+
+exports[`basics > an arrow function given to a called template or a slot reads the variables at its place 3`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { callSlot, slotContext } = helpers;
+  
+  return function template(ctx, node, key = "") {
+    ctx = Object.create(ctx);
+    ctx["n"] = 1;
+    const hctx1 = slotContext(ctx);
+    const b1 = callSlot(ctx, node, key + \`\\u00021\`, "default", false, {fn: ()=>hctx1['n']});
+    ctx["n"] = 2;
+    return b1;
+  }
+}"
+`;
+
+exports[`basics > an arrow function prop in a loop reads a running variable as it is at its item 1`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { prepareList, createComponent, withKey, keyOf, slotContext } = helpers;
+  const comp1 = createComponent(app, \`Child\`, true, false, false, ["fn.last"]);
+  
+  return function template(ctx, node, key = "") {
+    ctx = Object.create(ctx);
+    ctx["last"] = -1;
+    const ctx1 = ctx;
+    const [k_block1, v_block1, l_block1, c_block1] = prepareList([0,1,2]);
+    for (let i1 = 0; i1 < l_block1; i1++) {
+      let ctx = Object.create(ctx1);
+      ctx["i"] = k_block1[i1];
+      const key1 = ctx['i'];
+      const skey1 = keyOf(key1);
+      const hctx1 = slotContext(ctx);
+      c_block1[i1] = withKey(comp1({fn: ()=>hctx1['last'],"fn.last": ctx['last']}, key + \`\\u00021\\u0002:\${skey1}\`, node, this, null), skey1);
+      ctx1["last"] = ctx['i'];
+    }
+    return list(c_block1);
+  }
+}"
+`;
+
+exports[`basics > an arrow function prop in a loop reads a running variable as it is at its item 2`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  
+  let block1 = createBlock(\`<i/>\`);
+  
+  return function template(ctx, node, key = "") {
+    return block1();
+  }
+}"
+`;
+
+exports[`basics > an arrow function prop reads the variables as they are where it is given, as a handler does 1`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { createComponent, slotContext } = helpers;
+  const comp1 = createComponent(app, \`Child\`, true, false, false, ["fn.v"]);
+  const hdlr_fn1 = (ctx)=>ctx['this'].out(ctx['v']);
+  
+  const block3_handlers = [hdlr_fn1];
+  let block3 = createBlock(\`<button block-handler-0="click"/>\`, block3_handlers);
+  
+  return function template(ctx, node, key = "") {
+    ctx = Object.create(ctx);
+    ctx["v"] = 1;
+    const hctx1 = slotContext(ctx);
+    const b2 = comp1({fn: ()=>hctx1['v'],"fn.v": ctx['v']}, key + \`\\u00021\`, node, this, null);
+    const b3 = block3([hctx1], null, block3_handlers);
+    ctx["v"] = 2;
+    return multi([b2, b3]);
+  }
+}"
+`;
+
+exports[`basics > an arrow function prop reads the variables as they are where it is given, as a handler does 2`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  
+  let block1 = createBlock(\`<i/>\`);
+  
+  return function template(ctx, node, key = "") {
+    return block1();
+  }
+}"
+`;
+
 exports[`basics > arrow function props do not leak synthetic keys into props() 1`] = `
 "function anonymous(app, bdom, helpers
 ) {

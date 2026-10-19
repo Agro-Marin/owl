@@ -165,6 +165,80 @@ describe("basics", () => {
     expect(onClickArgs![1]).toBeInstanceOf(MouseEvent);
   });
 
+  test("an arrow function prop reads the variables as they are where it is given, as a handler does", async () => {
+    const calls: number[] = [];
+    let fn: any;
+    class Child extends Component {
+      static template = xml`<i/>`;
+      props = props();
+      setup() {
+        fn = this.props.fn;
+      }
+    }
+    class Parent extends Component {
+      static template = xml`
+        <t t-set="v" t-value="1"/>
+        <Child fn="() => v"/>
+        <button t-on-click="() => this.out(v)"/>
+        <t t-set="v" t-value="2"/>`;
+      static components = { Child };
+      out(v: number) {
+        calls.push(v);
+      }
+    }
+    await mount(Parent, fixture);
+    fixture.querySelector("button")!.click();
+    calls.push(fn());
+    expect(calls).toEqual([1, 1]);
+  });
+
+  test("an arrow function prop in a loop reads a running variable as it is at its item", async () => {
+    const fns: (() => number)[] = [];
+    class Child extends Component {
+      static template = xml`<i/>`;
+      props = props();
+      setup() {
+        fns.push(this.props.fn);
+      }
+    }
+    class Parent extends Component {
+      static template = xml`
+        <t t-set="last" t-value="-1"/>
+        <t t-foreach="[0, 1, 2]" t-as="i" t-key="i">
+          <Child fn="() => last"/>
+          <t t-set="last" t-value="i"/>
+        </t>`;
+      static components = { Child };
+    }
+    await mount(Parent, fixture);
+    expect(fns.map((fn) => fn())).toEqual([-1, 0, 1]);
+  });
+
+  test("an arrow function given to a called template or a slot reads the variables at its place", async () => {
+    const seen: number[] = [];
+    class Child extends Component {
+      static template = xml`
+        <t t-set="n" t-value="1"/>
+        <t t-call-slot="default" fn="() => n"/>
+        <t t-set="n" t-value="2"/>`;
+    }
+    class Parent extends Component {
+      static template = xml`
+        <t t-set="v" t-value="1"/>
+        <t t-call="${xml`<button t-on-click="() => this.record(fn())"/>`}" fn="() => v"/>
+        <t t-set="v" t-value="2"/>
+        <Child t-slot-scope="scope"><p t-on-click="() => this.record(scope.fn())"/></Child>`;
+      static components = { Child };
+      record(n: number) {
+        seen.push(n);
+      }
+    }
+    await mount(Parent, fixture);
+    fixture.querySelector("button")!.click();
+    fixture.querySelector("p")!.click();
+    expect(seen).toEqual([1, 1]);
+  });
+
   test("arrow function props do not leak synthetic keys into props()", async () => {
     let childProps: any;
     class Child extends Component {

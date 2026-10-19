@@ -53,6 +53,22 @@ describe("what a render allocates", () => {
     expect(allocating).toEqual([]);
   });
 
+  test("handlers and arrow props with no write between them share one context copy", () => {
+    const lines = renderFunctionLines(`
+      <t t-set="v" t-value="1"/>
+      <button t-on-click="() => this.a(v)"/>
+      <button t-on-click="() => this.b(v)"/>
+      <Child fn="() => v" t-on-click="() => this.c(v)"/>
+      <t t-set="v" t-value="2"/>
+      <button t-on-click="() => this.d(v)"/>
+      <t t-if="this.x"><button t-on-click="() => this.e(v)"/></t>
+      <t t-set="v" t-value="3"/>`);
+    expect(lines.filter((line) => line.includes("slotContext(ctx)"))).toEqual([
+      "const hctx1 = slotContext(ctx);",
+      "const hctx2 = slotContext(ctx);",
+    ]);
+  });
+
   test("slots are given as they are, not marked raw on every render", () => {
     const lines = renderFunctionLines(`
       <div>

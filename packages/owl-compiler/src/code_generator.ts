@@ -6,6 +6,7 @@ import {
   interpolate,
   isInterpolated,
   processExpr,
+  type ProcessedExpr,
 } from "./inline_expressions";
 import {
   type AST,
@@ -244,6 +245,13 @@ interface CaptureSite {
   reads: Set<string> | null;
 }
 
+interface ContextCopy {
+  site: CaptureSite;
+  writes: number;
+  loops: number;
+  scope: number;
+}
+
 interface ScopeSite {
   marker: string;
   target: CodeTarget;
@@ -270,6 +278,9 @@ class CodeTarget {
   hasRoot = false;
   deferReturn = false;
   needsScopeProtection = false;
+  scopes: number[] = [0];
+  nextScope = 1;
+  lastCopy: ContextCopy | null = null;
   on: EventHandlers | null;
 
   constructor(name: string, on?: EventHandlers | null) {
@@ -284,6 +295,16 @@ class CodeTarget {
     } else {
       this.code.splice(idx, 0, prefix + line);
     }
+  }
+
+  enterBlock() {
+    this.indentLevel++;
+    this.scopes.push(this.nextScope++);
+  }
+
+  exitBlock() {
+    this.indentLevel--;
+    this.scopes.pop();
   }
 
   generateCode(): string {
@@ -343,6 +364,7 @@ export class CodeGenerator {
   ast: AST;
   staticDefs: { id: string; expr: string }[] = [];
   hoistedHandlers: Map<string, string> = new Map();
+  handlerCode: Map<string, string> = new Map();
   helpers: Set<string> = new Set();
   nextBlockId = 1;
   nextDataIds: { [prefix: string]: number } = {};
@@ -500,11 +522,47 @@ export class CodeGenerator {
   }
 
   handlerContext(handlerIds: string[]): string {
+    return this.contextCopy(readsOf(handlerIds.map((id) => this.handlerCode.get(id) ?? "")));
+  }
+
+  contextCopy(reads: Set<string> | null): string {
+    const target = this.target;
+    const last = target.lastCopy;
+    if (
+      last &&
+      last.writes === target.writes.length &&
+      last.loops === target.loops.length &&
+      target.scopes.includes(last.scope)
+    ) {
+      const site = last.site;
+      if (reads === null) {
+        site.reads = null;
+      } else if (site.reads) {
+        for (const name of reads) {
+          site.reads.add(name);
+        }
+      }
+      return site.marker;
+    }
     const copy = this.generateId("hctx");
-    const code = handlerIds.map((id) => this.staticDefs.find((d) => d.id === id)?.expr ?? "");
-    const marker = this.captureMarker("ctx", copy, "slotContext", readsOf(code));
+    const marker = this.captureMarker("ctx", copy, "slotContext", reads && new Set(reads));
     this.addLine(`${marker}${CAPTURE_LINE}const ${copy} = slotContext(ctx);`);
+    target.lastCopy = {
+      site: this.captureSites[this.captureSites.length - 1],
+      writes: target.writes.length,
+      loops: target.loops.length,
+      scope: target.scopes[target.scopes.length - 1],
+    };
     return marker;
+  }
+
+  compileValue(expr: string): ProcessedExpr {
+    const processed = processExpr(expr);
+    if (!processed.hasArrow) {
+      return processed;
+    }
+    const reads = new Set(processed.variables.filter((name) => name !== "this"));
+    return reads.size ? processExpr(expr, undefined, false, this.contextCopy(reads)) : processed;
   }
 
   mark(): [number, number] {
@@ -753,6 +811,7 @@ export class CodeGenerator {
       id = this.generateId("hdlr_fn");
       this.hoistedHandlers.set(expr, id);
       this.staticDefs.push({ id, expr });
+      this.handlerCode.set(id, expr);
     }
     this.handlerUses.push(expr);
     return id;
@@ -1003,9 +1062,9 @@ export class CodeGenerator {
   }
 
   compileTIfBranch(content: AST, block: BlockDescription, ctx: Context) {
-    this.target.indentLevel++;
+    this.target.enterBlock();
     this.compileAST(content, createContext(ctx, { block, index: ctx.index }));
-    this.target.indentLevel--;
+    this.target.exitBlock();
   }
 
   compileTIf(ast: ASTTif, ctx: Context): string {
@@ -1067,7 +1126,7 @@ export class CodeGenerator {
       this.define(`keys${id}`, `new Set()`);
     }
     this.addLine(`for (let ${loopVar} = 0; ${loopVar} < ${l}; ${loopVar}++) {`);
-    this.target.indentLevel++;
+    this.target.enterBlock();
     const suffixes = [""];
     if (!(ast.noFlags & ForEachNoFlag.First)) {
       suffixes.push("_first");
@@ -1167,7 +1226,7 @@ export class CodeGenerator {
       }
     }
     keyLines.forEach((line, i) => this.addLine(line, keyIdx + i));
-    this.target.indentLevel--;
+    this.target.exitBlock();
     this.target.loopLevel--;
     this.target.loopCtxVars.pop();
     this.target.loops.pop();
@@ -1409,7 +1468,7 @@ export class CodeGenerator {
       const attrTranslationCtx = attrsTranslationCtx?.[name] || ctx.translationCtx;
       value = toStringExpression(ctx.translate ? this.translate(value, attrTranslationCtx) : value);
     } else {
-      value = compileExpr(value);
+      value = this.compileValue(value).expr;
     }
     if (name.includes(".")) {
       let [_name, suffix] = name.split(".");
@@ -1445,7 +1504,7 @@ export class CodeGenerator {
   }
 
   getPropString(props: string[], dynProps: string | null): string {
-    const entries = dynProps ? [`...${compileExpr(dynProps)}`, ...props] : props;
+    const entries = dynProps ? [`...${this.compileValue(dynProps).expr}`, ...props] : props;
     return `{${entries.join(",")}}`;
   }
 
@@ -1470,7 +1529,7 @@ export class CodeGenerator {
         continue;
       }
 
-      const { expr: compiledValue, freeVariables } = processExpr(ast.props![p]);
+      const { expr: compiledValue, freeVariables } = this.compileValue(ast.props![p]);
 
       props.push(`${propKey(name)}: ${compiledValue || undefined}`);
 
@@ -1587,7 +1646,7 @@ export class CodeGenerator {
       id: name,
       expr: `createCatcher(${JSON.stringify(spec)}, [${handlers.join(", ")}])`,
     });
-    return `${name}(${expr}, ${this.capturedContext(readsOf(handlers.map((id) => this.staticDefs.find((d) => d.id === id)?.expr ?? "")))})`;
+    return `${name}(${expr}, ${this.handlerContext(handlers)})`;
   }
 
   compileTCallSlot(ast: ASTTCallSlot, ctx: Context): string {
