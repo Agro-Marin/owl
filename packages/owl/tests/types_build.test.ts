@@ -2,6 +2,7 @@ import { spawnSync } from "node:child_process";
 import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
+import ts from "typescript";
 import { removeScratchPackage, scratchPackage } from "./scratch_build";
 
 let BUILT: string;
@@ -164,4 +165,43 @@ test("a consumer outside the checkout gets complete collection and hook types", 
   } finally {
     rmSync(consumerRoot, { recursive: true, force: true });
   }
+});
+
+const KNOWN_PHANTOM_EXPORTS = ["hasDefault", "isOptional", "isProps", "typeBrand"];
+
+function declaredValues(file: string): string[] {
+  const program = ts.createProgram([file], { noEmit: true, types: [] });
+  const checker = program.getTypeChecker();
+  const module = checker.getSymbolAtLocation(program.getSourceFile(file)!)!;
+  return checker
+    .getExportsOfModule(module)
+    .filter((symbol) => {
+      const target =
+        symbol.flags & ts.SymbolFlags.Alias ? checker.getAliasedSymbol(symbol) : symbol;
+      return target.flags & ts.SymbolFlags.Value;
+    })
+    .map((symbol) => symbol.name)
+    .sort();
+}
+
+test.each([
+  ["owl.es.js", "owl.d.ts"],
+  ["owl.runtime.es.js", "owl.d.ts"],
+  ["owl.compiler.es.js", "compiler.d.ts"],
+])("%s exports every value %s declares, and declares every value it exports", (js, dts) => {
+  const declared = declaredValues(resolve(BUILT, "dist/types", dts));
+  const run = spawnSync(
+    process.execPath,
+    [
+      "--input-type=module",
+      "-e",
+      `console.log(JSON.stringify(Object.keys(await import(${JSON.stringify(resolve(BUILT, "dist", js))}))))`,
+    ],
+    { encoding: "utf8", timeout: 30000 }
+  );
+  expect(run.stderr).toBe("");
+  const exported: string[] = JSON.parse(run.stdout);
+  const phantoms = declared.filter((name) => !exported.includes(name));
+  expect(phantoms).toEqual(dts === "owl.d.ts" ? KNOWN_PHANTOM_EXPORTS : []);
+  expect(exported.filter((name) => !declared.includes(name))).toEqual([]);
 });
