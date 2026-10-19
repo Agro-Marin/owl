@@ -91,7 +91,11 @@ function isMarkedRaw(target: Target): boolean {
     return true;
   }
   if (hasRawPrototypes) {
-    for (let proto = Object.getPrototypeOf(target); proto; proto = Object.getPrototypeOf(proto)) {
+    for (
+      let proto = Object.getPrototypeOf(target);
+      proto !== null && proto !== Object.prototype && proto !== Array.prototype;
+      proto = Object.getPrototypeOf(proto)
+    ) {
       if (rawPrototypes.has(proto)) {
         return true;
       }
