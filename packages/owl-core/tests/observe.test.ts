@@ -1,4 +1,4 @@
-import { batch, computed, effect, immediateEffect, observe, proxy, toRaw } from "../src";
+import { batch, computed, effect, immediateEffect, observe, proxy, signal, toRaw } from "../src";
 import { waitScheduler } from "./helpers";
 
 describe("observe", () => {
@@ -98,6 +98,44 @@ describe("observe", () => {
     expect(calls).toBe(1);
     state.b = 1;
     expect(calls).toBe(2);
+    stop();
+  });
+
+  test("a late read whose last other reader is disposed before the callback is still observed", () => {
+    const calls: number[] = [];
+    const view = observe({ a: 0, b: 0 }, () => calls.push(1));
+    const state = proxy(toRaw(view));
+    void view.a;
+    const dispose = effect(() => void state.b);
+    batch(() => {
+      state.a = 1;
+      void view.b;
+      dispose();
+    });
+    expect(calls).toEqual([1]);
+    state.b = 1;
+    expect(calls).toEqual([1, 1]);
+  });
+
+  test("a late read whose last other reader stops reading it first is still observed", () => {
+    const calls: number[] = [];
+    const view = observe({ a: 0, b: 0 }, () => calls.push(1));
+    const state = proxy(toRaw(view));
+    const reads = signal(true);
+    void view.a;
+    const stop = immediateEffect(() => {
+      if (reads()) {
+        void state.b;
+      }
+    });
+    batch(() => {
+      reads.set(false);
+      state.a = 1;
+      void view.b;
+    });
+    expect(calls).toEqual([1]);
+    state.b = 1;
+    expect(calls).toEqual([1, 1]);
     stop();
   });
 

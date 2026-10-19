@@ -224,7 +224,6 @@ export function onReadAtom(atom: Atom) {
     }
     if (observer.state !== ComputationState.EXECUTED) {
       (observer.lateReads ??= new Set()).add(atom);
-      return;
     }
     const observed = (observer.observed ??= observedSources(observer));
     if (!observed.has(atom)) {
