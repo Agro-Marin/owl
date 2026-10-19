@@ -614,8 +614,8 @@ describe("a list emptied or removed", () => {
     mount(tree, fixture);
     expect(removals(() => patch(tree, div([], [list([])])))).toEqual(["at once"]);
     expect(seen).toEqual([
-      ["bound", false],
-      ["bound", false],
+      ["bound", true],
+      ["bound", true],
       ["unbound", false],
       ["unbound", false],
     ]);

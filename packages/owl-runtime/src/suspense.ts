@@ -54,6 +54,8 @@ class SuspenseContent implements VNode<SuspenseContent> {
     this.anchor!.remove();
   }
 
+  detachRefs() {}
+
   firstNode(): Node {
     return this.content()?.firstNode() ?? this.anchor!;
   }

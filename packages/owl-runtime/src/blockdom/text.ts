@@ -31,6 +31,8 @@ class VText {
     characterDataRemove.call(this.el!);
   }
 
+  detachRefs() {}
+
   firstNode(): Node {
     return this.el!;
   }

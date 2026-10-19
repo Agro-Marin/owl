@@ -31,6 +31,21 @@ const XMLNS_URI = "http://www.w3.org/2000/xmlns/";
 
 let stringifying = 0;
 
+let refDepth = 0;
+const pendingRefs: any[] = [];
+
+function flushRefs() {
+  if (pendingRefs.length) {
+    const queue = pendingRefs.splice(0);
+    if (debug.template) {
+      debugLog("template", `${queue.length / 2} ref callbacks run once their block is inserted`);
+    }
+    for (let i = 0; i < queue.length; i += 2) {
+      queue[i](queue[i + 1], null);
+    }
+  }
+}
+
 function makePropSetter(name: string): Setter<HTMLElement> {
   return function setProp(this: HTMLElement, value: any) {
     const prop = value === 0 ? 0 : value ? value.valueOf() : "";
@@ -567,6 +582,7 @@ type BlockClass = Constructor<VNode<any>>;
 
 function createBlockClass(template: HTMLElement, ctx: BlockCtx, str: string): BlockClass {
   const { refN, collectors, children, locations, cbRefs } = ctx;
+  const cbN = cbRefs.length;
   const locN = locations.length;
   const childN = children.length;
   const isDynamic = refN > 0;
@@ -623,6 +639,8 @@ function createBlockClass(template: HTMLElement, ctx: BlockCtx, str: string): Bl
     remove() {
       elementRemove.call(this.el);
     }
+
+    detachRefs() {}
 
     firstNode(): Node {
       return this.el!;
@@ -700,17 +718,45 @@ function createBlockClass(template: HTMLElement, ctx: BlockCtx, str: string): Bl
         }
       }
 
+      const callRefs = cbN > 0 && !stringifying;
       if (childN) {
-        const children = this.children;
-        for (let i = 0; i < childN; i++) {
-          const child = children![i];
-          if (child) {
-            const info = childInfos[i];
-            const afterRefIdx = (info >> 16) & 0x7fff;
-            const afterNode = afterRefIdx ? refs[afterRefIdx] : null;
-            child.mount(refs[info & 0x7fff] as any, afterNode);
+        const top = refDepth === 0;
+        if (callRefs) {
+          for (let i = 0; i < cbN; i++) {
+            const cbRef = cbRefs[i];
+            pendingRefs.push(data[cbRef], refs[locRefIdxs[cbRef]]);
           }
         }
+        refDepth++;
+        try {
+          const children = this.children;
+          for (let i = 0; i < childN; i++) {
+            const child = children![i];
+            if (child) {
+              const info = childInfos[i];
+              const afterRefIdx = (info >> 16) & 0x7fff;
+              const afterNode = afterRefIdx ? refs[afterRefIdx] : null;
+              child.mount(refs[info & 0x7fff] as any, afterNode);
+            }
+          }
+          for (const i of lateLocs) {
+            locSetters[i].call(refs[locRefIdxs[i]], data[i]);
+          }
+          nodeInsertBefore.call(parent, el, afterNode);
+        } catch (error) {
+          if (top) {
+            pendingRefs.length = 0;
+          }
+          throw error;
+        } finally {
+          refDepth--;
+        }
+        this.el = el as HTMLElement;
+        this.parentEl = parent;
+        if (top) {
+          flushRefs();
+        }
+        return;
       }
       for (const i of lateLocs) {
         locSetters[i].call(refs[locRefIdxs[i]], data[i]);
@@ -720,12 +766,14 @@ function createBlockClass(template: HTMLElement, ctx: BlockCtx, str: string): Bl
       this.el = el as HTMLElement;
       this.parentEl = parent;
 
-      if (cbRefs.length && !stringifying) {
-        const data = this.data!;
-        const refs = this.refs!;
-        for (let cbRef of cbRefs) {
-          const fn = data[cbRef];
-          fn(refs[locRefIdxs[cbRef]], null);
+      if (callRefs) {
+        for (let i = 0; i < cbN; i++) {
+          const cbRef = cbRefs[i];
+          if (refDepth) {
+            pendingRefs.push(data[cbRef], refs[locRefIdxs[cbRef]]);
+          } else {
+            data[cbRef](refs[locRefIdxs[cbRef]], null);
+          }
         }
       }
     };
@@ -804,18 +852,31 @@ function createBlockClass(template: HTMLElement, ctx: BlockCtx, str: string): Bl
       }
     };
 
-    Block.prototype.remove = function remove() {
-      elementRemove.call(this.el);
-
-      if (cbRefs.length) {
-        const data = this.data!;
-        const refs = this.refs!;
-        for (let cbRef of cbRefs) {
-          const fn = data[cbRef];
-          fn(null, refs[locRefIdxs[cbRef]]);
+    if (cbN || childN) {
+      Block.prototype.detachRefs = function detachRefs() {
+        if (cbN) {
+          const data = this.data!;
+          const refs = this.refs!;
+          for (let i = 0; i < cbN; i++) {
+            const cbRef = cbRefs[i];
+            data[cbRef](null, refs[locRefIdxs[cbRef]]);
+          }
         }
-      }
-    };
+        if (childN) {
+          const children = this.children!;
+          for (let i = 0; i < childN; i++) {
+            const child = children[i];
+            if (child) {
+              child.detachRefs();
+            }
+          }
+        }
+      };
+      Block.prototype.remove = function remove() {
+        elementRemove.call(this.el);
+        this.detachRefs();
+      };
+    }
   }
   return Block;
 }

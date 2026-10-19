@@ -399,6 +399,10 @@ export class ComponentNode extends Scope<App> implements VNode<ComponentNode> {
   remove() {
     this.bdom!.remove();
   }
+
+  detachRefs() {
+    this.bdom?.detachRefs();
+  }
 }
 
 let removalDepth = 0;

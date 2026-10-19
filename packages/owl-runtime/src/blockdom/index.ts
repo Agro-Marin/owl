@@ -19,6 +19,7 @@ export interface VNode<T = any> {
   patch(other: T, withBeforeRemove: boolean): void;
   beforeRemove(): void;
   remove(): void;
+  detachRefs(): void;
   firstNode(): Node | undefined;
 
   el?: undefined | HTMLElement | Text;

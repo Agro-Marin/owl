@@ -198,6 +198,13 @@ class VList {
     }
   }
 
+  detachRefs() {
+    const children = this.children;
+    for (let i = 0, l = children.length; i < l; i++) {
+      children[i].detachRefs();
+    }
+  }
+
   firstNode(): Node | undefined {
     const child = this.children[0];
     return child ? child.firstNode() : this.anchor;

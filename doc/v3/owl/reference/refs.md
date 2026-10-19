@@ -27,6 +27,10 @@ class SomeComponent extends Component {
 The signal value will only be set when the target of the `t-ref`
 directive is mounted in the DOM. Otherwise, it will be `null`.
 
+The references of the elements a render adds are set once those elements are
+in the document, the outer ones first, and each is cleared when its element
+is removed, however deep inside the removed content it was.
+
 Note that this example uses the suffix `Ref` to name the reference. This
 is not mandatory, but it is a useful convention, so we do not forget that it is
 a reference signal.

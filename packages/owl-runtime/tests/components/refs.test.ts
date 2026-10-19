@@ -662,4 +662,44 @@ describe("refs", () => {
     seen.push(test.r.el?.tagName);
     expect(seen).toEqual(["B", "SPAN", "B"]);
   });
+
+  test("a {set} ref inside a removed block's nested block is unset", async () => {
+    const steps: string[] = [];
+    class Test extends Component {
+      static template = xml`
+        <p><t t-if="this.a()"><div><t t-if="this.b()"><span t-ref="this.custom"/></t></div></t></p>`;
+      a = signal(true);
+      b = signal(true);
+      custom = {
+        set: (el: HTMLElement | null) => steps.push(el ? el.tagName : "null"),
+      };
+    }
+    const test = await mount(Test, fixture);
+    expect(steps).toEqual(["SPAN"]);
+    test.a.set(false);
+    await nextTick();
+    expect(fixture.innerHTML).toBe("<p></p>");
+    expect(steps).toEqual(["SPAN", "null"]);
+  });
+
+  test("nested refs are set once their elements are in the document, outermost first", async () => {
+    const steps: string[] = [];
+    const logRef = (name: string) => ({
+      set: (el: HTMLElement | null) => el && steps.push(`${name} connected=${el.isConnected}`),
+    });
+    class Test extends Component {
+      static template = xml`
+        <div t-ref="this.root"><t t-if="this.show()"><p t-ref="this.nested"><t t-if="this.show()"><span t-ref="this.nested2"/></t></p></t></div>`;
+      show = signal(true);
+      root = logRef("root");
+      nested = logRef("nested");
+      nested2 = logRef("nested2");
+    }
+    await mount(Test, fixture);
+    expect(steps).toEqual([
+      "root connected=true",
+      "nested connected=true",
+      "nested2 connected=true",
+    ]);
+  });
 });

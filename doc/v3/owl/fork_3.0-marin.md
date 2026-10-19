@@ -346,6 +346,14 @@ plugins: [] })` rendered asynchronously); a resource-driven start belongs to
   out in both phases and never stopped). A native listener on that parent runs
   before or after all of them, not between. `t-on-*.self` on a component means the event targets one of its
   root elements.
+- **A ref is set once its element is in the document, outermost first**: the
+  ref callbacks of a mount run once its outermost block is inserted, in
+  document order (upstream ran a nested block's before its parent element was
+  inserted, on a detached element). **Removing a block releases the refs of
+  the blocks inside it**: every VNode has `detachRefs()` (no DOM work; multi,
+  list, toggler, catcher and component nodes forward it), which `remove()` of
+  a block calls; upstream called only the removed block's own, and a `{set}`
+  ref kept the removed element.
 - **A `t-set` body given to an attribute, interpolation, property or `t-att`
   is its string taken during the render** (`attrValue` / `attrsValue`), so the
   attribute follows what the body reads.
@@ -422,7 +430,9 @@ argument), handler data and `mainEventHandler` are internal; Odoo reads
 none of them. A slot descriptor is `{__render, __ctx, __owner, __scope?, ...attrs}`
 (`__render` static, run with `__owner`), and a t-call body sits in the call
 context under the `zero` / `zeroCtx` helper symbols; Odoo reads none of them.
-`node.renderFn` is an own function, wrapped and called unbound
+Odoo's one VNode, o_spreadsheet's `VPortal`, extends the text VNode
+(`blockDom.text("").constructor`), so a method added to VNodes needs a
+default there. `node.renderFn` is an own function, wrapped and called unbound
 (`web/core/utils/render_hooks.js`, HOOT, o_spreadsheet);
 `app._compileTemplate(name, template)` is wrapped per instance
 (`web/core/template_compile_cache.js`); `node.__owl__.children` is read as a

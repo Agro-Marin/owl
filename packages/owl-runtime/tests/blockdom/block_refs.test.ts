@@ -1,4 +1,13 @@
-import { createBlock, mount, patch, remove } from "../../src/blockdom";
+import {
+  createBlock,
+  createCatcher,
+  list,
+  mount,
+  multi,
+  patch,
+  remove,
+  toggler,
+} from "../../src/blockdom";
 import { logStep } from "../helpers";
 import { makeTestFixture } from "./helpers";
 
@@ -62,7 +71,7 @@ test("callback ref in callback ref with same block", async () => {
   mount(parent, fixture);
 
   expect(fixture.innerHTML).toBe("<p>parent<p>child</p></p>");
-  expect(["<p>child</p>", "<p>parent<p>child</p></p>"]).toBeLogged();
+  expect(["<p>parent<p>child</p></p>", "<p>child</p>"]).toBeLogged();
 });
 
 test("changing the ref callback unbinds the old one and binds the new one", async () => {
@@ -90,5 +99,44 @@ test("toString does not call ref callbacks", async () => {
   expect([]).toBeLogged();
 
   mount(tree, fixture);
-  expect(["ref child", "ref parentchild"]).toBeLogged();
+  expect(["ref parentchild", "ref child"]).toBeLogged();
+});
+
+describe("removing a block releases the refs of the blocks inside it", () => {
+  const outer = createBlock("<p><block-child-0/></p>");
+  const div = createBlock("<div><block-child-0/></div>");
+  const span = createBlock('<span block-ref="0"/>');
+
+  test.each([
+    ["a block", (ref: any) => span([ref])],
+    ["a multi", (ref: any) => multi([undefined, span([ref])])],
+    ["a toggler", (ref: any) => toggler("a", span([ref]))],
+    ["a list", (ref: any) => list([Object.assign(span([ref]), { key: 1 })])],
+    ["a catcher", (ref: any) => createCatcher({ click: 0 }, [() => {}])(span([ref]), {})],
+  ])("through %s", (_name, content) => {
+    const ref = (el: any, prev: any) => logStep(`ref ${el?.tagName} ${prev?.tagName}`);
+    const tree = outer([], [div([], [content(ref)])]);
+    mount(tree, fixture);
+    expect(["ref SPAN undefined"]).toBeLogged();
+    patch(tree, outer([], [undefined]));
+    expect(fixture.innerHTML).toBe("<p></p>");
+    expect(["ref undefined SPAN"]).toBeLogged();
+  });
+});
+
+test("nested ref callbacks run once the outermost block is inserted, parents first", () => {
+  const block = createBlock('<div block-ref="0"><block-text-1/><block-child-0/></div>');
+  const refFn = (el: any, prev: any) =>
+    logStep(
+      el
+        ? `${el.firstChild.textContent} connected=${el.isConnected}`
+        : `unset ${prev.firstChild.textContent}`
+    );
+  const tree = block([refFn, "root"], [block([refFn, "a"], [block([refFn, "b"], [])])]);
+  mount(tree, fixture);
+  expect(["root connected=true", "a connected=true", "b connected=true"]).toBeLogged();
+  patch(tree, block([refFn, "root"], [undefined]));
+  expect(["unset a", "unset b"]).toBeLogged();
+  patch(tree, block([refFn, "root"], [block([refFn, "c"], [block([refFn, "d"], [])])]));
+  expect(["c connected=true", "d connected=true"]).toBeLogged();
 });

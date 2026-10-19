@@ -355,6 +355,10 @@ export function createCatcher(eventsSpec: EventsSpec, fns: (HandlerFn | null)[])
       this.afterNode!.remove();
     }
 
+    detachRefs() {
+      this.child.detachRefs();
+    }
+
     firstNode(): Node | undefined {
       return this.child.firstNode();
     }

@@ -55,6 +55,10 @@ class VToggler {
     this.child.remove();
   }
 
+  detachRefs() {
+    this.child.detachRefs();
+  }
+
   firstNode(): Node | undefined {
     return this.child.firstNode();
   }

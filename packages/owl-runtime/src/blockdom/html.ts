@@ -71,6 +71,8 @@ class VHtml {
     }
   }
 
+  detachRefs() {}
+
   firstNode(): Node {
     return this.content[0]!;
   }

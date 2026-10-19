@@ -118,6 +118,16 @@ export class VMulti {
     }
   }
 
+  detachRefs() {
+    const children = this.children;
+    for (let i = 0, l = children.length; i < l; i++) {
+      const child = children[i];
+      if (child) {
+        child.detachRefs();
+      }
+    }
+  }
+
   firstNode(): Node | undefined {
     const child = this.children[0];
     return child ? child.firstNode() : this.anchors![0];

@@ -1,5 +1,30 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`refs > a {set} ref inside a removed block's nested block is unset 1`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { createRef } = helpers;
+  
+  let block1 = createBlock(\`<p><block-child-0/></p>\`);
+  let block2 = createBlock(\`<div><block-child-0/></div>\`);
+  let block3 = createBlock(\`<span block-ref="0"/>\`);
+  
+  return function template(ctx, node, key = "") {
+    let b2;
+    if (ctx['this'].a()) {
+      let b3;
+      if (ctx['this'].b()) {
+        let ref1 = createRef(ctx['this'].custom, node);
+        b3 = block3([ref1]);
+      }
+      b2 = block2([], [b3]);
+    }
+    return block1([], [b2]);
+  }
+}"
+`;
+
 exports[`refs > a listener firing during the removal still sees its ref 1`] = `
 "function anonymous(app, bdom, helpers
 ) {
@@ -164,6 +189,33 @@ exports[`refs > changing the ref of an element moves the element to the new ref 
   return function template(ctx, node, key = "") {
     let ref1 = createRef(ctx['this'].flag()?ctx['this'].r1:ctx['this'].r2, node);
     return block1([ref1]);
+  }
+}"
+`;
+
+exports[`refs > nested refs are set once their elements are in the document, outermost first 1`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { createRef } = helpers;
+  
+  let block1 = createBlock(\`<div block-ref="0"><block-child-0/></div>\`);
+  let block2 = createBlock(\`<p block-ref="0"><block-child-0/></p>\`);
+  let block3 = createBlock(\`<span block-ref="0"/>\`);
+  
+  return function template(ctx, node, key = "") {
+    let b2;
+    let ref1 = createRef(ctx['this'].root, node);
+    if (ctx['this'].show()) {
+      let b3;
+      let ref2 = createRef(ctx['this'].nested, node);
+      if (ctx['this'].show()) {
+        let ref3 = createRef(ctx['this'].nested2, node);
+        b3 = block3([ref3]);
+      }
+      b2 = block2([ref2], [b3]);
+    }
+    return block1([ref1], [b2]);
   }
 }"
 `;
