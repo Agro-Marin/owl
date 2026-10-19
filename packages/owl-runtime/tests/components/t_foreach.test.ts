@@ -56,6 +56,20 @@ describe("list of components", () => {
     expect(seen).toEqual(["1:3", "2:3", "3:4"]);
   });
 
+  test("a loop variable named like the compiler's item key is read as written", async () => {
+    class Child extends Component {
+      static template = xml`<i t-out="this.props.v"/>`;
+      props = props();
+    }
+    class Parent extends Component {
+      static template = xml`
+        <div><p t-foreach="['a', 'b']" t-as="ikey1" t-key="ikey1"><Child v="ikey1"/><t t-out="'ikey1'"/></p></div>`;
+      static components = { Child };
+    }
+    await mount(Parent, fixture);
+    expect(fixture.innerHTML).toBe("<div><p><i>a</i>ikey1</p><p><i>b</i>ikey1</p></div>");
+  });
+
   test("a keyed item switching between text and markup, or between tags", async () => {
     class Parent extends Component {
       static template = xml`

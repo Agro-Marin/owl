@@ -30,6 +30,14 @@ describe("properly support svg", () => {
     expect(fixture.querySelector("use")!.getAttributeNS(XLINK, "href")).toBe("#a");
   });
 
+  test("an attribute of a prefix the template declares keeps its namespace", () => {
+    const fixture = makeTestFixture();
+    const template = `<div xmlns:o="urn:x" o:a="1"><t t-if="c"><span o:a="2"/></t></div>`;
+    mount(renderToBdom(template, { c: true }), fixture);
+    expect(fixture.querySelector("div")!.getAttributeNS("urn:x", "a")).toBe("1");
+    expect(fixture.querySelector("span")!.getAttributeNS("urn:x", "a")).toBe("2");
+  });
+
   test("add proper namespace to g tags", () => {
     const template = `<g><circle cx="50" cy="50" r="4" stroke="green" stroke-width="1" fill="yellow"/> </g>`;
     expect(renderToString(template)).toBe(

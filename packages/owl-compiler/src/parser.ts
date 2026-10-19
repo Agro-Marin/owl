@@ -58,6 +58,7 @@ export interface ASTDomNode extends BaseAST {
   model: TModelInfo | null;
   dynamicTag: string | null;
   ns: string | null;
+  attrsNS?: Attrs;
 }
 
 export interface ASTMulti extends BaseAST {
@@ -448,6 +449,7 @@ function parseDOMNode(node: Element, ctx: ParsingContext): AST | null {
 
   const nodeAttrsNames = node.getAttributeNames();
   let attrs: ASTDomNode["attrs"] = null;
+  let attrsNS: Attrs | undefined;
   const handlers: NodeHandlers = { on: null, translationCtx: null };
   let model: TModelInfo | null = null;
 
@@ -523,6 +525,14 @@ function parseDOMNode(node: Element, ctx: ParsingContext): AST | null {
       }
       attrs = attrs || {};
       attrs[attr] = value;
+      const colon = attr.indexOf(":");
+      if (colon > 0 && !attr.startsWith("t-")) {
+        const attrNS = attributeNamespace(node, attr, attr.slice(0, colon));
+        if (attrNS) {
+          attrsNS = attrsNS || {};
+          attrsNS[attr] = attrNS;
+        }
+      }
     }
   }
   if (ns) {
@@ -541,7 +551,23 @@ function parseDOMNode(node: Element, ctx: ParsingContext): AST | null {
     content: children,
     model,
     ns,
+    ...(attrsNS && { attrsNS }),
   };
+}
+
+const KNOWN_PREFIXES = new Map([
+  ["xml", "http://www.w3.org/XML/1998/namespace"],
+  ["xlink", "http://www.w3.org/1999/xlink"],
+  ["xmlns", "http://www.w3.org/2000/xmlns/"],
+]);
+
+function attributeNamespace(node: Element, attr: string, prefix: string): string | null {
+  return (
+    node.getAttributeNode(attr)!.namespaceURI ||
+    node.lookupNamespaceURI(prefix) ||
+    KNOWN_PREFIXES.get(prefix) ||
+    null
+  );
 }
 
 function parseTOutNode(node: Element, ctx: ParsingContext): AST | null {

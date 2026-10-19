@@ -37,6 +37,7 @@ const SCOPE_MARKER_RE = /\u0001scope\d+\u0001/g;
 const CAPTURE_MARK = "\u0001capture";
 const CAPTURE_MARKER_RE = /\u0001capture\d+\u0001/g;
 const CAPTURE_LINE = "\u0001line";
+const ITEM_KEY_MARK = "\u0001ikey";
 const CONTEXT_WRITE =
   /ctx\['[^']*'\]\s*(?:[-+*/%&|^]|\*\*|<<|>>>?|&&|\|\||\?\?)?=(?![=>])|ctx\['[^']*'\]\s*(?:\+\+|--)|(?:\+\+|--)\s*ctx\[|delete\s+ctx\[|[[,{:]\s*ctx\['[^']*'\]\s*[,\]}][^;=\n]*?=(?![=>])/;
 
@@ -80,12 +81,6 @@ function makeXmlDocument(): Document {
 
 const LITERAL_RE =
   /^(?:'[^'\\]*'|"[^"\\]*"|`(?:[^`\\]|\\.)*`|-?\d[\d.e+-]*|true|false|null|undefined|\{.*\})$/s;
-
-const ATTRIBUTE_NAMESPACES = new Map([
-  ["xml", "http://www.w3.org/XML/1998/namespace"],
-  ["xlink", "http://www.w3.org/1999/xlink"],
-  ["xmlns", "http://www.w3.org/2000/xmlns/"],
-]);
 
 function isProp(tag: string, key: string): boolean {
   switch (tag) {
@@ -343,7 +338,7 @@ class CodeTarget {
       return `\`\${${this.stringKey(this.loopLevel)}}${ctx.keySegment}\``;
     }
     this.itemKeyLevels.add(this.loopLevel);
-    return `ikey${this.loopLevel}`;
+    return `${ITEM_KEY_MARK}${this.loopLevel}\u0001`;
   }
 
   stringKey(level: number): string {
@@ -982,8 +977,7 @@ export class CodeGenerator {
       if (attr === "class" && val === "") {
         continue;
       }
-      const colon = attr.indexOf(":");
-      const attrNS = colon > 0 ? ATTRIBUTE_NAMESPACES.get(attr.slice(0, colon)) : undefined;
+      const attrNS = ast.attrsNS?.[attr];
       if (attrNS) {
         dom.setAttributeNS(attrNS, attr, val);
       } else {
@@ -1213,13 +1207,6 @@ export class CodeGenerator {
       this.helpers.add("keyOf");
       keyLines.push(`const skey${level} = keyOf(key${level});`);
       uniqueKey = `skey${level}`;
-      if (itemKeyUsed) {
-        const itemKeyRE = new RegExp(`\\bikey${level}\\b`, "g");
-        const code = this.target.code;
-        for (let i = keyIdx; i < code.length; i++) {
-          code[i] = code[i].replace(itemKeyRE, uniqueKey);
-        }
-      }
     } else if (itemKeyUsed || memo || this.dev) {
       this.helpers.add("listKey");
       keyLines.push(`const ikey${level} = listKey(key${level});`);
@@ -1251,6 +1238,15 @@ export class CodeGenerator {
         this.addLine(`${memo}_next.set(${uniqueKey}, ${entry(`memoEnd(outer${level})`)});`);
       } else {
         this.addLine(`${memo}_next.set(${uniqueKey}, ${entry("null")});`);
+      }
+    }
+    if (itemKeyUsed) {
+      const marker = `${ITEM_KEY_MARK}${level}\u0001`;
+      const code = this.target.code;
+      for (let i = keyIdx; i < code.length; i++) {
+        if (code[i].includes(marker)) {
+          code[i] = code[i].replaceAll(marker, uniqueKey);
+        }
       }
     }
     keyLines.forEach((line, i) => this.addLine(line, keyIdx + i));

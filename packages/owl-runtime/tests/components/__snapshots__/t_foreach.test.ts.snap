@@ -35,6 +35,49 @@ exports[`list of components > a keyed item switching between text and markup, or
 }"
 `;
 
+exports[`list of components > a loop variable named like the compiler's item key is read as written 1`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { prepareList, createComponent, safeOutput, withKey, keyOf } = helpers;
+  const comp1 = createComponent(app, \`Child\`, true, false, false, ["v"]);
+  
+  let block1 = createBlock(\`<div><block-child-0/></div>\`);
+  let block3 = createBlock(\`<p><block-child-0/><block-child-1/></p>\`);
+  
+  return function template(ctx, node, key = "") {
+    const ctx1 = ctx;
+    const [k_block2, v_block2, l_block2, c_block2] = prepareList(['a','b']);
+    for (let i1 = 0; i1 < l_block2; i1++) {
+      let ctx = Object.create(ctx1);
+      ctx["ikey1"] = k_block2[i1];
+      const key1 = ctx['ikey1'];
+      const skey1 = keyOf(key1);
+      const b4 = comp1({v: ctx['ikey1']}, key + \`\\u00021\\u0002:\${skey1}\`, node, this, null);
+      const b5 = safeOutput('ikey1', node, key, "\\u00022", 1, key1);
+      c_block2[i1] = withKey(block3([], [b4, b5]), skey1);
+    }
+    const b2 = list(c_block2);
+    return block1([], [b2]);
+  }
+}"
+`;
+
+exports[`list of components > a loop variable named like the compiler's item key is read as written 2`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { safeOutput } = helpers;
+  
+  let block1 = createBlock(\`<i><block-child-0/></i>\`);
+  
+  return function template(ctx, node, key = "") {
+    const b2 = safeOutput(ctx['this'].props.v, node, key, "\\u00021");
+    return block1([], [b2]);
+  }
+}"
+`;
+
 exports[`list of components > an array key keeps its item's component and element across renders 1`] = `
 "function anonymous(app, bdom, helpers
 ) {
