@@ -552,8 +552,13 @@ function write(
 ): boolean {
   const isArray = Array.isArray(target);
   const length = isArray ? target.length : 0;
+  const compares = isArray || findAtom(atoms, key, itemAtoms) !== undefined;
   const before =
-    own !== undefined && "value" in own ? own.value : Reflect.get(target, key, receiver);
+    own !== undefined && "value" in own
+      ? own.value
+      : compares
+        ? readForWrite(target, key, receiver)
+        : UNREADABLE;
   if (!setKey(target, key, stored, receiver)) {
     return false;
   }
@@ -569,7 +574,8 @@ function write(
     return true;
   }
   const created = own === undefined && Object.hasOwn(target, key);
-  const changed = !Object.is(before, Reflect.get(target, key, receiver));
+  const changed =
+    compares && (before === UNREADABLE || !Object.is(before, readForWrite(target, key, receiver)));
   if (created) {
     onWriteKeyPresence(atoms, key);
   }
@@ -583,6 +589,16 @@ function write(
     onWriteItems(target);
   }
   return true;
+}
+
+const UNREADABLE = Symbol("unreadable");
+
+function readForWrite(target: any, key: PropertyKey, receiver: any): unknown {
+  try {
+    return Reflect.get(target, key, receiver);
+  } catch {
+    return UNREADABLE;
+  }
 }
 
 function onWriteItems(target: Target): void {

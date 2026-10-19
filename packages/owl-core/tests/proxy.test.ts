@@ -383,6 +383,55 @@ describe("writes", () => {
     expect(box.value).toBe(1);
   });
 
+  test("a write through a setter whose getter throws until it was set succeeds, observed or not", () => {
+    class Lazy {
+      _value: number | undefined = undefined;
+      get value(): number {
+        if (this._value === undefined) {
+          throw new Error("not set yet");
+        }
+        return this._value;
+      }
+      set value(value: number) {
+        this._value = value;
+      }
+    }
+    const state = proxy({ item: new Lazy(), other: new Lazy() });
+    state.other.value = 1;
+    expect(state.other.value).toBe(1);
+    const item = state.item;
+    const seen: unknown[] = [];
+    immediateEffect(() => {
+      seen.push(item._value);
+      try {
+        seen.push(item.value);
+      } catch {
+        seen.push("threw");
+      }
+    });
+    item.value = 2;
+    expect(item.value).toBe(2);
+    expect(seen).toEqual([undefined, "threw", 2, 2]);
+  });
+
+  test("a write through a setter calls its getter only when the key is observed", () => {
+    let reads = 0;
+    class Box {
+      _value = 0;
+      get value() {
+        reads++;
+        return this._value;
+      }
+      set value(value: number) {
+        this._value = value;
+      }
+    }
+    const box = proxy({ box: new Box() }).box;
+    immediateEffect(() => box._value);
+    box.value = 1;
+    expect(reads).toBe(0);
+  });
+
   test("an inherited setter defining its backing field runs an immediate reader once per write", () => {
     const proto = {
       get value() {

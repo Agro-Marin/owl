@@ -151,8 +151,11 @@ true })` creates an effect owned by nothing. When a computed and an effect
   (`Object`, `Array`, `Map`, `Set`, `WeakMap`, `Function`) throws.
 - **A write through a setter, an array write (an index or the length) and a
   delete are each one batch**: an immediate reader of several keys the write
-  notifies runs once, after it. An index written past the end of an array
-  behind its own Proxy notifies its length, also through a shallow proxy.
+  notifies runs once, after it. A write through a setter calls the key's
+  getter only when the key is observed (to compare the values), and a getter
+  that throws there counts as a change instead of failing the write. An index
+  written past the end of an array behind its own Proxy notifies its length,
+  also through a shallow proxy.
 - **A Map proxy, and an `observe()` view of a Map, have no `add`** (it reads
   `undefined`, as on a Map). A set operation (`union`, `intersection`, …) on a
   proxy checks its argument as the native method does, reads of it only what
