@@ -129,7 +129,7 @@ exports[`white space handling > whitespace in pre tags is kept under t-if and t-
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { prepareList, withKey } = helpers;
+  let { prepareList, withKey, listKey } = helpers;
   
   let block1 = createBlock(\`<pre><block-child-0/></pre>\`);
   
@@ -140,7 +140,8 @@ exports[`white space handling > whitespace in pre tags is kept under t-if and t-
       let ctx = Object.create(ctx1);
       ctx["i"] = k_block2[i1];
       const key1 = ctx['i'];
-      c_block2[i1] = withKey(text(\`a   b\`), key1);
+      const ikey1 = listKey(key1);
+      c_block2[i1] = withKey(text(\`a   b\`), ikey1);
     }
     const b2 = list(c_block2);
     return block1([], [b2]);

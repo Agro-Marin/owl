@@ -17,7 +17,7 @@ exports[`rows reading a selector render on a selection change only when their an
       ctx["row"] = k_block2[i1];
       const key1 = ctx['row'].id;
       const skey1 = keyOf(key1);
-      c_block2[i1] = withKey(comp1({row: ctx['row'],isSelected: ctx['this'].isSelected}, key + \`\\u00021\\u0002:\${skey1}\`, node, this, null), key1);
+      c_block2[i1] = withKey(comp1({row: ctx['row'],isSelected: ctx['this'].isSelected}, key + \`\\u00021\\u0002:\${skey1}\`, node, this, null), skey1);
     }
     const b2 = list(c_block2);
     return block1([], [b2]);

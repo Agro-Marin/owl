@@ -196,6 +196,7 @@ interface Context {
   translate: boolean;
   translationCtx: string;
   tKeyExpr: string | null;
+  keySegment: string | null;
   nameSpace?: string;
   tModelSelected?: { expr: string; number: boolean };
   inPreTag?: boolean;
@@ -210,6 +211,7 @@ function createContext(parentCtx: Context, params?: Partial<Context>): Context {
       translate: parentCtx.translate,
       translationCtx: parentCtx.translationCtx,
       tKeyExpr: null,
+      keySegment: parentCtx.keySegment,
       nameSpace: parentCtx.nameSpace,
       tModelSelected: parentCtx.tModelSelected,
       inPreTag: parentCtx.inPreTag,
@@ -259,6 +261,7 @@ class CodeTarget {
   loops: LoopScope[] = [];
   writtenLevels: Set<number> = new Set();
   stringKeyLevels: Set<number> = new Set();
+  itemKeyLevels: Set<number> = new Set();
   tSetVars: Map<string, number> = new Map();
   seq = 0;
   writes: WriteSite[] = [];
@@ -301,9 +304,10 @@ class CodeTarget {
 
   currentKey(ctx: Context) {
     if (ctx.tKeyExpr) {
-      return `\`\${${this.stringKey(this.loopLevel)}}${KEY_MARK}k\${${ctx.tKeyExpr}}\``;
+      return `\`\${${this.stringKey(this.loopLevel)}}${ctx.keySegment}\``;
     }
-    return `key${this.loopLevel}`;
+    this.itemKeyLevels.add(this.loopLevel);
+    return `ikey${this.loopLevel}`;
   }
 
   stringKey(level: number): string {
@@ -382,6 +386,7 @@ export class CodeGenerator {
       translate: true,
       translationCtx: "",
       tKeyExpr: null,
+      keySegment: null,
     });
     this.resolveCaptures();
     this.resolveScopes();
@@ -455,7 +460,7 @@ export class CodeGenerator {
     const target = new CodeTarget(name, on);
     this.targets.push(target);
     this.target = target;
-    this.compileAST(ast, createContext(ctx, { tModelSelected: undefined }));
+    this.compileAST(ast, createContext(ctx, { tModelSelected: undefined, keySegment: null }));
     this.target = initialTarget;
     return name;
   }
@@ -912,7 +917,6 @@ export class CodeGenerator {
         const subCtx = createContext(ctx, {
           block,
           forceNewBlock: false,
-          tKeyExpr: ctx.tKeyExpr,
           nameSpace,
           tModelSelected: tModelSelected || ctx.tModelSelected,
           inPreTag: ctx.inPreTag || ast.tag === "pre",
@@ -965,7 +969,7 @@ export class CodeGenerator {
       blockStr = this.compileZero(ast, ctx);
     } else {
       const site = this.siteId();
-      const keyExpr = ctx.tKeyExpr ? `key + \`${KEY_MARK}k\${${ctx.tKeyExpr}}\`` : "key";
+      const keyExpr = ctx.keySegment ? `key + \`${ctx.keySegment}\`` : "key";
       const level = this.target.loopLevel;
       let keyArgs: string;
       if (level <= MAX_LAZY_LOOP_KEYS) {
@@ -1116,11 +1120,22 @@ export class CodeGenerator {
       this.target.memoLevels.pop();
     }
     const keyLines: string[] = [];
-    let uniqueKey = `key${level}`;
+    const itemKeyUsed = this.target.itemKeyLevels.delete(level);
+    let uniqueKey = `ikey${level}`;
     if (this.target.stringKeyLevels.delete(level)) {
       this.helpers.add("keyOf");
       keyLines.push(`const skey${level} = keyOf(key${level});`);
       uniqueKey = `skey${level}`;
+      if (itemKeyUsed) {
+        const itemKeyRE = new RegExp(`\\bikey${level}\\b`, "g");
+        const code = this.target.code;
+        for (let i = keyIdx; i < code.length; i++) {
+          code[i] = code[i].replace(itemKeyRE, uniqueKey);
+        }
+      }
+    } else if (itemKeyUsed || memo || this.dev) {
+      this.helpers.add("listKey");
+      keyLines.push(`const ikey${level} = listKey(key${level});`);
     }
     if (this.dev) {
       this.helpers.add("OwlError");
@@ -1178,6 +1193,7 @@ export class CodeGenerator {
     this.define(tKeyExpr, `keyOf(${compileExpr(ast.expr)})`);
     ctx = createContext(ctx, {
       tKeyExpr,
+      keySegment: `${ctx.keySegment || ""}${KEY_MARK}k\${${tKeyExpr}}`,
       block: ctx.block,
       index: ctx.index,
     });
@@ -1361,7 +1377,7 @@ export class CodeGenerator {
   }
 
   scopeKey(ctx: Context, site: string = this.siteId()): string {
-    let suffix = ctx.tKeyExpr ? `${KEY_MARK}k\${${ctx.tKeyExpr}}${site}` : site;
+    let suffix = ctx.keySegment ? `${ctx.keySegment}${site}` : site;
     for (let i = 1; i <= this.target.loopLevel; i++) {
       suffix += `${KEY_MARK}:\${${this.target.stringKey(i)}}`;
     }

@@ -580,7 +580,7 @@ exports[`t-call (template calling) > recursive template, part 2 2`] = `
       const ctx2 = Object.create(ctx1); ctx2["subtree"] = ctx["subtree"]; ctx2["subtree_first"] = ctx["subtree_first"]; ctx2["subtree_last"] = ctx["subtree_last"]; ctx2["subtree_index"] = ctx["subtree_index"]; ctx2["subtree_value"] = ctx["subtree_value"];
       ctx2["node"] = ctx['subtree'];
       ctx2[zero] = null;
-      c_block3[i1] = withKey(callTemplate(\`nodeTemplate\`, this, app, ctx2, node, key + \`\\u00022\\u0002:\${skey1}\`), key1);
+      c_block3[i1] = withKey(callTemplate(\`nodeTemplate\`, this, app, ctx2, node, key + \`\\u00022\\u0002:\${skey1}\`), skey1);
     }
     const b3 = list(c_block3);
     return block1([], [b2, b3]);
@@ -630,7 +630,7 @@ exports[`t-call (template calling) > recursive template, part 3 2`] = `
       const ctx2 = Object.create(ctx1); ctx2["subtree"] = ctx["subtree"]; ctx2["subtree_first"] = ctx["subtree_first"]; ctx2["subtree_last"] = ctx["subtree_last"]; ctx2["subtree_index"] = ctx["subtree_index"]; ctx2["subtree_value"] = ctx["subtree_value"];
       ctx2["node"] = ctx['subtree'];
       ctx2[zero] = null;
-      c_block3[i1] = withKey(callTemplate(\`nodeTemplate\`, this, app, ctx2, node, key + \`\\u00022\\u0002:\${skey1}\`), key1);
+      c_block3[i1] = withKey(callTemplate(\`nodeTemplate\`, this, app, ctx2, node, key + \`\\u00022\\u0002:\${skey1}\`), skey1);
     }
     const b3 = list(c_block3);
     return block1([], [b2, b3]);
@@ -685,7 +685,7 @@ exports[`t-call (template calling) > recursive template, part 4: with t-set recu
       ctx2["node"] = ctx['subtree'];
       ctx2["recursive_idx"] = ctx['recursive_idx'];
       ctx2[zero] = null;
-      c_block4[i1] = withKey(callTemplate(\`nodeTemplate\`, this, app, ctx2, node, key + \`\\u00023\\u0002:\${skey1}\`), key1);
+      c_block4[i1] = withKey(callTemplate(\`nodeTemplate\`, this, app, ctx2, node, key + \`\\u00023\\u0002:\${skey1}\`), skey1);
     }
     const b4 = list(c_block4);
     return block1([], [b2, b3, b4]);
@@ -697,7 +697,7 @@ exports[`t-call (template calling) > root t-call with body: t-foreach 1`] = `
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { prepareList, withKey, zero, zeroCtx, callTemplate } = helpers;
+  let { prepareList, withKey, listKey, zero, zeroCtx, callTemplate } = helpers;
   
   function callBody1(ctx, node, key = "") {
     const ctx1 = ctx;
@@ -706,7 +706,8 @@ exports[`t-call (template calling) > root t-call with body: t-foreach 1`] = `
       let ctx = Object.create(ctx1);
       ctx["i"] = k_block2[i1];
       const key1 = ctx['i'];
-      c_block2[i1] = withKey(text(\`1\`), key1);
+      const ikey1 = listKey(key1);
+      c_block2[i1] = withKey(text(\`1\`), ikey1);
     }
     return list(c_block2);
   }
@@ -1209,7 +1210,7 @@ exports[`t-call (template calling) > t-call with t-set inside and outside 1`] = 
       const ctx2 = Object.create(ctx);
       ctx2["val3"] = ctx['val']*3;
       ctx2[zero] = null;
-      c_block2[i1] = withKey(callTemplate(\`sub\`, this, app, ctx2, node, key + \`\\u00021\\u0002:\${skey1}\`), key1);
+      c_block2[i1] = withKey(callTemplate(\`sub\`, this, app, ctx2, node, key + \`\\u00021\\u0002:\${skey1}\`), skey1);
     }
     const b2 = list(c_block2);
     return block1([], [b2]);
@@ -1278,7 +1279,7 @@ exports[`t-call (template calling) > t-call with t-set inside and outside. 2 2`]
       ctx2["val3"] = ctx['val']*3;
       ctx2["w"] = ctx['w'];
       ctx2[zero] = null;
-      c_block2[i1] = withKey(callTemplate(\`sub\`, this, app, ctx2, node, key + \`\\u00021\\u0002:\${skey1}\`), key1);
+      c_block2[i1] = withKey(callTemplate(\`sub\`, this, app, ctx2, node, key + \`\\u00021\\u0002:\${skey1}\`), skey1);
     }
     const b2 = list(c_block2);
     return block1([], [b2]);

@@ -95,7 +95,7 @@ exports[`t-on > can bind handlers with empty object (with non empty inner string
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { prepareList, withKey } = helpers;
+  let { prepareList, withKey, listKey } = helpers;
   const hdlr_fn1 = (ctx)=>ctx['activate'](ctx['action']);
   
   let block1 = createBlock(\`<ul><block-child-0/></ul>\`);
@@ -110,7 +110,8 @@ exports[`t-on > can bind handlers with empty object (with non empty inner string
       ctx["action"] = k_block2[i1];
       ctx["action_index"] = i1;
       const key1 = ctx['action_index'];
-      c_block2[i1] = withKey(block3([ctx], null, block3_handlers), key1);
+      const ikey1 = listKey(key1);
+      c_block2[i1] = withKey(block3([ctx], null, block3_handlers), ikey1);
     }
     const b2 = list(c_block2);
     return block1([], [b2]);
@@ -170,7 +171,7 @@ exports[`t-on > handler is bound to proper owner, part 2 1`] = `
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { prepareList, callHandler, withKey } = helpers;
+  let { prepareList, callHandler, withKey, listKey } = helpers;
   const hdlr_fn1 = (ctx, ev) => callHandler(ctx['add'], ctx, ev);
   
   const block2_handlers = [hdlr_fn1];
@@ -183,7 +184,8 @@ exports[`t-on > handler is bound to proper owner, part 2 1`] = `
       let ctx = Object.create(ctx1);
       ctx["value"] = k_block1[i1];
       const key1 = ctx['value'];
-      c_block1[i1] = withKey(block2([ctx], null, block2_handlers), key1);
+      const ikey1 = listKey(key1);
+      c_block1[i1] = withKey(block2([ctx], null, block2_handlers), ikey1);
     }
     return list(c_block1);
   }
@@ -236,7 +238,7 @@ exports[`t-on > handler is bound to proper owner, part 4 1`] = `
       ctx["value_value"] = v_block1[i1];
       const key1 = ctx['value'];
       const skey1 = keyOf(key1);
-      c_block1[i1] = withKey(callTemplate(\`sub\`, this, app, ctx[zero] ? withoutZero(ctx) : ctx, node, key + \`\\u00021\\u0002:\${skey1}\`), key1);
+      c_block1[i1] = withKey(callTemplate(\`sub\`, this, app, ctx[zero] ? withoutZero(ctx) : ctx, node, key + \`\\u00021\\u0002:\${skey1}\`), skey1);
     }
     return list(c_block1);
   }
@@ -410,7 +412,7 @@ exports[`t-on > t-on modifiers (native listener) > t-on with prevent modifier in
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { prepareList, safeOutput, withKey } = helpers;
+  let { prepareList, safeOutput, withKey, listKey } = helpers;
   const hdlr_fn1 = (ctx,_ev)=>ctx['onEdit'](ctx['project'].id,_ev);
   
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
@@ -424,8 +426,9 @@ exports[`t-on > t-on modifiers (native listener) > t-on with prevent modifier in
       let ctx = Object.create(ctx1);
       ctx["project"] = k_block2[i1];
       const key1 = ctx['project'];
+      const ikey1 = listKey(key1);
       const b4 = safeOutput(ctx['project'].name, node, key, "\\u00021", 1, key1);
-      c_block2[i1] = withKey(block3([ctx], [b4], block3_handlers), key1);
+      c_block2[i1] = withKey(block3([ctx], [b4], block3_handlers), ikey1);
     }
     const b2 = list(c_block2);
     return block1([], [b2]);

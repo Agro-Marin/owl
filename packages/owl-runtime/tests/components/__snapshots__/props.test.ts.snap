@@ -15,7 +15,7 @@ exports[`.alike suffix in a list 1`] = `
       ctx["elem"] = k_block1[i1];
       const key1 = ctx['elem'].id;
       const skey1 = keyOf(key1);
-      c_block1[i1] = withKey(comp1({todo: ctx['elem'],toggle: ()=>ctx['this'].toggle(ctx['elem'].id)}, key + \`\\u00021\\u0002:\${skey1}\`, node, this, null), key1);
+      c_block1[i1] = withKey(comp1({todo: ctx['elem'],toggle: ()=>ctx['this'].toggle(ctx['elem'].id)}, key + \`\\u00021\\u0002:\${skey1}\`, node, this, null), skey1);
     }
     return list(c_block1);
   }
@@ -137,7 +137,7 @@ exports[`.signal suffix works in a t-foreach loop 1`] = `
       ctx["item"] = k_block1[i1];
       const key1 = ctx['item'].id;
       const skey1 = keyOf(key1);
-      c_block1[i1] = withKey(comp1({value: ctx['item'].n}, key + \`\\u00021\\u0002:\${skey1}\`, node, this, null), key1);
+      c_block1[i1] = withKey(comp1({value: ctx['item'].n}, key + \`\\u00021\\u0002:\${skey1}\`, node, this, null), skey1);
     }
     return list(c_block1);
   }
@@ -346,7 +346,7 @@ exports[`.signal suffix: one signal per child > a removed child takes its signal
       ctx["i"] = k_block2[i1];
       const key1 = ctx['i'];
       const skey1 = keyOf(key1);
-      c_block2[i1] = withKey(comp1({v: ctx['i']}, key + \`\\u00021\\u0002:\${skey1}\`, node, this, null), key1);
+      c_block2[i1] = withKey(comp1({v: ctx['i']}, key + \`\\u00021\\u0002:\${skey1}\`, node, this, null), skey1);
     }
     const b2 = list(c_block2);
     return block1([], [b2]);
@@ -731,7 +731,7 @@ exports[`arrow function props re-render when captured variable changes 1`] = `
       ctx["elem"] = k_block1[i1];
       const key1 = ctx['elem'].id;
       const skey1 = keyOf(key1);
-      c_block1[i1] = withKey(comp1({todo: ctx['elem'],toggle: ()=>ctx['this'].toggle(ctx['elem'].id),"toggle.elem": ctx['elem']}, key + \`\\u00021\\u0002:\${skey1}\`, node, this, null), key1);
+      c_block1[i1] = withKey(comp1({todo: ctx['elem'],toggle: ()=>ctx['this'].toggle(ctx['elem'].id),"toggle.elem": ctx['elem']}, key + \`\\u00021\\u0002:\${skey1}\`, node, this, null), skey1);
     }
     return list(c_block1);
   }
@@ -805,7 +805,7 @@ exports[`basics > arrow function props do not leak synthetic keys into props() 1
       ctx["item"] = k_block1[i1];
       const key1 = ctx['item'].val;
       const skey1 = keyOf(key1);
-      c_block1[i1] = withKey(comp1({onClick: (_ev)=>ctx['this'].onClick(ctx['item'].val,_ev),"onClick.item": ctx['item']}, key + \`\\u00021\\u0002:\${skey1}\`, node, this, null), key1);
+      c_block1[i1] = withKey(comp1({onClick: (_ev)=>ctx['this'].onClick(ctx['item'].val,_ev),"onClick.item": ctx['item']}, key + \`\\u00021\\u0002:\${skey1}\`, node, this, null), skey1);
     }
     return list(c_block1);
   }
@@ -842,7 +842,7 @@ exports[`basics > arrow functions as prop correctly capture their scope 1`] = `
       ctx["item"] = k_block1[i1];
       const key1 = ctx['item'].val;
       const skey1 = keyOf(key1);
-      c_block1[i1] = withKey(comp1({onClick: (_ev)=>ctx['this'].onClick(ctx['item'].val,_ev),"onClick.item": ctx['item']}, key + \`\\u00021\\u0002:\${skey1}\`, node, this, null), key1);
+      c_block1[i1] = withKey(comp1({onClick: (_ev)=>ctx['this'].onClick(ctx['item'].val,_ev),"onClick.item": ctx['item']}, key + \`\\u00021\\u0002:\${skey1}\`, node, this, null), skey1);
     }
     return list(c_block1);
   }

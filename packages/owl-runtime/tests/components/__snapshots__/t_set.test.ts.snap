@@ -349,10 +349,10 @@ exports[`t-set > t-set body with a component, output in nested loops 1`] = `
         const key2 = ctx['c'];
         const skey2 = keyOf(key2);
         ctx["v"] = new LazyValue(value1, ctx, this, node, key + \`\\u00022\\u0002:\${skey1}\\u0002:\${skey2}\`);
-        c_block4[i2] = withKey(safeOutput(ctx['v'], node, key, "\\u00023", 2, key1, key2), key2);
+        c_block4[i2] = withKey(safeOutput(ctx['v'], node, key, "\\u00023", 2, key1, key2), skey2);
       }
       const b4 = list(c_block4);
-      c_block2[i1] = withKey(block3([], [b4]), key1);
+      c_block2[i1] = withKey(block3([], [b4]), skey1);
     }
     const b2 = list(c_block2);
     return block1([], [b2]);

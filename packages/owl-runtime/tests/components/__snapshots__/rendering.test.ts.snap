@@ -126,7 +126,7 @@ exports[`render loop detection > wide re-render under an uncommitted root is not
       if (keys2.has(skey1)) { throw new OwlError(\`Got duplicate key in t-foreach: \${key1}\`)}
       keys2.add(skey1);
       const props1 = {};
-      c_block2[i1] = withKey(comp1(props1, key + \`\\u00021\\u0002:\${skey1}\`, node, this, null), key1);
+      c_block2[i1] = withKey(comp1(props1, key + \`\\u00021\\u0002:\${skey1}\`, node, this, null), skey1);
     }
     const b2 = list(c_block2);
     const props2 = {};

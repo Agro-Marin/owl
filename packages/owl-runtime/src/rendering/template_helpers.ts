@@ -136,6 +136,14 @@ function arrayKey(items: any[], open: any[][] | null): string {
   return result + MARK + "]";
 }
 
+function listKey(key: any): any {
+  if (typeof key === "string") {
+    const first = key.charCodeAt(0);
+    return first === 0x40 || first === 0x27 ? "'" + key : key;
+  }
+  return key !== key || Array.isArray(key) ? keyOf(key) : key;
+}
+
 function withKey(elem: any, k: string) {
   elem.key = k;
   return elem;
@@ -659,6 +667,7 @@ export const helpers = {
   callSlot,
   withKey,
   keyOf,
+  listKey,
   prepareList,
   toNumber,
   LazyValue,

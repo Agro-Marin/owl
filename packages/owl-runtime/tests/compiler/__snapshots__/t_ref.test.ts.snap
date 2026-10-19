@@ -107,7 +107,7 @@ exports[`t-ref > refs in a loop 1`] = `
       const skey1 = keyOf(key1);
       const tKey_1 = keyOf(ctx['item'].id);
       let ref1 = createRef(ctx['item'].ref, node);
-      const b4 = toggler(tKey_1, safeOutput(ctx['item'].id, node, key + \`\\u0002k\${tKey_1}\`, "\\u00021", 1, key1));
+      const b4 = safeOutput(ctx['item'].id, node, key + \`\\u0002k\${tKey_1}\`, "\\u00021", 1, key1);
       c_block2[i1] = withKey(block3([ref1], [b4]), \`\${skey1}\\u0002k\${tKey_1}\`);
     }
     const b2 = list(c_block2);

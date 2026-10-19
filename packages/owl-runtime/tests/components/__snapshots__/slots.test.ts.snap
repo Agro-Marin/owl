@@ -122,7 +122,7 @@ exports[`slots > a slot called in a loop and again after it gives each call its 
       ctx["i"] = k_block2[i1];
       const key1 = ctx['i'];
       const skey1 = keyOf(key1);
-      c_block2[i1] = withKey(callSlot(ctx, node, key + \`\\u00021\\u0002:\${skey1}\`, "default", false, null), key1);
+      c_block2[i1] = withKey(callSlot(ctx, node, key + \`\\u00021\\u0002:\${skey1}\`, "default", false, null), skey1);
     }
     const b2 = list(c_block2);
     const b5 = safeOutput('|', node, key, "\\u00022");
@@ -196,7 +196,7 @@ exports[`slots > a sub-template looping over a slot can be called twice 3`] = `
       ctx["i"] = k_block1[i1];
       const key1 = ctx['i'];
       const skey1 = keyOf(key1);
-      c_block1[i1] = withKey(callSlot(ctx, node, key + \`\\u00021\\u0002:\${skey1}\`, "default", false, null), key1);
+      c_block1[i1] = withKey(callSlot(ctx, node, key + \`\\u00021\\u0002:\${skey1}\`, "default", false, null), skey1);
     }
     return list(c_block1);
   }
@@ -2254,10 +2254,10 @@ exports[`slots > slot called inside nested loops gets one component per outer it
         ctx["c"] = k_block4[i2];
         const key2 = ctx['c'];
         const skey2 = keyOf(key2);
-        c_block4[i2] = withKey(callSlot(ctx, node, key + \`\\u00021\\u0002:\${skey1}\\u0002:\${skey2}\`, "cell", false, null), key2);
+        c_block4[i2] = withKey(callSlot(ctx, node, key + \`\\u00021\\u0002:\${skey1}\\u0002:\${skey2}\`, "cell", false, null), skey2);
       }
       const b4 = list(c_block4);
-      c_block2[i1] = withKey(block3([], [b4]), key1);
+      c_block2[i1] = withKey(block3([], [b4]), skey1);
     }
     const b2 = list(c_block2);
     return block1([], [b2]);
@@ -2545,7 +2545,7 @@ exports[`slots > slot in t-foreach locations 2`] = `
       const skey1 = keyOf(key1);
       const b3 = safeOutput(ctx['elem'], node, key, "\\u00021", 1, key1);
       const b4 = callSlot(ctx, node, key + \`\\u00022\\u0002:\${skey1}\`, "default", false, null);
-      c_block1[i1] = withKey(block2([], [b3, b4]), key1);
+      c_block1[i1] = withKey(block2([], [b3, b4]), skey1);
     }
     return list(c_block1);
   }
@@ -2883,7 +2883,7 @@ exports[`slots > slots are rendered with proper context, part 2 1`] = `
       const key1 = ctx['user'].id;
       const skey1 = keyOf(key1);
       const b7 = comp1({to: '/user/'+ctx['user'].id,slots: {"default": {__render: slot1, __ctx: ctx, __owner: this}}}, key + \`\\u00022\\u0002:\${skey1}\`, node, this, null);
-      c_block2[i1] = withKey(block3([], [b7]), key1);
+      c_block2[i1] = withKey(block3([], [b7]), skey1);
     }
     const b2 = list(c_block2);
     return block1([], [b2]);
@@ -2931,7 +2931,7 @@ exports[`slots > slots are rendered with proper context, part 3 1`] = `
       const skey1 = keyOf(key1);
       ctx["userdescr"] = 'User '+ctx['user'].name;
       const b5 = comp1({to: '/user/'+ctx['user'].id,slots: {"default": {__render: slot1, __ctx: ctx, __owner: this}}}, key + \`\\u00022\\u0002:\${skey1}\`, node, this, null);
-      c_block2[i1] = withKey(block3([], [b5]), key1);
+      c_block2[i1] = withKey(block3([], [b5]), skey1);
     }
     const b2 = list(c_block2);
     return block1([], [b2]);
@@ -3074,7 +3074,7 @@ exports[`slots > slots in t-foreach and re-rendering 1`] = `
       ctx["n_index"] = i1;
       const key1 = ctx['n_index'];
       const skey1 = keyOf(key1);
-      c_block2[i1] = withKey(comp1({slots: {"default": {__render: slot1, __ctx: ctx, __owner: this}}}, key + \`\\u00022\\u0002:\${skey1}\`, node, this, null), key1);
+      c_block2[i1] = withKey(comp1({slots: {"default": {__render: slot1, __ctx: ctx, __owner: this}}}, key + \`\\u00022\\u0002:\${skey1}\`, node, this, null), skey1);
     }
     const b2 = list(c_block2);
     return block1([], [b2]);
@@ -3132,11 +3132,11 @@ exports[`slots > slots in t-foreach in t-foreach 1`] = `
         ctx["node2"] = k_block7[i2];
         const key2 = ctx['node2'].key;
         const skey2 = keyOf(key2);
-        c_block7[i2] = withKey(comp1({slots: {"default": {__render: slot1, __ctx: ctx, __owner: this}}}, key + \`\\u00023\\u0002:\${skey1}\\u0002:\${skey2}\`, node, this, null), key2);
+        c_block7[i2] = withKey(comp1({slots: {"default": {__render: slot1, __ctx: ctx, __owner: this}}}, key + \`\\u00023\\u0002:\${skey1}\\u0002:\${skey2}\`, node, this, null), skey2);
       }
       const b7 = list(c_block7);
       const b6 = block6([], [b7]);
-      c_block2[i1] = withKey(multi([b4, b6]), key1);
+      c_block2[i1] = withKey(multi([b4, b6]), skey1);
     }
     const b2 = list(c_block2);
     return block1([], [b2]);
@@ -3182,7 +3182,7 @@ exports[`slots > slots in t-foreach with t-set and re-rendering 1`] = `
       const key1 = ctx['n_index'];
       const skey1 = keyOf(key1);
       ctx["dummy"] = ctx['n_index'];
-      c_block2[i1] = withKey(comp1({slots: {"default": {__render: slot1, __ctx: ctx, __owner: this}}}, key + \`\\u00022\\u0002:\${skey1}\`, node, this, null), key1);
+      c_block2[i1] = withKey(comp1({slots: {"default": {__render: slot1, __ctx: ctx, __owner: this}}}, key + \`\\u00022\\u0002:\${skey1}\`, node, this, null), skey1);
     }
     const b2 = list(c_block2);
     return block1([], [b2]);
@@ -3281,7 +3281,7 @@ exports[`slots > t-out='0' in a loop and again after it gives each output its ow
       ctx["i"] = k_block2[i1];
       const key1 = ctx['i'];
       const skey1 = keyOf(key1);
-      c_block2[i1] = withKey(ctx[zero] ? ctx[zero].call(this, ctx[zeroCtx], node, key + \`\\u00021\\u0002:\${skey1}\`) : text(""), key1);
+      c_block2[i1] = withKey(ctx[zero] ? ctx[zero].call(this, ctx[zeroCtx], node, key + \`\\u00021\\u0002:\${skey1}\`) : text(""), skey1);
     }
     const b2 = list(c_block2);
     const b5 = safeOutput('|', node, key, "\\u00022");
@@ -3350,10 +3350,10 @@ exports[`slots > t-out='0' inside nested loops gets one component per outer iter
         ctx["c"] = k_block3[i2];
         const key2 = ctx['c'];
         const skey2 = keyOf(key2);
-        c_block3[i2] = withKey(ctx[zero] ? ctx[zero].call(this, ctx[zeroCtx], node, key + \`\\u00021\\u0002:\${skey1}\\u0002:\${skey2}\`) : text(""), key2);
+        c_block3[i2] = withKey(ctx[zero] ? ctx[zero].call(this, ctx[zeroCtx], node, key + \`\\u00021\\u0002:\${skey1}\\u0002:\${skey2}\`) : text(""), skey2);
       }
       const b3 = list(c_block3);
-      c_block1[i1] = withKey(block2([], [b3]), key1);
+      c_block1[i1] = withKey(block2([], [b3]), skey1);
     }
     return list(c_block1);
   }
@@ -3471,7 +3471,7 @@ exports[`slots > t-slot in recursive templates 1`] = `
         ctx2[zero] = null;
         b6 = callTemplate(\`_test_recursive_template\`, this, app, ctx2, node, key + \`\\u00023\\u0002:\${skey1}\`);
       }
-      c_block3[i1] = withKey(multi([b5, b6]), key1);
+      c_block3[i1] = withKey(multi([b5, b6]), skey1);
     }
     const b3 = list(c_block3);
     return multi([b2, b3]);
@@ -3813,7 +3813,7 @@ exports[`the context a slot renders in > a loop item's slot keeps the value an o
       ctx["i"] = k_block2[i1];
       const key1 = ctx['i'];
       const skey1 = keyOf(key1);
-      c_block2[i1] = withKey(comp1({slots: {"default": {__render: slot1, __ctx: slotContext(ctx), __owner: this}}}, key + \`\\u00022\\u0002:\${skey1}\`, node, this, null), key1);
+      c_block2[i1] = withKey(comp1({slots: {"default": {__render: slot1, __ctx: slotContext(ctx), __owner: this}}}, key + \`\\u00022\\u0002:\${skey1}\`, node, this, null), skey1);
       ctx1["x"] = ctx['i'];
     }
     const b2 = list(c_block2);

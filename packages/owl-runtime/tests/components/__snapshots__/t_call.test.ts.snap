@@ -21,7 +21,7 @@ exports[`t-call > a dynamic t-call in a loop keeps the components of two items a
       const ctx2 = Object.create(ctx1); ctx2["item"] = ctx["item"]; ctx2["item_first"] = ctx["item_first"]; ctx2["item_last"] = ctx["item_last"]; ctx2["item_index"] = ctx["item_index"]; ctx2["item_value"] = ctx["item_value"];
       ctx2["v"] = ctx['item'].id+ctx['this'].suffix;
       ctx2[zero] = null;
-      c_block1[i1] = withKey(callTemplate((ctx['item'].t), this, app, ctx2, node, key + \`\\u00021\\u0002:\${skey1}\`), key1);
+      c_block1[i1] = withKey(callTemplate((ctx['item'].t), this, app, ctx2, node, key + \`\\u00021\\u0002:\${skey1}\`), skey1);
     }
     return list(c_block1);
   }
@@ -547,7 +547,7 @@ exports[`t-call > t-call in t-foreach and children component 1`] = `
       ctx["val_value"] = v_block2[i1];
       const key1 = ctx['val'];
       const skey1 = keyOf(key1);
-      c_block2[i1] = withKey(callTemplate(\`__template__999\`, this, app, ctx[zero] ? withoutZero(ctx) : ctx, node, key + \`\\u00021\\u0002:\${skey1}\`), key1);
+      c_block2[i1] = withKey(callTemplate(\`__template__999\`, this, app, ctx[zero] ? withoutZero(ctx) : ctx, node, key + \`\\u00021\\u0002:\${skey1}\`), skey1);
     }
     const b2 = list(c_block2);
     return block1([], [b2]);

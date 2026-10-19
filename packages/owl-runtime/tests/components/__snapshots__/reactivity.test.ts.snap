@@ -87,7 +87,7 @@ exports[`computed with equals in components > a recompute with a shallow-equal r
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { safeOutput, prepareList, withKey } = helpers;
+  let { safeOutput, prepareList, withKey, listKey } = helpers;
   
   let block1 = createBlock(\`<ul><block-child-0/><block-child-1/></ul>\`);
   let block4 = createBlock(\`<li><block-child-0/></li>\`);
@@ -100,8 +100,9 @@ exports[`computed with equals in components > a recompute with a shallow-equal r
       let ctx = Object.create(ctx1);
       ctx["todo"] = k_block3[i1];
       const key1 = ctx['todo'].id;
+      const ikey1 = listKey(key1);
       const b5 = safeOutput(ctx['todo'].text, node, key, "\\u00022", 1, key1);
-      c_block3[i1] = withKey(block4([], [b5]), key1);
+      c_block3[i1] = withKey(block4([], [b5]), ikey1);
     }
     const b3 = list(c_block3);
     return block1([], [b2, b3]);
@@ -203,7 +204,7 @@ exports[`reactive cleanup on component destruction > benchmark-like scenario: si
       ctx["row"] = k_block2[i1];
       const key1 = ctx['row'].id;
       const skey1 = keyOf(key1);
-      c_block2[i1] = withKey(comp1({row: ctx['row'],selected: ctx['this'].selectedId}, key + \`\\u00021\\u0002:\${skey1}\`, node, this, null), key1);
+      c_block2[i1] = withKey(comp1({row: ctx['row'],selected: ctx['this'].selectedId}, key + \`\\u00021\\u0002:\${skey1}\`, node, this, null), skey1);
     }
     const b2 = list(c_block2);
     return block1([], [b2]);
@@ -279,7 +280,7 @@ exports[`reactive cleanup on component destruction > destroying multiple childre
       ctx["row"] = k_block2[i1];
       const key1 = ctx['row'];
       const skey1 = keyOf(key1);
-      c_block2[i1] = withKey(comp1({id: ctx['row'],selected: ctx['this'].selectedId}, key + \`\\u00021\\u0002:\${skey1}\`, node, this, null), key1);
+      c_block2[i1] = withKey(comp1({id: ctx['row'],selected: ctx['this'].selectedId}, key + \`\\u00021\\u0002:\${skey1}\`, node, this, null), skey1);
     }
     const b2 = list(c_block2);
     return block1([], [b2]);

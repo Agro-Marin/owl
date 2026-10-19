@@ -395,7 +395,7 @@ exports[`Reactivity: proxy > useless atoms should be deleted 1`] = `
       ctx["id"] = k_block2[i1];
       const key1 = ctx['id'];
       const skey1 = keyOf(key1);
-      c_block2[i1] = withKey(comp1({id: ctx['id']}, key + \`\\u00021\\u0002:\${skey1}\`, node, this, null), key1);
+      c_block2[i1] = withKey(comp1({id: ctx['id']}, key + \`\\u00021\\u0002:\${skey1}\`, node, this, null), skey1);
     }
     const b2 = list(c_block2);
     const b4 = safeOutput(ctx['this'].total, node, key, "\\u00022");

@@ -45,6 +45,18 @@ describe("t-memo", () => {
     expect(fixture.querySelector(".on")!.textContent).toBe("A/changed");
   });
 
+  test("an item keyed by an array keeps its previous content", async () => {
+    class List extends Component {
+      static template = xml`
+        <ul><li t-foreach="this.state.rows" t-as="row" t-key="[row.id, 'r']" t-memo="[row.label]"><t t-out="row.label"/>/<t t-out="row.note"/></li></ul>`;
+      state = proxy({ rows: [{ id: 1, label: "a", note: "x" }] });
+    }
+    const list = await mount(List, fixture);
+    list.state.rows[0].note = "changed";
+    await nextTick();
+    expect(rowsText()).toEqual(["a/x"]);
+  });
+
   test("memoized items move, disappear and come back with the right content", async () => {
     class List extends Component {
       static template = xml`

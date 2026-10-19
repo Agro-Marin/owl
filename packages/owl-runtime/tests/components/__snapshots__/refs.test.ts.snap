@@ -710,7 +710,7 @@ exports[`refs > resource can be used for multi ref 1`] = `
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { prepareList, createRef, withKey } = helpers;
+  let { prepareList, createRef, withKey, listKey } = helpers;
   
   let block2 = createBlock(\`<p block-attribute-0="id" block-ref="1"/>\`);
   
@@ -721,9 +721,10 @@ exports[`refs > resource can be used for multi ref 1`] = `
       let ctx = Object.create(ctx1);
       ctx["item"] = k_block1[i1];
       const key1 = ctx['item'];
+      const ikey1 = listKey(key1);
       let attr1 = \`item-\${ctx['item']}\`;
       let ref1 = createRef(ctx['this'].refs, node);
-      c_block1[i1] = withKey(block2([attr1, ref1]), key1);
+      c_block1[i1] = withKey(block2([attr1, ref1]), ikey1);
     }
     return list(c_block1);
   }
@@ -734,7 +735,7 @@ exports[`refs > set-like ref drops the elements of an enclosing block removed in
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { prepareList, createRef, withKey } = helpers;
+  let { prepareList, createRef, withKey, listKey } = helpers;
   
   let block2 = createBlock(\`<div><block-child-0/></div>\`);
   let block4 = createBlock(\`<p block-ref="0"/>\`);
@@ -748,8 +749,9 @@ exports[`refs > set-like ref drops the elements of an enclosing block removed in
         let ctx = Object.create(ctx1);
         ctx["i"] = k_block3[i1];
         const key1 = ctx['i'];
+        const ikey1 = listKey(key1);
         let ref1 = createRef(ctx['this'].refs, node);
-        c_block3[i1] = withKey(block4([ref1]), key1);
+        c_block3[i1] = withKey(block4([ref1]), ikey1);
       }
       const b3 = list(c_block3);
       b2 = block2([], [b3]);
@@ -763,7 +765,7 @@ exports[`refs > set-like ref drops the items of an emptied list 1`] = `
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { prepareList, createRef, withKey } = helpers;
+  let { prepareList, createRef, withKey, listKey } = helpers;
   
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
   let block3 = createBlock(\`<p block-ref="0"/>\`);
@@ -775,8 +777,9 @@ exports[`refs > set-like ref drops the items of an emptied list 1`] = `
       let ctx = Object.create(ctx1);
       ctx["i"] = k_block2[i1];
       const key1 = ctx['i'];
+      const ikey1 = listKey(key1);
       let ref1 = createRef(ctx['this'].refs, node);
-      c_block2[i1] = withKey(block3([ref1]), key1);
+      c_block2[i1] = withKey(block3([ref1]), ikey1);
     }
     const b2 = list(c_block2);
     return block1([], [b2]);

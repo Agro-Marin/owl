@@ -381,4 +381,64 @@ describe("t-key", () => {
     expect(created).toBe(2);
     expect(fixture.innerHTML).toBe("<i>c</i>");
   });
+
+  test("a t-key on a <t> holding a t-if recreates the component inside when the key changes", async () => {
+    let created = 0;
+    class Child extends Component {
+      static template = xml`<i t-out="this.id"/>`;
+      id = ++created;
+    }
+    class Parent extends Component {
+      static template = xml`<div><t t-key="this.state.k"><t t-if="this.state.show"><Child/></t></t></div>`;
+      static components = { Child };
+      state = proxy({ k: 1, show: true });
+    }
+    const parent = await mount(Parent, fixture);
+    expect(fixture.innerHTML).toBe("<div><i>1</i></div>");
+    parent.state.k = 2;
+    await nextTick();
+    expect(fixture.innerHTML).toBe("<div><i>2</i></div>");
+    parent.state.show = false;
+    await nextTick();
+    expect(fixture.innerHTML).toBe("<div></div>");
+  });
+
+  test("a t-key on a <t> holding several components recreates each of them when the key changes", async () => {
+    let created = 0;
+    class Child extends Component {
+      static template = xml`<i t-out="this.id"/>`;
+      id = ++created;
+    }
+    class Parent extends Component {
+      static template = xml`<div><t t-key="this.state.k"><Child/><Child/></t></div>`;
+      static components = { Child };
+      state = proxy({ k: 1 });
+    }
+    const parent = await mount(Parent, fixture);
+    expect(fixture.innerHTML).toBe("<div><i>1</i><i>2</i></div>");
+    parent.state.k = 2;
+    await nextTick();
+    expect(fixture.innerHTML).toBe("<div><i>3</i><i>4</i></div>");
+  });
+
+  test("nested t-keys: a change of the outer one recreates the component inside", async () => {
+    let created = 0;
+    class Child extends Component {
+      static template = xml`<i t-out="this.id"/>`;
+      id = ++created;
+    }
+    class Parent extends Component {
+      static template = xml`<div><t t-key="this.state.a"><p t-key="this.state.b"><Child/></p><Child/></t></div>`;
+      static components = { Child };
+      state = proxy({ a: 1, b: 1 });
+    }
+    const parent = await mount(Parent, fixture);
+    expect(fixture.innerHTML).toBe("<div><p><i>1</i></p><i>2</i></div>");
+    parent.state.a = 2;
+    await nextTick();
+    expect(fixture.innerHTML).toBe("<div><p><i>3</i></p><i>4</i></div>");
+    parent.state.b = 2;
+    await nextTick();
+    expect(fixture.innerHTML).toBe("<div><p><i>5</i></p><i>4</i></div>");
+  });
 });

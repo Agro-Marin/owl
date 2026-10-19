@@ -472,6 +472,73 @@ describe("list of components", () => {
     expect(getConsoleOutput()).toEqual([]);
   });
 
+  test("an array key keeps its item's component and element across renders", async () => {
+    let setups = 0;
+    class Child extends Component {
+      static template = xml`<i t-out="this.props.n"/>`;
+      props = props();
+      setup() {
+        setups++;
+      }
+    }
+    class Parent extends Component {
+      static template = xml`
+        <div t-foreach="this.state.items" t-as="item" t-key="[item.id, 'x']">
+          <Child n="item.n"/>
+        </div>
+      `;
+      static components = { Child };
+      state = proxy({
+        items: [
+          { id: 1, n: 1 },
+          { id: 2, n: 2 },
+        ],
+      });
+    }
+    const parent = await mount(Parent, fixture, { test: true });
+    const first = fixture.firstElementChild;
+    parent.state.items[0].n = 3;
+    await nextTick();
+    expect(fixture.innerHTML).toBe("<div><i>3</i></div><div><i>2</i></div>");
+    expect([fixture.firstElementChild === first, setups]).toEqual([true, 2]);
+    parent.state.items.reverse();
+    await nextTick();
+    expect(fixture.innerHTML).toBe("<div><i>2</i></div><div><i>3</i></div>");
+    expect([fixture.lastElementChild === first, setups]).toEqual([true, 2]);
+  });
+
+  test("an array key keeps its item's element across renders, without components", async () => {
+    class Parent extends Component {
+      static template = xml`<p t-foreach="this.state.items" t-as="item" t-key="[item.id]" t-out="item.n"/>`;
+      state = proxy({
+        items: [
+          { id: 1, n: 1 },
+          { id: NaN, n: 2 },
+        ],
+      });
+    }
+    const parent = await mount(Parent, fixture);
+    const [p1, p2] = fixture.children;
+    parent.state.items[0].n = 3;
+    await nextTick();
+    expect(fixture.innerHTML).toBe("<p>3</p><p>2</p>");
+    expect([fixture.children[0] === p1, fixture.children[1] === p2]).toEqual([true, true]);
+  });
+
+  test("crash on two arrays of the same items used as keys in dev mode", async () => {
+    class Parent extends Component {
+      static template = xml`<p t-foreach="[1, 2]" t-as="item" t-key="['k', 1]"/>`;
+    }
+    let error: any;
+    try {
+      await mount(Parent, fixture, { test: true });
+    } catch (e) {
+      error = e;
+    }
+    expect(error.message).toBe("Got duplicate key in t-foreach: k,1");
+    expect(getConsoleOutput()).toEqual([]);
+  });
+
   test("order is correct when slots are not of same type", async () => {
     class Child extends Component {
       static template = xml`

@@ -308,7 +308,12 @@ plugins: [] })` rendered asynchronously); a resource-driven start belongs to
   child's key. A loop key carries its type (`1` and `"1"` are two keys; an
   array is compared by its items), and a slot's default content has its own
   segment. Upstream concatenates strings, and a collision leaves a component
-  no deep render or destroy reaches.
+  no deep render or destroy reaches. A list item is diffed by that same key
+  (an array or `NaN` key keeps its item, its `t-memo` entry and the dev
+  duplicate check), and a `t-key` keys every component under it, through a
+  `t-if`, several children or a nested `t-key`. Before, such an item or such a
+  `t-key`'s content was remounted while its components kept their key, and
+  the render crashed.
 - **A `t-set` body output by another component renders in that component**:
   its components are that component's children, its expressions still read
   the context they were written in (upstream creates them in the component

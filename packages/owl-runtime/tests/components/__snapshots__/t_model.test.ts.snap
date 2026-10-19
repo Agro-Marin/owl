@@ -42,7 +42,7 @@ exports[`t-model directive > .number on a select: a static option is selected by
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { toNumber, modelExpr, prepareList, attrValue, safeOutput, withKey } = helpers;
+  let { toNumber, modelExpr, prepareList, attrValue, safeOutput, withKey, listKey } = helpers;
   const hdlr_fn1 = (ctx, ev, model) => model.set(toNumber(ev.target.value));
   
   const block1_handlers = [hdlr_fn1];
@@ -60,10 +60,11 @@ exports[`t-model directive > .number on a select: a static option is selected by
       let ctx = Object.create(ctx1);
       ctx["o"] = k_block2[i1];
       const key1 = ctx['o'];
+      const ikey1 = listKey(key1);
       let attr3 = attrValue(ctx['o']);
       let attr4 = bValue1 === toNumber(attr3);
       const b4 = safeOutput(ctx['o'], node, key, "\\u00021", 1, key1);
-      c_block2[i1] = withKey(block3([attr3, attr4], [b4]), key1);
+      c_block2[i1] = withKey(block3([attr3, attr4], [b4]), ikey1);
     }
     const b2 = list(c_block2);
     return block1([ctx, expr1, attr1, attr2], [b2], block1_handlers);
@@ -305,7 +306,7 @@ exports[`t-model directive > in a t-foreach 1`] = `
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { prepareList, modelExpr, withKey } = helpers;
+  let { prepareList, modelExpr, withKey, listKey } = helpers;
   const hdlr_fn1 = (ctx, ev, model) => model.set(ev.target.checked);
   
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
@@ -319,9 +320,10 @@ exports[`t-model directive > in a t-foreach 1`] = `
       let ctx = Object.create(ctx1);
       ctx["thing"] = k_block2[i1];
       const key1 = ctx['thing'].id;
+      const ikey1 = listKey(key1);
       const expr1 = modelExpr(ctx['thing'].f);
       let prop1 = expr1();
-      c_block2[i1] = withKey(block3([prop1, ctx, expr1], null, block3_handlers), key1);
+      c_block2[i1] = withKey(block3([prop1, ctx, expr1], null, block3_handlers), ikey1);
     }
     const b2 = list(c_block2);
     return block1([], [b2]);
@@ -333,7 +335,7 @@ exports[`t-model directive > in a t-foreach, part 2 1`] = `
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { prepareList, modelExpr, withKey } = helpers;
+  let { prepareList, modelExpr, withKey, listKey } = helpers;
   const hdlr_fn1 = (ctx, ev, model) => model.set(ev.target.value);
   
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
@@ -348,9 +350,10 @@ exports[`t-model directive > in a t-foreach, part 2 1`] = `
       ctx["thing"] = k_block2[i1];
       ctx["thing_index"] = i1;
       const key1 = ctx['thing_index'];
+      const ikey1 = listKey(key1);
       const expr1 = modelExpr(ctx['this'].things[ctx['thing_index']]);
       let prop1 = expr1();
-      c_block2[i1] = withKey(block3([prop1, ctx, expr1], null, block3_handlers), key1);
+      c_block2[i1] = withKey(block3([prop1, ctx, expr1], null, block3_handlers), ikey1);
     }
     const b2 = list(c_block2);
     return block1([], [b2]);
@@ -362,7 +365,7 @@ exports[`t-model directive > in a t-foreach, part 3 1`] = `
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { prepareList, modelExpr, withKey } = helpers;
+  let { prepareList, modelExpr, withKey, listKey } = helpers;
   const hdlr_fn1 = (ctx, ev, model) => model.set(ev.target.value);
   
   let block1 = createBlock(\`<div><block-child-0/></div>\`);
@@ -377,9 +380,10 @@ exports[`t-model directive > in a t-foreach, part 3 1`] = `
       ctx["name"] = k_block2[i1];
       ctx["name_index"] = i1;
       const key1 = ctx['name_index'];
+      const ikey1 = listKey(key1);
       const expr1 = modelExpr(ctx['this'].values[ctx['name']]);
       let prop1 = expr1();
-      c_block2[i1] = withKey(block3([prop1, ctx, expr1], null, block3_handlers), key1);
+      c_block2[i1] = withKey(block3([prop1, ctx, expr1], null, block3_handlers), ikey1);
     }
     const b2 = list(c_block2);
     return block1([], [b2]);
@@ -673,7 +677,7 @@ exports[`t-model directive > t-model with dynamic number values on select option
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { toNumber, modelExpr, prepareList, attrValue, safeOutput, withKey } = helpers;
+  let { toNumber, modelExpr, prepareList, attrValue, safeOutput, withKey, listKey } = helpers;
   const hdlr_fn1 = (ctx, ev, model) => model.set(toNumber(ev.target.value));
   
   const block1_handlers = [hdlr_fn1];
@@ -689,10 +693,11 @@ exports[`t-model directive > t-model with dynamic number values on select option
       let ctx = Object.create(ctx1);
       ctx["o"] = k_block2[i1];
       const key1 = ctx['o'].value;
+      const ikey1 = listKey(key1);
       let attr1 = attrValue(ctx['o'].value);
       let attr2 = bValue1 === toNumber(attr1);
       const b4 = safeOutput(ctx['o'].value, node, key, "\\u00021", 1, key1);
-      c_block2[i1] = withKey(block3([attr1, attr2], [b4]), key1);
+      c_block2[i1] = withKey(block3([attr1, attr2], [b4]), ikey1);
     }
     const b2 = list(c_block2);
     return block1([ctx, expr1], [b2], block1_handlers);
@@ -775,7 +780,7 @@ exports[`t-model directive > t-model with dynamic values on select options in fo
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { modelExpr, prepareList, attrValue, safeOutput, withKey } = helpers;
+  let { modelExpr, prepareList, attrValue, safeOutput, withKey, listKey } = helpers;
   const hdlr_fn1 = (ctx, ev, model) => model.set(ev.target.value);
   
   const block1_handlers = [hdlr_fn1];
@@ -791,10 +796,11 @@ exports[`t-model directive > t-model with dynamic values on select options in fo
       let ctx = Object.create(ctx1);
       ctx["v"] = k_block2[i1];
       const key1 = ctx['v'];
+      const ikey1 = listKey(key1);
       let attr1 = attrValue(ctx['v']);
       let attr2 = bValue1 === attr1;
       const b4 = safeOutput(ctx['v'], node, key, "\\u00021", 1, key1);
-      c_block2[i1] = withKey(block3([attr1, attr2], [b4]), key1);
+      c_block2[i1] = withKey(block3([attr1, attr2], [b4]), ikey1);
     }
     const b2 = list(c_block2);
     return block1([ctx, expr1], [b2], block1_handlers);
@@ -828,7 +834,7 @@ exports[`t-model directive > t-model with radio button group in t-foreach 1`] = 
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { callHandler, prepareList, attrValue, modelExpr, withKey } = helpers;
+  let { callHandler, prepareList, attrValue, modelExpr, withKey, listKey } = helpers;
   const hdlr_fn1 = (ctx, ev) => callHandler(ctx['this'].getData, ctx, ev);
   const hdlr_fn2 = (ctx, ev, model) => model.set(ev.target.value);
   
@@ -844,11 +850,12 @@ exports[`t-model directive > t-model with radio button group in t-foreach 1`] = 
       let ctx = Object.create(ctx1);
       ctx["opt"] = k_block2[i1];
       const key1 = ctx['opt'];
+      const ikey1 = listKey(key1);
       let prop1 = attrValue(ctx['opt']);
       let attr1 = attrValue(ctx['opt']);
       const expr1 = modelExpr(ctx['this'].group);
       let prop2 = expr1() === prop1;
-      c_block2[i1] = withKey(block3([prop1, attr1, prop2, ctx, expr1], null, block3_handlers), key1);
+      c_block2[i1] = withKey(block3([prop1, attr1, prop2, ctx, expr1], null, block3_handlers), ikey1);
     }
     const b2 = list(c_block2);
     return block1([ctx], [b2], block1_handlers);

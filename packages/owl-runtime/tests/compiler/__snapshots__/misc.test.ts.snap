@@ -28,7 +28,7 @@ exports[`misc > complex template 1`] = `
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { safeOutput, prepareList, createComponent, withKey, keyOf, attrValue } = helpers;
+  let { safeOutput, prepareList, createComponent, withKey, keyOf, listKey, attrValue } = helpers;
   const comp1 = createComponent(app, \`SlotButton\`, true, false, false, ["class","slot"]);
   
   let block1 = createBlock(\`<div block-attribute-0="class"><div block-attribute-1="class"><div class="batch_header"><a block-attribute-2="href" block-attribute-3="class" title="View Batch"><block-child-0/><block-child-1/><i class="arrow fa fa-window-maximize"/></a></div><block-child-2/><div class="batch_slots"><block-child-3/><block-child-4/></div><div class="batch_commits"><block-child-5/></div></div></div>\`);
@@ -61,7 +61,7 @@ exports[`misc > complex template 1`] = `
       ctx["slot"] = k_block5[i1];
       const key1 = ctx['slot'].id;
       const skey1 = keyOf(key1);
-      c_block5[i1] = withKey(comp1({class: ctx['slot_container'],slot: ctx['slot']}, key + \`\\u00022\\u0002:\${skey1}\`, node, this, null), key1);
+      c_block5[i1] = withKey(comp1({class: ctx['slot_container'],slot: ctx['slot']}, key + \`\\u00022\\u0002:\${skey1}\`, node, this, null), skey1);
     }
     b5 = list(c_block5);
     const ctx2 = ctx;
@@ -70,7 +70,8 @@ exports[`misc > complex template 1`] = `
       let ctx = Object.create(ctx2);
       ctx["x"] = k_block7[i1];
       const key1 = ctx['x'];
-      c_block7[i1] = withKey(block8(), key1);
+      const ikey1 = listKey(key1);
+      c_block7[i1] = withKey(block8(), ikey1);
     }
     b7 = list(c_block7);
     const ctx3 = ctx;
@@ -79,6 +80,7 @@ exports[`misc > complex template 1`] = `
       let ctx = Object.create(ctx3);
       ctx["commit_link"] = k_block9[i1];
       const key1 = ctx['commit_link'].id;
+      const ikey1 = listKey(key1);
       let b11, b12, b13, b14, b15, b16;
       let attr5 = \`/runbot/commit/\${ctx['commit_link'].commit_id}\`;
       let attr6 = \`badge badge-light batch_commit match_type_\${ctx['commit_link'].match_type}\`;
@@ -97,7 +99,7 @@ exports[`misc > complex template 1`] = `
       b15 = safeOutput(ctx['commit_link'].commit_dname, node, key, "\\u00023", 1, key1);
       let attr7 = attrValue('https://%s/commit/%s'%(ctx['commit_link'].commit_remote_url,ctx['commit_link'].commit_name));
       b16 = safeOutput(ctx['commit_link'].commit_subject, node, key, "\\u00024", 1, key1);
-      c_block9[i1] = withKey(block10([attr5, attr6, attr7], [b11, b12, b13, b14, b15, b16]), key1);
+      c_block9[i1] = withKey(block10([attr5, attr6, attr7], [b11, b12, b13, b14, b15, b16]), ikey1);
     }
     b9 = list(c_block9);
     return block1([attr1, attr2, attr3, attr4], [b2, b3, b4, b5, b7, b9]);
@@ -144,7 +146,7 @@ exports[`misc > global 1`] = `
       ctx3[zero] = callBody1;
       ctx3[zeroCtx] = ctx;
       const b6 = callTemplate(\`_callee-asc\`, this, app, ctx3, node, key + \`\\u00025\\u0002:\${skey1}\`);
-      c_block2[i1] = withKey(multi([b4, b6]), key1);
+      c_block2[i1] = withKey(multi([b4, b6]), skey1);
     }
     const b2 = list(c_block2);
     const b11 = callTemplate(\`_callee-asc-toto\`, this, app, ctx[zero] ? withoutZero(ctx) : ctx, node, key + \`\\u00026\`);
@@ -213,7 +215,7 @@ exports[`misc > other complex template 1`] = `
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { safeOutput, prepareList, callHandler, withKey, attrValue, createRef, zero, withoutZero, callTemplate, createComponent } = helpers;
+  let { safeOutput, prepareList, callHandler, withKey, listKey, attrValue, createRef, zero, withoutZero, callTemplate, createComponent } = helpers;
   const hdlr_fn1 = (ctx, ev) => callHandler(ctx['selectProject'](ctx['project']), ctx, ev);
   const hdlr_fn2 = (ctx, ev) => callHandler(ctx['toggleSettingsMenu'], ctx, ev);
   const hdlr_fn3 = (ctx, ev) => callHandler(ctx['toggleMore'], ctx, ev);
@@ -256,8 +258,9 @@ exports[`misc > other complex template 1`] = `
       let ctx = Object.create(ctx1);
       ctx["project"] = k_block3[i1];
       const key1 = ctx['project'].id;
+      const ikey1 = listKey(key1);
       const b5 = safeOutput(ctx['project'].name, node, key, "\\u00022", 1, key1);
-      c_block3[i1] = withKey(block4([ctx], [b5], block4_handlers), key1);
+      c_block3[i1] = withKey(block4([ctx], [b5], block4_handlers), ikey1);
     }
     b3 = list(c_block3);
     if (ctx['user']) {
@@ -293,10 +296,11 @@ exports[`misc > other complex template 1`] = `
         let ctx = Object.create(ctx2);
         ctx["category"] = k_block19[i1];
         const key1 = ctx['category'].id;
+        const ikey1 = listKey(key1);
         let attr6 = attrValue(ctx['category'].id);
         let prop1 = attrValue(ctx['category'].id==ctx['options'].active_category_id);
         const b21 = safeOutput(ctx['category'].name, node, key, "\\u00025", 1, key1);
-        c_block19[i1] = withKey(block20([attr6, prop1], [b21]), key1);
+        c_block19[i1] = withKey(block20([attr6, prop1], [b21]), ikey1);
       }
       const b19 = list(c_block19);
       b18 = block18([], [b19]);
@@ -311,6 +315,7 @@ exports[`misc > other complex template 1`] = `
         let ctx = Object.create(ctx3);
         ctx["trigger"] = k_block23[i1];
         const key1 = ctx['trigger'].id;
+        const ikey1 = listKey(key1);
         let b25;
         if (!ctx['trigger'].manual&&ctx['trigger'].project_id===ctx['project'].id&&ctx['trigger'].category_id===ctx['options'].active_category_id) {
           let attr7 = \`trigger_\${ctx['trigger'].id}\`;
@@ -321,7 +326,7 @@ exports[`misc > other complex template 1`] = `
           const b26 = safeOutput(ctx['trigger'].name, node, key, "\\u00026", 1, key1);
           b25 = block25([attr7, attr8, prop3, attr9, ctx, attr10], [b26], block25_handlers);
         }
-        c_block23[i1] = withKey(multi([b25]), key1);
+        c_block23[i1] = withKey(multi([b25]), ikey1);
       }
       const b23 = list(c_block23);
       const b27 = block27([ctx, ctx, ctx, ctx], null, block27_handlers);
@@ -369,7 +374,7 @@ exports[`names taken from the template are data in the generated code > t-as 1`]
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { prepareList, withKey } = helpers;
+  let { prepareList, withKey, listKey } = helpers;
   
   return function template(ctx, node, key = "") {
     const ctx1 = ctx;
@@ -378,7 +383,8 @@ exports[`names taken from the template are data in the generated code > t-as 1`]
       let ctx = Object.create(ctx1);
       ctx["\${globalThis.__nameRan = true}"] = k_block1[i1];
       const key1 = 1;
-      c_block1[i1] = withKey(text(\`x\`), key1);
+      const ikey1 = listKey(key1);
+      c_block1[i1] = withKey(text(\`x\`), ikey1);
     }
     return list(c_block1);
   }
