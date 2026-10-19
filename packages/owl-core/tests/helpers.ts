@@ -1,7 +1,12 @@
 import { onTestFinished, vi, type Mock } from "vitest";
 import { effect, Scope } from "../src";
 
-export { expectSpy, nextMicroTick, waitScheduler } from "../../../tools/testing/helpers";
+export {
+  expectSpy,
+  nextMicroTick,
+  waitScheduler,
+  waitSchedulerThenMicroTick,
+} from "../../../tools/testing/helpers";
 
 export class TestScope extends Scope {}
 

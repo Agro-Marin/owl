@@ -22,7 +22,7 @@ import {
   snapshotEverything,
   steps,
   useLogLifecycle,
-  waitScheduler,
+  waitSchedulerThenMicroTick,
 } from "../helpers";
 
 function createProxy(value: any) {
@@ -84,11 +84,11 @@ describe("Reactivity", () => {
     expectSpy(spy, 1, [1]);
     state.a = 100;
     expectSpy(spy, 1, [1]);
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expectSpy(spy, 2, [100]);
     state.a = state.a + 5;
     expectSpy(spy, 2, [100]);
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expectSpy(spy, 3, [105]);
   });
 
@@ -99,11 +99,11 @@ describe("Reactivity", () => {
     expectSpy(spy, 1, [1]);
     state.a.k = state.a.k + 100;
     expectSpy(spy, 1, [1]);
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expectSpy(spy, 2, [101]);
     state.a.k = state.a.k + 5;
     expectSpy(spy, 2, [101]);
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expectSpy(spy, 3, [106]);
   });
 
@@ -122,7 +122,7 @@ describe("Reactivity", () => {
     expectSpy(spy, 1, [1]);
     state.a = state.a + 100;
     expectSpy(spy, 1, [1]);
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expectSpy(spy, 2, [101]);
   });
 
@@ -138,7 +138,7 @@ describe("Reactivity", () => {
     expectSpy(spy, 1, [1]);
     state.a.b = 100;
     expectSpy(spy, 1, [1]);
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expectSpy(spy, 2, [100]);
   });
 
@@ -148,17 +148,17 @@ describe("Reactivity", () => {
     effect(() => spy("a" in state));
     expectSpy(spy, 1, [false]);
     state.a = 100;
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expectSpy(spy, 2, [true]);
 
     state.a = 3;
     expectSpy(spy, 2, [true]);
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expectSpy(spy, 2, [true]);
 
     delete state.a;
     expectSpy(spy, 2, [true]);
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expectSpy(spy, 3, [false]);
     expect(spy).toHaveBeenLastCalledWith(false);
   });
@@ -169,15 +169,15 @@ describe("Reactivity", () => {
     effect(() => spy(state.a));
     expectSpy(spy, 1, [1]);
     state.a = 1;
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expectSpy(spy, 1, [1]);
     state.a = state.a + 5;
     expectSpy(spy, 1, [1]);
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expectSpy(spy, 2, [6]);
     state.a = 6;
     expectSpy(spy, 2, [6]);
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expectSpy(spy, 2, [6]);
   });
 
@@ -193,23 +193,23 @@ describe("Reactivity", () => {
     state.k;
     state.k = 2;
     expectSpy(spy, 1, [state.a]);
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expectSpy(spy, 1, [state.a]);
 
     delete state.l;
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expectSpy(spy, 1, [state.a]);
 
     delete state.k;
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expectSpy(spy, 1, [state.a]);
 
     state.a = 1;
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expectSpy(spy, 2, [1]);
 
     state.a = state.a + 100;
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expectSpy(spy, 3, [101]);
   });
 
@@ -222,7 +222,7 @@ describe("Reactivity", () => {
 
     expect(state).toBe(state.a);
     state.b = state.b + 1;
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expectSpy(spy, 2, [state.a, 2]);
     expect(state).toBe(state.a);
   });
@@ -238,7 +238,7 @@ describe("Reactivity", () => {
     effect(() => spy2(state2.a));
 
     state.a = 100;
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expectSpy(spy1, 2, [100]);
     expectSpy(spy2, 2, [100]);
   });
@@ -252,7 +252,7 @@ describe("Reactivity", () => {
     effect(() => spy2(state2.a));
 
     state2.a = state2.a + 100;
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expectSpy(spy1, 2, [101]);
     expectSpy(spy2, 2, [101]);
   });
@@ -275,7 +275,7 @@ describe("Reactivity", () => {
     const state = createProxy({ a: { b: null } } as any);
     effect(() => spy(state.a.b));
     state.a.b = Boolean(state.a.b);
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expectSpy(spy, 2, [false]);
   });
 
@@ -296,7 +296,7 @@ describe("Reactivity", () => {
     expect(state.date).toBe(date);
 
     state.date = new Date();
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expectSpy(spy, 2, [state.date]);
     expect(state.date).not.toBe(date);
   });
@@ -320,7 +320,7 @@ describe("Reactivity", () => {
     expect(Array.isArray(state.arr)).toBe(true);
 
     state.arr[0] = state.arr[0] + "nope";
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expectSpy(spy, 2, ["1nope"]);
 
     expect(state.arr[0]).toBe("1nope");
@@ -336,7 +336,7 @@ describe("Reactivity", () => {
     expectSpy(spy, 1, [1]);
 
     state.arr = [2, 1];
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expectSpy(spy, 2, [2]);
     expect(state.arr[0]).toBe(2);
     expect(state.arr).toEqual([2, 1]);
@@ -356,16 +356,16 @@ describe("Reactivity", () => {
     expectSpy(spy, 1, [1]);
 
     state.a = state.a + 2;
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expectSpy(spy, 2, [3]);
 
     state.a;
     state.a = 3;
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expectSpy(spy, 2, [3]);
 
     state.a = 4;
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expectSpy(spy, 3, [4]);
   });
 
@@ -379,45 +379,45 @@ describe("Reactivity", () => {
     expectSpy(spy, 1, [[]]);
 
     state.push(1);
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expectSpy(spy, 2, [[1]]);
     expect(state.length).toBe(1);
     expect(state).toEqual([1]);
 
     state.splice(1, 0, "hey");
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expectSpy(spy, 3, [[1, "hey"]]);
     expect(state).toEqual([1, "hey"]);
     expect(state.length).toBe(2);
 
     state[0] = 2;
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expectSpy(spy, 4, [[2, "hey"]]);
 
     state.unshift("lindemans");
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expectSpy(spy, 5, [["lindemans", 2, "hey"]]);
     expect(state).toEqual(["lindemans", 2, "hey"]);
     expect(state.length).toBe(3);
 
     state[1] = 3;
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expectSpy(spy, 6, [["lindemans", 3, "hey"]]);
 
     state.reverse();
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expectSpy(spy, 7, [["hey", 3, "lindemans"]]);
     expect(state).toEqual(["hey", 3, "lindemans"]);
     expect(state.length).toBe(3);
 
     state.pop();
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expectSpy(spy, 8, [["hey", 3]]);
     expect(state).toEqual(["hey", 3]);
     expect(state.length).toBe(2);
 
     state.shift();
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expectSpy(spy, 9, [[3]]);
     expect(state).toEqual([3]);
     expect(state.length).toBe(1);
@@ -429,7 +429,7 @@ describe("Reactivity", () => {
     expectSpy(spy, 1, [2]);
 
     state.length = 1;
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expectSpy(spy, 2, [undefined]);
     expect(state).toEqual([0]);
   });
@@ -447,7 +447,7 @@ describe("Reactivity", () => {
     const spy = vi.fn();
     effect(() => spy(state.includes(item)));
     state.splice(1, 1);
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expectSpy(spy, 2, [false]);
   });
 
@@ -459,7 +459,7 @@ describe("Reactivity", () => {
     effect(() => beyondSpy(state[10]));
 
     state.length = 1;
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expectSpy(droppedSpy, 2, [undefined]);
     expectSpy(beyondSpy, 1, [undefined]);
   });
@@ -472,12 +472,12 @@ describe("Reactivity", () => {
     effect(() => itemsSpy([...state]));
 
     state[state.length] = 3;
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expectSpy(lengthSpy, 2, [3]);
     expectSpy(itemsSpy, 2, [[1, 2, 3]]);
 
     state[5] = 6;
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expectSpy(lengthSpy, 3, [6]);
   });
 
@@ -487,15 +487,15 @@ describe("Reactivity", () => {
     effect(() => spy(arr[0]?.kriek));
 
     arr.push({ kriek: 5 });
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expectSpy(spy, 2, [5]);
 
     arr[0].kriek = 6;
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expectSpy(spy, 3, [6]);
 
     arr[0].kriek = arr[0].kriek + 6;
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expectSpy(spy, 4, [12]);
   });
 
@@ -506,7 +506,7 @@ describe("Reactivity", () => {
     expectSpy(spy, 1, [[]]);
 
     state.b = 8;
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expectSpy(spy, 2, [["b"]]);
     expect(state.b).toBe(8);
     expect(Object.keys(state)).toEqual(["b"]);
@@ -519,7 +519,7 @@ describe("Reactivity", () => {
     expectSpy(spy, 1, [1]);
 
     state.b = 8;
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expectSpy(spy, 1, [1]);
     expect(state.b).toBe(8);
     expect(state).toEqual({ a: 1, b: 8 });
@@ -532,7 +532,7 @@ describe("Reactivity", () => {
     expectSpy(spy, 1, [["a", "b"]]);
 
     delete state.b;
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expectSpy(spy, 2, [["a"]]);
     expect(state).toEqual({ a: 1 });
   });
@@ -547,11 +547,11 @@ describe("Reactivity", () => {
     expectSpy(spy, 1, [["a"]]);
 
     delete state2.a;
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expectSpy(spy, 2, [[]]);
 
     state.new = 2;
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expectSpy(spy, 2, [[]]);
     expect(Object.keys(state)).toEqual(["b", "new"]);
     expect(Object.keys(state2)).toEqual([]);
@@ -562,7 +562,7 @@ describe("Reactivity", () => {
     const arr = createProxy(["a"]);
     effect(() => spy(arr[1]));
     arr[1] = "b";
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expectSpy(spy, 2, ["b"]);
     expect(arr).toEqual(["a", "b"]);
   });
@@ -576,7 +576,7 @@ describe("Reactivity", () => {
     expectSpy(spy, 1, [0]);
 
     state.arr.push(1);
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expectSpy(spy, 2, [1]);
     expect(state.arr.length).toBe(1);
   });
@@ -588,7 +588,7 @@ describe("Reactivity", () => {
     expectSpy(spy, 1, [1]);
 
     state.arr[0].something = state.arr[0].something + 1;
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expectSpy(spy, 2, [2]);
     expect(state.arr[0].something).toBe(2);
   });
@@ -600,7 +600,7 @@ describe("Reactivity", () => {
     expectSpy(spy, 1, [1]);
 
     state.a.b = state.a.b + 2;
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expectSpy(spy, 2, [3]);
   });
 
@@ -619,15 +619,15 @@ describe("Reactivity", () => {
     expectSpy(spy, 1, [1]);
 
     state.a++;
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expectSpy(spy, 2, [2]);
 
     state.a = { b: 100 };
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expectSpy(spy, 3, [100]);
 
     state.a.b = state.a.b + 3;
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expectSpy(spy, 4, [103]);
   });
 
@@ -638,19 +638,19 @@ describe("Reactivity", () => {
     expectSpy(spy, 1, [1, 1, 13]);
 
     state.o.a = state.o.a + 2;
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expectSpy(spy, 2, [3, 1, 13]);
 
     state.arr.push(2);
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expectSpy(spy, 3, [3, 2, 13]);
 
     state.n = 155;
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expectSpy(spy, 4, [3, 2, 155]);
 
     state.n = state.n + 1;
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expectSpy(spy, 5, [3, 2, 156]);
   });
 
@@ -666,23 +666,23 @@ describe("Reactivity", () => {
 
     obj1.a = obj1.a + 2;
     obj2.b = obj2.b + 3;
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expectSpy(spy1, 2, [3]);
     expectSpy(spy2, 2, [4]);
 
     (window as any).d = true;
     obj2.b = obj1;
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expectSpy(spy1, 2, [3]);
     expectSpy(spy2, 3, [obj1]);
 
     obj1.a = 33;
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expectSpy(spy1, 3, [33]);
     expectSpy(spy2, 3, [obj1]);
 
     obj2.b.a = obj2.b.a + 2;
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expectSpy(spy1, 4, [35]);
     expectSpy(spy2, 3, [obj1]);
   });
@@ -697,17 +697,17 @@ describe("Reactivity", () => {
     effect(() => spy2(obj2.c?.a?.c));
 
     obj2.c = obj1;
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expectSpy(spy1, 1, [2]);
     expectSpy(spy2, 2, [2]);
 
     obj1.a.c = obj1.a.c + 33;
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expectSpy(spy1, 2, [35]);
     expectSpy(spy2, 3, [35]);
 
     obj2.c.a.c = obj2.c.a.c + 3;
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expectSpy(spy1, 3, [38]);
     expectSpy(spy2, 4, [38]);
   });
@@ -723,12 +723,12 @@ describe("Reactivity", () => {
     effect(() => spy2(state2.c));
 
     state.a[0].b = state.a[0].b + 2;
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expectSpy(spy1, 2, [3]);
     expectSpy(spy2, 1, [undefined]);
 
     state2.c = 2;
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expectSpy(spy1, 2, [3]);
     expectSpy(spy2, 2, [2]);
   });
@@ -749,12 +749,12 @@ describe("Reactivity", () => {
     effect(() => spy2(state.a[0].b));
 
     state.a[0].b = { c: 1 };
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expectSpy(spy1, 2, [1]);
     expectSpy(spy2, 2, [{ c: 1 }]);
 
     state.a[0].b.c = state.a[0].b.c + 2;
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expectSpy(spy1, 3, [3]);
     expectSpy(spy2, 2, [{ c: 3 }]);
   });
@@ -768,11 +768,11 @@ describe("Reactivity", () => {
     expectSpy(spy, 1, [undefined]);
 
     state.aku = "always finds annoying problems";
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expectSpy(spy, 2, ["always finds annoying problems"]);
 
     state.aku = "always finds good problems";
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expectSpy(spy, 3, ["always finds good problems"]);
   });
 
@@ -790,11 +790,11 @@ describe("Reactivity", () => {
     const a = state.a;
     state.b = a;
     state.a = b;
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expectSpy(spy, 2, [1, arrDict]);
 
     state.b.arr.push("blanche");
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expectSpy(spy, 3, [1, arrDict]);
   });
 
@@ -805,11 +805,11 @@ describe("Reactivity", () => {
     expectSpy(spy, 1, [state.a, []]);
 
     state.a = { ...state.a, val: "test2" };
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expectSpy(spy, 2, [state.a, []]);
 
     state.a.arr.push("blanche");
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expectSpy(spy, 3, [state.a, ["blanche"]]);
   });
 
@@ -824,7 +824,7 @@ describe("Reactivity", () => {
     expectSpy(spy, 1, [undefined]);
 
     obj1.key = 3;
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expectSpy(spy, 2, [3]);
   });
 
@@ -835,20 +835,20 @@ describe("Reactivity", () => {
     expectSpy(spy, 1, [1, 2, 3, 4]);
 
     state.a = state.a + 2;
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expectSpy(spy, 2, [3, 2, 3, 4]);
 
     state.b.c = state.b.c + 3;
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expectSpy(spy, 3, [3, 5, 3, 4]);
 
     state.d[0].e = state.d[0].e + 5;
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expectSpy(spy, 4, [3, 5, 8, 4]);
 
     state.a = 111;
     state.f = 222;
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expectSpy(spy, 5, [111, 5, 8, 222]);
   });
 
@@ -865,7 +865,7 @@ describe("Reactivity", () => {
     expectSpy(spy2, 1, [1]);
 
     outer.b.a = outer.b.a + 2;
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expectSpy(spy1, 2, [3]);
     expectSpy(spy2, 2, [3]);
   });
@@ -881,12 +881,12 @@ describe("Reactivity", () => {
     expectSpy(spy2, 1, [0]);
 
     inner.a = inner.a + 2;
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expectSpy(spy1, 2, [3]);
     expectSpy(spy2, 1, [0]);
 
     outer.c = outer.c + 3;
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expectSpy(spy1, 2, [3]);
     expectSpy(spy2, 2, [3]);
   });
@@ -905,26 +905,26 @@ describe("Reactivity", () => {
 
     obj2.b = obj2.b;
     obj3.c = obj3.c;
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expectSpy(spy1, 1, [1]);
     expectSpy(spy2, 1, [{}]);
     expectSpy(spy3, 1, [{}]);
 
     obj2.b = obj1;
     obj3.c = obj1;
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expectSpy(spy1, 1, [1]);
     expectSpy(spy2, 2, [obj1]);
     expectSpy(spy3, 2, [obj1]);
 
     obj1.a = obj1.a + 2;
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expectSpy(spy1, 2, [3]);
     expectSpy(spy2, 2, [obj1]);
     expectSpy(spy3, 2, [obj1]);
 
     obj2.b.a = obj2.b.a + 1;
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expectSpy(spy1, 3, [4]);
     expectSpy(spy2, 2, [obj1]);
     expectSpy(spy3, 2, [obj1]);
@@ -938,17 +938,17 @@ describe("Reactivity", () => {
     effect(() => spy(state.k?.l));
 
     state.k.l = 1;
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expectSpy(spy, 2, [1]);
 
     const kVal = state.k;
 
     delete state.k;
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expectSpy(spy, 3, [undefined]);
 
     kVal.l = 2;
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expectSpy(spy, 3, [undefined]);
   });
 
@@ -963,15 +963,15 @@ describe("Reactivity", () => {
 
     state.c = 1;
     state.k.d = 2;
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expectSpy(spy, 2, [2]);
 
     delete state.k;
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expectSpy(spy, 3, [undefined]);
 
     state2.e = 3;
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expectSpy(spy, 3, [undefined]);
   });
 
@@ -986,15 +986,15 @@ describe("Reactivity", () => {
 
     state.c = 1;
     state.k.d = 2;
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expectSpy(spy, 2, [2]);
 
     delete state.k;
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expectSpy(spy, 3, [undefined]);
 
     state2.e = 3;
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expectSpy(spy, 3, [undefined]);
   });
 
@@ -1008,12 +1008,12 @@ describe("Reactivity", () => {
     expectSpy(spy, 1, [1]);
 
     state.k = { n: state.k.n + 1 };
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expectSpy(spy, 2, [2]);
     expect(state.k).toEqual({ n: 2 });
 
     kVal.n = 3;
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expectSpy(spy, 2, [2]);
     expect(state.k).toEqual({ n: 2 });
   });
@@ -1035,7 +1035,7 @@ describe("Reactivity", () => {
     expect(toRaw(state)).toEqual({ val: 0 });
     expect(toRaw(nonReactive)).toEqual({ val: 1 });
     state.val++;
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expect(spy).toHaveBeenCalledTimes(2);
     expect(toRaw(state)).toEqual({ val: 1 });
     expect(toRaw(nonReactive)).toEqual({ val: 1 });
@@ -1047,7 +1047,7 @@ describe("Reactivity", () => {
     const child = Object.create(parent);
     effect(() => spy(Object.keys(parent)));
     child.val = 0;
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expectSpy(spy, 1, [[]]);
   });
 
@@ -1059,7 +1059,7 @@ describe("Reactivity", () => {
     expect(child).not.toBe(parent);
 
     child.val++;
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expectSpy(spy, 2, [1]);
     expect(parent.val).toBe(0);
     expect(child.val).toBe(1);
@@ -1071,7 +1071,7 @@ describe("Reactivity", () => {
     const child = createProxy(Object.create(parent));
     effect(() => spy(child.val));
     child.val++;
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expectSpy(spy, 2, [1]);
     expect(parent).toEqual({ val: 0 });
     expect(child).toEqual({ val: 1 });
@@ -1146,31 +1146,31 @@ describe("Collections", () => {
 
       expectSpy(spy, 1, [false]);
       state.add(2);
-      await waitScheduler();
+      await waitSchedulerThenMicroTick();
       expectSpy(spy, 2, [true]);
       state.delete(2);
-      await waitScheduler();
+      await waitSchedulerThenMicroTick();
       expectSpy(spy, 3, [false]);
       state.add(2);
-      await waitScheduler();
+      await waitSchedulerThenMicroTick();
       expectSpy(spy, 4, [true]);
       state.clear();
-      await waitScheduler();
+      await waitSchedulerThenMicroTick();
       expectSpy(spy, 5, [false]);
       state.clear();
-      await waitScheduler();
+      await waitSchedulerThenMicroTick();
       expectSpy(spy, 5, [false]);
 
       state.add(3);
-      await waitScheduler();
+      await waitSchedulerThenMicroTick();
       expectSpy(spy, 5, [false]);
       expect(state.has(3)).toBe(true);
       state.add(3);
-      await waitScheduler();
+      await waitSchedulerThenMicroTick();
       expectSpy(spy, 5, [false]);
       expect(state.has(4)).toBe(false);
       state.delete(4);
-      await waitScheduler();
+      await waitSchedulerThenMicroTick();
       expectSpy(spy, 5, [false]);
     });
 
@@ -1184,14 +1184,14 @@ describe("Collections", () => {
       expect(toRaw(proxyObj as any)).toBe(obj);
       expectSpy(spy, 1, [2]);
       proxyObj.a = 0;
-      await waitScheduler();
+      await waitSchedulerThenMicroTick();
       expectSpy(spy, 2, [0]);
       proxyObj.a;
       proxyObj.a = 1;
-      await waitScheduler();
+      await waitSchedulerThenMicroTick();
       expectSpy(spy, 3, [1]);
       proxyObj.a = 1;
-      await waitScheduler();
+      await waitSchedulerThenMicroTick();
       expectSpy(spy, 3, [1]);
     });
 
@@ -1205,14 +1205,14 @@ describe("Collections", () => {
       expect(toRaw(proxyObj as any)).toBe(obj);
       expectSpy(spy, 1, [2]);
       proxyObj.a = 0;
-      await waitScheduler();
+      await waitSchedulerThenMicroTick();
       expectSpy(spy, 2, [0]);
       proxyObj.a;
       proxyObj.a = 1;
-      await waitScheduler();
+      await waitSchedulerThenMicroTick();
       expectSpy(spy, 3, [1]);
       proxyObj.a = 1;
-      await waitScheduler();
+      await waitSchedulerThenMicroTick();
       expectSpy(spy, 3, [1]);
     });
 
@@ -1227,14 +1227,14 @@ describe("Collections", () => {
       effect(() => spy(proxyObj.a));
       expectSpy(spy, 1, [2]);
       proxyObj.a = 0;
-      await waitScheduler();
+      await waitSchedulerThenMicroTick();
       expectSpy(spy, 2, [0]);
       proxyObj.a;
       proxyObj.a = 1;
-      await waitScheduler();
+      await waitSchedulerThenMicroTick();
       expectSpy(spy, 3, [1]);
       proxyObj.a = 1;
-      await waitScheduler();
+      await waitSchedulerThenMicroTick();
       expectSpy(spy, 3, [1]);
     });
 
@@ -1248,14 +1248,14 @@ describe("Collections", () => {
       expect(toRaw(proxyObj as any)).toBe(obj);
       expectSpy(spy, 1, [2]);
       proxyObj.a = 0;
-      await waitScheduler();
+      await waitSchedulerThenMicroTick();
       expectSpy(spy, 2, [0]);
       proxyObj.a;
       proxyObj.a = 1;
-      await waitScheduler();
+      await waitSchedulerThenMicroTick();
       expectSpy(spy, 3, [1]);
       proxyObj.a = 1;
-      await waitScheduler();
+      await waitSchedulerThenMicroTick();
       expectSpy(spy, 3, [1]);
     });
 
@@ -1280,17 +1280,17 @@ describe("Collections", () => {
       expectSpy(spy, 1, [2]);
 
       proxyKeyObj!.a = 0;
-      await waitScheduler();
+      await waitSchedulerThenMicroTick();
       expectSpy(spy, 2, [0]);
 
       proxyKeyObj!.a;
       proxyKeyObj!.a = 1;
-      await waitScheduler();
+      await waitSchedulerThenMicroTick();
       expectSpy(spy, 3, [1]);
 
       proxyKeyObj!.a = 1;
       proxyValObj!.a = 1;
-      await waitScheduler();
+      await waitSchedulerThenMicroTick();
       expectSpy(spy, 3, [1]);
     });
 
@@ -1301,10 +1301,10 @@ describe("Collections", () => {
       effect(() => spy([...set.union(other)], set.isSubsetOf(new Set([1, 2, 3]))));
       expectSpy(spy, 1, [[1, 2, 3], true]);
       set.add(4);
-      await waitScheduler();
+      await waitSchedulerThenMicroTick();
       expectSpy(spy, 2, [[1, 2, 4, 3], false]);
       other.add(5);
-      await waitScheduler();
+      await waitSchedulerThenMicroTick();
       expectSpy(spy, 3, [[1, 2, 4, 3, 5], false]);
     });
   });
@@ -1330,11 +1330,11 @@ describe("Collections", () => {
       effect(() => keysSpy([...map.keys()]));
       effect(() => valuesSpy([...map.values()]));
       map.set("a", 2);
-      await waitScheduler();
+      await waitSchedulerThenMicroTick();
       expectSpy(keysSpy, 1, [["a"]]);
       expectSpy(valuesSpy, 2, [[2]]);
       map.set("b", 3);
-      await waitScheduler();
+      await waitSchedulerThenMicroTick();
       expectSpy(keysSpy, 2, [["a", "b"]]);
     });
 
@@ -1346,7 +1346,7 @@ describe("Collections", () => {
       const spy = vi.fn();
       effect(() => spy(map.get("k").a));
       map.set("k", obj);
-      await waitScheduler();
+      await waitSchedulerThenMicroTick();
       expectSpy(spy, 1, [1]);
     });
 
@@ -1365,7 +1365,7 @@ describe("Collections", () => {
       });
       expectSpy(spy, 2, [1]);
       [...map.values()][0].v = 2;
-      await waitScheduler();
+      await waitSchedulerThenMicroTick();
       expectSpy(spy, 4, [2]);
     });
 
@@ -1439,31 +1439,31 @@ describe("Collections", () => {
 
       expectSpy(spy, 1, [false]);
       state.set(2, 3);
-      await waitScheduler();
+      await waitSchedulerThenMicroTick();
       expectSpy(spy, 2, [true]);
       state.delete(2);
-      await waitScheduler();
+      await waitSchedulerThenMicroTick();
       expectSpy(spy, 3, [false]);
       state.set(2, 3);
-      await waitScheduler();
+      await waitSchedulerThenMicroTick();
       expectSpy(spy, 4, [true]);
       state.clear();
-      await waitScheduler();
+      await waitSchedulerThenMicroTick();
       expectSpy(spy, 5, [false]);
       state.clear();
-      await waitScheduler();
+      await waitSchedulerThenMicroTick();
       expectSpy(spy, 5, [false]);
 
       state.set(3, 4);
-      await waitScheduler();
+      await waitSchedulerThenMicroTick();
       expectSpy(spy, 5, [false]);
       expect(state.has(3)).toBe(true);
       state.set(3, 4);
-      await waitScheduler();
+      await waitSchedulerThenMicroTick();
       expectSpy(spy, 5, [false]);
       expect(state.has(4)).toBe(false);
       state.delete(4);
-      await waitScheduler();
+      await waitSchedulerThenMicroTick();
       expectSpy(spy, 5, [false]);
     });
 
@@ -1474,37 +1474,37 @@ describe("Collections", () => {
 
       expectSpy(spy, 1, [undefined]);
       state.set(2, 3);
-      await waitScheduler();
+      await waitSchedulerThenMicroTick();
       expectSpy(spy, 2, [3]);
       expect(state.get(2)).toBe(3);
       state.delete(2);
-      await waitScheduler();
+      await waitSchedulerThenMicroTick();
       expectSpy(spy, 3, [undefined]);
       state.delete(2);
-      await waitScheduler();
+      await waitSchedulerThenMicroTick();
       expectSpy(spy, 3, [undefined]);
       state.set(2, 3);
-      await waitScheduler();
+      await waitSchedulerThenMicroTick();
       expectSpy(spy, 4, [3]);
       expect(state.get(2)).toBe(3);
       state.clear();
-      await waitScheduler();
+      await waitSchedulerThenMicroTick();
       expectSpy(spy, 5, [undefined]);
       expect(state.get(2)).toBeUndefined();
       state.clear();
-      await waitScheduler();
+      await waitSchedulerThenMicroTick();
       expectSpy(spy, 5, [undefined]);
 
       state.set(3, 4);
-      await waitScheduler();
+      await waitSchedulerThenMicroTick();
       expectSpy(spy, 5, [undefined]);
       expect(state.get(3)).toBe(4);
       state.set(3, 4);
-      await waitScheduler();
+      await waitSchedulerThenMicroTick();
       expectSpy(spy, 5, [undefined]);
       expect(state.get(4)).toBe(undefined);
       state.delete(4);
-      await waitScheduler();
+      await waitSchedulerThenMicroTick();
       expectSpy(spy, 5, [undefined]);
     });
 
@@ -1518,13 +1518,13 @@ describe("Collections", () => {
       effect(() => spy(proxyObj.a));
       expectSpy(spy, 1, [2]);
       proxyObj.a = 0;
-      await waitScheduler();
+      await waitSchedulerThenMicroTick();
       expectSpy(spy, 2, [0]);
       proxyObj.a = 1;
-      await waitScheduler();
+      await waitSchedulerThenMicroTick();
       expectSpy(spy, 3, [1]);
       proxyObj.a = 1;
-      await waitScheduler();
+      await waitSchedulerThenMicroTick();
       expectSpy(spy, 3, [1]);
     });
 
@@ -1538,13 +1538,13 @@ describe("Collections", () => {
       expect(toRaw(proxyObj as any)).toBe(obj);
       expectSpy(spy, 1, [2]);
       proxyObj.a = 0;
-      await waitScheduler();
+      await waitSchedulerThenMicroTick();
       expectSpy(spy, 2, [0]);
       proxyObj.a = 1;
-      await waitScheduler();
+      await waitSchedulerThenMicroTick();
       expectSpy(spy, 3, [1]);
       proxyObj.a = 1;
-      await waitScheduler();
+      await waitSchedulerThenMicroTick();
       expectSpy(spy, 3, [1]);
     });
 
@@ -1558,13 +1558,13 @@ describe("Collections", () => {
       effect(() => spy(proxyObj.a));
       expectSpy(spy, 1, [2]);
       proxyObj.a = 0;
-      await waitScheduler();
+      await waitSchedulerThenMicroTick();
       expectSpy(spy, 2, [0]);
       proxyObj.a = 1;
-      await waitScheduler();
+      await waitSchedulerThenMicroTick();
       expectSpy(spy, 3, [1]);
       proxyObj.a = 1;
-      await waitScheduler();
+      await waitSchedulerThenMicroTick();
       expectSpy(spy, 3, [1]);
     });
 
@@ -1582,17 +1582,17 @@ describe("Collections", () => {
       expectSpy(spy, 1, [2, 2]);
       proxyKeyObj.a = 0;
       proxyValObj.a = 0;
-      await waitScheduler();
+      await waitSchedulerThenMicroTick();
       expectSpy(spy, 2, [0, 0]);
       proxyKeyObj.a = 1;
-      await waitScheduler();
+      await waitSchedulerThenMicroTick();
       expectSpy(spy, 3, [1, 0]);
       proxyValObj.a = 1;
-      await waitScheduler();
+      await waitSchedulerThenMicroTick();
       expectSpy(spy, 4, [1, 1]);
       proxyKeyObj.a = 1;
       proxyValObj.a = 1;
-      await waitScheduler();
+      await waitSchedulerThenMicroTick();
       expectSpy(spy, 4, [1, 1]);
     });
 
@@ -1610,17 +1610,17 @@ describe("Collections", () => {
       expectSpy(spy, 1, [2, 2]);
       proxyKeyObj.a = 0;
       proxyValObj.a = 0;
-      await waitScheduler();
+      await waitSchedulerThenMicroTick();
       expectSpy(spy, 2, [0, 0]);
       proxyKeyObj.a = 1;
-      await waitScheduler();
+      await waitSchedulerThenMicroTick();
       expectSpy(spy, 3, [1, 0]);
       proxyValObj.a = 1;
-      await waitScheduler();
+      await waitSchedulerThenMicroTick();
       expectSpy(spy, 4, [1, 1]);
       proxyKeyObj.a = 1;
       proxyValObj.a = 1;
-      await waitScheduler();
+      await waitSchedulerThenMicroTick();
       expectSpy(spy, 4, [1, 1]);
     });
 
@@ -1646,20 +1646,20 @@ describe("Collections", () => {
 
       proxyKeyObj!.a = 0;
       proxyValObj!.a = 0;
-      await waitScheduler();
+      await waitSchedulerThenMicroTick();
       expectSpy(spy, 2, [0, 0]);
 
       proxyKeyObj!.a = 1;
-      await waitScheduler();
+      await waitSchedulerThenMicroTick();
       expectSpy(spy, 3, [1, 0]);
 
       proxyValObj!.a = 1;
-      await waitScheduler();
+      await waitSchedulerThenMicroTick();
       expectSpy(spy, 4, [1, 1]);
 
       proxyKeyObj!.a = 1;
       proxyValObj!.a = 1;
-      await waitScheduler();
+      await waitSchedulerThenMicroTick();
       expectSpy(spy, 4, [1, 1]);
     });
   });
@@ -1715,20 +1715,20 @@ describe("Collections", () => {
 
       expectSpy(spy, 1, [false]);
       state.set(obj, 3);
-      await waitScheduler();
+      await waitSchedulerThenMicroTick();
       expectSpy(spy, 2, [true]);
       expect(state.has(obj)).toBe(true);
       state.delete(obj);
-      await waitScheduler();
+      await waitSchedulerThenMicroTick();
       expectSpy(spy, 3, [false]);
       state.set(obj, 3);
       state.delete(obj);
-      await waitScheduler();
+      await waitSchedulerThenMicroTick();
       expectSpy(spy, 4, [false]);
       expect(state.has(obj)).toBe(false);
 
       state.set(obj3, 4);
-      await waitScheduler();
+      await waitSchedulerThenMicroTick();
       expectSpy(spy, 4, [false]);
     });
 
@@ -1743,20 +1743,20 @@ describe("Collections", () => {
 
       expectSpy(spy, 1, [undefined]);
       state.set(obj, 3);
-      await waitScheduler();
+      await waitSchedulerThenMicroTick();
       expectSpy(spy, 2, [3]);
       expect(state.get(obj)).toBe(3);
       state.delete(obj);
-      await waitScheduler();
+      await waitSchedulerThenMicroTick();
       expectSpy(spy, 3, [undefined]);
       state.set(obj, 3);
       state.delete(obj);
-      await waitScheduler();
+      await waitSchedulerThenMicroTick();
       expectSpy(spy, 4, [undefined]);
       expect(state.get(obj)).toBeUndefined();
 
       state.set(obj3, 4);
-      await waitScheduler();
+      await waitSchedulerThenMicroTick();
       expectSpy(spy, 4, [undefined]);
     });
 
@@ -1771,13 +1771,13 @@ describe("Collections", () => {
       effect(() => spy(proxyObj.a));
       expectSpy(spy, 1, [2]);
       proxyObj.a = 0;
-      await waitScheduler();
+      await waitSchedulerThenMicroTick();
       expectSpy(spy, 2, [0]);
       proxyObj.a = 1;
-      await waitScheduler();
+      await waitSchedulerThenMicroTick();
       expectSpy(spy, 3, [1]);
       proxyObj.a = 1;
-      await waitScheduler();
+      await waitSchedulerThenMicroTick();
       expectSpy(spy, 3, [1]);
     });
   });
@@ -1792,10 +1792,10 @@ describe("markRaw", () => {
     effect(() => spy(r.obj2.value));
     expectSpy(spy, 1, [1]);
     r.obj1.value = r.obj1.value + 1;
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expectSpy(spy, 1, [1]);
     r.obj2.value = r.obj2.value + 1;
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expectSpy(spy, 2, [2]);
     expect(r.obj1).toBe(obj1);
     expect(r.obj2).not.toBe(obj2);
@@ -1810,7 +1810,7 @@ describe("proxy flavors", () => {
     const spy = vi.fn();
     effect(() => spy(p.inner.x));
     p.inner.x = 2;
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expectSpy(spy, 2, [2]);
     expect(sig().inner).toBe(obj.inner);
   });
@@ -1831,7 +1831,7 @@ describe("proxy flavors", () => {
     const spy = vi.fn();
     effect(() => spy(p.inner.x));
     p.inner.x = 2;
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expectSpy(spy, 2, [2]);
   });
 
@@ -1849,16 +1849,16 @@ describe("key presence", () => {
     const spy = vi.fn();
     effect(() => spy("a" in p));
     p.b = 1;
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expectSpy(spy, 1, [false]);
     p.a = undefined;
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expectSpy(spy, 2, [true]);
     p.a = 2;
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expectSpy(spy, 2, [true]);
     delete p.a;
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expectSpy(spy, 3, [false]);
   });
 
@@ -1867,7 +1867,7 @@ describe("key presence", () => {
     const spy = vi.fn();
     effect(() => spy(2 in arr));
     arr.length = 1;
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expectSpy(spy, 2, [false]);
   });
 
@@ -1876,16 +1876,16 @@ describe("key presence", () => {
     const spy = vi.fn();
     effect(() => spy(map.has("a")));
     map.set("a", 2);
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expectSpy(spy, 1, [true]);
     map.delete("a");
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expectSpy(spy, 2, [false]);
     map.set("a", undefined as any);
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expectSpy(spy, 3, [true]);
     map.clear();
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expectSpy(spy, 4, [false]);
   });
 });
@@ -1896,10 +1896,10 @@ describe("delete", () => {
     const spy = vi.fn();
     effect(() => spy(Object.keys(p).length, p.b));
     delete p.b;
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expectSpy(spy, 1, [1, undefined]);
     delete p.a;
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expectSpy(spy, 2, [0, undefined]);
   });
 });
@@ -1912,7 +1912,7 @@ describe("writes", () => {
     effect(() => spy(p.x, map.get("x")));
     p.x = NaN;
     map.set("x", NaN);
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expect(spy).toHaveBeenCalledTimes(1);
   });
 
@@ -1933,10 +1933,10 @@ describe("writes", () => {
       spy();
     });
     p._x = 42;
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expect(spy).toHaveBeenCalledTimes(1);
     source.set(2);
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expect(spy).toHaveBeenCalledTimes(2);
     expect(p._x).toBe(2);
   });
@@ -2513,7 +2513,7 @@ describe("collections and arrays: values stay what they are", () => {
       sizes.push(a.union(b).size);
     });
     b.add(3);
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expect(sizes).toEqual([2, 3]);
   });
 
@@ -2527,7 +2527,7 @@ describe("collections and arrays: values stay what they are", () => {
       seen.push(m().get("a").n);
     });
     rec.n = 2;
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expect(seen).toEqual([1, 2]);
   });
 
@@ -2540,10 +2540,10 @@ describe("collections and arrays: values stay what they are", () => {
     });
     arr.foo = 1;
     arr["-1"] = 1;
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expect(runs).toBe(1);
     arr[arr.length] = 3;
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expect(runs).toBe(2);
   });
 });
@@ -2557,7 +2557,7 @@ describe("array mutators do not subscribe their caller", () => {
       log.push("effect");
     });
     log.push("external");
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expect(runs).toBe(1);
     expect(log).toEqual(["effect", "external"]);
   });
@@ -2575,7 +2575,7 @@ describe("array mutators do not subscribe their caller", () => {
       log.push("b");
     });
     for (let i = 0; i < 5; i++) {
-      await waitScheduler();
+      await waitSchedulerThenMicroTick();
     }
     expect([runsA, runsB]).toEqual([1, 1]);
   });
@@ -2594,7 +2594,7 @@ describe("array mutators do not subscribe their caller", () => {
       state.records.sort((x, y) => x[state.key] - y[state.key]);
     });
     state.key = "b";
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expect(runs).toBe(2);
     expect(toRaw(state.records).map((r) => `${r.a}${r.b}`)).toEqual(["21", "12"]);
   });
@@ -2615,7 +2615,7 @@ describe("array mutators do not subscribe their caller", () => {
       seen.push([...items]);
     });
     items.push(0);
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expect(seen).toEqual([
       [1, 2, 3],
       [0, 1, 2, 3],

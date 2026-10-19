@@ -10,7 +10,12 @@ import {
   signal,
   untrack,
 } from "../src";
-import { captureUnhandledRejections, expectSpy, TestScope, waitScheduler } from "./helpers";
+import {
+  captureUnhandledRejections,
+  expectSpy,
+  TestScope,
+  waitSchedulerThenMicroTick,
+} from "./helpers";
 
 describe("effect", () => {
   test("effect runs directly", () => {
@@ -27,7 +32,7 @@ describe("effect", () => {
     effect(() => spy(state.a));
     expectSpy(spy, 1, { args: [1] });
     state.a = 2;
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expectSpy(spy, 2, { args: [2] });
   });
 
@@ -42,10 +47,10 @@ describe("effect", () => {
     effect(() => spy(state.a, "b" in state, Object.keys(state).length));
     expectSpy(spy, 1, { args: [2, false, 1] });
     state.a = 3;
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expectSpy(spy, 2, { args: [3, false, 1] });
     state.b = 1;
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expectSpy(spy, 3, { args: [3, true, 2] });
   });
 
@@ -61,16 +66,16 @@ describe("effect", () => {
     });
     expectSpy(spy, 1, { args: [10] });
     state.b = 20;
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expectSpy(spy, 2, { args: [20] });
     state.a = 2;
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expectSpy(spy, 3, { args: [100] });
     state.b = 30;
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expectSpy(spy, 3, { args: [100] });
     state.c = 200;
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expectSpy(spy, 4, { args: [200] });
   });
 
@@ -82,10 +87,10 @@ describe("effect", () => {
     });
     expectSpy(spy, 1, { args: [1] });
     state.a = 1;
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expectSpy(spy, 1, { args: [1] });
     state.a = 2;
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expectSpy(spy, 2, { args: [2] });
   });
 
@@ -139,11 +144,11 @@ describe("effect", () => {
       log.push(`b${s()}`);
     });
     s.set(1);
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expect(log).toEqual(["a0", "b0", "b1"]);
     expect(await rejections()).toEqual(["IntentionalTestError: boom"]);
     s.set(2);
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expect(log).toEqual(["a0", "b0", "b1", "a2", "b2"]);
   });
 
@@ -189,7 +194,7 @@ describe("effect", () => {
     expect(uppercaseRuns).toBe(1);
 
     list.set([]);
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expect(effectRuns).toBe(2);
     expect(lastValueRuns).toBe(2);
     expect(uppercaseRuns).toBe(1);
@@ -210,11 +215,11 @@ describe("effect", () => {
     expect(seen).toEqual([[]]);
 
     items.set([10, 20, 30, 40, 50, 60]);
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expect(seen).toEqual([[], [50, 60]]);
 
     page.set(0);
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expect(seen).toEqual([[], [50, 60], [10, 20]]);
   });
 
@@ -232,10 +237,10 @@ describe("effect", () => {
     disposeComputation((c as any)[atomSymbol]);
     s.set(2);
     t.set(1);
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expect(seen).toEqual([11, 12]);
     s.set(3);
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expect(seen).toEqual([11, 12, 33]);
   });
 
@@ -275,10 +280,10 @@ describe("effect", () => {
     });
     expect(seen).toEqual([10]);
     s.set(1);
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expect(seen).toEqual([10, 20]);
     s.set(2);
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expect(seen).toEqual([10, 20, 30]);
   });
 
@@ -297,11 +302,11 @@ describe("effect", () => {
       order.push("second");
     });
     t.set(1);
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expect(order).toEqual(["first", "second", "first"]);
     order.length = 0;
     s.set(1);
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expect(order).toEqual(["first", "second"]);
     expect(observersOf((s as any)[atomSymbol]).length).toBe(2);
   });
@@ -318,12 +323,12 @@ describe("effect", () => {
     });
     expect(s2()).toBe(1);
     expect(result).toBe(0);
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expect(result).toBe(1);
     s1.set(2);
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expect(s2()).toBe(2);
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expect(result).toBe(2);
   });
 
@@ -343,15 +348,15 @@ describe("effect", () => {
       expectSpy(spy1, 1, { args: [1] });
       expectSpy(spy2, 1, { args: [10] });
       state.b = 20;
-      await waitScheduler();
+      await waitSchedulerThenMicroTick();
       expectSpy(spy1, 1, { args: [1] });
       expectSpy(spy2, 2, { args: [20] });
       state.a = 2;
-      await waitScheduler();
+      await waitSchedulerThenMicroTick();
       expectSpy(spy1, 2, { args: [2] });
       expectSpy(spy2, 2, { args: [20] });
       state.b = 30;
-      await waitScheduler();
+      await waitSchedulerThenMicroTick();
       expectSpy(spy1, 2, { args: [2] });
       expectSpy(spy2, 2, { args: [20] });
     });
@@ -369,7 +374,7 @@ describe("effect", () => {
     });
     a.set(1);
     b.set(1);
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expect(seen).toEqual(["parent=0 a=0", "parent=1 a=1"]);
   });
 
@@ -389,11 +394,11 @@ describe("effect", () => {
       expectSpy(spy, 1, { args: [0] });
 
       n.set(1);
-      await waitScheduler();
+      await waitSchedulerThenMicroTick();
       expectSpy(reader, 2, { args: [1] });
 
       other.set(1);
-      await waitScheduler();
+      await waitSchedulerThenMicroTick();
       expectSpy(spy, 2, { args: [1] });
       expectSpy(reader, 2, { args: [1] });
       memo!();
@@ -410,12 +415,12 @@ describe("effect", () => {
       });
       effect(() => c());
       n.set(1);
-      await waitScheduler();
+      await waitSchedulerThenMicroTick();
       n.set(2);
-      await waitScheduler();
+      await waitSchedulerThenMicroTick();
       spy.mockClear();
       other.set(1);
-      await waitScheduler();
+      await waitSchedulerThenMicroTick();
       expect(spy).toHaveBeenCalledTimes(1);
     });
 
@@ -430,7 +435,7 @@ describe("effect", () => {
       disposeComputation((c as any)[atomSymbol]);
       expect(observersOf((c as any)[atomSymbol]).length).toBe(0);
       other.set(1);
-      await waitScheduler();
+      await waitSchedulerThenMicroTick();
       expectSpy(spy, 1, { args: [0] });
     });
   });
@@ -461,20 +466,20 @@ describe("effect", () => {
         }
       });
 
-      await waitScheduler();
+      await waitSchedulerThenMicroTick();
       expectSpy(spyA, 1, { args: [1] });
       expectSpy(spyC, 2, { args: [10] });
 
       source.set(2);
-      await waitScheduler();
+      await waitSchedulerThenMicroTick();
       expectSpy(spyA, 2, { args: [2] });
       expectSpy(spyC, 3, { args: [20] });
 
       sortKey.set("desc");
-      await waitScheduler();
+      await waitSchedulerThenMicroTick();
 
       source.set(3);
-      await waitScheduler();
+      await waitSchedulerThenMicroTick();
       expectSpy(spyA, 2, { args: [2] });
       expectSpy(spyC, 3, { args: [20] });
     });
@@ -507,20 +512,20 @@ describe("effect", () => {
         }
       });
 
-      await waitScheduler();
+      await waitSchedulerThenMicroTick();
       expectSpy(spyA, 1, { args: [1] });
       expectSpy(spyC, 2, { args: [10] });
 
       source.set(2);
-      await waitScheduler();
+      await waitSchedulerThenMicroTick();
       expectSpy(spyA, 2, { args: [2] });
       expectSpy(spyC, 3, { args: [20] });
 
       sortKey.set("desc");
-      await waitScheduler();
+      await waitSchedulerThenMicroTick();
 
       source.set(3);
-      await waitScheduler();
+      await waitSchedulerThenMicroTick();
       expectSpy(spyA, 3, { args: [3] });
       expectSpy(spyC, 4, { args: [30] });
     });
@@ -545,7 +550,7 @@ describe("effect", () => {
       expect(cleanupA).toHaveBeenCalledTimes(1);
 
       b.set(20);
-      await waitScheduler();
+      await waitSchedulerThenMicroTick();
       expectSpy(spyA, 1, { args: [10] });
     });
 
@@ -557,11 +562,11 @@ describe("effect", () => {
       });
       expectSpy(spy, 1, { args: [1] });
       state.a = 2;
-      await waitScheduler();
+      await waitSchedulerThenMicroTick();
       expectSpy(spy, 2, { args: [2] });
       unsubscribe();
       state.a = 3;
-      await waitScheduler();
+      await waitSchedulerThenMicroTick();
       expectSpy(spy, 2, { args: [2] });
     });
 
@@ -574,7 +579,7 @@ describe("effect", () => {
       expectSpy(spy, 1, { args: [1] });
       s.set(2);
       dispose();
-      await waitScheduler();
+      await waitSchedulerThenMicroTick();
       expectSpy(spy, 1, { args: [1] });
     });
 
@@ -588,7 +593,7 @@ describe("effect", () => {
       expectSpy(spy, 1, { args: [2] });
       s.set(2);
       dispose();
-      await waitScheduler();
+      await waitSchedulerThenMicroTick();
       expectSpy(spy, 1, { args: [2] });
     });
 
@@ -603,11 +608,11 @@ describe("effect", () => {
       expectSpy(spy, 1, { args: [1] });
       expect(cleanup).toHaveBeenCalledTimes(0);
       state.a = 2;
-      await waitScheduler();
+      await waitSchedulerThenMicroTick();
       expectSpy(spy, 2, { args: [2] });
       expect(cleanup).toHaveBeenCalledTimes(1);
       state.a = 3;
-      await waitScheduler();
+      await waitSchedulerThenMicroTick();
       expectSpy(spy, 3, { args: [3] });
       expect(cleanup).toHaveBeenCalledTimes(2);
     });
@@ -640,7 +645,7 @@ describe("effect", () => {
       expect(cleanup2).toHaveBeenCalledTimes(0);
       expect(cleanup3).toHaveBeenCalledTimes(0);
       state.b = 20;
-      await waitScheduler();
+      await waitSchedulerThenMicroTick();
       expectSpy(spy1, 1, { args: [1] });
       expectSpy(spy2, 2, { args: [20] });
       expectSpy(spy3, 1, { args: [100] });
@@ -649,7 +654,7 @@ describe("effect", () => {
       expect(cleanup3).toHaveBeenCalledTimes(0);
       (global as any).d = true;
       state.a = 2;
-      await waitScheduler();
+      await waitSchedulerThenMicroTick();
       expectSpy(spy1, 2, { args: [2] });
       expectSpy(spy2, 2, { args: [20] });
       expectSpy(spy3, 2, { args: [100] });
@@ -657,7 +662,7 @@ describe("effect", () => {
       expect(cleanup2).toHaveBeenCalledTimes(2);
       expect(cleanup3).toHaveBeenCalledTimes(1);
       state.b = 30;
-      await waitScheduler();
+      await waitSchedulerThenMicroTick();
       expectSpy(spy1, 2, { args: [2] });
       expectSpy(spy2, 2, { args: [20] });
       expectSpy(spy3, 2, { args: [100] });
@@ -671,7 +676,7 @@ describe("effect", () => {
       state.a = 4;
       state.b = 40;
       state.c = 400;
-      await waitScheduler();
+      await waitSchedulerThenMicroTick();
       expectSpy(spy1, 2, { args: [2] });
       expectSpy(spy2, 2, { args: [20] });
       expectSpy(spy3, 2, { args: [100] });
@@ -705,7 +710,7 @@ describe("effect", () => {
       expect(cleanupRuns).toBe(1);
 
       cleanupSignal.set(1);
-      await waitScheduler();
+      await waitSchedulerThenMicroTick();
       expect(outerRuns).toBe(1);
     });
 
@@ -725,7 +730,7 @@ describe("effect", () => {
       expect(() => dispose()).toThrow("cleanup failed");
       expect(childCleanup).toHaveBeenCalledTimes(1);
       childDep.set(1);
-      await waitScheduler();
+      await waitSchedulerThenMicroTick();
       expectSpy(childSpy, 1, { args: [0] });
     });
 
@@ -748,10 +753,10 @@ describe("effect", () => {
         };
       });
       s.set(1);
-      await waitScheduler();
+      await waitSchedulerThenMicroTick();
       expectSpy(spy, 2, { args: [1] });
       s.set(2);
-      await waitScheduler();
+      await waitSchedulerThenMicroTick();
       expectSpy(spy, 3, { args: [2] });
       expect(cleanups).toEqual([0, 1]);
       expect(await rejections()).toEqual(["IntentionalTestError: cleanup failed"]);
@@ -770,7 +775,7 @@ describe("effect", () => {
         spy(later());
       });
       later.set(1);
-      await waitScheduler();
+      await waitSchedulerThenMicroTick();
       expectSpy(spy, 2, { args: [1] });
     });
 
@@ -788,12 +793,12 @@ describe("effect", () => {
         return () => cleanups.push(value);
       });
       s.set(1);
-      await waitScheduler();
+      await waitSchedulerThenMicroTick();
       expectSpy(spy, 2, { args: [1, 0] });
       expect(cleanups).toEqual([0, 1]);
       after.set(1);
       s.set(2);
-      await waitScheduler();
+      await waitSchedulerThenMicroTick();
       expectSpy(spy, 2, { args: [1, 0] });
     });
   });
@@ -817,18 +822,18 @@ describe("effects created by a scoped computed", () => {
     );
     const disposeReader = effect(() => c());
     n.set(1);
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     runs = 0;
     dep.set(1);
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expect(runs).toBe(1);
     scope.finalize(() => {});
     dep.set(2);
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expect(runs).toBe(2);
     disposeReader();
     dep.set(3);
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expect(runs).toBe(2);
   });
 });
@@ -869,11 +874,11 @@ describe("disposed by its own cleanup", () => {
       };
     });
     s.set(1);
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expect(log).toEqual(["run 0", "cleanup"]);
     expect(observersOf((s as any)[atomSymbol])).toEqual([]);
     s.set(2);
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expect(log).toEqual(["run 0", "cleanup"]);
   });
 });
@@ -895,7 +900,7 @@ describe("disposed by its own run", () => {
     expect(observersOf((s as any)[atomSymbol])).toEqual([]);
     expect(observersOf((other as any)[atomSymbol])).toEqual([]);
     other.set(1);
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expect(runs).toBe(2);
   });
 });

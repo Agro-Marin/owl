@@ -9,6 +9,11 @@ export async function waitScheduler(): Promise<void> {
   await nextMicroTick();
 }
 
+export async function waitSchedulerThenMicroTick(): Promise<void> {
+  await nextMicroTick();
+  return Promise.resolve();
+}
+
 export function expectSpy(
   spy: Mock,
   count: number,

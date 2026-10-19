@@ -1,5 +1,5 @@
 import { computed, immediateEffect, effect, proxy, signal, untrack } from "../src";
-import { expectSpy, waitScheduler } from "./helpers";
+import { expectSpy, waitSchedulerThenMicroTick } from "./helpers";
 
 describe("immediateEffect", () => {
   test("immediateEffect runs directly", () => {
@@ -28,7 +28,7 @@ describe("immediateEffect", () => {
     expectSpy(spy, 1, { args: [1] });
     state.a = 2;
     expectSpy(spy, 1, { args: [1] });
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expectSpy(spy, 2, { args: [2] });
   });
 
@@ -190,7 +190,7 @@ describe("immediateEffect", () => {
     expectSpy(immediateSpy, 2, { args: [2] });
     expectSpy(batchedSpy, 1, { args: [1] });
 
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
 
     expectSpy(batchedSpy, 2, { args: [2] });
   });
@@ -239,7 +239,7 @@ describe("immediateEffect", () => {
     });
     expect(() => s.set(1)).toThrow("boom");
     expect(log).toEqual(["a0", "b0", "c0", "b1"]);
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expect(log).toEqual(["a0", "b0", "c0", "b1", "c1"]);
     s.set(2);
     expect(log).toEqual(["a0", "b0", "c0", "b1", "c1", "a2", "b2"]);
@@ -295,7 +295,7 @@ describe("owner of an effect", () => {
     a.set(1);
     b.set(1);
     expect(log).toEqual(["child a=1"]);
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expect(log).toEqual(["child a=1", "parent a=1 b=1", "child a=1"]);
   });
 });
@@ -343,7 +343,7 @@ describe("owner chain", () => {
     });
     log.length = 0;
     a.set(1);
-    await waitScheduler();
+    await waitSchedulerThenMicroTick();
     expect(log).toEqual(["child ga=1 a=1"]);
   });
 });

@@ -23,9 +23,10 @@ import {
   makeTestFixture,
   nextMicroTick,
   waitScheduler,
+  waitSchedulerThenMicroTick,
 } from "../../../tools/testing/helpers";
 
-export { expectSpy, makeTestFixture, nextMicroTick, waitScheduler };
+export { expectSpy, makeTestFixture, nextMicroTick, waitScheduler, waitSchedulerThenMicroTick };
 
 const mount = blockDom.mount;
 
