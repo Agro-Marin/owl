@@ -541,3 +541,17 @@ test("an unchanged class beside a static one is not written again", () => {
   });
   expect(records.length).toBe(0);
 });
+
+test("a class, style or attribute changed by other code is not repaired", () => {
+  const block = createBlock(
+    '<div block-attribute-0="class" block-attribute-1="style" block-attribute-2="title"></div>'
+  );
+  const tree = block([{ show: 1 }, { color: "red" }, "a"]);
+  mount(tree, fixture);
+  const div = fixture.firstChild as HTMLDivElement;
+  div.classList.remove("show");
+  div.style.color = "blue";
+  div.setAttribute("title", "z");
+  patch(tree, block([{ show: 2, other: true }, { color: "red" }, "a"]));
+  expect(div.outerHTML).toBe(`<div class="other" style="color: blue;" title="z"></div>`);
+});

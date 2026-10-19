@@ -303,7 +303,9 @@ plugins: [] })` rendered asynchronously); a resource-driven start belongs to
   against that value, mutated too. A string equal to the last one is skipped.
   A class whose value is truthy but not `true` is not written again; the
   classes of an element without a static one are written in one
-  `setAttribute` on mount.
+  `setAttribute` on mount. Owl never repairs a class, style or attribute
+  changed by other code: it writes what differs from its own last write, so
+  a class removed by other code stays removed while its value stays truthy.
 - **A block string has one block type**, given its handlers at each call
   (`type(data, children, handlers)`, the list checked by
   `createBlock(str, list)`; a missing list throws at mount), so making an
@@ -383,7 +385,10 @@ plugins: [] })` rendered asynchronously); a resource-driven start belongs to
   a block calls; upstream called only the removed block's own, and a `{set}`
   ref kept the removed element. A component tracks no refs: upstream checked
   `isConnected` on every signal ref and set-like ref element it had bound,
-  after each of its patches.
+  after each of its patches. So a ref is cleared when owl removes its element,
+  however deep; an element removed by other code keeps its ref until owl
+  removes it or binds the ref elsewhere (upstream cleared it at the
+  component's next patch).
 - **A proxied class or style object** (`t-att-class`, `t-att-style`, inside a
   class array, or the `class` / `style` of a `t-att` object) has its keys and
   values read during the render (`objectAttrValue`), so a change made to it in

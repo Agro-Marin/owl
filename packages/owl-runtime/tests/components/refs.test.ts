@@ -140,6 +140,26 @@ describe("refs", () => {
     expect(comp!.ref()).not.toBeNull();
   });
 
+  test("an element removed by other code keeps its ref until owl removes it", async () => {
+    class Comp extends Component {
+      static template = xml`<div><p t-out="this.state.n"/><section t-if="this.state.on"><span t-ref="this.ref">x</span></section></div>`;
+      state = proxy({ n: 0, on: true });
+      ref = signal<HTMLElement | null>(null);
+    }
+
+    const comp = await mount(Comp, fixture);
+    const span = comp.ref()!;
+    span.remove();
+    comp.state.n++;
+    await nextTick();
+    expect(fixture.innerHTML).toBe("<div><p>1</p><section></section></div>");
+    expect(comp.ref()).toBe(span);
+
+    comp.state.on = false;
+    await nextTick();
+    expect(comp.ref()).toBeNull();
+  });
+
   test.each(["signal", "setter"])("a shared %s ref follows the last binding", async (kind) => {
     const value = signal<HTMLElement | null>(null);
     class Test extends Component {

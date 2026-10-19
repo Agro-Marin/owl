@@ -28,8 +28,10 @@ The signal value will only be set when the target of the `t-ref`
 directive is mounted in the DOM. Otherwise, it will be `null`.
 
 The references of the elements a render adds are set once those elements are
-in the document, the outer ones first, and each is cleared when its element
-is removed, however deep inside the removed content it was.
+in the document, the outer ones first, and each is cleared when Owl removes its
+element, however deep inside the removed content it was. An element removed by
+other code keeps its reference until Owl removes it too (a render that no
+longer shows it) or binds the reference to another element.
 
 Note that this example uses the suffix `Ref` to name the reference. This
 is not mandatory, but it is a useful convention, so we do not forget that it is
