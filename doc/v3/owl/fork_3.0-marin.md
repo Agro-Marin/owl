@@ -127,8 +127,9 @@ true })` creates an effect owned by nothing. When a computed and an effect
   others: on a recompute it is reported as an unhandled rejection, on a
   cascade the dispose throws after releasing everything, and in bulk the
   error goes to the flush or to `reportError`.
-- **An effect its own cleanup disposes does not run again**, and an effect
-  keeps only a returned function as its cleanup.
+- **An effect its own cleanup disposes does not run again**, one its own run
+  disposes keeps no subscription (also when the run then throws), and an
+  effect keeps only a returned function as its cleanup.
 - **A selector** notifies both keys of a change in one batch (a reader that
   throws no longer starves the other key), rethrows its source's error for
   every key and re-runs its readers on recovery, and follows its source only

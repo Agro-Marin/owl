@@ -878,6 +878,28 @@ describe("disposed by its own cleanup", () => {
   });
 });
 
+describe("disposed by its own run", () => {
+  test("an effect that disposes itself and then throws keeps no subscription", async () => {
+    const s = signal(0);
+    const other = signal(0);
+    let runs = 0;
+    const dispose = immediateEffect(() => {
+      runs++;
+      if (s() === 1) {
+        dispose();
+        other();
+        throw new Error("after dispose");
+      }
+    });
+    expect(() => s.set(1)).toThrow("after dispose");
+    expect(observersOf((s as any)[atomSymbol])).toEqual([]);
+    expect(observersOf((other as any)[atomSymbol])).toEqual([]);
+    other.set(1);
+    await waitScheduler();
+    expect(runs).toBe(2);
+  });
+});
+
 describe("returned value", () => {
   test("an effect keeps what it returns only when it is a cleanup function", () => {
     const list = signal([1, 2, 3]);

@@ -44,7 +44,20 @@ function createEffect<T>(fn: () => T, immediate: boolean, options?: EffectOption
         }
         return undefined;
       }
-      const result = fn();
+      let result;
+      try {
+        result = fn();
+      } catch (error) {
+        if (disposed) {
+          removeSources(computation);
+          try {
+            runUnowned(release, computation);
+          } catch (releaseError) {
+            Promise.reject(releaseError);
+          }
+        }
+        throw error;
+      }
       const cleanup = typeof result === "function" ? result : undefined;
       if (disposed) {
         computation.value = cleanup;
