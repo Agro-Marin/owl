@@ -1,4 +1,4 @@
-import { computed, immediateEffect, shallowEqual, signal } from "../src";
+import { computed, effect, immediateEffect, shallowEqual, signal } from "../src";
 import { batch } from "../src/computations";
 import { expectSpy, spyEffect, waitScheduler } from "./helpers";
 
@@ -717,5 +717,54 @@ describe("a write reverted in a batch", () => {
     list().push(2);
     signal.trigger(list);
     expect(runs).toBe(3);
+  });
+});
+
+describe("an effect that writes a signal it read and reads it again", () => {
+  test("runs again when the signal changes back to the value it corrected", async () => {
+    const s = signal(-1);
+    const shown: number[] = [];
+    effect(() => {
+      if (s() < 0) {
+        s.set(0);
+      }
+      shown.push(s());
+    });
+    await waitScheduler();
+    s.set(-1);
+    await waitScheduler();
+    expect(s()).toBe(0);
+    expect(shown.at(-1)).toBe(0);
+  });
+
+  test("an immediate effect does too", () => {
+    const s = signal(-1);
+    const shown: number[] = [];
+    immediateEffect(() => {
+      if (s() < 0) {
+        s.set(0);
+      }
+      shown.push(s());
+    });
+    s.set(-1);
+    expect(s()).toBe(0);
+    expect(shown.at(-1)).toBe(0);
+  });
+
+  test("also when it reads another source between the two reads", () => {
+    const s = signal(-1);
+    const other = signal("x");
+    const shown: string[] = [];
+    immediateEffect(() => {
+      const before = s();
+      other();
+      if (before < 0) {
+        s.set(0);
+      }
+      shown.push(`${s()}${other()}`);
+    });
+    s.set(-1);
+    expect(s()).toBe(0);
+    expect(shown.at(-1)).toBe("0x");
   });
 });

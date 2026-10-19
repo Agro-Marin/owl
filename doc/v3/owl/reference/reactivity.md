@@ -90,7 +90,9 @@ a.set(10);
 
 This holds for signals with the default equality. A signal created with a
 custom `equals` (including `equals: false`), and `signal.trigger(s)`, notify
-their readers unconditionally.
+their readers unconditionally. The value a reader saw is the last one it
+read: an effect that corrects a signal and reads it again runs when a later
+write brings back the value it corrected.
 
 An [`immediateEffect`](effects.md) runs on each write, not in a microtask.
 `batch(fn)` holds those runs until `fn` (and any batch around it) returns, so

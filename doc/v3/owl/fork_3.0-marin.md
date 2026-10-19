@@ -68,7 +68,9 @@ differently from upstream.
   before its own cleanup runs, on a re-run and on dispose.
 - **A signal written and set back** before its readers run changed nothing
   for them (default equality only; a custom `equals` and `signal.trigger`
-  always notify).
+  always notify). What a reader saw is the last value it read: an effect that
+  writes a signal and reads it again runs when the value it read first comes
+  back.
 - **A cancelled render pass** does not make a child run `onWillUpdateProps`
   again for props it already holds.
 - **Proxy reads nobody observes create no atom**; `in` / `has()` subscribe to

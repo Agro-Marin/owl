@@ -192,6 +192,8 @@ export function onReadAtom(atom: Atom) {
     const tail = sub.depsTail;
     if (tail === undefined || tail.dep !== atom) {
       track(atom, sub, tail);
+    } else if (sub.state !== ComputationState.RUNNING) {
+      readAgainAfterWrite(tail, sub);
     }
   }
   const observer = currentObserver;
@@ -233,6 +235,8 @@ function track(dep: Atom, sub: ComputationAtom, tail: Link | undefined) {
   if (active !== undefined && active.sub === sub && active.version !== DEAD) {
     if (active.version !== version) {
       reuse(active, sub, tail, version);
+    } else if (sub.state !== ComputationState.RUNNING) {
+      readAgainAfterWrite(active, sub);
     }
     return;
   }
@@ -274,6 +278,12 @@ function track(dep: Atom, sub: ComputationAtom, tail: Link | undefined) {
   sub.depsTail = link;
   dep.activeLink = link;
   appendSub(dep, link);
+}
+
+function readAgainAfterWrite(link: Link, sub: ComputationAtom) {
+  if (!sub.isDerived) {
+    link.seen = seenValue(link.dep);
+  }
 }
 
 function reuse(link: Link, sub: ComputationAtom, tail: Link | undefined, version: number) {
