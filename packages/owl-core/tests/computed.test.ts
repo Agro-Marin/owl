@@ -16,7 +16,7 @@ import {
   observersOf,
   sourcesOf,
 } from "../src/computations";
-import { expectSpy, nextMicroTick, spyEffect } from "./helpers";
+import { captureUnhandledRejections, expectSpy, nextMicroTick, spyEffect } from "./helpers";
 
 async function waitScheduler() {
   await nextMicroTick();
@@ -887,6 +887,7 @@ describe("a failing source in a pending check", () => {
       return s();
     }, true);
     let runs = 0;
+    const rejections = captureUnhandledRejections();
     effect(() => {
       runs++;
       updateComputation(failing);
@@ -896,6 +897,7 @@ describe("a failing source in a pending check", () => {
     s.set(1);
     await waitScheduler();
     expect(runs).toBe(1);
+    expect(await rejections()).toEqual(["IntentionalTestError: source failed"]);
     t.set(1);
     await waitScheduler();
     expect(runs).toBe(2);

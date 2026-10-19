@@ -10,7 +10,7 @@ import {
   signal,
   untrack,
 } from "../src";
-import { expectSpy, nextMicroTick, TestScope } from "./helpers";
+import { captureUnhandledRejections, expectSpy, nextMicroTick, TestScope } from "./helpers";
 
 async function waitScheduler() {
   await nextMicroTick();
@@ -108,6 +108,7 @@ describe("effect", () => {
 
     let runs = 0;
     let seen: string | undefined;
+    const rejections = captureUnhandledRejections();
     effect(() => {
       runs++;
       seen = uppercase();
@@ -118,6 +119,7 @@ describe("effect", () => {
     for (let i = 0; i < 5; i++) await Promise.resolve();
     expect(runs).toBe(2);
     expect(seen).toBe("A");
+    expect(await rejections()).toEqual(["IntentionalTestError: undefined value"]);
 
     list.set(["b"]);
     for (let i = 0; i < 5; i++) await Promise.resolve();
@@ -131,6 +133,7 @@ describe("effect", () => {
     }
     const s = signal(0);
     const log: string[] = [];
+    const rejections = captureUnhandledRejections();
     effect(() => {
       if (s() === 1) {
         throw new IntentionalTestError("boom");
@@ -143,6 +146,7 @@ describe("effect", () => {
     s.set(1);
     await waitScheduler();
     expect(log).toEqual(["a0", "b0", "b1"]);
+    expect(await rejections()).toEqual(["IntentionalTestError: boom"]);
     s.set(2);
     await waitScheduler();
     expect(log).toEqual(["a0", "b0", "b1", "a2", "b2"]);
@@ -737,6 +741,7 @@ describe("effect", () => {
       const s = signal(0);
       const spy = vi.fn();
       const cleanups: number[] = [];
+      const rejections = captureUnhandledRejections();
       effect(() => {
         const value = s();
         spy(value);
@@ -754,6 +759,7 @@ describe("effect", () => {
       await waitScheduler();
       expectSpy(spy, 3, { args: [2] });
       expect(cleanups).toEqual([0, 1]);
+      expect(await rejections()).toEqual(["IntentionalTestError: cleanup failed"]);
     });
 
     test("a throwing cleanup run by dispose() inside another effect leaves the outer one tracking", async () => {

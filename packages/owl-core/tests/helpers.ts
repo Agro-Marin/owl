@@ -1,4 +1,4 @@
-import { vi, type Mock } from "vitest";
+import { onTestFinished, vi, type Mock } from "vitest";
 import { effect, Scope } from "../src";
 
 export class TestScope extends Scope {}
@@ -10,6 +10,19 @@ export function nextMicroTick(): Promise<void> {
 export async function waitScheduler() {
   await nextMicroTick();
   await nextMicroTick();
+}
+
+export function captureUnhandledRejections(): () => Promise<string[]> {
+  const reasons: unknown[] = [];
+  const listener = (reason: unknown) => reasons.push(reason);
+  process.on("unhandledRejection", listener);
+  onTestFinished(() => {
+    process.off("unhandledRejection", listener);
+  });
+  return async () => {
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    return reasons.map((reason) => `${(reason as Error).name}: ${(reason as Error).message}`);
+  };
 }
 
 export function expectSpy(

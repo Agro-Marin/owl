@@ -7,10 +7,6 @@ export default defineConfig({
     environment: "node",
     include: ["tests/**/*.test.ts"],
     setupFiles: ["./tests/setup.ts"],
-    onUnhandledError(error) {
-      if (error.name === "IntentionalTestError") {
-        return false;
-      }
-    },
+    onUnhandledError: (error) => (error.name === "IntentionalTestError" ? false : undefined),
   },
 });

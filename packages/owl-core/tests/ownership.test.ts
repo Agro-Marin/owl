@@ -17,7 +17,7 @@ import {
   untrack,
   type DebugChannel,
 } from "../src";
-import { TestScope, waitScheduler } from "./helpers";
+import { captureUnhandledRejections, TestScope, waitScheduler } from "./helpers";
 
 function rethrow(e: unknown) {
   throw e;
@@ -276,6 +276,7 @@ describe("a cleanup that throws while computeds are disposed in bulk", () => {
 
   test("by the flush, unobserved: every one is disposed, the error is reported", async () => {
     const reject = vi.spyOn(Promise, "reject");
+    const rejections = captureUnhandledRejections();
     const s = signal(0);
     const a = failingComputed(s, true);
     const b = failingComputed(s, true);
@@ -286,6 +287,7 @@ describe("a cleanup that throws while computeds are disposed in bulk", () => {
     expect(live).toBe(0);
     expect(reject.mock.calls.map(([e]) => (e as Error).message)).toEqual(["cleanup failed"]);
     reject.mockRestore();
+    expect(await rejections()).toEqual(["IntentionalTestError: cleanup failed"]);
   });
 });
 
