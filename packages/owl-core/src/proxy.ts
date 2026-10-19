@@ -10,6 +10,7 @@ import {
   createAtom,
   createComputation,
   hasObservers,
+  trackLateReads,
   untrack,
   withObserver,
 } from "./computations";
@@ -324,7 +325,10 @@ const viewBases = new WeakMap<object, any>();
 
 export function observe<T extends Target>(target: T, callback: () => void): T {
   const computation = createComputation(
-    () => untrack(callback),
+    () => {
+      trackLateReads(computation);
+      return untrack(callback);
+    },
     false,
     ComputationState.EXECUTED,
     true,

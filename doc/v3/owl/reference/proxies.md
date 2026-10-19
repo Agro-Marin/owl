@@ -144,7 +144,9 @@ view.count; // read again: observed again
 
 - The subscription is **one-shot**: once `callback` ran, only the values read
   through the view again are observed. A callback that reads the view stays
-  subscribed to what it read.
+  subscribed to what it read. A value read through the view after a change but
+  before `callback` ran (later in the same `batch`, or by an `immediateEffect`
+  the change ran first) is observed once it ran.
 - Objects read through the view are views too, with the same callback.
 - Collection iterators return live views of their members, including arrays.
   `entries()` returns a plain pair containing those views. Iterator helpers

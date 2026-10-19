@@ -1,4 +1,4 @@
-import { computed, effect, observe, proxy, toRaw } from "../src";
+import { batch, computed, effect, immediateEffect, observe, proxy, toRaw } from "../src";
 import { waitScheduler } from "./helpers";
 
 describe("observe", () => {
@@ -68,6 +68,37 @@ describe("observe", () => {
     expect(calls).toBe(2);
     state.a = 4;
     expect(calls).toBe(2);
+  });
+
+  test("a read made in a batch after a notification is observed once the callback ran", () => {
+    let calls = 0;
+    const view = observe({ a: 0, b: 0 }, () => calls++);
+    const state = proxy(toRaw(view));
+    void view.a;
+    batch(() => {
+      state.a = 1;
+      void view.b;
+    });
+    expect(calls).toBe(1);
+    state.b = 1;
+    expect(calls).toBe(2);
+  });
+
+  test("a read an immediate effect makes before the callback runs is observed after it", () => {
+    let calls = 0;
+    const view = observe({ a: 0, b: 0 }, () => calls++);
+    const state = proxy(toRaw(view));
+    const stop = immediateEffect(() => {
+      if (state.a) {
+        void view.b;
+      }
+    });
+    void view.a;
+    state.a = 1;
+    expect(calls).toBe(1);
+    state.b = 1;
+    expect(calls).toBe(2);
+    stop();
   });
 
   test("observes nested objects read through the view", () => {

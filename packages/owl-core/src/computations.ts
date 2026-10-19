@@ -87,6 +87,7 @@ export interface ComputationAtom<T = any> extends Atom<T> {
   prepared: boolean;
   tracksElsewhere: boolean;
   observed: Set<Atom> | null;
+  lateReads: Set<Atom> | null;
   state: ComputationState;
   immediate: boolean;
   notifiesWithoutRecompute: boolean;
@@ -167,6 +168,7 @@ export function createComputation(
     prepared: false,
     tracksElsewhere: false,
     observed: null,
+    lateReads: null,
     state,
     immediate,
     notifiesWithoutRecompute: false,
@@ -203,6 +205,10 @@ export function onReadAtom(atom: Atom) {
       if (tail === undefined || tail.dep !== atom) {
         track(atom, observer, tail);
       }
+      return;
+    }
+    if (observer.state !== ComputationState.EXECUTED) {
+      (observer.lateReads ??= new Set()).add(atom);
       return;
     }
     const observed = (observer.observed ??= observedSources(observer));
@@ -347,6 +353,19 @@ export function withObserver<T>(observer: ComputationAtom, fn: () => T): T {
     return fn();
   } finally {
     currentObserver = previousObserver;
+  }
+}
+
+export function trackLateReads(observer: ComputationAtom) {
+  const late = observer.lateReads;
+  if (late !== null) {
+    observer.lateReads = null;
+    if (debug.reactivity) {
+      debugLog("reactivity", `${observer.name} keeps ${late.size} read(s) made before it ran`);
+    }
+    for (const atom of late) {
+      onReadAtom(atom);
+    }
   }
 }
 
@@ -733,6 +752,7 @@ export function removeSources(computation: ComputationAtom) {
   computation.deps = undefined;
   computation.depsTail = undefined;
   computation.observed = null;
+  computation.lateReads = null;
   let failure: { error: unknown } | null = null;
   while (link !== undefined) {
     const next: Link | undefined = link.nextDep;

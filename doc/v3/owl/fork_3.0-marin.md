@@ -190,6 +190,10 @@ true })` creates an effect owned by nothing. When a computed and an effect
 - **`includes` / `indexOf` / `lastIndexOf`** on a proxied plain array
   subscribe to its items as one atom and search the raw array; a subclass of
   `Array` is searched through its proxy, as for `t-foreach`.
+- **A read through an `observe()` view between a change and its callback**
+  (later in the same `batch`, or by an immediate reader the change ran first)
+  is observed after the callback, instead of being dropped with the
+  subscriptions the callback ends.
 - **Through an `observe()` view**, `forEach` hands out views; a `push` or
   `splice` reads the length through the view and calls its callback, as OWL 2's
   `reactive([], callback)` did. Collection iterators preserve array members'
