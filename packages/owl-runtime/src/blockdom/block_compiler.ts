@@ -7,6 +7,7 @@ import {
   makeAttrsUpdater,
   makeSharedClassUpdaters,
   makeSharedStyleUpdaters,
+  prefixNamespace,
   setClass,
   setStyle,
   updateClass,
@@ -28,6 +29,11 @@ import {
 
 const NO_OP = () => {};
 const XMLNS_URI = "http://www.w3.org/2000/xmlns/";
+
+function attributeNamespace(node: Element, name: string): string | null {
+  const colon = name.indexOf(":");
+  return colon > 0 ? prefixNamespace(node, name.slice(0, colon)) : null;
+}
 
 let stringifying = 0;
 
@@ -159,6 +165,7 @@ interface DynamicInfo {
   handler?: number;
   withoutAnchor?: boolean;
   name?: string;
+  ns?: string | null;
   event?: string;
   sharedClass?: Snapshotter<HTMLElement>;
   sharedStyle?: Snapshotter<HTMLElement>;
@@ -200,7 +207,7 @@ function buildTree(
         info.push({ type: "child", idx: index });
         el = document.createTextNode("");
       }
-      currentNS ||= (node as Element).namespaceURI;
+      currentNS = (node as Element).namespaceURI;
       if (!el) {
         el = currentNS
           ? document.createElementNS(currentNS, tagName)
@@ -234,6 +241,7 @@ function buildTree(
               type: "attribute",
               idx,
               name: attrValue,
+              ns: attributeNamespace(node as Element, attrValue),
             });
           } else if (attrName.startsWith("block-property-")) {
             const idx = parseInt(attrName.slice(15), 10);
@@ -500,7 +508,7 @@ function updateCtx(ctx: BlockCtx, tree: IntermediateTree) {
           setter = setStyle;
           updater = updateStyle;
         } else {
-          setter = createAttrUpdater(info.name!);
+          setter = createAttrUpdater(info.name!, info.ns);
           updater = setter;
           snap = false;
         }

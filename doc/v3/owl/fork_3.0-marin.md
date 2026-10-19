@@ -346,6 +346,11 @@ plugins: [] })` rendered asynchronously); a resource-driven start belongs to
   out in both phases and never stopped). A native listener on that parent runs
   before or after all of them, not between. `t-on-*.self` on a component means the event targets one of its
   root elements.
+- **An explicit `xmlns` inside a namespaced block is its element's
+  namespace** (upstream kept the enclosing one: a `<div xmlns="…xhtml">` in a
+  `foreignObject` was an SVG element). **A prefixed dynamic attribute**
+  (`xlink:`, `xml:`, or a prefix in scope in the block string), a `t-att` name
+  included, is set and removed in its namespace, as a static one is.
 - **A ref is set once its element is in the document, outermost first**: the
   ref callbacks of a mount run once its outermost block is inserted, in
   document order (upstream ran a nested block's before its parent element was

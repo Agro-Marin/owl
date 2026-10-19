@@ -1,4 +1,4 @@
-import { createBlock, mount } from "../../src/blockdom";
+import { createBlock, mount, patch } from "../../src/blockdom";
 import { makeTestFixture } from "./helpers";
 
 const XHTML_URI = "http://www.w3.org/1999/xhtml";
@@ -71,5 +71,32 @@ describe("namespace", () => {
     const use = fixture.querySelector("use")!;
     expect(use.getAttributeNS(XLINK_URI, "href")).toBe("#a");
     expect(use.outerHTML).toBe(`<use xlink:href="#a"></use>`);
+  });
+
+  test("an explicit xmlns inside a namespaced element is its namespace", () => {
+    const block = createBlock(
+      `<svg xmlns="${SVG_URI}"><foreignObject><div xmlns="${XHTML_URI}"><p/></div></foreignObject></svg>`
+    );
+    mount(block(), fixture);
+    expect(fixture.querySelector("foreignObject")!.namespaceURI).toBe(SVG_URI);
+    expect(fixture.querySelector("div")!.namespaceURI).toBe(XHTML_URI);
+    expect(fixture.querySelector("p")!.namespaceURI).toBe(XHTML_URI);
+  });
+
+  test("a prefixed dynamic attribute is set and removed in its namespace", () => {
+    const XLINK_URI = "http://www.w3.org/1999/xlink";
+    const block = createBlock(
+      `<svg xmlns="${SVG_URI}"><use block-attribute-0="xlink:href" block-attribute-1="href"/></svg>`
+    );
+    const tree = block(["#a", "#b"]);
+    mount(tree, fixture);
+    const use = fixture.querySelector("use")!;
+    expect(use.getAttributeNS(XLINK_URI, "href")).toBe("#a");
+    expect(use.getAttributeNS(null, "href")).toBe("#b");
+    patch(tree, block(["#c", "#b"]));
+    expect(use.getAttributeNS(XLINK_URI, "href")).toBe("#c");
+    patch(tree, block([false, "#b"]));
+    expect(use.hasAttributeNS(XLINK_URI, "href")).toBe(false);
+    expect(use.getAttributeNS(null, "href")).toBe("#b");
   });
 });

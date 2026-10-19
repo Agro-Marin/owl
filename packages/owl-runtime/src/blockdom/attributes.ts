@@ -4,6 +4,8 @@ import { fromDom } from "./dom";
 
 const elemSetAttribute = /* @__PURE__ */ fromDom(() => Element.prototype.setAttribute);
 const removeAttribute = /* @__PURE__ */ fromDom(() => Element.prototype.removeAttribute);
+const elemSetAttributeNS = /* @__PURE__ */ fromDom(() => Element.prototype.setAttributeNS);
+const removeAttributeNS = /* @__PURE__ */ fromDom(() => Element.prototype.removeAttributeNS);
 const tokenListAdd = /* @__PURE__ */ fromDom(() => DOMTokenList.prototype.add);
 const tokenListRemove = /* @__PURE__ */ fromDom(() => DOMTokenList.prototype.remove);
 const isArray = Array.isArray;
@@ -24,7 +26,18 @@ function setAttribute(this: HTMLElement, key: string, value: any) {
   }
 }
 
-export function createAttrUpdater(attr: string): Setter<HTMLElement> {
+export function createAttrUpdater(attr: string, ns?: string | null): Setter<HTMLElement> {
+  if (ns) {
+    const localName = attr.slice(attr.indexOf(":") + 1);
+    return function (this: HTMLElement, value: any) {
+      const str = toAttrValue(value);
+      if (str === null) {
+        removeAttributeNS.call(this, ns, localName);
+      } else {
+        elemSetAttributeNS.call(this, ns, attr, str);
+      }
+    };
+  }
   return function (this: HTMLElement, value: any) {
     setAttribute.call(this, attr, value);
   };
@@ -60,6 +73,33 @@ function toAttrValue(value: any): string | null {
   }
 }
 
+function writeAttr(el: Element, name: string, value: string | null) {
+  const colon = name.indexOf(":");
+  const ns = colon > 0 ? prefixNamespace(el, name.slice(0, colon)) : null;
+  if (ns) {
+    if (value === null) {
+      removeAttributeNS.call(el, ns, name.slice(colon + 1));
+    } else {
+      elemSetAttributeNS.call(el, ns, name, value);
+    }
+  } else if (value === null) {
+    removeAttribute.call(el, name);
+  } else {
+    elemSetAttribute.call(el, name, value);
+  }
+}
+
+const KNOWN_PREFIXES: { [prefix: string]: string } = {
+  xlink: "http://www.w3.org/1999/xlink",
+  xml: "http://www.w3.org/XML/1998/namespace",
+};
+
+export function prefixNamespace(node: Node, prefix: string): string | null {
+  return Object.hasOwn(KNOWN_PREFIXES, prefix)
+    ? KNOWN_PREFIXES[prefix]
+    : node.lookupNamespaceURI(prefix);
+}
+
 type AttrsSnap = { [name: string]: any };
 
 function nullProtoClass(): new () => AttrsSnap {
@@ -88,11 +128,7 @@ export function makeAttrsUpdater(
       } else {
         const value = toAttrValue(val);
         if (value !== prev[name]) {
-          if (value === null) {
-            removeAttribute.call(this, name);
-          } else {
-            elemSetAttribute.call(this, name, value);
-          }
+          writeAttr(this, name, value);
         }
         snap[name] = value;
       }
@@ -104,7 +140,7 @@ export function makeAttrsUpdater(
         } else if (name === "style") {
           updateStyleFn.call(this, undefined, prev.style);
         } else if (prev[name] !== null) {
-          removeAttribute.call(this, name);
+          writeAttr(this, name, null);
         }
       }
     }

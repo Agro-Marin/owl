@@ -117,4 +117,25 @@ describe("properly support svg", () => {
       expect(el.namespaceURI).toBe("http://www.w3.org/2000/svg");
     }
   });
+
+  test("an element given the xhtml namespace in an svg is an html element", () => {
+    const template = `<svg><foreignObject><div xmlns="http://www.w3.org/1999/xhtml"><p>x</p></div></foreignObject></svg>`;
+    const fixture = makeTestFixture();
+    mount(renderToBdom(template), fixture);
+    expect(fixture.querySelector("foreignObject")!.namespaceURI).toBe("http://www.w3.org/2000/svg");
+    expect(fixture.querySelector("div")!.namespaceURI).toBe("http://www.w3.org/1999/xhtml");
+    expect(fixture.querySelector("p")!.namespaceURI).toBe("http://www.w3.org/1999/xhtml");
+  });
+
+  test("a prefixed t-att name is set and removed in its namespace", () => {
+    const XLINK = "http://www.w3.org/1999/xlink";
+    const template = `<svg><use t-att="{ 'xlink:href': href }"/></svg>`;
+    const fixture = makeTestFixture();
+    const tree = renderToBdom(template, { href: "#a" });
+    mount(tree, fixture);
+    const use = fixture.querySelector("use")!;
+    expect(use.getAttributeNS(XLINK, "href")).toBe("#a");
+    tree.patch(renderToBdom(template, { href: false }), false);
+    expect(use.hasAttributeNS(XLINK, "href")).toBe(false);
+  });
 });
