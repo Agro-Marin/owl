@@ -1,9 +1,9 @@
 import { spawnSync } from "child_process";
 import { build, transform } from "esbuild";
-import { readdirSync, readFileSync } from "fs";
+import { readdirSync, readFileSync, rmSync, writeFileSync } from "fs";
 import { TARGET } from "../build_target.mjs";
 import { join } from "path";
-import { PACKAGE_SOURCES } from "../../../tools/workspace.mjs";
+import { PACKAGE_SOURCES, scratchDir } from "../../../tools/workspace.mjs";
 import { PACKAGE, removeScratchPackage, scratchPackage } from "./scratch_build";
 
 let BUILT: string;
@@ -61,6 +61,31 @@ test("the build makes ES modules only: no IIFE script, no CommonJS", () => {
   const files = readdirSync(join(BUILT, "dist")).filter((name) => name.endsWith("js"));
   expect(files.sort()).toEqual(["owl.compiler.es.js", "owl.es.js", "owl.runtime.es.js"]);
 });
+
+test("a build into a directory replaces its owl*.js files and leaves the others", () => {
+  const outdir = scratchDir("owl-outdir");
+  try {
+    for (const name of ["notes.txt", "package.json", "owl.iife.js", "owl.es.js"]) {
+      writeFileSync(join(outdir, name), "kept?");
+    }
+    const run = spawnSync(process.execPath, ["build.mjs", "--outdir", outdir], {
+      cwd: PACKAGE,
+      encoding: "utf8",
+    });
+    expect(run.stderr).toBe("");
+    expect(readdirSync(outdir).sort()).toEqual([
+      "notes.txt",
+      "owl.compiler.es.js",
+      "owl.es.js",
+      "owl.runtime.es.js",
+      "package.json",
+    ]);
+    expect(readFileSync(join(outdir, "notes.txt"), "utf8")).toBe("kept?");
+    expect(readFileSync(join(outdir, "owl.es.js"), "utf8")).not.toBe("kept?");
+  } finally {
+    rmSync(outdir, { recursive: true, force: true });
+  }
+}, 60000);
 
 describe("require()", () => {
   test("each entry loads as the module import() gives, without a warning", () => {

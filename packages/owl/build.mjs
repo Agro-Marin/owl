@@ -43,6 +43,8 @@ const bundledCompilerPlugin = {
   },
 };
 
+const BUILT_FILE = /^owl\.[\w.-]*js$/;
+
 const common = { bundle: true, define, target: TARGET, format: "esm", alias: PACKAGE_SOURCES };
 
 const COMPILER_INPUTS = [
@@ -119,7 +121,7 @@ switch (target) {
     break;
   default:
     for (const file of existsSync(outdir) ? readdirSync(outdir, { withFileTypes: true }) : []) {
-      if (file.isFile()) {
+      if (file.isFile() && BUILT_FILE.test(file.name)) {
         rmSync(join(outdir, file.name));
       }
     }

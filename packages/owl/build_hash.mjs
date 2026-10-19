@@ -60,9 +60,30 @@ export function buildHash(root) {
   return `${commit}-dirty-${digest(changes, "\0", ...contents)}`;
 }
 
+export function sameSources(root, built, current = buildHash(root)) {
+  if (built === current) {
+    return true;
+  }
+  if (![built, current].every((hash) => /^[0-9a-f]{8}$/.test(hash))) {
+    return false;
+  }
+  try {
+    git(realpathSync(root), `diff --quiet ${built} ${current} -- ${SOURCES.join(" ")}`);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export function buildDate(root, hash = buildHash(root), env = process.env) {
   if (env.SOURCE_DATE_EPOCH) {
-    return new Date(Number(env.SOURCE_DATE_EPOCH) * 1000).toISOString();
+    const date = new Date(Number(env.SOURCE_DATE_EPOCH) * 1000);
+    if (!/^\d+$/.test(env.SOURCE_DATE_EPOCH) || Number.isNaN(date.getTime())) {
+      throw new Error(
+        `SOURCE_DATE_EPOCH must be a number of seconds since 1970, not ${JSON.stringify(env.SOURCE_DATE_EPOCH)}`
+      );
+    }
+    return date.toISOString();
   }
   if (/^[0-9a-f]{8}$/.test(hash)) {
     return new Date(git(realpathSync(root), "log -1 --format=%cI HEAD")).toISOString();

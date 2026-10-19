@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import { createRequire } from "node:module";
 import { join, resolve } from "node:path";
+import { buildHash, sameSources, SOURCES } from "../../packages/owl/build_hash.mjs";
 import { defaultOdoo, ROOT } from "../workspace.mjs";
 
 export const require = createRequire(import.meta.url);
@@ -34,6 +35,19 @@ export function owlBuild() {
       `no Owl build in ${owl} (OWL names the Owl checkout to check, default this one): ` +
         "run `npm run build` there"
     );
+  }
+  if (
+    build.endsWith("packages/owl/dist/owl.es.js") &&
+    SOURCES.some((dir) => fs.existsSync(join(owl, dir)))
+  ) {
+    const built = /^var buildHash = "([^"]*)";$/m.exec(fs.readFileSync(build, "utf8"))?.[1];
+    const current = buildHash(owl);
+    if (!built || !sameSources(owl, built, current)) {
+      refuse(
+        `${build} is build ${built ?? "(unnamed)"}, the sources beside it are ${current}: ` +
+          `run \`npm run build\` in ${owl}`
+      );
+    }
   }
   return build;
 }

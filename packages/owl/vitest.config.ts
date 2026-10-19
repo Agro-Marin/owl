@@ -3,7 +3,7 @@ import { fileURLToPath } from "url";
 import { PACKAGE_SOURCES, TEST_DEFAULTS } from "../../tools/workspace.mjs";
 
 const RUNTIME_TESTS = ["tests/compiler_module.test.ts", "tests/runtime.test.ts"];
-const NODE_TESTS = ["tests/dist.test.ts", "tests/types_build.test.ts"];
+const NODE_TESTS = ["tests/build_hash.test.ts", "tests/dist.test.ts", "tests/types_build.test.ts"];
 const fullAliases = [
   ...Object.entries(PACKAGE_SOURCES).map(([find, replacement]) => ({ find, replacement })),
   {

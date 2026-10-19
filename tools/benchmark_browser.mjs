@@ -2,12 +2,14 @@ import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { createHash } from "node:crypto";
 import { createServer } from "node:http";
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
+import { readFile, rm, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
 import { build } from "esbuild";
+import { checkNodeVersion, scratchDir } from "./workspace.mjs";
+
+checkNodeVersion();
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const { values } = parseArgs({
@@ -28,7 +30,7 @@ const roots = values.baseline
   ? [resolve(values.baseline), resolve(values.candidate)]
   : [resolve(values.candidate)];
 const labels = values.baseline ? ["baseline", "candidate"] : ["candidate"];
-const directory = await mkdtemp(join(tmpdir(), "owl-navigation-bench-"));
+const directory = scratchDir("owl-navigation-bench");
 const files = new Map();
 const artifacts = {};
 let browser, server;

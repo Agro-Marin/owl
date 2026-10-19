@@ -1,6 +1,7 @@
 import { execFileSync, spawnSync } from "node:child_process";
-import { mkdir, rm, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
+import { buildHash } from "../../packages/owl/build_hash.mjs";
 import { scratchDir } from "../workspace.mjs";
 
 const root = resolve(__dirname, "../..");
@@ -208,6 +209,63 @@ test("the raw checker names the build it needs when OWL has none", async () => {
     expect(run.stderr).toContain("run `npm run build` there");
   } finally {
     await rm(empty, { recursive: true, force: true });
+  }
+});
+
+test.each(["compile_templates", "compile_inherited_templates"])(
+  "the %s checker refuses a root that does not exist or holds no template",
+  async (checker) => {
+    const scratch = scratchDir("owl-checker-roots");
+    try {
+      const web = join(scratch, "odoo/addons/web");
+      await mkdir(join(web, "static/src/core"), { recursive: true });
+      await writeFile(join(web, "static/src/core/template_inheritance.js"), "export {};");
+      await mkdir(join(scratch, "odoo/node_modules/xpath"), { recursive: true });
+      await writeFile(join(scratch, "odoo/node_modules/xpath/index.js"), "");
+      await mkdir(join(scratch, "empty/static/lib"), { recursive: true });
+      await writeFile(join(scratch, "empty/static/lib/t.xml"), "<templates/>");
+      const run = (dir: string) =>
+        spawnSync(process.execPath, [join(root, `tools/odoo_migration/${checker}.mjs`), dir], {
+          encoding: "utf8",
+          timeout: 10000,
+          env: { ...process.env, OWL, WEB: web, OLD: BUILD },
+        });
+      const missing = run(join(scratch, "adons"));
+      const empty = run(join(scratch, "empty"));
+      console.debug("[owl:checker-roots]", checker, missing.stderr, empty.stderr);
+      expect([missing.status, empty.status]).toEqual([2, 2]);
+      expect(missing.stderr).toContain(`${join(scratch, "adons")} does not exist`);
+      expect(empty.stderr).toContain(`${join(scratch, "empty")} holds no template file`);
+    } finally {
+      await rm(scratch, { recursive: true, force: true });
+    }
+  }
+);
+
+test("the raw checker refuses a build older than the sources beside it", async () => {
+  const owl = scratchDir("owl-stale-build");
+  try {
+    await mkdir(join(owl, "packages/owl-core/src"), { recursive: true });
+    await mkdir(join(owl, "packages/owl/dist"), { recursive: true });
+    await writeFile(join(owl, "packages/owl-core/src/a.ts"), "export const a = 1;");
+    const bundle = await readFile(BUILD, "utf8");
+    const stale = join(owl, "packages/owl/dist/owl.es.js");
+    await writeFile(stale, bundle);
+    const sources = buildHash(owl);
+    const refused = await runRaw('<templates><t t-name="good"><p/></t></templates>', { OWL: owl });
+    expect(refused.status).toBe(2);
+    expect(refused.stderr).toMatch(
+      new RegExp(`is build [0-9a-f]{8}\\S*, the sources beside it are ${sources}: run`)
+    );
+    await writeFile(
+      stale,
+      bundle.replace(/^var buildHash = "[^"]*";$/m, `var buildHash = "${sources}";`)
+    );
+    const fresh = await runRaw('<templates><t t-name="good"><p/></t></templates>', { OWL: owl });
+    expect(fresh.stdout).toContain("compiled 1 templates, 0 failures");
+    expect(fresh.status).toBe(0);
+  } finally {
+    await rm(owl, { recursive: true, force: true });
   }
 });
 

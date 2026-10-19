@@ -23,7 +23,9 @@ export function checkNodeVersion() {
   }
 }
 
-export const ODOO_CANDIDATES = [resolve(ROOT, "../odoo"), "/home/marin/Odoo/odoo"];
+export const SIBLING_ODOO = resolve(ROOT, "../odoo");
+
+export const ODOO_CANDIDATES = [SIBLING_ODOO, "/home/marin/Odoo/odoo"];
 
 export function defaultOdoo() {
   return ODOO_CANDIDATES.find((dir) => existsSync(join(dir, "addons/web")));

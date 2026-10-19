@@ -1,14 +1,14 @@
 import { spawnSync } from "node:child_process";
-import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { copyFileSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import ts from "typescript";
+import { scratchDir } from "../../../tools/workspace.mjs";
 import { removeScratchPackage, scratchPackage } from "./scratch_build";
 
 let BUILT: string;
 
 beforeAll(() => {
-  BUILT = scratchPackage("owl-types-test");
+  BUILT = scratchPackage("owl-types-test", { types: true });
 }, 60000);
 
 afterAll(() => removeScratchPackage(BUILT));
@@ -38,7 +38,7 @@ test("declarations build with this Node even inside npm exec", () => {
 
 test("a consumer outside the checkout gets complete collection and hook types", () => {
   const packageRoot = resolve(__dirname, "..");
-  const consumerRoot = mkdtempSync(resolve(tmpdir(), "owl-type-consumer-"));
+  const consumerRoot = scratchDir("owl-type-consumer");
   try {
     const installed = resolve(consumerRoot, "node_modules/@odoo/owl");
     mkdirSync(resolve(installed, "dist/types"), { recursive: true });

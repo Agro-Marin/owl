@@ -43,8 +43,9 @@ differently from upstream.
   runs the compiler's TypeScript sources directly for the standalone
   precompiler, and the internal workspace packages are private.
 - `build.mjs [types] --outdir <dir>` builds into another directory than
-  `dist/`; the package tests build into their own directory under `temp/` and
-  never touch `dist/`, and `build:devtools` builds the package first and
+  `dist/`, replacing its `owl.*.js` files and leaving any other; the package
+  tests and the benchmarks build into their own directory under `temp/` and
+  never touch `dist/` or `/tmp`, and `build:devtools` builds the package first and
   compiles the devtools templates into `dist/devtools/`, not the source tree.
 - The standalone precompiler rejects partial output and duplicate names,
   preserves an existing artifact on compilation errors, and stages successful
@@ -477,8 +478,9 @@ plugins: [] })` rendered asynchronously); a resource-driven start belongs to
   chain is ignored (Owl's own contexts hold none).
 - **`__info__.hash`** is the commit, plus `-dirty-<digest>` when the sources
   differ from it; outside a git checkout, `nogit-<digest of the sources>`. **`__info__.date`**
-  is `SOURCE_DATE_EPOCH` if set, else the commit's date for a clean build (two
-  builds of a commit are the same bytes), else the build time.
+  is `SOURCE_DATE_EPOCH` if set (whole seconds; anything else fails the
+  build by name), else the commit's date for a clean build (two builds of a
+  commit are the same bytes), else the build time.
 
 Several debug texts are shorter than in earlier fork builds, and `debug` is
 built from `DEBUG_CHANNELS`.
@@ -513,7 +515,10 @@ snapshot of the committed children; `App.version` + `__info__.hash` scope the te
 
    Both take the new build from `OWL` (an Owl checkout; default the one the
    script is in), at its `packages/owl/dist/owl.es.js`, so `npm run build`
-   first. The second also reads `WEB`, Odoo's `addons/web` (default: in
+   first; a build whose `__info__.hash` names other sources than those beside
+   it (a commit whose `packages/*/src` differ, or another dirty state) is
+   refused as stale, as is a root that does not exist or holds no
+   `static/src/**/*.xml`, each with exit 2. The second also reads `WEB`, Odoo's `addons/web` (default: in
    `../odoo` beside the Owl checkout, else `/home/marin/Odoo/odoo`), its
    `template_inheritance.js` and the Odoo checkout's `node_modules/xpath`, and
    `OLD`, the old build's `owl.es.js` (default: the one vendored in `WEB`). A
@@ -528,11 +533,19 @@ snapshot of the committed children; `App.version` + `__info__.hash` scope the te
 
 `npm run vendor:odoo` (`tools/vendor_odoo.mjs`) builds the committed checkout
 and copies the three files into Odoo's `web/static/lib/owl/`, writing the full
-commit, the three sha256 and the version into the `owl` entry of
-`web/static/lib/versions.json` (nothing else in it changes); `-- --check` only
-compares the build with both and exits 1 on a difference. A build whose
-sources differ from the commit is refused; `--odoo <path>` names the Odoo
-checkout (default `../odoo` beside this one). Upstream's release script (push
+commit, the three sha256 (exactly those three: a stray pin is dropped) and the
+version into the `owl` entry of `web/static/lib/versions.json` (nothing else
+in it changes); `-- --check` only compares the build with both and exits 1 on
+a difference, or on what Odoo's `tooling/assets/check_vendored_libs.py`
+rejects (checksums pinning other files than the three, the entry's `probe`
+missing from its file, a file whose `var buildHash` is not the commit's). The
+version is the build's `var version` (`owl-runtime/src/version.ts`, what
+Odoo's probe reads); a `packages/owl/package.json` saying otherwise is
+refused. A checkout with any uncommitted change to a tracked file (sources,
+build scripts, `package.json` files, the lockfile, tsconfigs alike) or an
+untracked file under `packages/*/src` is refused; other untracked files are
+not. `--odoo <path>` names the Odoo checkout, default only `../odoo` beside
+this one. Upstream's release script (push
 to master, GitHub release, `npm publish`) is removed.
 
 The compilation checks destroy each temporary App, including failed ones.
@@ -550,7 +563,8 @@ outside the checkout without its ambient types.
 
 ## Test suites beyond upstream's
 
-`npm run verify` (`tools/verify.mjs`) runs every step even after one fails and
+`npm test` runs the four packages' suites, then the tooling tests
+(`test:tools`). `npm run verify` (`tools/verify.mjs`) runs every step even after one fails and
 prints a table of results and durations, exiting 1 if any failed: each
 package's tests and type check, the tooling tests (`test:tools`) and type
 check, lint (type-aware, with `await-thenable`), formatting, the package,

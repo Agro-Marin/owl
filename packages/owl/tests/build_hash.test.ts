@@ -1,13 +1,13 @@
 import { execSync } from "child_process";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "fs";
-import { tmpdir } from "os";
+import { mkdirSync, rmSync, writeFileSync } from "fs";
 import { join } from "path";
-import { buildDate, buildHash } from "../build_hash.mjs";
+import { scratchDir } from "../../../tools/workspace.mjs";
+import { buildDate, buildHash, sameSources } from "../build_hash.mjs";
 
 const dirs: string[] = [];
 
 function makeTree(files: Record<string, string>): string {
-  const root = mkdtempSync(join(tmpdir(), "owl-build-hash-"));
+  const root = scratchDir("owl-build-hash");
   dirs.push(root);
   for (const [path, content] of Object.entries(files)) {
     mkdirSync(join(root, path, ".."), { recursive: true });
@@ -92,4 +92,35 @@ test("SOURCE_DATE_EPOCH dates any build; a dirty or unversioned one is dated now
   expect(dirty).toBeGreaterThanOrEqual(before - 1000);
   const tree = makeTree(SOURCES);
   expect(Date.parse(buildDate(tree, buildHash(tree), {}))).toBeGreaterThanOrEqual(before - 1000);
+});
+
+test("a malformed SOURCE_DATE_EPOCH is refused by name", () => {
+  const tree = makeTree(SOURCES);
+  for (const value of ["yesterday", "1.5e400", "-"]) {
+    expect(() => buildDate(tree, buildHash(tree), { SOURCE_DATE_EPOCH: value })).toThrow(
+      `SOURCE_DATE_EPOCH must be a number of seconds since 1970, not ${JSON.stringify(value)}`
+    );
+  }
+});
+
+test("a build has the same sources as a later commit only if no source changed in between", () => {
+  const root = makeRepo({ ...SOURCES, "README.md": "one" });
+  const git = (command: string) =>
+    execSync(`git -c user.name=t -c user.email=t@t -c commit.gpgsign=false ${command}`, {
+      cwd: root,
+    })
+      .toString()
+      .trim();
+  const built = buildHash(root);
+  writeFileSync(join(root, "README.md"), "two");
+  git("commit -q -am readme");
+  expect(sameSources(root, built)).toBe(true);
+  writeFileSync(join(root, "packages/owl-core/src/a.ts"), "export const a = 2;");
+  expect(sameSources(root, built)).toBe(false);
+  const dirty = buildHash(root);
+  expect(sameSources(root, dirty)).toBe(true);
+  git("commit -q -am source");
+  expect(sameSources(root, built)).toBe(false);
+  expect(sameSources(root, dirty)).toBe(false);
+  expect(sameSources(root, "deadbeef")).toBe(false);
 });

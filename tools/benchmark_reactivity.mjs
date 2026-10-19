@@ -1,13 +1,15 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
+import { readFile, rm, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { performance } from "node:perf_hooks";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { parseArgs } from "node:util";
 import { build } from "esbuild";
+import { checkNodeVersion, scratchDir } from "./workspace.mjs";
+
+checkNodeVersion();
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const { values } = parseArgs({
@@ -28,7 +30,7 @@ const roots = values.baseline
   ? [resolve(values.baseline), resolve(values.candidate)]
   : [resolve(values.candidate)];
 const labels = values.baseline ? ["baseline", "candidate"] : ["candidate"];
-const directory = await mkdtemp(join(tmpdir(), "owl-reactivity-bench-"));
+const directory = scratchDir("owl-reactivity-bench");
 const median = (numbers) => [...numbers].sort((a, b) => a - b)[Math.floor(numbers.length / 2)];
 const drain = () => new Promise((resolve) => setImmediate(resolve));
 
