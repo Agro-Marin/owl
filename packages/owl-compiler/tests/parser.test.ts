@@ -1593,6 +1593,10 @@ describe("qweb parser", () => {
       error("null", "t-slot-scope")
     );
     expect(() => parse(`<t t-call="sub" Promise="1"/>`)).toThrow(error("Promise", "t-call"));
+    expect(() => parse(`<t t-set="Uint8Array" t-value="1"/>`)).toThrow(
+      error("Uint8Array", "t-set")
+    );
+    expect(() => parse(`<t t-set="Temporal" t-value="1"/>`)).not.toThrow();
     expect(() => parse(`<t t-set="maps" t-value="1"/>`)).not.toThrow();
   });
 

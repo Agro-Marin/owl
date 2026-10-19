@@ -58,7 +58,11 @@ differently from upstream.
 - **Template expressions read JavaScript's standard globals** (`String`,
   `Number`, `Boolean`, `JSON`, `parseInt`, `parseFloat`, `isNaN`, `Map`, `Set`,
   `Intl`, `Infinity`, `Promise`, `Reflect`, `WeakMap`, `globalThis`, the error
-  types, the URI functions, …) as the globals, not from the context. Upstream
+  types, the typed arrays, the URI functions, …) as the globals, not from the
+  context: every global of a fresh JavaScript context that all four targets
+  have (a test holds the list to Node's), so not `SharedArrayBuffer` (a browser
+  global only in a cross-origin-isolated page), `Temporal`, `DisposableStack`,
+  `AsyncDisposableStack` or `SuppressedError` (not in Safari). Upstream
   reads them from the component and gets `undefined`. A `t-set`, `t-as`,
   `t-slot-scope` or `t-call` argument named like one (or like a keyword such
   as `null`) throws, since no expression could read it.
@@ -465,8 +469,9 @@ plugins: [] })` rendered asynchronously); a resource-driven start belongs to
 - **`t-model.number`** checks the radio, or selects the static option, whose
   value equals the model's number.
 - **Template expressions skip comments**; a statement keyword in an arrow's
-  block body, and an object literal method or accessor (`{ f() {} }`,
-  `{ get g() {} }`), throw a named error; `1 .toString()` keeps its space; `delete` is an operator (`delete o.x`
+  block body, and an object literal method, accessor or generator
+  (`{ f() {} }`, `{ 'f'() {} }`, `{ [k]() {} }`, `{ get g() {} }`,
+  `{ *g() {} }`), throw a named error; `1 .toString()` keeps its space; `delete` is an operator (`delete o.x`
   compiles; a context variable cannot be named `delete`); `{{ }}` and `#{ }`
   end at the brace that closes them; an arrow prop's free variables include
   those its parameter defaults read.

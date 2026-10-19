@@ -1,3 +1,4 @@
+import { runInNewContext } from "node:vm";
 import { compileExpr, interpolate, processExpr, tokenize } from "../src/inline_expressions";
 
 describe("tokenizer", () => {
@@ -497,6 +498,18 @@ describe("expression edge cases", () => {
     expect(() => compileExpr("{ x() { return 1; } }")).toThrow(error);
     expect(() => compileExpr("{ a: 1, get g() { return 1; } }")).toThrow(error);
     expect(() => compileExpr("{ async f() {} }")).toThrow(error);
+    expect(() => compileExpr("{ get 'x'() { return 1; } }")).toThrow(error);
+    expect(() => compileExpr("{ set 1(v) {} }")).toThrow(error);
+    expect(() => compileExpr("{ *g() {} }")).toThrow(error);
+    expect(() => compileExpr("{ a: 1, async *g() {} }")).toThrow(error);
+    expect(() => compileExpr("{ 'x'() { return a; } }")).toThrow(error);
+    expect(() => compileExpr("{ 1() {} }")).toThrow(error);
+    expect(() => compileExpr("{ [k]() {} }")).toThrow(error);
+    expect(() => compileExpr("{ get [k]() { return 1; } }")).toThrow(error);
+    expect(compileExpr("{ [k]: f(x), 'y': (a), 2: [b] }")).toBe(
+      "{[ctx['k']]:ctx['f'](ctx['x']),'y':(ctx['a']),2:[ctx['b']]}"
+    );
+    expect(compileExpr("{ a: b * c, d: [e] }")).toBe("{a:ctx['b']*ctx['c'],d:[ctx['e']]}");
     expect(compileExpr("{ get: 1, set: f(x), x: () => 1 }")).toBe(
       "{get:1,set:ctx['f'](ctx['x']),x:()=>1}"
     );
@@ -519,6 +532,21 @@ describe("standard globals", () => {
       "globalThis.a||Reflect.has(ctx['o'],ctx['k'])"
     );
     expect(compileExpr("new WeakMap() && new WeakSet()")).toBe("new WeakMap()&&new WeakSet()");
+  });
+
+  test("are every global of a JavaScript context but those a target browser lacks", () => {
+    const globals = Object.getOwnPropertyNames(runInNewContext("globalThis"));
+    expect(globals.filter((name) => compileExpr(name) !== name).sort()).toEqual([
+      "AsyncDisposableStack",
+      "DisposableStack",
+      "SharedArrayBuffer",
+      "SuppressedError",
+      "Temporal",
+    ]);
+    expect(compileExpr("new Uint8Array(n) instanceof Function")).toBe(
+      "new Uint8Array(ctx['n']) instanceof Function"
+    );
+    expect(compileExpr("Temporal")).toBe("ctx['Temporal']");
   });
 
   test("an arrow's parameter of the same name stays the parameter", () => {

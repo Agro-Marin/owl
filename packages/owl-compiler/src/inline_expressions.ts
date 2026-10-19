@@ -5,6 +5,9 @@ const RESERVED_WORDS = /* @__PURE__ */ wordSet(
     "Math,RegExp,Array,Object,Date,Number,Boolean,String,Symbol,BigInt,Map,Set,JSON,Intl,Error," +
     "Promise,globalThis,Reflect,Proxy,WeakMap,WeakSet,WeakRef,Iterator,ArrayBuffer,DataView," +
     "AggregateError,EvalError,RangeError,ReferenceError,SyntaxError,TypeError,URIError," +
+    "Function,FinalizationRegistry,Atomics,WebAssembly,Int8Array,Uint8Array,Uint8ClampedArray," +
+    "Int16Array,Uint16Array,Int32Array,Uint32Array,Float16Array,Float32Array,Float64Array," +
+    "BigInt64Array,BigUint64Array,escape,unescape," +
     "Infinity,isFinite,isNaN,parseFloat,parseInt,decodeURI,decodeURIComponent,encodeURI,encodeURIComponent"
 );
 
@@ -576,6 +579,37 @@ function isAsyncArrow(tokens: Token[], i: number): boolean {
   return arrow?.type === "OPERATOR" && arrow.value === "=>";
 }
 
+function startsObjectMethod(tokens: Token[], i: number): boolean {
+  const token = tokens[i];
+  const next = tokens[i + 1];
+  if (token.type === "OPERATOR") {
+    return token.value === "*";
+  }
+  if (token.type === "SYMBOL" && ACCESSOR_WORDS.has(token.value) && next) {
+    if (
+      next.type === "SYMBOL" ||
+      next.type === "VALUE" ||
+      next.type === "LEFT_BRACKET" ||
+      (next.type === "OPERATOR" && next.value === "*")
+    ) {
+      return true;
+    }
+  }
+  let end = i;
+  if (token.type === "LEFT_BRACKET") {
+    for (let depth = 0; end < tokens.length; end++) {
+      if (LEFT_GROUPS.has(tokens[end].type)) {
+        depth++;
+      } else if (RIGHT_GROUPS.has(tokens[end].type) && !--depth) {
+        break;
+      }
+    }
+  } else if (token.type !== "SYMBOL" && token.type !== "VALUE") {
+    return false;
+  }
+  return tokens[end + 1]?.type === "LEFT_PAREN";
+}
+
 function collectVariables(tokens: Token[], start: number): string[] {
   const vars = new Set<string>();
   for (let i = start; i < tokens.length; i++) {
@@ -692,12 +726,9 @@ export function processExpr(
       }
     }
     if (
-      token.type === "SYMBOL" &&
       groupType === "LEFT_BRACE" &&
       (prevToken.type === "LEFT_BRACE" || prevToken.type === "COMMA") &&
-      (nextToken?.type === "LEFT_PAREN" ||
-        (ACCESSOR_WORDS.has(token.value) &&
-          (nextToken?.type === "SYMBOL" || nextToken?.type === "LEFT_BRACKET")))
+      startsObjectMethod(tokens, i)
     ) {
       throw new OwlError(
         `Object literal methods and accessors are not supported in a template expression (\`${expr}\`): use a property holding an arrow function`
