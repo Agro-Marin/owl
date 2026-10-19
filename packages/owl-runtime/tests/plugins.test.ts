@@ -1760,8 +1760,14 @@ describe("plugin manager: identity, nested and failed starts, teardown", () => {
     );
     const sub = new PluginManager(manager.app, { parent: manager });
     expect(sub.run(() => plugin(Red)).color).toBe("red");
-    expect(sub.getPlugin(Blue)).toBe(null);
+    expect(sub.getPlugin(Blue)).toBe(manager.getPlugin(Blue));
     expect(manager.getPlugin(Blue)!.color).toBe("blue");
+    class UsesBlue extends Plugin {
+      blue = plugin(Blue);
+    }
+    const subsub = new PluginManager(manager.app, { parent: sub });
+    subsub.startPlugins([UsesBlue]);
+    expect(subsub.getPlugin(UsesBlue)!.blue).toBe(manager.getPlugin(Blue));
 
     let error = "";
     class Root extends Component {
@@ -1855,6 +1861,98 @@ describe("plugin manager: identity, nested and failed starts, teardown", () => {
     child.startPlugins([User]);
     expect(child.getPlugin(User)!.late).toBe(parent.getPlugin(Late));
     expect(setups).toBe(1);
+  });
+
+  test("a child manager starts a plugin it lists itself, though its parent has that plugin pending", () => {
+    const rpc = makeDeferred<void>();
+    class Session extends Plugin {
+      static sequence = 10;
+      setup() {
+        onWillStart(() => rpc);
+      }
+    }
+    class Late extends Plugin {}
+    class User extends Plugin {
+      late = plugin(Late);
+    }
+    const parent = new PluginManager(new App());
+    parent.startPlugins([Session, Late]);
+    const child = new PluginManager(parent.app, { parent });
+    child.startPlugins([User, Late]);
+    expect(child.getPlugin(User)!.late).toBe(child.getPlugin(Late));
+    expect(parent.getPluginById("Late")).toBe(null);
+  });
+
+  test("a start nested in a plugin's setup leaves the manager starting until the plugin's onWillStart is done", async () => {
+    const own = makeDeferred<void>();
+    class B extends Plugin {}
+    class A extends Plugin {
+      loaded = false;
+      setup() {
+        this.__owl__.startPlugins([B]);
+        onWillStart(async () => {
+          await own;
+          this.loaded = true;
+        });
+      }
+    }
+    const manager = new PluginManager(new App());
+    manager.startPlugins([A]);
+    expect(manager.status).toBe(STATUS.NEW);
+    own.resolve();
+    await manager.ready;
+    expect(manager.status).toBe(STATUS.MOUNTED);
+    expect(manager.getPlugin(A)!.loaded).toBe(true);
+  });
+
+  test("a start nested in a deferred batch holds the ready a component waits on", async () => {
+    const rpc = makeDeferred<void>();
+    const slow = makeDeferred<void>();
+    class Session extends Plugin {
+      static sequence = 10;
+      setup() {
+        onWillStart(() => rpc);
+      }
+    }
+    class Z extends Plugin {
+      loaded = false;
+      setup() {
+        onWillStart(async () => {
+          await slow;
+          this.loaded = true;
+        });
+      }
+    }
+    class A extends Plugin {
+      setup() {
+        this.__owl__.startPlugins([Z]);
+      }
+    }
+    const seen: boolean[] = [];
+    class Child extends Component {
+      static template = xml`<span/>`;
+      setup() {
+        seen.push(plugin(Z).loaded);
+      }
+    }
+    class Root extends Component {
+      static template = xml`<Child/>`;
+      static components = { Child };
+      setup() {
+        providePlugins([Session, A]);
+      }
+    }
+    const app = new App();
+    const mounted = app.createRoot(Root).mount(makeTestFixture());
+    rpc.resolve();
+    for (let i = 0; i < 10; i++) {
+      await nextTick();
+    }
+    expect(seen).toEqual([]);
+    slow.resolve();
+    await mounted;
+    expect(seen).toEqual([true]);
+    app.destroy();
   });
 
   test("a resource-driven start made inside an effect outlives that effect's run", async () => {

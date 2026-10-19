@@ -55,9 +55,10 @@ class MyPlugin extends Plugin {
 ```
 
 A plugin without a declared id is found only for its own class: another class
-of the same name is not handed out in its place (`usePlugin` throws, a
-`getPlugin` returns `null`). Declare an id for plugins whose class names a
-minifier may shorten or drop.
+of the same name is not handed out in its place. The lookup goes on to the
+parent managers past such a class; when none holds the asked class, a component
+gets an error and a plugin starts its own instance (`getPlugin` returns `null`).
+Declare an id for plugins whose class names a minifier may shorten or drop.
 
 ## Using a Plugin
 
@@ -383,9 +384,11 @@ Two things to keep in mind:
 - If an `onWillStart` callback in a batch rejects, the remaining batches are
   not started and the mount is rejected. A later start is not held back by it.
 - A plugin of a child manager (`providePlugins`) asking for one its parent has
-  in a waiting batch gets the same error, rather than a second instance.
+  in a waiting batch gets the same error, rather than a second instance, unless
+  the child manager lists that plugin itself.
 - Plugins started from a plugin's `setup()` (`this.__owl__.startPlugins(...)`)
-  are waited for as well: the manager is ready once they are.
+  are waited for as well: the batch that started the plugin waits for them, so
+  the manager is ready once they are.
 
 ## Lifecycle and Cleanup
 

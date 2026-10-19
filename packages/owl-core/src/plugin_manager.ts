@@ -84,8 +84,19 @@ export class PluginManager<TApp extends ScopeApp = ScopeApp> extends Scope<TApp>
   }
 
   getPlugin<T extends PluginConstructor>(pluginConstructor: T): InstanceType<T> | null {
-    const plugin = this.getPluginById<InstanceType<T>>(pluginConstructor.id);
-    return plugin && isPluginOf(plugin, pluginConstructor) ? plugin : null;
+    const id = pluginConstructor.id;
+    for (let manager: PluginManager | null = this; manager; manager = manager.parent) {
+      if (Object.hasOwn(manager.plugins, id)) {
+        const plugin = manager.plugins[id] as InstanceType<T>;
+        if (isPluginOf(plugin, pluginConstructor)) {
+          return plugin;
+        }
+        if (debug.plugin) {
+          debugLog("plugin", `${id} here is another class, looking further up`);
+        }
+      }
+    }
+    return null;
   }
 
   onDestroy(cb: () => void): void {
@@ -227,8 +238,9 @@ export class PluginManager<TApp extends ScopeApp = ScopeApp> extends Scope<TApp>
       }
       return true;
     });
+    const nested = this.collectingWillStart;
     if (!fresh.length) {
-      if (!this.hasPendingReady && this.status < STATUS.MOUNTED) {
+      if (!nested && !this.hasPendingReady && this.status < STATUS.MOUNTED) {
         this.status = STATUS.MOUNTED;
       }
       return;
@@ -245,11 +257,9 @@ export class PluginManager<TApp extends ScopeApp = ScopeApp> extends Scope<TApp>
       }
     }
     const readyBefore = this.ready;
-    let chain: Promise<unknown> | null = this.hasPendingReady ? this.ready : null;
-    for (const batch of chain ? batches : batches.slice(1)) {
-      for (const ctor of batch) {
-        this.pending.set(ctor.id, ctor);
-      }
+    let chain: Promise<unknown> | null = !nested && this.hasPendingReady ? this.ready : null;
+    for (const ctor of fresh) {
+      this.pending.set(ctor.id, ctor);
     }
 
     const startBatch = (batch: PluginConstructor[]): Promise<unknown> | null => {
@@ -297,6 +307,16 @@ export class PluginManager<TApp extends ScopeApp = ScopeApp> extends Scope<TApp>
         );
       }
       throw e;
+    }
+    if (nested) {
+      if (chain) {
+        if (debug.plugin) {
+          debugLog("plugin", "a start nested in a batch is pending, the batch waits for it");
+        }
+        const nestedChain = chain;
+        this.willStart.push(() => nestedChain);
+      }
+      return;
     }
     if (this.ready !== readyBefore && this.hasPendingReady) {
       if (debug.plugin) {

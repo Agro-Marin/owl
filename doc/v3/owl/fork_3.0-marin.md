@@ -232,13 +232,14 @@ d)` is typed `V | D`; `useListener` takes any function reading a target.
   asking for each other in `setup()` each get the other (logged on the `plugin`
   channel). A synchronous start failure leaves no later batch pending.
 - **A plugin without a declared `static id`** is found only for its own class
-  (`getPlugin` / `usePlugin` check `instanceof`): two classes named `Theme`
-  were one plugin. A declared id keeps upstream's shadowing by id. A
+  (`getPlugin` / `usePlugin` check `instanceof`, and look past another class of
+  that name to the parent managers): two classes named `Theme` were one plugin. A declared id keeps upstream's shadowing by id. A
   dependency started implicitly with its dependent's id throws the
   duplicate-id error instead of being overwritten.
-- **Plugin starts**: plugins started from a plugin's `setup()` hold the
-  manager's `ready`; a plugin of a child manager asking for one its parent has
-  pending throws "not started yet" instead of starting a copy; a plugin deferred
+- **Plugin starts**: plugins started from a plugin's `setup()` hold the batch
+  that started it, so neither `ready` nor the manager's status gets ahead of
+  them; a plugin of a child manager asking for one its parent has pending throws
+  "not started yet" instead of starting a copy, unless the child lists it; a plugin deferred
   behind a pending start is pending too; a rejected start no longer blocks
   later ones; an empty list or resource leaves the manager ready (`new App({
 plugins: [] })` rendered asynchronously); a resource-driven start belongs to

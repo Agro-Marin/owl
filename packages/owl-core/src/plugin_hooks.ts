@@ -1,6 +1,6 @@
 import { debug, debugLog } from "./debug";
 import { OwlError } from "./owl_error";
-import { isPluginOf, PluginConstructor, PluginManager } from "./plugin_manager";
+import { Plugin, PluginConstructor, PluginManager } from "./plugin_manager";
 import { useScope } from "./scope";
 import { getDefault, types, type Optional, type Schema, type WithDefault } from "./types";
 import { assertType } from "./validation";
@@ -22,14 +22,11 @@ export function usePlugin<T extends PluginConstructor>(pluginType: T): PluginIns
       `Plugin "${id}" is not started yet: its batch waits for the onWillStart of a lower sequence. Use it from a child component, or lower its sequence.`
     );
   }
-  let plugin = manager.getPluginById(id);
-  if (plugin && !isPluginOf(plugin, pluginType)) {
-    if (!isPlugin) {
-      throw new OwlError(
-        `Plugin "${id}" is another class with the same id; declare a distinct static id on one of them`
-      );
-    }
-    plugin = null;
+  let plugin: Plugin | null = manager.getPlugin(pluginType);
+  if (!plugin && !isPlugin && manager.getPluginById(id)) {
+    throw new OwlError(
+      `Plugin "${id}" is another class with the same id; declare a distinct static id on one of them`
+    );
   }
   plugin ??= isPlugin ? manager.startPlugin(pluginType) : null;
   if (!plugin) {
