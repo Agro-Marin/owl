@@ -407,7 +407,10 @@ agent reporter, which hides passing-test console output.
   `t-foreach` against each.
 - `owl-core/tests/conformance.test.ts`: the cross-framework reactive
   conformance suite (`reactive-framework-test-suite`): every case passes, with
-  no expected failure.
+  no expected failure, and each of its 18 behavioural cases (design choices it
+  only characterizes) must return the verdict pinned there (owl: lazy, no
+  subscription, `Object.is`, `batch` returns its value, post-write, FIFO
+  cleanups, ...). Owl-core tests require an assertion each.
 - `owl-compiler/tests/expression_fuzz.test.ts`: random expressions, compiled,
   against native evaluation.
 - `owl-runtime/tests/compiler/template_fuzz.test.ts`: random templates,

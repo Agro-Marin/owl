@@ -8,6 +8,7 @@ export default defineConfig({
     setupFiles: ["./tests/setup.ts"],
     globals: true,
     testTimeout: 10000,
+    expect: { requireAssertions: true },
     onUnhandledError(error) {
       if (error.name === "IntentionalTestError") {
         return false;
