@@ -116,10 +116,12 @@ its own value` instead of recursing (upstream hangs); a computed that catches
   then), instead of at the next write to its sources (which a computed
   reading nothing never got). Read again, such a computed recomputes (a new
   object for an object result), and an effect its getter creates is created
-  again, owned by the computed. `untrack` around a getter keeps the reads that
-  getter makes off an `observe()` view; a read through the view itself
-  subscribes the view in any context, `untrack` and lifecycle hooks included
-  (Odoo's `useRecordObserver` first reads its view in `onWillStart`, which runs
+  again, owned by the computed. `untrack` inside a getter reached through an
+  `observe()` view keeps that getter's reads of other proxies off the view. A
+  read through the view (`this` in such a getter included), and what a getter
+  it reaches reads outside such an `untrack`, subscribes the view in any
+  context, `untrack` around the view read and lifecycle hooks included (Odoo's
+  `useRecordObserver` first reads its view in `onWillStart`, which runs
   untracked).
 - **An effect belongs to the computation whose run creates it**, tracked or
   not (`untrack` keeps the owner): an effect's, a computed's (detached ones

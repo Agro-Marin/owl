@@ -1,4 +1,14 @@
-import { batch, computed, effect, immediateEffect, observe, proxy, signal, toRaw } from "../src";
+import {
+  batch,
+  computed,
+  effect,
+  immediateEffect,
+  observe,
+  proxy,
+  signal,
+  toRaw,
+  untrack,
+} from "../src";
 import { waitScheduler } from "./helpers";
 
 describe("observe", () => {
@@ -375,5 +385,34 @@ describe("observe", () => {
     expect(view.hasOwnProperty("b")).toBe(false);
     proxy(toRaw(view)).b = 1;
     expect(calls).toBe(1);
+  });
+
+  test("untrack keeps a getter's reads of other proxies off the view only inside the getter", () => {
+    const other = proxy({ n: 1 });
+    const calls: string[] = [];
+    const view = observe(
+      {
+        x: 1,
+        get total() {
+          return other.n;
+        },
+        get own() {
+          return untrack(() => this.x);
+        },
+        get hidden() {
+          return untrack(() => other.n);
+        },
+      },
+      () => calls.push("cb")
+    );
+    void view.hidden;
+    other.n = 2;
+    expect(calls).toEqual([]);
+    void view.own;
+    proxy(toRaw(view)).x = 2;
+    expect(calls).toEqual(["cb"]);
+    untrack(() => view.total);
+    other.n = 3;
+    expect(calls).toEqual(["cb", "cb"]);
   });
 });
