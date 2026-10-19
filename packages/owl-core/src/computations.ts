@@ -69,6 +69,7 @@ function seenValue(dep: Atom): unknown {
 }
 
 const DEAD = -1;
+const WRITTEN = -2;
 
 export interface AtomHolder {
   release(atom: Atom): void;
@@ -144,7 +145,9 @@ export function observersOf(atom: Atom): ComputationAtom[] {
 export function sourcesOf(computation: ComputationAtom): Atom[] {
   const result: Atom[] = [];
   for (let link = computation.deps; link !== undefined; link = link.nextDep) {
-    result.push(link.dep);
+    if (link.dep !== writeMark) {
+      result.push(link.dep);
+    }
   }
   return result;
 }
@@ -209,8 +212,6 @@ export function onReadAtom(atom: Atom) {
     const tail = sub.depsTail;
     if (tail === undefined || tail.dep !== atom) {
       track(atom, sub, tail);
-    } else if (sub.state !== ComputationState.RUNNING) {
-      readAgainAfterWrite(tail, sub);
     }
   }
   const observer = currentObserver;
@@ -254,9 +255,11 @@ function track(dep: Atom, sub: ComputationAtom, tail: Link | undefined) {
   let active = dep.activeLink;
   if (active !== undefined && active.sub === sub && active.version !== DEAD) {
     if (active.version !== version) {
-      reuse(active, sub, tail, version);
-    } else if (sub.state !== ComputationState.RUNNING) {
-      readAgainAfterWrite(active, sub);
+      if (active.version === WRITTEN) {
+        readAgainAfterWrite(active);
+      } else {
+        reuse(active, sub, tail, version);
+      }
     }
     return;
   }
@@ -300,9 +303,52 @@ function track(dep: Atom, sub: ComputationAtom, tail: Link | undefined) {
   appendSub(dep, link);
 }
 
-function readAgainAfterWrite(link: Link, sub: ComputationAtom) {
-  if (!sub.isDerived) {
-    link.seen = seenValue(link.dep);
+function readAgainAfterWrite(link: Link) {
+  link.seen = seenValue(link.dep);
+  if (debug.reactivity) {
+    debugLog("reactivity", `${link.sub.name} reads again a source written during its run`);
+  }
+}
+
+const writeMark = createAtom(undefined, "write mark");
+
+function writtenWhileRunning(computation: ComputationAtom, link: Link) {
+  link.version = WRITTEN;
+  if (computation.depsTail === link) {
+    const mark = new Link(
+      writeMark,
+      computation,
+      WRITTEN,
+      link,
+      link.nextDep,
+      undefined,
+      undefined
+    );
+    if (link.nextDep !== undefined) {
+      link.nextDep.prevDep = mark;
+    }
+    link.nextDep = mark;
+    computation.depsTail = mark;
+  }
+}
+
+function endWrittenLinks(computation: ComputationAtom) {
+  for (let link = computation.deps; link !== undefined; link = link.nextDep) {
+    if (link.version !== WRITTEN) {
+      continue;
+    }
+    if (link.dep !== writeMark) {
+      link.version = computation.version;
+      continue;
+    }
+    const prevDep = link.prevDep!;
+    const nextDep = link.nextDep;
+    prevDep.nextDep = nextDep;
+    if (nextDep !== undefined) {
+      nextDep.prevDep = prevDep;
+    } else {
+      computation.depsTail = prevDep;
+    }
   }
 }
 
@@ -410,6 +456,11 @@ export function onWriteAtom(atom: Atom, comparable: boolean = false) {
         continue;
       }
       invalidatedWhileRunning(ctx);
+      if (!ctx.isDerived) {
+        writtenWhileRunning(ctx, link);
+      }
+    } else if (ctx.running && link.version === ctx.version && !ctx.isDerived) {
+      writtenWhileRunning(ctx, link);
     }
     ctx.state =
       comparable && ctx.state !== ComputationState.STALE && !ctx.notifiesWithoutRecompute
@@ -756,6 +807,9 @@ function endTracking(computation: ComputationAtom) {
   for (link = computation.deps; link !== undefined; link = link.nextDep) {
     link.dep.activeLink = link.rollback;
     link.rollback = undefined;
+  }
+  if (computation.running && computation.state !== ComputationState.RUNNING) {
+    endWrittenLinks(computation);
   }
   computation.observed = null;
 }

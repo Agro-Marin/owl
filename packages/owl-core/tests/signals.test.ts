@@ -1,4 +1,13 @@
-import { computed, effect, immediateEffect, shallowEqual, signal } from "../src";
+import {
+  atomSymbol,
+  computed,
+  effect,
+  getCurrentComputation,
+  immediateEffect,
+  shallowEqual,
+  signal,
+  sourcesOf,
+} from "../src";
 import { batch } from "../src/computations";
 import { expectSpy, spyEffect, waitScheduler } from "./helpers";
 
@@ -766,5 +775,37 @@ describe("an effect that writes a signal it read and reads it again", () => {
     s.set(-1);
     expect(s()).toBe(0);
     expect(shown.at(-1)).toBe("0x");
+  });
+
+  test("keeps its sources in reading order, and compares what it last read of each", () => {
+    const s = signal(1);
+    const t = signal(1);
+    const other = signal("x");
+    const sources: unknown[][] = [];
+    let runs = 0;
+    immediateEffect(() => {
+      runs++;
+      const first = s();
+      if (first > 0) {
+        s.set(0);
+      }
+      t();
+      if (first > 0) {
+        t.set(0);
+        s();
+      }
+      other();
+      sources.push(sourcesOf(getCurrentComputation()!));
+    });
+    const atoms = [s, t, other].map((source) => (source as any)[atomSymbol]);
+    expect(runs).toBe(1);
+    expect(sources).toEqual([atoms]);
+    t.set(1);
+    expect(runs).toBe(1);
+    s.set(1);
+    expect(runs).toBe(2);
+    expect(sources[1]).toEqual(atoms);
+    other.set("y");
+    expect(runs).toBe(3);
   });
 });
