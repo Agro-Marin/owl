@@ -118,6 +118,11 @@ Slots can define a default content, in case the parent did not define them:
 <!-- will be rendered as: <div><span>default content</span></div> -->
 ```
 
+A directive on the `t-set-slot` node itself (`<t t-set-slot="footer"
+t-if="cond">`) makes only the slot's content conditional: the slot is always
+given, so the child never shows its default content for it and
+`props.slots.footer` is always set.
+
 ## Dynamic Slots
 
 The `t-call-slot` directive is able to use any expressions, using string

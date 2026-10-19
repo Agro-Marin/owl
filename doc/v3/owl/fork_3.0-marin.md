@@ -403,6 +403,11 @@ plugins: [] })` rendered asynchronously); a resource-driven start belongs to
   between them share one copy. In Odoo's 3491 templates (2026-10-18), 134
   places in 56 templates are copied. A `t-set` body reads its variables at its `t-set`
   (upstream: at its output), as QWeb in Python does.
+- **A directive on a `t-set-slot` node makes only its content conditional**,
+  as upstream, documented as it works: the slot is always given, so the
+  child's default content never shows and `props.slots.<name>` is always set.
+  Odoo's 15 such sites (a `t-if` on the slot node) rely on the slot being
+  there: `hasSlot()` in `ViewLayout`, `props.slots.collapse` in `BuilderRow`.
 - **Scoping as QWeb's**, documented as it works: a `t-if` or an element opens
   no scope; a loop item does, and writes a variable `t-set` earlier outside
   it in the same template.
