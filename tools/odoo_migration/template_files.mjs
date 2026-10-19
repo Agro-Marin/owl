@@ -35,3 +35,19 @@ export async function templateFiles(roots = process.argv.slice(2)) {
   }
   return files;
 }
+
+export async function viewFiles(roots) {
+  const files = [];
+  for (const root of roots) {
+    for await (const file of fs.promises.glob("**/*.xml", {
+      cwd: root,
+      exclude: (path) => {
+        const parts = path.split("/");
+        return parts.includes("node_modules") || parts.includes("static");
+      },
+    })) {
+      files.push(join(root, file));
+    }
+  }
+  return files;
+}

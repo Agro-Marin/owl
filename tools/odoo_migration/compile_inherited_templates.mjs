@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import { installDom, oldBuild, owlBuild, requireFromOdoo, webAddon } from "./checker_env.mjs";
 import customDirectives from "./custom_directives.mjs";
-import { templateFiles } from "./template_files.mjs";
+import { templateFiles, viewFiles } from "./template_files.mjs";
 
 const dom = installDom();
 globalThis.odoo = { debug: "" };
@@ -192,6 +192,48 @@ for (const name of [...base.keys(), ...primary.keys()]) {
     console.log("BOTH", `${name} :: ${fresh.slice(0, 160)}`);
   }
 }
+const templateRegressions = regressions.length;
+let archTotal = 0;
+let archBothFail = 0;
+let attributeSets = 0;
+for (const file of await viewFiles(process.argv.slice(2))) {
+  const src = fs.readFileSync(file, "utf8");
+  if (!src.includes("<templates") && !src.includes("attributes")) {
+    continue;
+  }
+  const doc = new DOMParser().parseFromString(src, "text/xml");
+  if (
+    doc.getElementsByTagName("parsererror").length ||
+    doc.documentElement.tagName === "templates"
+  ) {
+    continue;
+  }
+  for (const el of doc.querySelectorAll("templates [t-name]")) {
+    const name = el.getAttribute("t-name");
+    archTotal++;
+    const fresh = compiles(newOwl, name, el);
+    const stale = compiles(oldOwl, name, el);
+    if (fresh && !stale && !JSDOM_ONLY.test(fresh)) {
+      regressions.push(`${file} ${name} :: ${fresh.slice(0, 160)}`);
+    } else if (fresh && stale) {
+      archBothFail++;
+    }
+  }
+  for (const target of doc.querySelectorAll('record [position="attributes"]')) {
+    const expr = target.getAttribute("expr") || "";
+    if (target.tagName !== "t" && !(target.tagName === "xpath" && /(^|\/)t(\[.*\])?$/.test(expr))) {
+      continue;
+    }
+    attributeSets++;
+    for (const attribute of target.querySelectorAll(":scope > attribute")) {
+      const name = attribute.getAttribute("name") || "";
+      if (name.startsWith("t-att")) {
+        const record = target.closest("record").getAttribute("id");
+        regressions.push(`${file} ${record} :: sets ${name} on a <t>, which the old build dropped`);
+      }
+    }
+  }
+}
 for (const line of regressions) {
   console.log("REGRESSION", line);
 }
@@ -205,8 +247,13 @@ if (process.env.UNAPPLIED) {
 }
 console.log(
   `${total} templates after inheritance (${extensions.size} extended, ${primary.size} primary); ` +
-    `${regressions.length} rejected only by the new build, ${fixedByNew.length} only by the old, ` +
+    `${templateRegressions} rejected only by the new build, ${fixedByNew.length} only by the old, ` +
     `${bothFail} by both; ${unapplied.length} extensions not applied (in module dependency order)`
+);
+console.log(
+  `view archs: ${archTotal} templates, ${regressions.length - templateRegressions} rejected only by the new build ` +
+    `(${archBothFail} by both), ` +
+    `${attributeSets} inherited attribute sets on a <t>`
 );
 const absentExtensionTargets = [...extensions.keys()].filter(
   (name) => !base.has(name) && !primary.has(name)

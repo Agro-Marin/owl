@@ -535,7 +535,13 @@ snapshot of the committed children; `App.version` + `__info__.hash` scope the te
    called template is an unavailable context.
 2. `node tools/odoo_migration/compile_inherited_templates.mjs <roots>`: every
    template compiles after Odoo's own template inheritance, with the new and
-   the old build; it must print no `REGRESSION` line. `FREE_NAMES=1` also
+   the old build; it must print no `REGRESSION` line. The same comparison
+   covers the templates inside view archs (each `[t-name]` under a
+   `<templates>` in the roots' non-static XML, as Odoo's kanban arch parser
+   takes them) and flags an inherited view setting a `t-att*` attribute on a
+   `<t>`, which the old build dropped and the new one rejects. It reads the
+   view files, not a database, so an arch built by an `xpath` that inserts
+   such a node is still only seen by the HOOT suites. `FREE_NAMES=1` also
    lists the component templates reading a context name nothing sets.
 
    Both take the new build from `OWL` (an Owl checkout; default the one the
@@ -549,9 +555,15 @@ snapshot of the committed children; `App.version` + `__info__.hash` scope the te
    `OLD`, the old build's `owl.es.js` (default: the one vendored in `WEB`). A
    missing build, `WEB` or `OLD` exits 2 naming it.
 
-3. The `@web` HOOT suites (`WebSuite`, `MobileWebSuite`) and `@mail`'s
-   (`MailSuite`, `MobileMailSuite`) with the old and the new build, compared
-   test by test. Vendor the three files together (`owl.es.js`,
+3. Every HOOT suite, with the old and the new build, compared test by
+   test, on a database where every module whose tests they run is
+   installed: `@web`'s `WebSuite`, `MobileWebSuite`, `AddonSuite` and
+   `MobileAddonSuite` (the other addons' unit tests), `@mail`'s `MailSuite`
+   and `MobileMailSuite`, and each addon's own runner (`WebsiteSuite`,
+   `PointOfSaleSuite`, `im_livechat`'s `ExternalTestSuite`, agromarin's
+   `*HootSuite`, …; `grep -rln "HOOTCommon\|/web/tests" --include=*.py` over
+   the module roots lists them). `WebSuite` alone does not reach the addons'
+   kanban archs or their components. Vendor the three files together (`owl.es.js`,
    `owl.runtime.es.js`, `owl.compiler.es.js`): a compiler from another build
    is refused. Odoo's `web/tests/test_esm_pipeline.py` checks the compiler
    module's shape (it imports nothing since the compiler registers itself).

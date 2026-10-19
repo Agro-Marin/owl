@@ -113,6 +113,21 @@ test.each(["regression", "coverage"] as const)(
           : '<templates><t t-name="good"><p/></t><t t-name="missing_primary" t-inherit="missing" t-inherit-mode="primary"/><t t-inherit="absent" t-inherit-mode="extension"/></templates>';
       await writeFile(join(templates, "templates.xml"), source);
       if (scenario === "coverage") await writeFile(join(templates, "broken.xml"), "<templates><t>");
+      if (scenario === "regression") {
+        await mkdir(join(scratch, "input/views"), { recursive: true });
+        await writeFile(
+          join(scratch, "input/views/views.xml"),
+          `<odoo>
+            <record id="kanban" model="ir.ui.view"><field name="arch" type="xml">
+              <kanban><templates><t t-name="card"><p/></t><t t-name="arch_rejection"><p t-unknown="1"/></t></templates></kanban>
+            </field></record>
+            <record id="kanban_extension" model="ir.ui.view"><field name="arch" type="xml">
+              <xpath expr="//t[@t-name='card']" position="attributes"><attribute name="t-att-style">1</attribute></xpath>
+              <xpath expr="//t[@t-name='card']/p" position="attributes"><attribute name="t-att-style">1</attribute></xpath>
+            </field></record>
+          </odoo>`
+        );
+      }
       const bundle = JSON.stringify(BUILD);
       const oldBuild = join(scratch, "old.mjs");
       await writeFile(
@@ -122,7 +137,7 @@ test.each(["regression", "coverage"] as const)(
       export { setDebug } from ${bundle};
       export class App extends BaseApp {
         getTemplate(name) {
-          if (name === "new_rejection") return () => {};
+          if (name === "new_rejection" || name === "arch_rejection") return () => {};
           return super.getTemplate(name);
         }
       }
@@ -154,11 +169,18 @@ test.each(["regression", "coverage"] as const)(
       expect(run.stderr).toBe("");
       expect(run.stdout).toContain("[owl:inherited-probe] temporary apps retained: 0");
       expect(run.stdout.match(/\[owl:lifecycle\] destroy app/g)).toHaveLength(
-        scenario === "regression" ? 4 : 2
+        scenario === "regression" ? 8 : 2
       );
       if (scenario === "regression") {
         expect(run.stdout).toContain("REGRESSION new_rejection");
         expect(run.stdout).toContain("1 rejected only by the new build");
+        expect(run.stdout).toMatch(/^REGRESSION \S+\/views\/views.xml arch_rejection :: /m);
+        expect(run.stdout).toMatch(
+          /^REGRESSION \S+\/views\/views.xml kanban_extension :: sets t-att-style on a <t>/m
+        );
+        expect(run.stdout).toContain(
+          "view archs: 2 templates, 2 rejected only by the new build (0 by both), 1 inherited attribute sets on a <t>"
+        );
       } else {
         expect(run.stdout).toContain("0 rejected only by the new build");
         expect(run.stdout).toContain(
