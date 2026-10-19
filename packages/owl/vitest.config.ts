@@ -1,28 +1,18 @@
 import { defineConfig } from "vitest/config";
 import { fileURLToPath } from "url";
+import { PACKAGE_SOURCES, TEST_DEFAULTS } from "../../tools/testing/workspace.mjs";
 
-const sources = {
-  "@odoo/owl-core": fileURLToPath(new URL("../owl-core/src/index.ts", import.meta.url)),
-  "@odoo/owl-compiler": fileURLToPath(new URL("../owl-compiler/src/index.ts", import.meta.url)),
-  "@odoo/owl-runtime": fileURLToPath(new URL("../owl-runtime/src/index.ts", import.meta.url)),
-};
 const RUNTIME_TESTS = ["tests/compiler_module.test.ts", "tests/runtime.test.ts"];
 const NODE_TESTS = ["tests/dist.test.ts", "tests/types_build.test.ts"];
 const fullAliases = [
-  ...Object.entries(sources).map(([find, replacement]) => ({ find, replacement })),
+  ...Object.entries(PACKAGE_SOURCES).map(([find, replacement]) => ({ find, replacement })),
   {
     find: /^\.\/bundled_compiler$/,
     replacement: fileURLToPath(new URL("src/bundled_compiler.ts", import.meta.url)),
   },
 ];
 
-const test = {
-  environment: "jsdom",
-  root: ".",
-  setupFiles: ["./tests/setup.ts"],
-  globals: true,
-  testTimeout: 10000,
-};
+const test = { ...TEST_DEFAULTS, environment: "jsdom", setupFiles: ["./tests/setup.ts"] };
 
 export default defineConfig({
   define: {
@@ -30,6 +20,7 @@ export default defineConfig({
     __BUILD_HASH__: JSON.stringify("dev"),
   },
   test: {
+    globalSetup: TEST_DEFAULTS.globalSetup,
     projects: [
       {
         extends: true,
@@ -43,7 +34,7 @@ export default defineConfig({
       },
       {
         extends: true,
-        resolve: { alias: sources },
+        resolve: { alias: PACKAGE_SOURCES },
         test: { ...test, name: "runtime", include: RUNTIME_TESTS },
       },
       {

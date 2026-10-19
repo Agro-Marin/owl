@@ -187,10 +187,11 @@ describe("the dist and its targets", () => {
 
   test("each API's Node support is what this Node has", () => {
     const [, node] = targets().find(([engine]) => engine === "node")!;
-    expect(Number(process.versions.node.split(".")[0])).toBe(node);
+    const running = Number(process.versions.node.split(".")[0]);
+    expect(running).toBeGreaterThanOrEqual(node);
     for (const api of APIS) {
       const added = api.support.node;
-      expect([api.api, api.present()]).toEqual([api.api, added !== false && added <= node]);
+      expect([api.api, api.present()]).toEqual([api.api, added !== false && added <= running]);
     }
   });
 

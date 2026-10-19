@@ -1,20 +1,14 @@
 import { defineConfig } from "vitest/config";
-import { fileURLToPath } from "url";
+import { PACKAGE_SOURCES, TEST_DEFAULTS } from "../../tools/testing/workspace.mjs";
 
 export default defineConfig({
   resolve: {
-    alias: {
-      "@odoo/owl-core": fileURLToPath(
-        new URL("../owl-core/src/index.ts", import.meta.url)
-      ),
-    },
+    alias: { "@odoo/owl-core": PACKAGE_SOURCES["@odoo/owl-core"] },
   },
   test: {
+    ...TEST_DEFAULTS,
     environment: "jsdom",
-    root: ".",
     include: ["tests/**/*.test.ts"],
     setupFiles: ["./tests/setup.ts"],
-    globals: true,
-    testTimeout: 10000,
   },
 });

@@ -38,7 +38,8 @@ differently from upstream.
   `_ESBUILD_TARGET` plus the server's Node), with no down-levelling; the
   sources may use any API all four have (today `Promise.withResolvers` and
   `WeakMap.getOrInsertComputed`), and `tests/dist.test.ts` keeps the dist off
-  any a target lacks. The toolchain requires Node >=26 (`.node-version`),
+  any a target lacks. The toolchain requires Node >=26 (`.node-version`; every test suite
+  refuses an older one by name),
   runs the compiler's TypeScript sources directly for the standalone
   precompiler, and the internal workspace packages are private.
 - The standalone precompiler rejects partial output and duplicate names,

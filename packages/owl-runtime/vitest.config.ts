@@ -1,13 +1,8 @@
 import { defineConfig } from "vitest/config";
-import { fileURLToPath } from "url";
+import { PACKAGE_SOURCES, TEST_DEFAULTS } from "../../tools/testing/workspace.mjs";
 
 const NODE_TESTS = ["tests/no_dom.test.ts"];
-const test = {
-  root: ".",
-  setupFiles: ["./tests/setup.ts"],
-  globals: true,
-  testTimeout: 10000,
-};
+const test = { ...TEST_DEFAULTS, setupFiles: ["./tests/setup.ts"] };
 
 export default defineConfig({
   define: {
@@ -16,21 +11,12 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      "@odoo/owl-core": fileURLToPath(
-        new URL("../owl-core/src/index.ts", import.meta.url)
-      ),
-      "@odoo/owl-compiler/src/parser": fileURLToPath(
-        new URL("../owl-compiler/src/parser.ts", import.meta.url)
-      ),
-      "@odoo/owl-compiler/src/inline_expressions": fileURLToPath(
-        new URL("../owl-compiler/src/inline_expressions.ts", import.meta.url)
-      ),
-      "@odoo/owl-compiler": fileURLToPath(
-        new URL("../owl-compiler/src/index.ts", import.meta.url)
-      ),
+      "@odoo/owl-core": PACKAGE_SOURCES["@odoo/owl-core"],
+      "@odoo/owl-compiler": PACKAGE_SOURCES["@odoo/owl-compiler"],
     },
   },
   test: {
+    globalSetup: TEST_DEFAULTS.globalSetup,
     projects: [
       {
         extends: true,
