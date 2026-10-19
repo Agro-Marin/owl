@@ -269,7 +269,8 @@ plugins: [] })` rendered asynchronously); a resource-driven start belongs to
 - **An error no handler catches under a Portal or Suspense** destroys the app
   once, like any other.
 - **An `ErrorBoundary`** passes an error caught while its fallback shows to
-  its parent; **`mount()`** destroys the App it created when the mount fails;
+  its parent; **`mount()`** destroys the App it created when the mount fails,
+  and rejects with an `AbortError` when that App is destroyed first;
   **`render(true)`** renders every `t-memo` item again, and the content of a
   Portal or Suspense too (a separate root, once the host's render is done).
 

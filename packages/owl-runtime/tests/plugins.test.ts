@@ -1549,6 +1549,23 @@ describe("plugin start failures and lookups", () => {
     expect(fixture.innerHTML).toBe("");
   });
 
+  test("mount() rejects with an AbortError when its app dies while the root's onWillStart waits", async () => {
+    let app!: App;
+    class Root extends Component {
+      static template = xml`<div/>`;
+      setup() {
+        app = useApp();
+        onWillStart(() => new Promise(() => {}));
+      }
+    }
+    const fixture = makeTestFixture();
+    const mounted = mount(Root, fixture);
+    await Promise.resolve();
+    app.destroy();
+    await expect(mounted).rejects.toMatchObject({ name: "AbortError" });
+    expect(fixture.innerHTML).toBe("");
+  });
+
   test("a plugin onWillStart failing after its app was destroyed is dropped, not unhandled", async () => {
     const rpc = makeDeferred<void>();
     class Failing extends Plugin {

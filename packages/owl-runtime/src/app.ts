@@ -36,6 +36,7 @@ interface SubRootConfig<P> extends RootConfig<P> {
   pluginManager?: PluginManager;
   onError?: (error: any, finalize: Function) => void;
   host?: ComponentNode;
+  abortOnDestroy?: boolean;
 }
 
 export interface AppConfig extends TemplateSetConfig {
@@ -171,8 +172,8 @@ export class App extends TemplateSet {
       let rejectMount: ((error: any, finalize: Function) => void) | null = null;
       if (!subConfig.onError) {
         rejectMount = (error, finalize) => {
-          finalize();
           reject(error);
+          finalize();
         };
         nodeErrorHandlers.getOrInsertComputed(node, () => []).unshift(rejectMount);
       }
@@ -204,10 +205,7 @@ export class App extends TemplateSet {
     };
 
     const mount = (target: MountTarget, options?: MountOptions): Promise<InstanceType<T>> => {
-      if (destroyed) {
-        return promise;
-      }
-      if (error) {
+      if (destroyed || error) {
         return promise;
       }
       if (mounted) {
@@ -243,6 +241,9 @@ export class App extends TemplateSet {
           node?.destroy();
         } finally {
           resolvePrepared?.();
+          if (subConfig.abortOnDestroy && mounted) {
+            reject(makeAbortError());
+          }
         }
       },
     };
@@ -306,7 +307,11 @@ export async function mount<T extends ComponentConstructor>(
         throw makeAbortError();
       }
     }
-    const root = app.createRoot(C, config);
+    const rootConfig: SubRootConfig<GetProps<InstanceType<T>>> = {
+      ...config,
+      abortOnDestroy: true,
+    };
+    const root = app.createRoot(C, rootConfig);
     return await root.mount(target, config);
   } catch (error) {
     if (!app.destroyed) {

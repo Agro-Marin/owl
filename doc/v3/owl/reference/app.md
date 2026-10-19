@@ -63,6 +63,11 @@ await mount(MyComponent, document.body, { props: { user }, position: "first-chil
 - **`config`**: optional — merges `AppConfig` fields, `props`, and
   `MountOptions`.
 
+The returned promise rejects with the mount's error (the helper then destroys
+its `App`), and with an `AbortError` when that `App` is destroyed before the
+mount is done. A `root.mount()` of `createRoot` stays pending when its root
+is destroyed first.
+
 ### `MountOptions`
 
 The mount call (`root.mount(target, options)` or the `mount` helper) accepts:
