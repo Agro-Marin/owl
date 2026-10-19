@@ -4,8 +4,10 @@ import {
   computed,
   effect,
   mount,
+  observe,
   onPatched,
   onWillPatch,
+  onWillStart,
   onWillUnmount,
   props,
   shallowEqual,
@@ -770,4 +772,30 @@ describe("ownership of the effects a component creates", () => {
     disposeChildEffect!();
     expect(live).toBe(0);
   });
+});
+
+test("an observe() view first read in onWillStart, or inside untrack, keeps calling back", async () => {
+  const calls: string[] = [];
+  class Child extends Component {
+    static template = xml`<span/>`;
+    props = props();
+    setup() {
+      onWillStart(async () => {
+        const deps: any = observe([this.props.record], () => calls.push(`cb:${deps[0].data.foo}`));
+        calls.push(`start:${deps[0].data.foo}`);
+        untrack(() => deps[0].data.bar);
+      });
+    }
+  }
+  class Parent extends Component {
+    static components = { Child };
+    static template = xml`<Child record="this.state.record"/>`;
+    state = proxy({ record: { data: { foo: "abc", bar: 1 } } });
+  }
+  const parent = await mount(Parent, fixture);
+  parent.state.record.data.bar = 2;
+  await nextTick();
+  parent.state.record.data.foo = "def";
+  await nextTick();
+  expect(calls).toEqual(["start:abc", "cb:abc", "cb:def"]);
 });

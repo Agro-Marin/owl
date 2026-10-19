@@ -43,6 +43,32 @@ exports[`a throwing effect does not freeze a component notified with it 1`] = `
 }"
 `;
 
+exports[`an observe() view first read in onWillStart, or inside untrack, keeps calling back 1`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { createComponent } = helpers;
+  const comp1 = createComponent(app, \`Child\`, true, false, false, ["record"]);
+  
+  return function template(ctx, node, key = "") {
+    return comp1({record: ctx['this'].state.record}, key + \`\\u00021\`, node, this, null);
+  }
+}"
+`;
+
+exports[`an observe() view first read in onWillStart, or inside untrack, keeps calling back 2`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  
+  let block1 = createBlock(\`<span/>\`);
+  
+  return function template(ctx, node, key = "") {
+    return block1();
+  }
+}"
+`;
+
 exports[`components and computed > Child is not rerender when reactive is computed 1`] = `
 "function anonymous(app, bdom, helpers
 ) {
