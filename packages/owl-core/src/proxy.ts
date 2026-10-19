@@ -782,13 +782,66 @@ function membersByRaw(members: Iterator<any>): Map<any, any> {
   return byRaw;
 }
 
+function rawSetRecord(other: any, mine: Map<any, any>, theirs: Map<any, any>): object {
+  return {
+    get size() {
+      return other.size;
+    },
+    get has() {
+      const has = other.has;
+      return typeof has !== "function"
+        ? has
+        : (raw: any) => {
+            if (Reflect.apply(has, other, [raw])) {
+              return true;
+            }
+            if (typeof raw !== "object" || raw === null) {
+              return false;
+            }
+            const member = mine.get(raw);
+            if (member !== raw && Reflect.apply(has, other, [member])) {
+              return true;
+            }
+            const deep = deepProxies.get(raw);
+            return deep !== undefined && deep !== member && Reflect.apply(has, other, [deep]);
+          };
+    },
+    get keys() {
+      const keys = other.keys;
+      return typeof keys !== "function"
+        ? keys
+        : () => {
+            const iterator: any = Reflect.apply(keys, other, []);
+            if (typeof iterator !== "object" || iterator === null) {
+              return iterator;
+            }
+            const next = iterator.next;
+            return {
+              next() {
+                const step: any = Reflect.apply(next, iterator, []);
+                if (typeof step !== "object" || step === null || step.done) {
+                  return step;
+                }
+                const member = step.value;
+                const raw = rawKey(member);
+                if (!theirs.has(raw)) {
+                  theirs.set(raw, member);
+                }
+                return { done: false, value: raw };
+              },
+            };
+          };
+    },
+  };
+}
+
 function makeSetOperation(name: string, target: Set<any>) {
   return (other: any) => {
-    (new Set() as any).isSubsetOf(other);
-    const theirs = membersByRaw(other.keys());
     onReadTargetKey(target, KEYCHANGES);
     const mine = membersByRaw(target.values());
-    const result = (new Set(mine.keys()) as any)[name](new Set(theirs.keys()));
+    const theirs = new Map();
+    const record = Object(other) === other ? rawSetRecord(other, mine, theirs) : other;
+    const result = (new Set(mine.keys()) as any)[name](record);
     if (typeof result === "boolean") {
       return result;
     }

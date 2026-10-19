@@ -155,8 +155,10 @@ true })` creates an effect owned by nothing. When a computed and an effect
   behind its own Proxy notifies its length, also through a shallow proxy.
 - **A Map proxy, and an `observe()` view of a Map, have no `add`** (it reads
   `undefined`, as on a Map). A set operation (`union`, `intersection`, …) on a
-  proxy checks its argument as the native method does and returns a plain Set
-  of the members as its own set holds them, the target's first.
+  proxy checks its argument as the native method does, reads of it only what
+  the native method reads (its `has` or its `keys()`, lazily), compares
+  members raw, and returns a plain Set of the members as their set holds them,
+  the target's first.
 - **Collection mutations are one batch**: immediate readers run once after a
   `set`, `add`, `delete` or `clear`, even when they read several affected keys.
   A throwing reader leaves the other keys' readers notified. `set` and `add`

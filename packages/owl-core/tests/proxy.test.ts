@@ -701,6 +701,36 @@ describe("collections", () => {
     expect([...set.union(setLike)]).toEqual([1, 2, 3]);
   });
 
+  test("a set operation reads only what the native one reads of its argument", () => {
+    if (!("union" in Set.prototype)) {
+      return;
+    }
+    const reads: string[] = [];
+    const endless = {
+      get size() {
+        reads.push("size");
+        return Infinity;
+      },
+      get has() {
+        reads.push("has");
+        return () => true;
+      },
+      get keys() {
+        reads.push("keys");
+        return () => {
+          throw new Error("keys read");
+        };
+      },
+    };
+    const set: any = proxy(new Set([1, 2]));
+    expect((new Set([1, 2]) as any).isSubsetOf(endless)).toBe(true);
+    const native = reads.splice(0);
+    expect(set.isSubsetOf(endless)).toBe(true);
+    expect(set.intersection(endless).size).toBe(2);
+    expect(reads.splice(0)).toEqual([...native, ...native]);
+    expect(() => set.union(endless)).toThrow("keys read");
+  });
+
   test("a set operation answers as on the raw sets, each member as its set holds it, in order", () => {
     if (!("union" in Set.prototype)) {
       return;
