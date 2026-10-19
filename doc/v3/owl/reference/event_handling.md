@@ -120,3 +120,22 @@ element around its content: the inner component's handlers run before the
 outer one's (with `.capture`, the outer one's first), and `.stop` or
 `stopPropagation()` in one keeps the event from the components around it,
 `stopImmediatePropagation()` from every other handler.
+
+This holds between components, not between a component and the element it is
+in: that element's own `t-on` handlers are listeners of the same element, so
+they run before the component's, with or without `.capture`, and a `.stop` in
+either does not keep the other out. With `.synthetic` on both, the component's
+handlers run as a level inside the element: before the element's own as the
+event bubbles, after them with `.capture`, and a stop in one keeps the other
+out.
+
+```xml
+<div t-on-click="this.onDiv">
+    <!-- onDiv runs first, and still runs although onChild stops -->
+    <Child t-on-click.stop="this.onChild"/>
+</div>
+<div t-on-click.synthetic="this.onDiv">
+    <!-- onChild runs first, and onDiv does not run -->
+    <Child t-on-click.synthetic.stop="this.onChild"/>
+</div>
+```

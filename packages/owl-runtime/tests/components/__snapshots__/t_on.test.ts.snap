@@ -46,6 +46,58 @@ exports[`t-on > a slot's t-on mounted by its component's own render runs, then t
 }"
 `;
 
+exports[`t-on > a t-on on a component and one on its parent element: synthetic ones nest, native ones do not 1`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { createComponent, createCatcher } = helpers;
+  const hdlr_fn1 = (ctx)=>ctx['this'].log('div');
+  const comp1 = createComponent(app, \`Child\`, true, false, false, []);
+  const hdlr_fn2 = (ctx)=>ctx['this'].log('child');
+  const catcher1 = createCatcher({"click.stop":0}, [hdlr_fn2]);
+  const comp2 = createComponent(app, \`Child\`, true, false, false, []);
+  const catcher2 = createCatcher({"click.capture":0}, [hdlr_fn2]);
+  const comp3 = createComponent(app, \`Child\`, true, false, false, []);
+  const catcher3 = createCatcher({"click.synthetic.stop":0}, [hdlr_fn2]);
+  const comp4 = createComponent(app, \`Child\`, true, false, false, []);
+  const catcher4 = createCatcher({"click.capture.synthetic":0}, [hdlr_fn2]);
+  
+  const block2_handlers = [hdlr_fn1];
+  let block2 = createBlock(\`<div class="native" block-handler-0="click"><block-child-0/></div>\`, block2_handlers);
+  const block4_handlers = [hdlr_fn1];
+  let block4 = createBlock(\`<div class="native-capture" block-handler-0="click.capture.stop"><block-child-0/></div>\`, block4_handlers);
+  const block6_handlers = [hdlr_fn1];
+  let block6 = createBlock(\`<div class="synthetic" block-handler-0="click.synthetic"><block-child-0/></div>\`, block6_handlers);
+  const block8_handlers = [hdlr_fn1];
+  let block8 = createBlock(\`<div class="synthetic-capture" block-handler-0="click.capture.synthetic.stop"><block-child-0/></div>\`, block8_handlers);
+  
+  return function template(ctx, node, key = "") {
+    const b3 = catcher1(comp1({}, key + \`\\u00021\`, node, this, null), ctx);
+    const b2 = block2([ctx], [b3], block2_handlers);
+    const b5 = catcher2(comp2({}, key + \`\\u00022\`, node, this, null), ctx);
+    const b4 = block4([ctx], [b5], block4_handlers);
+    const b7 = catcher3(comp3({}, key + \`\\u00023\`, node, this, null), ctx);
+    const b6 = block6([ctx], [b7], block6_handlers);
+    const b9 = catcher4(comp4({}, key + \`\\u00024\`, node, this, null), ctx);
+    const b8 = block8([ctx], [b9], block8_handlers);
+    return multi([b2, b4, b6, b8]);
+  }
+}"
+`;
+
+exports[`t-on > a t-on on a component and one on its parent element: synthetic ones nest, native ones do not 2`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  
+  let block1 = createBlock(\`<span>c</span>\`);
+  
+  return function template(ctx, node, key = "") {
+    return block1();
+  }
+}"
+`;
+
 exports[`t-on > t-on expression captured in t-foreach 1`] = `
 "function anonymous(app, bdom, helpers
 ) {

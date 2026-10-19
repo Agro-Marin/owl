@@ -729,6 +729,70 @@ describe("nested catchers follow propagation", () => {
   });
 });
 
+describe("a synthetic catcher and its parent element's own synthetic handler", () => {
+  const span = createBlock("<span>x</span>");
+  const scenario = (name: string, capture: boolean, prior: boolean) => {
+    const key = `${name}${capture ? ".capture" : ""}.synthetic`;
+    if (prior) {
+      const other = createCatcher({ [key]: 0 }, [() => {}])(span(), {});
+      mount(other, fixture);
+      remove(other);
+    }
+    const calls: string[] = [];
+    const div = (mod: string) => {
+      const type = createBlock(`<div block-handler-0="${key}${mod}"><block-child-0/></div>`, [run]);
+      return (child: any) => type([() => calls.push("div")], [child], [run]);
+    };
+    const plainDiv = div("");
+    const stoppingDiv = div(".stop");
+    const child = (mod: string) =>
+      createCatcher({ [key + mod]: 0 }, [run])(span(), () => calls.push("child"));
+    const fire = (tree: any) => {
+      mount(tree, fixture);
+      fixture.querySelector("span")!.dispatchEvent(new Event(name, { bubbles: true }));
+      remove(tree);
+      return calls.splice(0);
+    };
+    return {
+      order: fire(plainDiv(child(""))),
+      childStops: fire(plainDiv(child(".stop"))),
+      divStops: fire(stoppingDiv(child(""))),
+    };
+  };
+
+  test("the component's runs first as the event bubbles, and its stop keeps the element's out", () => {
+    expect(scenario("pointerdown", false, false)).toEqual({
+      order: ["child", "div"],
+      childStops: ["child"],
+      divStops: ["child", "div"],
+    });
+  });
+
+  test("the bubble order holds after another template listened for that kind", () => {
+    expect(scenario("pointerup", false, true)).toEqual({
+      order: ["child", "div"],
+      childStops: ["child"],
+      divStops: ["child", "div"],
+    });
+  });
+
+  test("the element's runs first with .capture, and its stop keeps the component's out", () => {
+    expect(scenario("pointerover", true, false)).toEqual({
+      order: ["div", "child"],
+      childStops: ["div", "child"],
+      divStops: ["div"],
+    });
+  });
+
+  test("the capture order holds after another template listened for that kind", () => {
+    expect(scenario("pointerout", true, true)).toEqual({
+      order: ["div", "child"],
+      childStops: ["div", "child"],
+      divStops: ["div"],
+    });
+  });
+});
+
 test("one catcher site over many parents adds one listener function and no per-parent names", () => {
   const li = createBlock("<li><block-child-0/></li>");
   const span = createBlock("<span>x</span>");

@@ -23,14 +23,18 @@ interface EventHandlerCreator {
   remove: (this: HTMLElement) => void;
 }
 
-export function createEventHandler(rawEvent: string, slot: HandlerSlot): EventHandlerCreator {
+export function createEventHandler(
+  rawEvent: string,
+  slot: HandlerSlot,
+  inner = false
+): EventHandlerCreator {
   const eventName = rawEvent.split(".")[0];
   const mask = eventModifierMask(rawEvent);
   const capture = !!(mask & EventModifier.CAPTURE);
   const passive = !!(mask & EventModifier.PASSIVE);
   const mods = mask & HANDLER_MODIFIERS;
   if (mask & EventModifier.SYNTHETIC) {
-    return createSyntheticHandler(eventName, capture, passive, slot, mods);
+    return createSyntheticHandler(eventName, capture, passive, slot, mods, inner);
   } else {
     return createElementHandler(eventName, capture, passive, slot, mods);
   }
@@ -84,6 +88,7 @@ interface SyntheticHandler {
   mods: number;
   ownerKey: string;
   passive: boolean;
+  inner: boolean;
 }
 
 let nextSyntheticEventId = 1;
@@ -92,13 +97,14 @@ function createSyntheticHandler(
   capture: boolean,
   passive: boolean,
   slot: HandlerSlot,
-  mods: number
+  mods: number,
+  inner: boolean
 ): EventHandlerCreator {
   const eventKey = `__event__synthetic_${evName}${capture ? "_capture" : ""}`;
   setupSyntheticEvent(evName, eventKey, capture, passive);
   const currentId = nextSyntheticEventId++;
   const ownerKey = `__event__synthetic_owner_${currentId}`;
-  const handler: SyntheticHandler = { slot, mods, ownerKey, passive };
+  const handler: SyntheticHandler = { slot, mods, ownerKey, passive, inner };
   function setup(this: HTMLElement, owner: HandlerOwner) {
     ((this as any)[eventKey] ||= {})[currentId] = handler;
     (this as any)[ownerKey] = owner;
@@ -157,24 +163,37 @@ function nativeToSyntheticEvent(eventKey: string, capture: boolean, event: Event
       if (!handlers || !node.isConnected) {
         continue;
       }
-      for (const id in handlers) {
-        const { slot, mods, ownerKey, passive } = handlers[id] as SyntheticHandler;
-        if (passive && !Object.hasOwn(event, "preventDefault")) {
-          event.preventDefault = ignore;
-          try {
-            dispatchTo(node[ownerKey], slot, mods, event, node);
-          } finally {
-            delete (event as any).preventDefault;
+      for (let pass = 0; pass < 2; pass++) {
+        const inner = (pass === 0) !== capture;
+        for (const id in handlers) {
+          const handler = handlers[id] as SyntheticHandler;
+          if (handler.inner !== inner) {
+            continue;
           }
-        } else {
-          dispatchTo(node[ownerKey], slot, mods, event, node);
+          const { slot, mods, ownerKey, passive } = handler;
+          if (passive && !Object.hasOwn(event, "preventDefault")) {
+            event.preventDefault = ignore;
+            try {
+              dispatchTo(node[ownerKey], slot, mods, event, node);
+            } finally {
+              delete (event as any).preventDefault;
+            }
+          } else {
+            dispatchTo(node[ownerKey], slot, mods, event, node);
+          }
+          if (stoppedImmediately) {
+            return;
+          }
         }
-        if (stoppedImmediately) {
+        if (event.cancelBubble) {
+          if (debug.event && pass === 0) {
+            debugLog(
+              "event",
+              `${event.type}: stopped by the ${inner ? "component" : "element"} handlers of its ${node.nodeName}`
+            );
+          }
           return;
         }
-      }
-      if (event.cancelBubble) {
-        return;
       }
     }
   } finally {

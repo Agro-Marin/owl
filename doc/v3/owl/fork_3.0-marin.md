@@ -349,8 +349,12 @@ plugins: [] })` rendered asynchronously); a resource-driven start belongs to
   tree, with the target a native listener there would see (capture handlers
   inside a shadow root, closed ones included, run for composed events). The
   handlers of one event and phase, passive or not, are replayed in one pass,
-  in path order, up to a stop; a passive one cannot prevent the default. A
-  root that was garbage-collected is dropped, and with none left the events
+  in path order, up to a stop; a passive one cannot prevent the default. On
+  one element, the synthetic `t-on`s of components among its children run as
+  a level inside the element's own: before them as the event bubbles, after
+  them for `.capture`, and a stop in one level skips the other (before, they
+  ran in the order their kinds were first used in the page, and never
+  stopped each other). A root that was garbage-collected is dropped, and with none left the events
   of the document skip the per-root replay range again.
 - **Every component `t-on` on a parent element shares one listener per kind**
   (event name, capture, synthetic), made once per kind and kept on no property
@@ -361,7 +365,9 @@ plugins: [] })` rendered asynchronously); a resource-driven start belongs to
   enclosing one's first for `.capture`; a stop in one skips the ones around it,
   `stopImmediatePropagation()` every other (upstream walked the catchers inside
   out in both phases and never stopped). A native listener on that parent runs
-  before or after all of them, not between. `t-on-*.self` on a component means the event targets one of its
+  before or after all of them, not between; the parent's own native `t-on`s
+  run before them in both phases, and a stop on either side does not skip
+  the other, as upstream (they are listeners of one element). `t-on-*.self` on a component means the event targets one of its
   root elements.
 - **An explicit `xmlns` inside a namespaced block is its element's
   namespace** (upstream kept the enclosing one: a `<div xmlns="…xhtml">` in a

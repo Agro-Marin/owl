@@ -60,11 +60,11 @@ function makeKind(id: string, mask: number): ListenerKind {
   if (mask & EventModifier.SYNTHETIC) {
     const creators: ReturnType<typeof createEventHandler>[] = [];
     const creator = (passive: boolean) =>
-      (creators[+passive] ||= createEventHandler(passive ? id + ".passive" : id, {
-        fn: 0,
-        ctx: 0,
-        arg: -1,
-      }));
+      (creators[+passive] ||= createEventHandler(
+        passive ? id + ".passive" : id,
+        { fn: 0, ctx: 0, arg: -1 },
+        true
+      ));
     const handlers = [(parent: Node, ev: Event) => dispatch(kind, parent, ev)];
     const kind: ListenerKind = {
       id,

@@ -486,6 +486,41 @@ describe("t-on", () => {
     expect(reached).toBe(1);
   });
 
+  test("a t-on on a component and one on its parent element: synthetic ones nest, native ones do not", async () => {
+    const calls: string[] = [];
+    class Child extends Component {
+      static template = xml`<span>c</span>`;
+    }
+    class Parent extends Component {
+      static template = xml`
+        <div class="native" t-on-click="() => this.log('div')">
+          <Child t-on-click.stop="() => this.log('child')"/>
+        </div>
+        <div class="native-capture" t-on-click.capture.stop="() => this.log('div')">
+          <Child t-on-click.capture="() => this.log('child')"/>
+        </div>
+        <div class="synthetic" t-on-click.synthetic="() => this.log('div')">
+          <Child t-on-click.synthetic.stop="() => this.log('child')"/>
+        </div>
+        <div class="synthetic-capture" t-on-click.capture.synthetic.stop="() => this.log('div')">
+          <Child t-on-click.capture.synthetic="() => this.log('child')"/>
+        </div>`;
+      static components = { Child };
+      log(s: string) {
+        calls.push(s);
+      }
+    }
+    await mount(Parent, fixture);
+    const click = (cls: string) => {
+      fixture.querySelector<HTMLElement>(`.${cls} span`)!.click();
+      return calls.splice(0);
+    };
+    expect(click("native")).toEqual(["div", "child"]);
+    expect(click("native-capture")).toEqual(["div", "child"]);
+    expect(click("synthetic")).toEqual(["child"]);
+    expect(click("synthetic-capture")).toEqual(["div"]);
+  });
+
   test("t-on.self on a component runs for an event targeting one of its root nodes", async () => {
     const calls: string[] = [];
     class Child extends Component {
