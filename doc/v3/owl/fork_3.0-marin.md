@@ -416,6 +416,9 @@ plugins: [] })` rendered asynchronously); a resource-driven start belongs to
   on it consumed (a `t-call` there keeps its own). Upstream ignored them
   (`t-raw`, a typo such as `t-esle`, `t-att-class` on a `<t>`, a `t-set-slot`
   outside a component).
+- **A `t-set` with a `t-value` and a blank body takes the value** (upstream
+  took the whitespace as its default, truthy for a falsy value), and **a CDATA
+  section is text**, in an element or a `t-set` body (upstream dropped it).
 - **A directive that needs an expression throws on an empty one**, naming it;
   a `t-set-slot` nested directly in another throws.
 - **`t-model.number`** checks the radio, or selects the static option, whose

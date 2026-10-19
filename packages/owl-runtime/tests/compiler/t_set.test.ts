@@ -365,6 +365,16 @@ describe("t-set", () => {
     expect(renderToString(`<t t-set="x" t-value="1"><!-- c --></t><t t-out="x"/>`)).toBe("1");
   });
 
+  test("a t-set with a t-value and a blank body takes the value", () => {
+    expect(renderToString(`<t t-set="x" t-value="false">  </t><t t-out="x ? 'yes' : 'no'"/>`)).toBe(
+      "no"
+    );
+    expect(renderToString(`<t t-set="x" t-value="null">\n  </t><t t-out="x === null"/>`)).toBe(
+      "true"
+    );
+    expect(renderToString(`<t t-set="x"> </t>[<t t-out="x"/>]`)).toBe("[ ]");
+  });
+
   test("t-set body of text with entities is a string", () => {
     expect(renderToString(`<t t-set="v">a &gt; b</t><t t-out="v.length"/>`)).toBe("5");
     expect(renderToString(`<t t-set="v">a <!-- c -->b</t><t t-out="v"/>`)).toBe("a b");

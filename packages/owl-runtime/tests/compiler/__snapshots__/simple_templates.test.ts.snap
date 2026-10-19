@@ -1,5 +1,32 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`simple templates, mostly static > a CDATA section is text 1`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  
+  let block1 = createBlock(\`<div>a &lt; b &amp;&amp; c</div>\`);
+  
+  return function template(ctx, node, key = "") {
+    return block1();
+  }
+}"
+`;
+
+exports[`simple templates, mostly static > a CDATA section is text 2`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { safeOutput } = helpers;
+  
+  return function template(ctx, node, key = "") {
+    ctx = Object.create(ctx);
+    ctx["v"] = \`<b>\`;
+    return safeOutput(ctx['v'], node, key, "\\u00021");
+  }
+}"
+`;
+
 exports[`simple templates, mostly static > can render a table row 1`] = `
 "function anonymous(app, bdom, helpers
 ) {

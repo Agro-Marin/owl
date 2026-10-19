@@ -26,6 +26,13 @@ describe("simple templates, mostly static", () => {
     expect(context.renderToString("potato")).toBe("");
   });
 
+  test("a CDATA section is text", () => {
+    expect(renderToString(`<div><![CDATA[a < b && c]]></div>`)).toBe(
+      "<div>a &lt; b &amp;&amp; c</div>"
+    );
+    expect(renderToString(`<t t-set="v"><![CDATA[<b>]]></t><t t-out="v"/>`)).toBe("&lt;b&gt;");
+  });
+
   test("empty div", () => {
     const template = `<div></div>`;
     expect(renderToString(template)).toBe("<div></div>");

@@ -365,6 +365,51 @@ exports[`t-set > a t-set in an ended loop does not change scoping in a later loo
 }"
 `;
 
+exports[`t-set > a t-set with a t-value and a blank body takes the value 1`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { safeOutput } = helpers;
+  
+  return function template(ctx, node, key = "") {
+    ctx = Object.create(ctx);
+    ctx["x"] = false;
+    return safeOutput(ctx['x']?'yes':'no', node, key, "\\u00021");
+  }
+}"
+`;
+
+exports[`t-set > a t-set with a t-value and a blank body takes the value 2`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { safeOutput } = helpers;
+  
+  return function template(ctx, node, key = "") {
+    ctx = Object.create(ctx);
+    ctx["x"] = null;
+    return safeOutput(ctx['x']===null, node, key, "\\u00021");
+  }
+}"
+`;
+
+exports[`t-set > a t-set with a t-value and a blank body takes the value 3`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { safeOutput } = helpers;
+  
+  return function template(ctx, node, key = "") {
+    ctx = Object.create(ctx);
+    ctx["x"] = \` \`;
+    const b2 = text(\`[\`);
+    const b3 = safeOutput(ctx['x'], node, key, "\\u00021");
+    const b4 = text(\`]\`);
+    return multi([b2, b3, b4]);
+  }
+}"
+`;
+
 exports[`t-set > a variable may be named await or async 1`] = `
 "function anonymous(app, bdom, helpers
 ) {

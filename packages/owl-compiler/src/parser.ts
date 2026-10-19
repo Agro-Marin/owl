@@ -349,7 +349,7 @@ const lineBreakRE = /[\r\n]/;
 const htmlWhitespaceOnlyRE = /^[ \t\n\r\f]*$/;
 
 function parseTextCommentNode(node: Node, ctx: ParsingContext): AST | null {
-  if (node.nodeType === Node.TEXT_NODE) {
+  if (node.nodeType === Node.TEXT_NODE || node.nodeType === Node.CDATA_SECTION_NODE) {
     let value = node.textContent || "";
     if (!ctx.inPreTag && lineBreakRE.test(value) && htmlWhitespaceOnlyRE.test(value)) {
       return null;
@@ -808,12 +808,16 @@ function parseTSetNode(node: Element, ctx: ParsingContext): AST | null {
   node.removeAttribute("t-value");
   rejectDirectives(node, "a t-set node");
   const isText = [...node.childNodes].every(
-    (n) => n.nodeType === Node.TEXT_NODE || n.nodeType === Node.COMMENT_NODE
+    (n) =>
+      n.nodeType === Node.TEXT_NODE ||
+      n.nodeType === Node.CDATA_SECTION_NODE ||
+      n.nodeType === Node.COMMENT_NODE
   );
   let defaultValue: string | null = null;
   let body: AST[] | null = null;
   if (isText) {
-    defaultValue = node.textContent || null;
+    const text = node.textContent || null;
+    defaultValue = value && !text?.trim() ? null : text;
   } else {
     const content = parseChildren(node, ctx);
     body = content.length ? content : null;
