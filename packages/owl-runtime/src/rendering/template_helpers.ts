@@ -231,16 +231,45 @@ function attrValue(value: any): any {
   return value;
 }
 
+function readObjectAttr(value: any) {
+  if (value && typeof value === "object") {
+    if (Array.isArray(value)) {
+      for (const item of value) {
+        readObjectAttr(item);
+      }
+    } else if (toRaw(value) !== value) {
+      if (debug.template) {
+        debugLog("template", "a proxied class or style object is read in the render");
+      }
+      for (const key in value) {
+        value[key];
+      }
+    }
+  }
+}
+
+function objectAttrValue(value: any): any {
+  value = attrValue(value);
+  readObjectAttr(value);
+  return value;
+}
+
 function attrsValue(attrs: any): any {
   if (Array.isArray(attrs)) {
+    if (attrs[0] === "class" || attrs[0] === "style") {
+      readObjectAttr(attrs[1]);
+    }
     return attrs[1] instanceof LazyValue ? [attrs[0], attrValue(attrs[1])] : attrs;
   }
   if (attrs && typeof attrs === "object") {
     let copy: any = null;
     for (const name in attrs) {
-      if (attrs[name] instanceof LazyValue) {
+      const value = attrs[name];
+      if (value instanceof LazyValue) {
         copy ||= { ...attrs };
-        copy[name] = attrValue(attrs[name]);
+        copy[name] = attrValue(value);
+      } else if (name === "class" || name === "style") {
+        readObjectAttr(value);
       }
     }
     return copy || attrs;
@@ -678,6 +707,7 @@ export const helpers = {
   LazyValue,
   safeOutput,
   attrValue,
+  objectAttrValue,
   attrsValue,
   createCatcher,
   OwlError,

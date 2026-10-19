@@ -533,4 +533,32 @@ describe("style and class handling", () => {
     await nextTick();
     expect(fixture.innerHTML).toBe(`<div class="b" style="color: blue;" data-x="2">1</div>`);
   });
+
+  test("a proxied class or style object changed in place re-renders on its own", async () => {
+    class Test extends Component {
+      static template = xml`<div t-att-class="this.state.cls" t-att-style="this.state.st"/>`;
+      state = proxy({ cls: { a: true } as Record<string, boolean>, st: { color: "red" } });
+    }
+    const test = await mount(Test, fixture);
+    test.state.cls.b = true;
+    await nextTick();
+    expect(fixture.innerHTML).toBe(`<div class="a b" style="color: red;"></div>`);
+    test.state.st.color = "blue";
+    await nextTick();
+    expect(fixture.innerHTML).toBe(`<div class="a b" style="color: blue;"></div>`);
+    delete test.state.cls.a;
+    await nextTick();
+    expect(fixture.innerHTML).toBe(`<div class="b" style="color: blue;"></div>`);
+  });
+
+  test("a proxied class object in a class array or a t-att object re-renders on its own", async () => {
+    class Test extends Component {
+      static template = xml`<div t-att-class="['x', this.state.cls]"/><p t-att="{ class: this.state.cls }"/>`;
+      state = proxy({ cls: { a: true } as Record<string, boolean> });
+    }
+    const test = await mount(Test, fixture);
+    test.state.cls.a = false;
+    await nextTick();
+    expect(fixture.innerHTML).toBe(`<div class="x"></div><p class=""></p>`);
+  });
 });

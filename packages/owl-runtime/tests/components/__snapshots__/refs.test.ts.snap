@@ -545,14 +545,14 @@ exports[`refs > ref is unset when t-if goes to false after unrelated render 1`] 
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { attrValue, createRef } = helpers;
+  let { objectAttrValue, createRef } = helpers;
   
   let block2 = createBlock(\`<div block-attribute-0="class" block-ref="1"/>\`);
   
   return function template(ctx, node, key = "") {
     let b2;
     if (ctx['this'].state.show) {
-      let attr1 = attrValue(ctx['this'].state.class);
+      let attr1 = objectAttrValue(ctx['this'].state.class);
       let ref1 = createRef(ctx['this'].ref, node);
       b2 = block2([attr1, ref1]);
     }

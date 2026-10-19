@@ -369,6 +369,12 @@ plugins: [] })` rendered asynchronously); a resource-driven start belongs to
   ref kept the removed element. A component tracks no refs: upstream checked
   `isConnected` on every signal ref and set-like ref element it had bound,
   after each of its patches.
+- **A proxied class or style object** (`t-att-class`, `t-att-style`, inside a
+  class array, or the `class` / `style` of a `t-att` object) has its keys and
+  values read during the render (`objectAttrValue`), so a change made to it in
+  place renders the component again; upstream read them only at the patch,
+  untracked, and the change showed only once something else re-rendered. A
+  plain object is not walked again.
 - **A `t-set` body given to an attribute, interpolation, property or `t-att`
   is its string taken during the render** (`attrValue` / `attrsValue`), so the
   attribute follows what the body reads.

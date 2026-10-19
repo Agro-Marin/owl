@@ -859,8 +859,10 @@ export class CodeGenerator {
           this.helpers.add("attrsValue");
           expr = `attrsValue(${expr})`;
         } else if (!LITERAL_RE.test(expr)) {
-          this.helpers.add("attrValue");
-          expr = `attrValue(${expr})`;
+          const helper =
+            attrName === "class" || attrName === "style" ? "objectAttrValue" : "attrValue";
+          this.helpers.add(helper);
+          expr = `${helper}(${expr})`;
         }
         if (attrName && isProp(ast.tag, attrName)) {
           if (attrName === "readonly") {

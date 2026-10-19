@@ -394,6 +394,9 @@ String values are supported as well:
 
 A class, style or `t-att` object is read again each time its element is
 patched, so one changed in place since the last render shows at the next one.
+A proxied one (`t-att-class="this.state.cls"`, also inside a class array or as
+the `class` or `style` of a `t-att` object) is read during the render, so a
+change made to it in place renders its component again.
 
 ### Dynamic tag names
 

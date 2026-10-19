@@ -4,16 +4,51 @@ exports[`style and class handling > a class, style or t-att object changed in pl
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { attrValue, attrsValue, safeOutput } = helpers;
+  let { objectAttrValue, attrsValue, safeOutput } = helpers;
   
   let block1 = createBlock(\`<div block-attribute-0="class" block-attribute-1="style" block-attributes="2"><block-child-0/></div>\`);
   
   return function template(ctx, node, key = "") {
-    let attr1 = attrValue(ctx['this'].state.cls);
-    let attr2 = attrValue(ctx['this'].state.st);
+    let attr1 = objectAttrValue(ctx['this'].state.cls);
+    let attr2 = objectAttrValue(ctx['this'].state.st);
     let attr3 = attrsValue(ctx['this'].state.attrs);
     const b2 = safeOutput(ctx['this'].state.n, node, key, "\\u00021");
     return block1([attr1, attr2, attr3], [b2]);
+  }
+}"
+`;
+
+exports[`style and class handling > a proxied class object in a class array or a t-att object re-renders on its own 1`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { objectAttrValue, attrsValue } = helpers;
+  
+  let block2 = createBlock(\`<div block-attribute-0="class"/>\`);
+  let block3 = createBlock(\`<p block-attributes="0"/>\`);
+  
+  return function template(ctx, node, key = "") {
+    let attr1 = objectAttrValue(['x',ctx['this'].state.cls]);
+    const b2 = block2([attr1]);
+    let attr2 = attrsValue({class:ctx['this'].state.cls});
+    const b3 = block3([attr2]);
+    return multi([b2, b3]);
+  }
+}"
+`;
+
+exports[`style and class handling > a proxied class or style object changed in place re-renders on its own 1`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { objectAttrValue } = helpers;
+  
+  let block1 = createBlock(\`<div block-attribute-0="class" block-attribute-1="style"/>\`);
+  
+  return function template(ctx, node, key = "") {
+    let attr1 = objectAttrValue(ctx['this'].state.cls);
+    let attr2 = objectAttrValue(ctx['this'].state.st);
+    return block1([attr1, attr2]);
   }
 }"
 `;
@@ -35,14 +70,14 @@ exports[`style and class handling > can set class on multi root component 2`] = 
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { attrValue } = helpers;
+  let { objectAttrValue } = helpers;
   
   let block2 = createBlock(\`<div>a</div>\`);
   let block3 = createBlock(\`<span block-attribute-0="class">b</span>\`);
   
   return function template(ctx, node, key = "") {
     const b2 = block2();
-    let attr1 = attrValue(ctx['this'].props.class);
+    let attr1 = objectAttrValue(ctx['this'].props.class);
     const b3 = block3([attr1]);
     return multi([b2, b3]);
   }
@@ -66,12 +101,12 @@ exports[`style and class handling > can set class on sub component, as prop 2`] 
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { attrValue } = helpers;
+  let { objectAttrValue } = helpers;
   
   let block1 = createBlock(\`<div block-attribute-0="class">child</div>\`);
   
   return function template(ctx, node, key = "") {
-    let attr1 = attrValue(ctx['this'].props.class);
+    let attr1 = objectAttrValue(ctx['this'].props.class);
     return block1([attr1]);
   }
 }"
@@ -107,12 +142,12 @@ exports[`style and class handling > can set class on sub sub component 3`] = `
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { attrValue } = helpers;
+  let { objectAttrValue } = helpers;
   
   let block1 = createBlock(\`<div block-attribute-0="class">childchild</div>\`);
   
   return function template(ctx, node, key = "") {
-    let attr1 = attrValue(ctx['this'].props.class);
+    let attr1 = objectAttrValue(ctx['this'].props.class);
     return block1([attr1]);
   }
 }"
@@ -135,12 +170,12 @@ exports[`style and class handling > can set more than one class on sub component
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { attrValue } = helpers;
+  let { objectAttrValue } = helpers;
   
   let block1 = createBlock(\`<div block-attribute-0="class">child</div>\`);
   
   return function template(ctx, node, key = "") {
-    let attr1 = attrValue(ctx['this'].props.class);
+    let attr1 = objectAttrValue(ctx['this'].props.class);
     return block1([attr1]);
   }
 }"
@@ -210,12 +245,12 @@ exports[`style and class handling > class on sub component, which is switched to
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { attrValue } = helpers;
+  let { objectAttrValue } = helpers;
   
   let block1 = createBlock(\`<div block-attribute-0="class">a</div>\`);
   
   return function template(ctx, node, key = "") {
-    let attr1 = attrValue(ctx['this'].props.class);
+    let attr1 = objectAttrValue(ctx['this'].props.class);
     return block1([attr1]);
   }
 }"
@@ -225,12 +260,12 @@ exports[`style and class handling > class on sub component, which is switched to
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { attrValue } = helpers;
+  let { objectAttrValue } = helpers;
   
   let block1 = createBlock(\`<span block-attribute-0="class">b</span>\`);
   
   return function template(ctx, node, key = "") {
-    let attr1 = attrValue(ctx['this'].props.class);
+    let attr1 = objectAttrValue(ctx['this'].props.class);
     return block1([attr1]);
   }
 }"
@@ -256,12 +291,12 @@ exports[`style and class handling > class with extra whitespaces (variation) 2`]
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { attrValue } = helpers;
+  let { objectAttrValue } = helpers;
   
   let block1 = createBlock(\`<div block-attribute-0="class"/>\`);
   
   return function template(ctx, node, key = "") {
-    let attr1 = attrValue(ctx['this'].props.class);
+    let attr1 = objectAttrValue(ctx['this'].props.class);
     return block1([attr1]);
   }
 }"
@@ -284,12 +319,12 @@ exports[`style and class handling > class with extra whitespaces 2`] = `
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { attrValue } = helpers;
+  let { objectAttrValue } = helpers;
   
   let block1 = createBlock(\`<div block-attribute-0="class"/>\`);
   
   return function template(ctx, node, key = "") {
-    let attr1 = attrValue(ctx['this'].props.class);
+    let attr1 = objectAttrValue(ctx['this'].props.class);
     return block1([attr1]);
   }
 }"
@@ -312,12 +347,12 @@ exports[`style and class handling > component class and parent class combine tog
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { attrValue } = helpers;
+  let { objectAttrValue } = helpers;
   
   let block1 = createBlock(\`<div class="child" block-attribute-0="class">child</div>\`);
   
   return function template(ctx, node, key = "") {
-    let attr1 = attrValue(ctx['this'].props.class);
+    let attr1 = objectAttrValue(ctx['this'].props.class);
     return block1([attr1]);
   }
 }"
@@ -340,12 +375,12 @@ exports[`style and class handling > component static style and dynamic t-att-sty
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { attrValue } = helpers;
+  let { objectAttrValue } = helpers;
   
   let block1 = createBlock(\`<div style="color: red;" block-attribute-0="style">child</div>\`);
   
   return function template(ctx, node, key = "") {
-    let attr1 = attrValue(ctx['this'].props.style);
+    let attr1 = objectAttrValue(ctx['this'].props.style);
     return block1([attr1]);
   }
 }"
@@ -398,12 +433,12 @@ exports[`style and class handling > empty class attribute is not added on widget
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { attrValue } = helpers;
+  let { objectAttrValue } = helpers;
   
   let block1 = createBlock(\`<span block-attribute-0="class"/>\`);
   
   return function template(ctx, node, key = "") {
-    let attr1 = attrValue(ctx['this'].props.class);
+    let attr1 = objectAttrValue(ctx['this'].props.class);
     return block1([attr1]);
   }
 }"
@@ -426,12 +461,12 @@ exports[`style and class handling > error in subcomponent with class 2`] = `
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { attrValue, safeOutput } = helpers;
+  let { objectAttrValue, safeOutput } = helpers;
   
   let block1 = createBlock(\`<div block-attribute-0="class"><block-child-0/></div>\`);
   
   return function template(ctx, node, key = "") {
-    let attr1 = attrValue(ctx['this'].props.class);
+    let attr1 = objectAttrValue(ctx['this'].props.class);
     const b2 = safeOutput(ctx['this'].will.crash, node, key, "\\u00021");
     return block1([attr1], [b2]);
   }
@@ -442,12 +477,12 @@ exports[`style and class handling > longhand override is preserved when a preced
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { attrValue } = helpers;
+  let { objectAttrValue } = helpers;
   
   let block1 = createBlock(\`<div block-attribute-0="style"/>\`);
   
   return function template(ctx, node, key = "") {
-    let attr1 = attrValue(ctx['this'].getStyle());
+    let attr1 = objectAttrValue(ctx['this'].getStyle());
     return block1([attr1]);
   }
 }"
@@ -496,12 +531,12 @@ exports[`style and class handling > no class is set is parent does not give it a
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { attrValue } = helpers;
+  let { objectAttrValue } = helpers;
   
   let block1 = createBlock(\`<div block-attribute-0="class">child</div>\`);
   
   return function template(ctx, node, key = "") {
-    let attr1 = attrValue(ctx['this'].props.class);
+    let attr1 = objectAttrValue(ctx['this'].props.class);
     return block1([attr1]);
   }
 }"
@@ -551,12 +586,12 @@ exports[`style and class handling > style is properly added on widget root el 2`
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { attrValue } = helpers;
+  let { objectAttrValue } = helpers;
   
   let block1 = createBlock(\`<div block-attribute-0="style"/>\`);
   
   return function template(ctx, node, key = "") {
-    let attr1 = attrValue(ctx['this'].props.style);
+    let attr1 = objectAttrValue(ctx['this'].props.style);
     return block1([attr1]);
   }
 }"
@@ -623,12 +658,12 @@ exports[`style and class handling > t-att-style is cleared when interpolated pro
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { attrValue } = helpers;
+  let { objectAttrValue } = helpers;
   
   let block1 = createBlock(\`<span block-attribute-0="style">text</span>\`);
   
   return function template(ctx, node, key = "") {
-    let attr1 = attrValue(ctx['this'].getStyle());
+    let attr1 = objectAttrValue(ctx['this'].getStyle());
     return block1([attr1]);
   }
 }"
@@ -638,12 +673,12 @@ exports[`style and class handling > t-att-style is cleared when value becomes un
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { attrValue } = helpers;
+  let { objectAttrValue } = helpers;
   
   let block1 = createBlock(\`<div block-attribute-0="style"/>\`);
   
   return function template(ctx, node, key = "") {
-    let attr1 = attrValue(ctx['this'].state.style);
+    let attr1 = objectAttrValue(ctx['this'].state.style);
     return block1([attr1]);
   }
 }"
@@ -653,12 +688,12 @@ exports[`style and class handling > t-att-style object value with !important app
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { attrValue } = helpers;
+  let { objectAttrValue } = helpers;
   
   let block1 = createBlock(\`<div block-attribute-0="style"/>\`);
   
   return function template(ctx, node, key = "") {
-    let attr1 = attrValue(ctx['this'].state.style);
+    let attr1 = objectAttrValue(ctx['this'].state.style);
     return block1([attr1]);
   }
 }"
@@ -668,12 +703,12 @@ exports[`style and class handling > t-att-style string value with !important app
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { attrValue } = helpers;
+  let { objectAttrValue } = helpers;
   
   let block1 = createBlock(\`<div block-attribute-0="style"/>\`);
   
   return function template(ctx, node, key = "") {
-    let attr1 = attrValue(ctx['this'].state.style);
+    let attr1 = objectAttrValue(ctx['this'].state.style);
     return block1([attr1]);
   }
 }"
@@ -683,12 +718,12 @@ exports[`style and class handling > t-att-style string with a data URI containin
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { attrValue } = helpers;
+  let { objectAttrValue } = helpers;
   
   let block1 = createBlock(\`<div block-attribute-0="style"/>\`);
   
   return function template(ctx, node, key = "") {
-    let attr1 = attrValue(ctx['this'].state.style);
+    let attr1 = objectAttrValue(ctx['this'].state.style);
     return block1([attr1]);
   }
 }"
@@ -698,12 +733,12 @@ exports[`style and class handling > t-att-style with object value 1`] = `
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { attrValue } = helpers;
+  let { objectAttrValue } = helpers;
   
   let block1 = createBlock(\`<div block-attribute-0="style"/>\`);
   
   return function template(ctx, node, key = "") {
-    let attr1 = attrValue(ctx['this'].state.style);
+    let attr1 = objectAttrValue(ctx['this'].state.style);
     return block1([attr1]);
   }
 }"
@@ -713,12 +748,12 @@ exports[`style and class handling > t-att-style with string value 1`] = `
 "function anonymous(app, bdom, helpers
 ) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { attrValue } = helpers;
+  let { objectAttrValue } = helpers;
   
   let block1 = createBlock(\`<div block-attribute-0="style"/>\`);
   
   return function template(ctx, node, key = "") {
-    let attr1 = attrValue(ctx['this'].state.style);
+    let attr1 = objectAttrValue(ctx['this'].state.style);
     return block1([attr1]);
   }
 }"

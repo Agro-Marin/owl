@@ -289,12 +289,12 @@ describe("basics", () => {
 generated code:
 function(app, bdom, helpers) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { attrValue } = helpers;
+  let { objectAttrValue } = helpers;
   
   let block1 = createBlock(\`<div block-attribute-0="class">test</div>\`);
   
   return function template(ctx, node, key = "") {
-    let attr1 = attrValue(ctx['a']ctx['b']);
+    let attr1 = objectAttrValue(ctx['a']ctx['b']);
     return block1([attr1]);
   }
 }`;
@@ -315,12 +315,12 @@ function(app, bdom, helpers) {
 generated code:
 function(app, bdom, helpers) {
   let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { attrValue } = helpers;
+  let { objectAttrValue } = helpers;
   
   let block1 = createBlock(\`<div block-attribute-0="class">test</div>\`);
   
   return function template(ctx, node, key = "") {
-    let attr1 = attrValue(ctx['a']ctx['b']);
+    let attr1 = objectAttrValue(ctx['a']ctx['b']);
     return block1([attr1]);
   }
 }`;
