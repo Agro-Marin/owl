@@ -693,6 +693,7 @@ describe("qweb parser", () => {
       },
       tElif: null,
       tElse: null,
+      hasNoRepresentation: true,
     });
   });
 

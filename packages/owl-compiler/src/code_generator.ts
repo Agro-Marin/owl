@@ -251,6 +251,13 @@ interface CaptureSite {
   reads: Set<string> | null;
 }
 
+interface PropEntry {
+  name: string;
+  code: string;
+  suffix: string | undefined;
+  freeVariables: string[] | null;
+}
+
 interface ContextCopy {
   site: CaptureSite;
   writes: number;
@@ -270,8 +277,6 @@ interface ScopeSite {
 class CodeTarget {
   name: string;
   indentLevel = 0;
-  loopLevel = 0;
-  loopCtxVars: string[] = [];
   loops: LoopScope[] = [];
   writtenLevels: Set<number> = new Set();
   stringKeyLevels: Set<number> = new Set();
@@ -301,6 +306,10 @@ class CodeTarget {
     } else {
       this.code.splice(idx, 0, prefix + line);
     }
+  }
+
+  get loopLevel(): number {
+    return this.loops.length;
   }
 
   enterBlock() {
@@ -1074,33 +1083,39 @@ export class CodeGenerator {
     return block.varName;
   }
 
-  compileTIfBranch(content: AST, block: BlockDescription, ctx: Context) {
-    this.target.enterBlock();
-    this.compileAST(content, createContext(ctx, { block, index: ctx.index }));
-    this.target.exitBlock();
-  }
-
-  compileTIf(ast: ASTTif, ctx: Context): string {
-    let { block, forceNewBlock } = ctx;
-    const codeIdx = this.target.code.length;
-    const isNewBlock = !block || (block.type !== "multi" && forceNewBlock);
-    if (block) {
-      block.hasDynamicChildren = true;
-    }
-    block = isNewBlock ? this.createBlock(block, "multi") : block!;
+  compileTIfBranches(ast: ASTTif, block: BlockDescription | null, ctx: Context) {
     this.addLine(`if (${compileExpr(ast.condition)}) {`);
     this.compileTIfBranch(ast.content, block, ctx);
-    if (ast.tElif) {
-      for (let clause of ast.tElif) {
-        this.addLine(`} else if (${compileExpr(clause.condition)}) {`);
-        this.compileTIfBranch(clause.content, block, ctx);
-      }
+    for (const clause of ast.tElif || []) {
+      this.addLine(`} else if (${compileExpr(clause.condition)}) {`);
+      this.compileTIfBranch(clause.content, block, ctx);
     }
     if (ast.tElse) {
       this.addLine(`} else {`);
       this.compileTIfBranch(ast.tElse, block, ctx);
     }
     this.addLine("}");
+  }
+
+  compileTIfBranch(content: AST, block: BlockDescription | null, ctx: Context) {
+    this.target.enterBlock();
+    this.compileAST(content, createContext(ctx, { block, index: ctx.index }));
+    this.target.exitBlock();
+  }
+
+  compileTIf(ast: ASTTif, ctx: Context): string | null {
+    let { block, forceNewBlock } = ctx;
+    if (ast.hasNoRepresentation) {
+      this.compileTIfBranches(ast, block, ctx);
+      return null;
+    }
+    const codeIdx = this.target.code.length;
+    const isNewBlock = !block || (block.type !== "multi" && forceNewBlock);
+    if (block) {
+      block.hasDynamicChildren = true;
+    }
+    block = isNewBlock ? this.createBlock(block, "multi") : block!;
+    this.compileTIfBranches(ast, block, ctx);
     if (isNewBlock) {
       if (block.children.length) {
         this.hoistChildDeclarations(block, codeIdx);
@@ -1124,22 +1139,6 @@ export class CodeGenerator {
       this.define(`${memo}_previous`, `memoPrevious(node, ${memo}_site)`);
       this.define(`${memo}_next`, `new Map()`);
     }
-    this.target.loopLevel++;
-    const loopVar = `i${this.target.loopLevel}`;
-    const ctxVar = this.generateId("ctx");
-    this.addLine(`const ${ctxVar} = ctx;`);
-    this.target.loopCtxVars.push(ctxVar);
-    const vals = `v_block${id}`;
-    const keys = `k_block${id}`;
-    const l = `l_block${id}`;
-    const lists = block ? [keys, vals, l, `c_block${id}`] : [keys, vals, l];
-    this.helpers.add("prepareList");
-    this.define(`[${lists.join(", ")}]`, `prepareList(${compileExpr(ast.collection)})`);
-    if (this.dev) {
-      this.define(`keys${id}`, `new Set()`);
-    }
-    this.addLine(`for (let ${loopVar} = 0; ${loopVar} < ${l}; ${loopVar}++) {`);
-    this.target.enterBlock();
     const suffixes = [""];
     if (!(ast.noFlags & ForEachNoFlag.First)) {
       suffixes.push("_first");
@@ -1154,17 +1153,32 @@ export class CodeGenerator {
       suffixes.push("_value");
     }
     const parentLoop = this.target.loops[this.target.loops.length - 1] || null;
+    const ctxVar = this.generateId("ctx");
     const loopScope: LoopScope = {
-      level: this.target.loopLevel,
+      level: this.target.loopLevel + 1,
       parentVar: ctxVar,
       names: suffixes.map((suffix) => ast.elem + suffix),
       parent: parentLoop,
     };
+    this.target.loops.push(loopScope);
+    const level = loopScope.level;
+    const loopVar = `i${level}`;
+    this.addLine(`const ${ctxVar} = ctx;`);
+    const vals = `v_block${id}`;
+    const keys = `k_block${id}`;
+    const l = `l_block${id}`;
+    const lists = block ? [keys, vals, l, `c_block${id}`] : [keys, vals, l];
+    this.helpers.add("prepareList");
+    this.define(`[${lists.join(", ")}]`, `prepareList(${compileExpr(ast.collection)})`);
+    if (this.dev) {
+      this.define(`keys${id}`, `new Set()`);
+    }
+    this.addLine(`for (let ${loopVar} = 0; ${loopVar} < ${l}; ${loopVar}++) {`);
+    this.target.enterBlock();
     const itemExpr = parentLoop
       ? this.scopeMarker(parentLoop, ctxVar, "ctx", loopScope.names)
       : `Object.create(${ctxVar})`;
     this.addLine(`let ctx = ${itemExpr};`);
-    this.target.loops.push(loopScope);
     const loopVarName = (suffix: string) => JSON.stringify(ast.elem + suffix);
     this.addLine(`ctx[${loopVarName("")}] = ${keys}[${loopVar}];`);
     if (!(ast.noFlags & ForEachNoFlag.First)) {
@@ -1179,7 +1193,6 @@ export class CodeGenerator {
     if (!(ast.noFlags & ForEachNoFlag.Value)) {
       this.addLine(`ctx[${loopVarName("_value")}] = ${vals}[${loopVar}];`);
     }
-    const level = this.target.loopLevel;
     this.define(`key${level}`, compileExpr(ast.key));
     const keyIdx = this.target.code.length;
 
@@ -1240,8 +1253,6 @@ export class CodeGenerator {
     }
     keyLines.forEach((line, i) => this.addLine(line, keyIdx + i));
     this.target.exitBlock();
-    this.target.loopLevel--;
-    this.target.loopCtxVars.pop();
     this.target.loops.pop();
     for (const [name, level] of this.target.tSetVars) {
       if (level > this.target.loopLevel) {
@@ -1348,7 +1359,7 @@ export class CodeGenerator {
       this.addLine(`const ${dynCtxVar} = ${compileExpr(ast.context)};`);
       const entries = [
         `this: ${dynCtxVar}`,
-        ...attrs.map(([name, value]) => `${propKey(name)}: ${value}`),
+        ...attrs.map(({ name, code }) => `${propKey(name)}: ${code}`),
         ...zero.map(([key, value]) => `${key}: ${value}`),
       ];
       ctxExpr = `Object.assign({}, ${dynCtxVar}, {${entries.join(", ")}})`;
@@ -1367,15 +1378,20 @@ export class CodeGenerator {
         ctxExpr,
         this.captureMarker(
           loop
-            ? this.scopeMarker(loop, "ctx", ctxExpr, [...attrs.map(([name]) => name)])
+            ? this.scopeMarker(
+                loop,
+                "ctx",
+                ctxExpr,
+                attrs.map(({ name }) => name)
+              )
             : `Object.create(ctx)`,
           "callContext(ctx)",
           "callContext",
           null
         )
       );
-      for (const [name, value] of attrs) {
-        this.addLine(`${ctxExpr}[${JSON.stringify(name)}] = ${value};`);
+      for (const { name, code } of attrs) {
+        this.addLine(`${ctxExpr}[${JSON.stringify(name)}] = ${code};`);
       }
       for (const [key, value] of zero) {
         this.addLine(`${ctxExpr}${key} = ${value};`);
@@ -1429,7 +1445,7 @@ export class CodeGenerator {
           `t-set="${ast.name}" inside a t-memo item writes a variable of an enclosing scope, and a memo hit would skip the write`
         );
       }
-      this.addLine(`${this.target.loopCtxVars[defLevel]}[${name}] = ${value};`);
+      this.addLine(`${this.target.loops[defLevel].parentVar}[${name}] = ${value};`);
       this.target.writtenLevels.add(defLevel);
       this.recordWrite(ast.name, defLevel);
     } else {
@@ -1461,58 +1477,40 @@ export class CodeGenerator {
     return this.generateId(KEY_MARK);
   }
 
-  formatProp(
-    name: string,
-    value: string,
-    attrsTranslationCtx: { [name: string]: string } | null,
-    ctx: Context
-  ): string {
-    const [key, code] = this.propEntry(name, value, attrsTranslationCtx, ctx);
-    return `${propKey(key)}: ${code}`;
-  }
-
   propEntry(
-    name: string,
+    prop: string,
     value: string,
     attrsTranslationCtx: { [name: string]: string } | null,
-    ctx: Context
-  ): [string, string] {
-    if (name.endsWith(".translate")) {
-      const attrTranslationCtx = attrsTranslationCtx?.[name] || ctx.translationCtx;
-      value = toStringExpression(ctx.translate ? this.translate(value, attrTranslationCtx) : value);
+    ctx: Context,
+    allowSignal: boolean = false
+  ): PropEntry {
+    const [name, suffix] = prop.split(".");
+    let code: string;
+    let freeVariables: string[] | null = null;
+    if (prop.endsWith(".translate")) {
+      const attrTranslationCtx = attrsTranslationCtx?.[prop] || ctx.translationCtx;
+      code = toStringExpression(ctx.translate ? this.translate(value, attrTranslationCtx) : value);
     } else {
-      value = this.compileValue(value).expr;
+      ({ expr: code, freeVariables } = this.compileValue(value));
     }
-    if (name.includes(".")) {
-      let [_name, suffix] = name.split(".");
-      name = _name;
-      switch (suffix) {
-        case "bind":
-          value = `(${value}).bind(this)`;
-          break;
-        case "alike":
-        case "translate":
-          break;
-        default:
-          throw new OwlError(`Invalid prop suffix: ${suffix}`);
-      }
+    if (suffix === "bind") {
+      code = `(${code}).bind(this)`;
+    } else if (
+      suffix !== undefined &&
+      suffix !== "alike" &&
+      suffix !== "translate" &&
+      !(allowSignal && suffix === "signal")
+    ) {
+      throw new OwlError(`Invalid prop suffix: ${suffix}`);
     }
-    return [name, value || "undefined"];
-  }
-
-  formatPropObject(
-    obj: { [prop: string]: any },
-    attrsTranslationCtx: { [name: string]: string } | null,
-    ctx: Context
-  ): string[] {
-    return this.propEntries(obj, attrsTranslationCtx, ctx).map(([k, v]) => `${propKey(k)}: ${v}`);
+    return { name, code: code || "undefined", suffix, freeVariables };
   }
 
   propEntries(
-    obj: { [prop: string]: any },
+    obj: { [prop: string]: string },
     attrsTranslationCtx: { [name: string]: string } | null,
     ctx: Context
-  ): [string, string][] {
+  ): PropEntry[] {
     return Object.entries(obj).map(([k, v]) => this.propEntry(k, v, attrsTranslationCtx, ctx));
   }
 
@@ -1528,25 +1526,20 @@ export class CodeGenerator {
     const propList: string[] = [];
     const signalProps: string[] = [];
 
-    for (let p in ast.props || {}) {
-      let [name, suffix] = p.split(".");
-
+    for (const p in ast.props || {}) {
+      const { name, code, suffix, freeVariables } = this.propEntry(
+        p,
+        ast.props![p],
+        ast.propsTranslationCtx,
+        ctx,
+        true
+      );
+      props.push(`${propKey(name)}: ${code}`);
       if (suffix === "signal") {
-        props.push(`${propKey(name)}: ${compileExpr(ast.props![p]) || undefined}`);
         signalProps.push(JSON.stringify(name));
+      } else if (suffix) {
         continue;
-      }
-
-      if (suffix) {
-        props.push(this.formatProp(p, ast.props![p], ast.propsTranslationCtx, ctx));
-        continue;
-      }
-
-      const { expr: compiledValue, freeVariables } = this.compileValue(ast.props![p]);
-
-      props.push(`${propKey(name)}: ${compiledValue || undefined}`);
-
-      if (freeVariables) {
+      } else if (freeVariables) {
         for (const varName of freeVariables) {
           const syntheticKey = `\x01${name}.${varName}`;
           propList.push(`"${syntheticKey}"`);
@@ -1580,11 +1573,11 @@ export class CodeGenerator {
         }
         if (ast.slots[slotName].attrs) {
           params.push(
-            ...this.formatPropObject(
+            ...this.propEntries(
               ast.slots[slotName].attrs!,
               ast.slots[slotName].attrsTranslationCtx,
               ctx
-            )
+            ).map(({ name, code }) => `${propKey(name)}: ${code}`)
           );
         }
         const slotInfo = `{${params.join(", ")}}`;
@@ -1676,7 +1669,11 @@ export class CodeGenerator {
     }
     const key = this.scopeKey(ctx);
 
-    const props = ast.attrs ? this.formatPropObject(ast.attrs, ast.attrsTranslationCtx, ctx) : [];
+    const props = ast.attrs
+      ? this.propEntries(ast.attrs, ast.attrsTranslationCtx, ctx).map(
+          ({ name, code }) => `${propKey(name)}: ${code}`
+        )
+      : [];
     const scope =
       props.length || ast.dynamicProps ? this.getPropString(props, ast.dynamicProps) : "null";
     if (ast.defaultContent) {

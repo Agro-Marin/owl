@@ -777,9 +777,9 @@ function parseTIf(node: Element, ctx: ParsingContext): AST | null {
   const content = parseNode(node, ctx) || { type: ASTType.Text, value: "" };
 
   let nextElement = node.nextElementSibling;
-  const tElifs: any[] = [];
+  const tElifs: { condition: string; content: AST }[] = [];
   while (nextElement && nextElement.hasAttribute("t-elif")) {
-    const condition = exprAttr(nextElement, "t-elif");
+    const condition = exprAttr(nextElement, "t-elif")!;
     nextElement.removeAttribute("t-elif");
     const tElif = parseNode(nextElement, ctx) || { type: ASTType.Text, value: "" };
     const next = nextElement.nextElementSibling;
@@ -795,13 +795,21 @@ function parseTIf(node: Element, ctx: ParsingContext): AST | null {
     nextElement.remove();
   }
 
-  return {
+  const ast: ASTTif = {
     type: ASTType.TIf,
     condition,
     content,
     tElif: tElifs.length ? tElifs : null,
     tElse,
   };
+  if (
+    content.hasNoRepresentation &&
+    tElifs.every((clause) => clause.content.hasNoRepresentation) &&
+    (!tElse || tElse.hasNoRepresentation)
+  ) {
+    ast.hasNoRepresentation = true;
+  }
+  return ast;
 }
 
 function parseTSetNode(node: Element, ctx: ParsingContext): AST | null {

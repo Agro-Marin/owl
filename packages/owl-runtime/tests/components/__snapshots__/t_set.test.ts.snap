@@ -423,7 +423,6 @@ exports[`t-set > t-set in t-if 1`] = `
   
   return function template(ctx, node, key = "") {
     ctx = Object.create(ctx);
-    let b2;
     ctx["flag"] = ctx['this'].state.flag;
     if (ctx['flag']==='if') {
       ctx["iter"] = 2;
@@ -432,7 +431,7 @@ exports[`t-set > t-set in t-if 1`] = `
     } else {
       ctx["iter"] = 4;
     }
-    b2 = safeOutput(ctx['iter'], node, key, "\\u00021");
+    const b2 = safeOutput(ctx['iter'], node, key, "\\u00021");
     return block1([], [b2]);
   }
 }"
@@ -487,7 +486,6 @@ exports[`t-set > t-set outside modified in t-if 1`] = `
   
   return function template(ctx, node, key = "") {
     ctx = Object.create(ctx);
-    let b2;
     ctx["iter"] = 0;
     ctx["flag"] = ctx['this'].state.flag;
     if (ctx['flag']==='if') {
@@ -497,7 +495,7 @@ exports[`t-set > t-set outside modified in t-if 1`] = `
     } else {
       ctx["iter"] = 4;
     }
-    b2 = safeOutput(ctx['iter'], node, key, "\\u00021");
+    const b2 = safeOutput(ctx['iter'], node, key, "\\u00021");
     return block1([], [b2]);
   }
 }"

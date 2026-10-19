@@ -69,6 +69,17 @@ describe("what a render allocates", () => {
     ]);
   });
 
+  test("a t-if holding only t-sets makes no block, at the root or as a loop item", () => {
+    const atRoot = renderFunctionLines(`
+      <t t-if="c"><t t-set="x" t-value="1"/></t><t t-else=""><t t-set="x" t-value="2"/></t>
+      <div t-out="x"/>`);
+    expect(atRoot.filter((line) => line.includes("multi("))).toEqual([]);
+    const inLoop = renderFunctionLines(`
+      <t t-foreach="l" t-as="i" t-key="i"><t t-if="i"><t t-set="x" t-value="i"/></t></t>
+      <p t-out="x"/>`);
+    expect(inLoop.filter((line) => /multi\(|list\(|withKey/.test(line))).toEqual([]);
+  });
+
   test("slots are given as they are, not marked raw on every render", () => {
     const lines = renderFunctionLines(`
       <div>
