@@ -36,6 +36,7 @@
     "@odoo/owl-core": "*"
   },
   "devDependencies": {
-    "@odoo/owl-compiler": "*"
+    "@odoo/owl-compiler": "*",
+    "jsdom": "^25.0.1"
   }
 }
