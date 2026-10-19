@@ -3,7 +3,6 @@ import { untrack } from "./computations";
 import { effect } from "./effect";
 import { onWillDestroy } from "./lifecycle_hooks";
 import { useScope, type ScopeApp } from "./scope";
-import { Signal } from "./signal";
 import { shallowEqual } from "./utils";
 
 export function useEffect(fn: Parameters<typeof effect>[0]): void {
@@ -33,7 +32,7 @@ export function useOnChange<T extends unknown[]>(
 }
 
 export function useListener(
-  target: EventTarget | Signal<EventTarget | null>,
+  target: EventTarget | (() => EventTarget | null),
   eventName: string,
   handler: EventListener,
   eventParams?: AddEventListenerOptions

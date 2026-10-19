@@ -109,7 +109,8 @@ function createContext(
     validate(type: any) {
       const error = typeError(type);
       if (error) {
-        throw new OwlError(`Invalid schema at "${this.path.join(" > ")}": ${error}`);
+        const at = this.path.length ? ` at "${this.path.join(" > ")}"` : "";
+        throw new OwlError(`Invalid schema${at}: ${error}`);
       }
       const before = issues.length;
       type(this);
@@ -128,6 +129,6 @@ function createContext(
 
 export function validateType(value: any, validation: any): ValidationIssue[] {
   const issues: ValidationIssue[] = [];
-  validation(createContext(issues, value, []));
+  createContext(issues, value, []).validate(validation);
   return issues;
 }

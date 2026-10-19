@@ -2,7 +2,7 @@ import { debug, debugLog } from "./debug";
 import { OwlError } from "./owl_error";
 import { PluginConstructor, PluginManager } from "./plugin_manager";
 import { useScope } from "./scope";
-import { getDefault, types, type Optional, type StripBrands, type WithDefault } from "./types";
+import { getDefault, types, type Optional, type Schema, type WithDefault } from "./types";
 import { assertType } from "./validation";
 
 export type PluginInstance<T extends PluginConstructor> = Omit<InstanceType<T>, "setup">;
@@ -35,7 +35,7 @@ export const plugin = usePlugin;
 export function useConfig<T = unknown>(key: string): NoInfer<T>;
 export function useConfig<T>(key: string, type: WithDefault<T>): T;
 export function useConfig<T>(key: string, type: Optional<T>): T | undefined;
-export function useConfig<T>(key: string, type: T): StripBrands<T>;
+export function useConfig<T>(key: string, type: Schema<T>): T;
 export function useConfig(key: string, type?: unknown): unknown {
   const scope = useScope();
   if (!(scope instanceof PluginManager)) {

@@ -89,6 +89,44 @@ function _registryCheck() {
   void value;
 }
 
+function _schemaIsNotItsValue() {
+  // @ts-expect-error a schema is not the value it describes
+  const s: string = t.string();
+  // @ts-expect-error a number schema has no number methods
+  t.number().toFixed(2);
+  // @ts-expect-error a shape schema has no key of its shape
+  void t.object({ a: t.string() }).a;
+  // @ts-expect-error a registry entry is a value, not a schema
+  new Registry({ validation: t.string() }).add("k", t.string());
+  // @ts-expect-error a resource validation is a schema
+  new Resource({ validation: 42 });
+  // @ts-expect-error a registry validation is a schema
+  new Registry({ validation: "x" });
+  // @ts-expect-error a config type is a schema
+  config("delay", 500);
+  // @ts-expect-error a static prop type is a schema
+  props.static("label", "fallback");
+  const userType = t.object({ name: t.string(), age: t.number().optional() });
+  assertEq<typeof userType.type, { name: string; age?: number }>();
+  const maybeNumber = t.number().optional();
+  assertEq<typeof maybeNumber.type, number | undefined>();
+  const optionalItems = new Resource({ validation: t.string().optional() });
+  assertEq<ReturnType<typeof optionalItems.items>, (string | undefined)[]>();
+  void [s, userType, maybeNumber, optionalItems];
+}
+
+function _registryGetDefault() {
+  const registry = new Registry({ validation: t.string() });
+  const orUndefined = registry.get("missing", undefined);
+  assertEq<typeof orUndefined, string | undefined>();
+  const orNull = registry.get("missing", null);
+  assertEq<typeof orNull, string | null>();
+  const orString = registry.get("missing", "fallback");
+  assertEq<typeof orString, string>();
+  void [orUndefined, orNull, orString];
+}
+void [_schemaIsNotItsValue, _registryGetDefault];
+
 const NotificationShape = {
   message: t.string(),
   className: t.string().optional("card"),

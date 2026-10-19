@@ -83,26 +83,18 @@ export {
   getDefault,
   type Constructor,
   type GetDefaultedKeys,
-  type GetOptionalEntries,
-  type KeyedObject,
-  type LiteralTypes,
   type Optional,
-  type PrettifyShape,
   type ResolveObjectType,
-  type ResolveOptionalEntries,
   type ResolveReaderObjectType,
+  type Schema,
   type ShapeType,
   type StripBrands,
   type Type,
-  type UnionToIntersection,
   type WithDefault,
-  type hasDefault,
-  type isOptional,
-  type typeBrand,
 } from "./types";
 
 export { Registry } from "./registry";
-export { Resource, type ResourceAddOptions } from "./resource";
+export { Resource } from "./resource";
 
 export { EventModifier, eventModifierMask } from "./event_modifiers";
 

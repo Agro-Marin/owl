@@ -301,8 +301,9 @@ t.ref(); // null | HTMLElement
 t.ref(HTMLInputElement); // null | HTMLInputElement
 ```
 
-Since it relies on `HTMLElement`, `t.ref()` throws when called in a non-DOM
-environment (e.g. server-side rendering).
+`t.ref()` can be declared anywhere; without a DOM (e.g. server-side
+rendering) it accepts `null` and throws when it checks any other value, since
+it relies on `HTMLElement`.
 
 ### `t.or(types)`
 

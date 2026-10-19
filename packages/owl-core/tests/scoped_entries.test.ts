@@ -8,6 +8,7 @@ import {
   setDebug,
   setDebugSink,
   signal,
+  type Schema,
   types as t,
 } from "../src";
 import { TestScope, waitScheduler } from "./helpers";
@@ -137,7 +138,7 @@ test.each(["Resource", "Registry"])(
   }
 );
 
-function mutableStore(name: string, validation?: unknown) {
+function mutableStore(name: string, validation?: Schema<unknown>) {
   const options = { validation };
   if (name === "Resource") {
     const store = new Resource<unknown>(options);

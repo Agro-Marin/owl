@@ -18,7 +18,7 @@ import { type ComponentNode, getComponentScope } from "./component_node";
 import { staticProp } from "./prop";
 import { types } from "./types";
 
-export declare const isProps: unique symbol;
+declare const isProps: unique symbol;
 
 export type Props<T extends {}> = T & { [isProps]: never };
 export type PropsWithDefaults<T extends {}, DK extends PropertyKey> = T & { [isProps]: DK };

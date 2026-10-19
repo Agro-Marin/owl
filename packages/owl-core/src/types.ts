@@ -11,20 +11,34 @@ const elementTypeSymbol = Symbol("elementType");
 const optionalSymbol = Symbol("optional");
 const intersectionSymbol = Symbol("intersection");
 
-export declare const hasDefault: unique symbol;
-export type WithDefault<T> = T & { [hasDefault]: T };
+declare const typeBrand: unique symbol;
+declare const isOptional: unique symbol;
+declare const hasDefault: unique symbol;
 
-export declare const isOptional: unique symbol;
-export type Optional<T> = T & { [isOptional]: T };
+export interface Schema<T> {
+  (context: ValidationContext): void;
+  readonly [typeBrand]: T;
+  readonly type: T;
+}
 
-export declare const typeBrand: unique symbol;
-export type Type<T> = T & {
-  [typeBrand]: T;
+type DefaultValue<T> = T extends Function ? () => T : T | (() => T);
+
+export interface Type<T> extends Schema<T> {
   optional(): Optional<T>;
-  optional(value: T extends Function ? () => T : T | (() => T)): WithDefault<T>;
+  optional(value: DefaultValue<T>): WithDefault<T>;
+}
 
-  type: T;
-};
+export interface Optional<T> extends Schema<T | undefined> {
+  readonly [isOptional]: T;
+  optional(): Optional<T>;
+  optional(value: DefaultValue<T>): WithDefault<T>;
+}
+
+export interface WithDefault<T> extends Schema<T> {
+  readonly [hasDefault]: T;
+  optional(): WithDefault<T>;
+  optional(value: DefaultValue<T>): WithDefault<T>;
+}
 
 export type ShapeType<Shape, T> = Type<T> & {
   toShape(): Shape;
@@ -512,14 +526,15 @@ function reactiveValueType(type?: any): any {
 function ref(): Type<HTMLElement | null>;
 function ref<T extends Constructor<HTMLElement>>(type: T): Type<InstanceType<T> | null>;
 function ref(type?: any): any {
-  if (typeof HTMLElement === "undefined") {
-    throw new OwlError("Cannot use ref in a non-DOM environment");
-  }
-  return union([literalType(null), elementType(type || HTMLElement)]);
+  return union([literalType(null), elementType(type)]);
 }
 
-function elementType(constructor: Constructor): Type<HTMLElement> {
+function elementType(type: Constructor | undefined): Type<HTMLElement> {
   return makeType(function validateElement(context: ValidationContext) {
+    if (!type && typeof HTMLElement === "undefined") {
+      throw new OwlError("Cannot use ref in a non-DOM environment");
+    }
+    const constructor = type || HTMLElement;
     const value = context.value;
     const realmConstructor = value?.ownerDocument?.defaultView?.[constructor.name];
     if (

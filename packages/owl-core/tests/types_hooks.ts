@@ -1,4 +1,14 @@
-import { PluginManager, useApp, useConfig, config, t, type ScopeApp } from "../src";
+import {
+  computed,
+  PluginManager,
+  signal,
+  useApp,
+  useConfig,
+  useListener,
+  config,
+  t,
+  type ScopeApp,
+} from "../src";
 
 type IsAny<T> = 0 extends 1 & T ? true : false;
 type Eq<A, B> = [A] extends [B] ? ([B] extends [A] ? true : false) : false;
@@ -114,3 +124,18 @@ void [
   inferredReader,
   explicitConfigReader,
 ];
+
+function _listenerTargets() {
+  const element = signal<HTMLElement | null>(null);
+  const target = computed(() => element());
+  const read = () => element();
+  const notTarget = () => 42;
+  const onClick = () => {};
+  useListener(target, "click", onClick);
+  useListener(read, "click", onClick);
+  useListener(element, "click", onClick);
+  useListener(window, "click", onClick);
+  // @ts-expect-error a listener target is an event target or a function reading one
+  useListener(notTarget, "click", onClick);
+}
+void _listenerTargets;

@@ -3,6 +3,7 @@ import {
   applyDefaults,
   assertType,
   OwlError,
+  Registry,
   computed,
   getDefault,
   signal,
@@ -593,7 +594,7 @@ test("record", () => {
 });
 
 test("ref", () => {
-  expect(() => t.ref()).toThrow("Cannot use ref in a non-DOM environment");
+  expect(() => validateType({}, t.ref())).toThrow("Cannot use ref in a non-DOM environment");
 
   class FakeHTMLElement {}
   (globalThis as any).HTMLElement = FakeHTMLElement;
@@ -1396,6 +1397,28 @@ describe("values and schemas validation used to mishandle", () => {
     const deep = t.customValidator(t.object({ x: t.object({ y: t.number() }) }), () => true);
     const issues = validateType({ x: { y: "s" } }, t.or([t.string(), deep]));
     expect(issues).toEqual([{ message: "value is not a number", path: "x > y", received: "s" }]);
+  });
+
+  test("a top-level schema is checked as a schema nested in a shape is", () => {
+    expect(() => validateType(42, String)).toThrow("String is a constructor, not a type");
+    expect(() => validateType("x", Number)).toThrow("Number is a constructor, not a type");
+    expect(() => assertType(42, { a: t.string() })).toThrow("object is not a type");
+    expect(() => validateType(42, null)).toThrow("Invalid schema: null is not a type");
+    const registry = new Registry({ validation: String as any });
+    expect(() => registry.add("k", 42)).toThrow("String is a constructor, not a type");
+  });
+
+  test("t.ref() is a schema without a DOM, and its validation needs one", () => {
+    const ref = t.ref();
+    expect(validateType(null, ref)).toEqual([]);
+    expect(() => validateType({}, ref)).toThrow("Cannot use ref in a non-DOM environment");
+    class FakeHTMLElement {}
+    (globalThis as any).HTMLElement = FakeHTMLElement;
+    try {
+      expect(validateType(new FakeHTMLElement(), ref)).toEqual([]);
+    } finally {
+      delete (globalThis as any).HTMLElement;
+    }
   });
 
   test("strictObject and record read the own keys of the value", () => {

@@ -195,8 +195,9 @@ useEffect(() => console.log(this.value()));
 
 The `useListener` hook adds an event listener to a target and automatically
 removes it when the component is destroyed. It accepts either a direct
-`EventTarget` (e.g. `window`, `document`) or a signal containing an element
-reference:
+`EventTarget` (e.g. `window`, `document`) or a function reading one — a
+signal holding an element reference, a computed, or a plain function whose
+reactive reads re-run it:
 
 ```js
 // Listen on window — added immediately, removed on destroy

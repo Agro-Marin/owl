@@ -167,8 +167,6 @@ test("a consumer outside the checkout gets complete collection and hook types", 
   }
 });
 
-const KNOWN_PHANTOM_EXPORTS = ["hasDefault", "isOptional", "isProps", "typeBrand"];
-
 function declaredValues(file: string): string[] {
   const program = ts.createProgram([file], { noEmit: true, types: [] });
   const checker = program.getTypeChecker();
@@ -202,6 +200,6 @@ test.each([
   expect(run.stderr).toBe("");
   const exported: string[] = JSON.parse(run.stdout);
   const phantoms = declared.filter((name) => !exported.includes(name));
-  expect(phantoms).toEqual(dts === "owl.d.ts" ? KNOWN_PHANTOM_EXPORTS : []);
+  expect(phantoms).toEqual([]);
   expect(exported.filter((name) => !declared.includes(name))).toEqual([]);
 });

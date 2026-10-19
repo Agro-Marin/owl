@@ -35,7 +35,7 @@ export { ErrorBoundary } from "./error_boundary";
 export { Portal } from "./portal";
 export { Suspense } from "./suspense";
 export { useProps, props } from "./props";
-export type { GetProps, isProps } from "./props";
+export type { GetProps } from "./props";
 export { status } from "./status";
 export {
   asyncComputed,
@@ -74,13 +74,13 @@ export {
 export { applyDefaults, assertType, getDefault, validateType } from "@odoo/owl-core";
 export { types, types as t } from "./types";
 export type {
-  hasDefault,
-  isOptional,
   Optional,
+  Schema,
   ShapeType,
   StripBrands,
   Type,
-  typeBrand,
+  ValidationContext,
+  ValidationIssue,
   WithDefault,
 } from "@odoo/owl-core";
 export { OwlError } from "@odoo/owl-core";

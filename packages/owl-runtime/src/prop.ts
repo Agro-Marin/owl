@@ -3,7 +3,7 @@ import {
   getDefault,
   OwlError,
   type Optional,
-  type StripBrands,
+  type Schema,
   type WithDefault,
 } from "@odoo/owl-core";
 import { getComponentScope } from "./component_node";
@@ -11,7 +11,7 @@ import { getComponentScope } from "./component_node";
 export function staticProp<T = any>(key: string): T;
 export function staticProp<T>(key: string, type: WithDefault<T>): T;
 export function staticProp<T>(key: string, type: Optional<T>): T | undefined;
-export function staticProp<T>(key: string, type: T): StripBrands<T>;
+export function staticProp<T>(key: string, type: Schema<T>): T;
 export function staticProp(key: string, type?: any): any {
   const node = getComponentScope();
   const defaultFactory = getDefault(type);

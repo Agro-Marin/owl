@@ -2,38 +2,38 @@ import { computed } from "./computed";
 import { batch, untrack, type ReadonlyReactiveValue } from "./computations";
 import { OwlError } from "./owl_error";
 import { signal } from "./signal";
-import { ResourceAddOptions } from "./resource";
+import { DEFAULT_SEQUENCE, type ResourceAddOptions } from "./resource";
 import { useScope } from "./scope";
-import { type StripBrands } from "./types";
+import { type Schema } from "./types";
 import { assertType } from "./validation";
 
-interface RegistryOptions<T> {
+interface RegistryOptions<V> {
   name?: string;
-  validation?: T;
+  validation?: Schema<V>;
 }
 
 interface RegistryAddOptions extends ResourceAddOptions {
   force?: boolean;
 }
 
-type Entry<T> = [sequence: number, value: StripBrands<T>, order: number];
+type Entry<V> = [sequence: number, value: V, order: number];
 
-export class Registry<T> {
-  private _map = signal.Object<Record<string, Entry<T>>>(Object.create(null));
+export class Registry<V> {
+  private _map = signal.Object<Record<string, Entry<V>>>(Object.create(null));
   private _order = 0;
   private _name: string;
-  private _validation?: T;
-  private _overwritten = new WeakMap<Entry<T>, Entry<T>>();
-  private _ended = new WeakSet<Entry<T>>();
+  private _validation?: Schema<V>;
+  private _overwritten = new WeakMap<Entry<V>, Entry<V>>();
+  private _ended = new WeakSet<Entry<V>>();
 
-  constructor(options: RegistryOptions<T> = {}) {
+  constructor(options: RegistryOptions<V> = {}) {
     this._name = options.name || "registry";
     this._validation = options.validation;
   }
 
-  entries: ReadonlyReactiveValue<[string, StripBrands<T>][]> = computed(
+  entries: ReadonlyReactiveValue<[string, V][]> = computed(
     () => {
-      const entries: [string, StripBrands<T>][] = Object.entries(this._map())
+      const entries: [string, V][] = Object.entries(this._map())
         .sort((el1, el2) => el1[1][0] - el2[1][0] || el1[1][2] - el2[1][2])
         .map(([str, elem]) => [str, elem[1]]);
       return entries;
@@ -41,18 +41,15 @@ export class Registry<T> {
     { detached: true }
   );
 
-  items: ReadonlyReactiveValue<StripBrands<T>[]> = computed(() => this.entries().map((e) => e[1]), {
+  items: ReadonlyReactiveValue<V[]> = computed(() => this.entries().map((e) => e[1]), {
     detached: true,
   });
 
-  addById<U extends { id: string } & StripBrands<T>>(
-    item: U,
-    options: RegistryAddOptions = {}
-  ): Registry<T> {
+  addById<U extends { id: string } & V>(item: U, options: RegistryAddOptions = {}): Registry<V> {
     return this.add(this._getId(item), item, options);
   }
 
-  add(key: string, value: StripBrands<T>, options: RegistryAddOptions = {}): Registry<T> {
+  add(key: string, value: V, options: RegistryAddOptions = {}): Registry<V> {
     this._add(key, value, options);
     return this;
   }
@@ -77,10 +74,10 @@ export class Registry<T> {
 
   private _add(
     key: string,
-    value: StripBrands<T>,
+    value: V,
     options: RegistryAddOptions,
-    register?: (entry: Entry<T>, previous: Entry<T> | undefined) => void
-  ): Entry<T> {
+    register?: (entry: Entry<V>, previous: Entry<V> | undefined) => void
+  ): Entry<V> {
     return untrack(() => {
       const force = options.force;
       this._assertCanAdd(key, force);
@@ -91,27 +88,29 @@ export class Registry<T> {
           `Registry entry does not match the type (registry '${this._name}', key: '${key}')`
         );
       }
-      const sequence = options.sequence ?? 50;
+      const sequence = options.sequence ?? DEFAULT_SEQUENCE;
       this._assertCanAdd(key, force);
       const map = this._map();
       const previous = map[key];
       const order = previous ? previous[2] : this._order++;
-      const entry: Entry<T> = [sequence, value, order];
+      const entry: Entry<V> = [sequence, value, order];
       map[key] = entry;
       register?.(entry, previous);
       return entry;
     });
   }
 
-  get(key: string, defaultValue?: StripBrands<T>): StripBrands<T> {
+  get(key: string): V;
+  get<D>(key: string, defaultValue: D): V | D;
+  get(key: string, defaultValue?: unknown): unknown {
     const hasKey = key in this._map();
     if (!hasKey && arguments.length < 2) {
       throw new OwlError(`Cannot find key "${key}" (registry '${this._name}')`);
     }
-    return hasKey ? this._map()[key][1] : defaultValue!;
+    return hasKey ? this._map()[key][1] : defaultValue;
   }
 
-  delete(key: string): Registry<T> {
+  delete(key: string): Registry<V> {
     untrack(() => {
       delete this._map()[key];
     });
@@ -126,7 +125,7 @@ export class Registry<T> {
     return key in this._map();
   }
 
-  use(key: string, value: StripBrands<T>, options: RegistryAddOptions = {}): Registry<T> {
+  use(key: string, value: V, options: RegistryAddOptions = {}): Registry<V> {
     const scope = useScope();
     batch(() => {
       this._add(key, value, options, (entry, previous) => {
@@ -156,10 +155,7 @@ export class Registry<T> {
     return this;
   }
 
-  useById<U extends { id: string } & StripBrands<T>>(
-    item: U,
-    options: RegistryAddOptions = {}
-  ): Registry<T> {
+  useById<U extends { id: string } & V>(item: U, options: RegistryAddOptions = {}): Registry<V> {
     return this.use(this._getId(item), item, options);
   }
 }

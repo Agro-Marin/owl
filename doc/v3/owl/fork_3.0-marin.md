@@ -188,8 +188,17 @@ true })` creates an effect owned by nothing. When a computed and an effect
   `reactive([], callback)` did. Collection iterators preserve array members'
   identity, yield live views, and support iterator helpers.
 - **A constructor in a type schema** (`{ a: String }`) throws instead of
-  accepting everything; a `customValidator` of an optional type is optional,
-  with that type's default.
+  accepting everything, at the top level too (`validateType(42, String)`, a
+  registry's `validation`, `props.static`); a `customValidator` of an optional
+  type is optional, with that type's default. `t.ref()` can be declared
+  without a DOM; only checking a non-null value needs one.
+- **A schema is typed as a schema**, not as the value it describes (upstream's
+  `Type<T> = T & {…}` let `t.number().toFixed()` and `const s: string =
+t.string()` compile): `Schema<T>` is a validator carrying `T` under a
+  module-private brand, so the declarations export no phantom symbol values.
+  `Registry` / `Resource` `validation`, and the type of `useConfig` and
+  `props.static`, take a `Schema<V>`, entries typed `V`. `registry.get(key,
+d)` is typed `V | D`; `useListener` takes any function reading a target.
 - **A plugin dependency cycle through constructors or field initializers**
   throws "Circular plugin dependency" instead of overflowing the stack; plugins
   asking for each other in `setup()` each get the other (logged on the `plugin`
