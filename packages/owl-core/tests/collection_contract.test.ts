@@ -173,6 +173,61 @@ describe.each(["deep", "shallow", "observed"] as const)("%s collections", (kind)
     }
   );
 
+  test("a Set holding a proxy finds, deletes and notifies it", () => {
+    const item = proxy({ id: 1 });
+    const set = wrap(new Set([item]));
+    const seen: boolean[] = [];
+    const stop = immediateEffect(() => {
+      seen.push(set.has(item));
+    });
+    try {
+      set.add(item);
+      expect(set.size).toBe(1);
+      expect(set.delete(item)).toBe(true);
+      expect(set.size).toBe(0);
+      expect(seen).toEqual([true, false]);
+    } finally {
+      stop();
+    }
+  });
+
+  test("a Map keyed by a proxy finds its entry, and its readers see writes to it", () => {
+    const key = proxy({ id: 1 });
+    const map = wrap(new Map([[key, "x"]]));
+    const seen: unknown[][] = [];
+    const stop = immediateEffect(() => {
+      seen.push([map.get(key), [...map.values()]]);
+    });
+    try {
+      map.set(key, "y");
+      expect(map.size).toBe(1);
+      map.getOrInsert(key, "z");
+      map.delete(key);
+      expect(seen).toEqual([
+        ["x", ["x"]],
+        ["y", ["y"]],
+        [undefined, []],
+      ]);
+    } finally {
+      stop();
+    }
+  });
+
+  test("clearing a Map keyed by a proxy notifies the readers of that key", () => {
+    const key = proxy({ id: 1 });
+    const map = wrap(new Map([[key, "x"]]));
+    const seen: unknown[] = [];
+    const stop = immediateEffect(() => {
+      seen.push(map.get(key));
+    });
+    try {
+      map.clear();
+      expect(seen).toEqual(["x", undefined]);
+    } finally {
+      stop();
+    }
+  });
+
   test("getOrInsert reads an existing value as a reactive dependency", () => {
     const map = wrap(new Map([["a", 1]]));
     const seen: number[] = [];

@@ -678,15 +678,18 @@ function makeMethod(key: PropertyKey, target: any, shallow: boolean): Function {
   switch (key) {
     case "has":
       return (item: any) => {
-        item = toRaw(item);
-        onReadTargetKey(target, item, presenceAtoms);
-        return target.has(item);
+        const raw = rawKey(item);
+        onReadTargetKey(target, raw, presenceAtoms);
+        return target.has(raw === item ? raw : storedKey(target, item, raw));
       };
     case "get":
       return (item: any) => {
-        item = toRaw(item);
-        onReadTargetKey(target, item);
-        return reactiveValue(target.get(item), shallow);
+        const raw = rawKey(item);
+        onReadTargetKey(target, raw);
+        return reactiveValue(
+          target.get(raw === item ? raw : storedKey(target, item, raw)),
+          shallow
+        );
       };
     case "getOrInsert":
     case "getOrInsertComputed":
@@ -708,6 +711,23 @@ function makeMethod(key: PropertyKey, target: any, shallow: boolean): Function {
   return makeSetOperation(key as string, target);
 }
 
+function storedKey(target: any, item: any, raw: any): any {
+  const has = nativeHas(target);
+  return has.call(target, raw) || !has.call(target, item) ? raw : item;
+}
+
+function nativeHas(target: object): (this: object, key: any) => boolean {
+  return target instanceof Map
+    ? Map.prototype.has
+    : target instanceof Set
+      ? Set.prototype.has
+      : WeakMap.prototype.has;
+}
+
+function rawKey(key: unknown): unknown {
+  return typeof key === "object" && key !== null ? toRaw(key) : key;
+}
+
 function makeIteratorObserver(methodName: PropertyKey, target: any, shallow: boolean) {
   const isMap = target instanceof Map;
   const entries = methodName === "entries" || (methodName === Symbol.iterator && isMap);
@@ -716,7 +736,7 @@ function makeIteratorObserver(methodName: PropertyKey, target: any, shallow: boo
     onReadTargetKey(target, KEYCHANGES);
     for (const item of entries || readsValues ? target.entries() : target.keys()) {
       if (readsValues) {
-        onReadTargetKey(target, item[0]);
+        onReadTargetKey(target, rawKey(item[0]));
       }
       if (!entries) {
         yield reactiveValue(readsValues ? item[1] : item, shallow);
@@ -742,7 +762,7 @@ function makeForEachObserver(target: any, shallow: boolean) {
     onReadTargetKey(target, KEYCHANGES);
     target.forEach((value: any, key: any) => {
       if (readsValues) {
-        onReadTargetKey(target, key);
+        onReadTargetKey(target, rawKey(key));
       }
       callback.call(
         thisArg,
@@ -798,9 +818,10 @@ function delegateAndNotify(setterName: "set" | "add" | "delete", target: any, sh
         ? Set.prototype.add
         : (prototype as Map<any, any>).set;
   const collection = (shallow ? shallowProxies : deepProxies).get(target)!;
-  return (key: any, value: any) =>
+  return (item: any, value: any) =>
     batch(() => {
-      key = toRaw(key);
+      const raw = rawKey(item);
+      const key = raw === item ? raw : storedKey(target, item, raw);
       const hadKey = has.call(target, key);
       const before = get && hadKey ? get.call(target, key) : undefined;
       let ret;
@@ -814,14 +835,14 @@ function delegateAndNotify(setterName: "set" | "add" | "delete", target: any, sh
         const hasKey =
           completed && method === nativeMethod ? setterName !== "delete" : has.call(target, key);
         if (hadKey !== hasKey) {
-          onWriteKeyPresence(target, key);
+          onWriteKeyPresence(target, raw);
         }
         const after = get && hasKey ? get.call(target, key) : undefined;
         if (readsValue ? !Object.is(before, after) : hadKey !== hasKey) {
-          onWriteTargetKey(target, key);
+          onWriteTargetKey(target, raw);
         }
         if (!hasKey) {
-          releaseKey(target, key);
+          releaseKey(target, raw);
         }
       }
       return ret === target ? collection : ret;
@@ -836,9 +857,10 @@ function makeGetOrInsert(
   const prototype = target instanceof Map ? Map.prototype : WeakMap.prototype;
   const has = prototype.has;
   const get = prototype.get;
-  return (key: any, value: any) =>
+  return (item: any, value: any) =>
     batch(() => {
-      key = toRaw(key);
+      const raw = rawKey(item);
+      const key = raw === item ? raw : storedKey(target, item, raw);
       const hadKey = has.call(target, key);
       const before = hadKey ? get.call(target, key) : undefined;
       const argument =
@@ -855,12 +877,12 @@ function makeGetOrInsert(
       } finally {
         const hasKey = has.call(target, key);
         if (hadKey !== hasKey) {
-          onWriteKeyPresence(target, key);
+          onWriteKeyPresence(target, raw);
         }
         if (!Object.is(before, get.call(target, key))) {
-          onWriteTargetKey(target, key);
+          onWriteTargetKey(target, raw);
         }
-        onReadTargetKey(target, key);
+        onReadTargetKey(target, raw);
       }
       return reactiveValue(result, shallow);
     });
@@ -908,11 +930,12 @@ function makeClearNotifier(target: Map<any, any> | Set<any>) {
           for (const key of keys) {
             const hadKey = before.has(key);
             const hasKey = after.has(key);
-            if (hadKey !== hasKey) onWriteTargetKey(target, key, presenceAtoms);
+            const raw = rawKey(key);
+            if (hadKey !== hasKey) onWriteTargetKey(target, raw, presenceAtoms);
             if (isMap ? !Object.is(before.get(key), after.get(key)) : hadKey !== hasKey) {
-              onWriteTargetKey(target, key);
+              onWriteTargetKey(target, raw);
             }
-            if (!hasKey) releaseKey(target, key);
+            if (!hasKey) releaseKey(target, raw);
           }
         }
       });
@@ -923,9 +946,10 @@ function makeClearNotifier(target: Map<any, any> | Set<any>) {
       Reflect.apply(clear, target, []);
       if (nonempty) onWriteTargetKey(target, KEYCHANGES);
       for (const key of keys) {
-        onWriteTargetKey(target, key, presenceAtoms);
-        onWriteTargetKey(target, key);
-        releaseKey(target, key);
+        const raw = rawKey(key);
+        onWriteTargetKey(target, raw, presenceAtoms);
+        onWriteTargetKey(target, raw);
+        releaseKey(target, raw);
       }
     });
   };

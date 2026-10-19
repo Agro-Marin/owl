@@ -165,7 +165,10 @@ true })` creates an effect owned by nothing. When a computed and an effect
   `getOrInsertComputed`) read and notify their entry through the proxy,
   keeping the same raw/deep and shallow value rules as `get` and `set`.
 - **A shallow proxy** (`signal.Array`, `signal.Object`) keeps a proxy written
-  into it, as shallow Maps and Sets did.
+  into it, as a shallow Map keeps a proxy value. A Set member and a Map key are
+  stored raw by every kind, as upstream; a collection that already holds a
+  proxy (built before it was wrapped) finds it, deletes it and notifies its
+  readers through it.
 - **`obj.hasOwnProperty(k)` through a proxy subscribes to the presence of
   `k`**, as `in` does. `Object.defineProperty` stays untracked, as upstream
   (Odoo's web_studio defines a label getter on a proxied field inside a
