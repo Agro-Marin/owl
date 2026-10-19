@@ -378,6 +378,10 @@ plugins: [] })` rendered asynchronously); a resource-driven start belongs to
 - **`.passive` with `.prevent` throws** when the template compiles; the
   modifier mask also carries `.capture`, `.passive` and `.synthetic`, the one
   parse every listener reads.
+- **A prefixed attribute** (`xml:lang`, `xlink:href`, `xmlns:xlink`) is given
+  its namespace in the block string, so it keeps it in a block of its own and
+  the template compiles under JSDOM too (the standalone precompiler). A
+  prefixed element name (`<s:Envelope>`) still does not compile there.
 - **`t-tag` rejects prefixed and `block-` names**; a malformed block string and
   a `t-att` given a string (a `Markup` included) or a number throw an
   OwlError. A dynamic `t-call` key cannot collide across loop items, and

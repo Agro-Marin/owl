@@ -12,6 +12,24 @@ describe("properly support svg", () => {
     );
   });
 
+  test("prefixed attributes keep their namespace", () => {
+    const XLINK = "http://www.w3.org/1999/xlink";
+    const XML = "http://www.w3.org/XML/1998/namespace";
+    const template = `<svg xmlns:xlink="${XLINK}"><use xlink:href="#a"/><text xml:lang="fr">t</text></svg>`;
+    const fixture = makeTestFixture();
+    mount(renderToBdom(template), fixture);
+    expect(fixture.querySelector("use")!.getAttributeNS(XLINK, "href")).toBe("#a");
+    expect(fixture.querySelector("text")!.getAttributeNS(XML, "lang")).toBe("fr");
+  });
+
+  test("a prefixed attribute in a block of its own keeps its namespace", () => {
+    const XLINK = "http://www.w3.org/1999/xlink";
+    const fixture = makeTestFixture();
+    const template = `<svg xmlns:xlink="${XLINK}"><t t-if="c"><use xlink:href="#a"/></t></svg>`;
+    mount(renderToBdom(template, { c: true }), fixture);
+    expect(fixture.querySelector("use")!.getAttributeNS(XLINK, "href")).toBe("#a");
+  });
+
   test("add proper namespace to g tags", () => {
     const template = `<g><circle cx="50" cy="50" r="4" stroke="green" stroke-width="1" fill="yellow"/> </g>`;
     expect(renderToString(template)).toBe(

@@ -1,5 +1,23 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`properly support svg > a prefixed attribute in a block of its own keeps its namespace 1`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  
+  let block1 = createBlock(\`<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><block-child-0 xmlns=""/></svg>\`);
+  let block2 = createBlock(\`<use xmlns="http://www.w3.org/2000/svg" xmlns:ns1="http://www.w3.org/1999/xlink" ns1:href="#a"/>\`);
+  
+  return function template(ctx, node, key = "") {
+    let b2;
+    if (ctx['c']) {
+      b2 = block2();
+    }
+    return block1([], [b2]);
+  }
+}"
+`;
+
 exports[`properly support svg > a prefixed t-att name is set and removed in its namespace 1`] = `
 "function anonymous(app, bdom, helpers
 ) {
@@ -75,6 +93,19 @@ exports[`properly support svg > namespace to svg tags added even if already in s
   let { text, createBlock, list, multi, html, toggler } = bdom;
   
   let block1 = createBlock(\`<svg xmlns="http://www.w3.org/2000/svg"><svg/></svg>\`);
+  
+  return function template(ctx, node, key = "") {
+    return block1();
+  }
+}"
+`;
+
+exports[`properly support svg > prefixed attributes keep their namespace 1`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  
+  let block1 = createBlock(\`<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><use xlink:href="#a"/><text xml:lang="fr">t</text></svg>\`);
   
   return function template(ctx, node, key = "") {
     return block1();

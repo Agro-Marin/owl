@@ -81,6 +81,12 @@ function makeXmlDocument(): Document {
 const LITERAL_RE =
   /^(?:'[^'\\]*'|"[^"\\]*"|`(?:[^`\\]|\\.)*`|-?\d[\d.e+-]*|true|false|null|undefined|\{.*\})$/s;
 
+const ATTRIBUTE_NAMESPACES = new Map([
+  ["xml", "http://www.w3.org/XML/1998/namespace"],
+  ["xlink", "http://www.w3.org/1999/xlink"],
+  ["xmlns", "http://www.w3.org/2000/xmlns/"],
+]);
+
 function isProp(tag: string, key: string): boolean {
   switch (tag) {
     case "input":
@@ -962,7 +968,14 @@ export class CodeGenerator {
       ? xmlDoc.createElementNS(nameSpace, ast.tag)
       : xmlDoc.createElement(ast.tag);
     for (const [attr, val] of Object.entries(attrs)) {
-      if (!(attr === "class" && val === "")) {
+      if (attr === "class" && val === "") {
+        continue;
+      }
+      const colon = attr.indexOf(":");
+      const attrNS = colon > 0 ? ATTRIBUTE_NAMESPACES.get(attr.slice(0, colon)) : undefined;
+      if (attrNS) {
+        dom.setAttributeNS(attrNS, attr, val);
+      } else {
         dom.setAttribute(attr, val);
       }
     }
