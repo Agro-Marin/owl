@@ -146,8 +146,10 @@ true })` creates an effect owned by nothing. When a computed and an effect
   cascade the dispose throws after releasing everything, and in bulk the
   error goes to the flush or to `reportError`.
 - **An effect its own cleanup disposes does not run again**, one its own run
-  disposes keeps no subscription (also when the run then throws), and an
-  effect keeps only a returned function as its cleanup.
+  disposes keeps no subscription (also when the run then throws: an error
+  dropping its sources or releasing it goes to `Promise.reject`, the run's
+  own error is thrown), and an effect keeps only a returned function as its
+  cleanup.
 - **A selector** notifies both keys of a change in one batch (a reader that
   throws no longer starves the other key), rethrows its source's error for
   every key and re-runs its readers on recovery, and follows its source only

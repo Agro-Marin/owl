@@ -49,20 +49,14 @@ function createEffect<T>(fn: () => T, immediate: boolean, options?: EffectOption
         result = fn();
       } catch (error) {
         if (disposed) {
-          removeSources(computation);
-          try {
-            runUnowned(release, computation);
-          } catch (releaseError) {
-            Promise.reject(releaseError);
-          }
+          detach(computation, false);
         }
         throw error;
       }
       const cleanup = typeof result === "function" ? result : undefined;
       if (disposed) {
         computation.value = cleanup;
-        removeSources(computation);
-        runUnowned(release, computation);
+        detach(computation, true);
         return undefined;
       }
       if (failure) {
@@ -119,6 +113,28 @@ export function adopt(dispose: () => void): ComputationAtom | undefined {
     (owner.owned ??= new Set()).add(dispose);
   }
   return owner;
+}
+
+function detach(effect: ComputationAtom, throwFirst: boolean) {
+  let errors: unknown[] | null = null;
+  try {
+    removeSources(effect);
+  } catch (error) {
+    (errors ||= []).push(error);
+  }
+  try {
+    runUnowned(release, effect);
+  } catch (error) {
+    (errors ||= []).push(error);
+  }
+  if (errors) {
+    for (let i = throwFirst ? 1 : 0; i < errors.length; i++) {
+      Promise.reject(errors[i]);
+    }
+    if (throwFirst) {
+      throw errors[0];
+    }
+  }
 }
 
 function release(effect: ComputationAtom) {

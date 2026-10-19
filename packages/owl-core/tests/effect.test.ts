@@ -903,6 +903,35 @@ describe("disposed by its own run", () => {
     await waitSchedulerThenMicroTick();
     expect(runs).toBe(2);
   });
+
+  test("an effect that disposes itself and then throws keeps its error when dropping a source throws", async () => {
+    const rejections = captureUnhandledRejections();
+    const go = signal(false);
+    const t = signal(0);
+    const c = computed(
+      () => {
+        effect(() => () => {
+          throw new Error("inner cleanup");
+        });
+        return 1;
+      },
+      { detached: true }
+    );
+    const created: number[] = [];
+    const stop: () => void = immediateEffect(() => {
+      if (go()) {
+        stop();
+        c();
+        effect(() => created.push(t()));
+        throw new Error("run error");
+      }
+    });
+    expect(() => go.set(true)).toThrow("run error");
+    expect(await rejections()).toEqual(["Error: inner cleanup"]);
+    t.set(1);
+    await waitSchedulerThenMicroTick();
+    expect(created).toEqual([0]);
+  });
 });
 
 describe("returned value", () => {
