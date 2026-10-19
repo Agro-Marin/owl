@@ -52,8 +52,8 @@ the order may matter. For instance `t-on-click.prevent.self` will prevent all
 clicks while `t-on-click.self.prevent` will only prevent clicks on the element
 itself.
 
-Combining `.passive` with `.prevent` is contradictory: the browser will ignore
-`preventDefault()` calls in a passive listener and log a console warning.
+Combining `.passive` with `.prevent` is contradictory (a passive listener
+cannot prevent the default), so the template throws when it compiles.
 
 Finally, empty handlers are tolerated as they could be defined only to apply
 modifiers. For example,
@@ -114,3 +114,9 @@ dispatched by the browser on the parent element (a `div` in this case).
 
 On a component, `.self` runs the handler when the event targets one of the
 child's root elements itself, not an element inside one.
+
+The `t-on`s of nested components propagate as if each component were an
+element around its content: the inner component's handlers run before the
+outer one's (with `.capture`, the outer one's first), and `.stop` or
+`stopPropagation()` in one keeps the event from the components around it,
+`stopImmediatePropagation()` from every other handler.

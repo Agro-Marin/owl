@@ -513,6 +513,13 @@ describe("t-on", () => {
       expect(() => mountToFixture(template, owner)).toThrow("Unknown event modifier");
     });
 
+    test("t-on crashes when a passive handler prevents the default", async () => {
+      const template = `<div t-on-touchmove.passive.prevent="onMove" />`;
+      expect(() => mountToFixture(template, { onMove() {} })).toThrow(
+        "a passive listener cannot prevent the default"
+      );
+    });
+
     test("t-on combined with t-out", async () => {
       expect.assertions(3);
       const template = `<div><button t-on-click="onClick" t-out="html"/></div>`;

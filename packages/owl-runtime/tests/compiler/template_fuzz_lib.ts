@@ -161,7 +161,10 @@ export function generator(random: () => number, interactive = false) {
     const values = [...env.locals, ...env.vars.filter((v) => !v.body).map((v) => v.name)];
     const count = random() < 0.5 ? 0 : 1 + Math.floor(random() * 3);
     for (let i = 0; i < count; i++) {
-      const mods = MODIFIERS.filter(([, p]) => random() < p).map(([m]) => m);
+      let mods = MODIFIERS.filter(([, p]) => random() < p).map(([m]) => m);
+      if (mods.includes("passive")) {
+        mods = mods.filter((m) => m !== "prevent");
+      }
       for (let j = mods.length - 1; j > 0; j--) {
         const k = Math.floor(random() * (j + 1));
         [mods[j], mods[k]] = [mods[k], mods[j]];

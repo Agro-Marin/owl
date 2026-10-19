@@ -332,12 +332,19 @@ plugins: [] })` rendered asynchronously); a resource-driven start belongs to
   tree, with the target a native listener there would see (capture handlers
   inside a shadow root, closed ones included, run for composed events). The
   handlers of one event and phase, passive or not, are replayed in one pass,
-  in path order, up to a stop; a passive one cannot prevent the default.
+  in path order, up to a stop; a passive one cannot prevent the default. A
+  root that was garbage-collected is dropped, and with none left the events
+  of the document skip the per-root replay range again.
 - **Every component `t-on` on a parent element shares one listener per kind**
-  (event name, capture, passive, synthetic): a nested component's handler runs
-  before the enclosing one's, whatever site or render made each, as the event
-  bubbles; a native listener on that parent runs before or after all of them,
-  not between. `t-on-*.self` on a component means the event targets one of its
+  (event name, capture, synthetic), made once per kind and kept on no property
+  of the parent; it is passive while every handler of that kind on that parent
+  is (a passive one's `preventDefault` is ignored otherwise). The catchers run
+  as nested elements would, whatever site or render made each: a nested
+  component's handler before the enclosing one's as the event bubbles, the
+  enclosing one's first for `.capture`; a stop in one skips the ones around it,
+  `stopImmediatePropagation()` every other (upstream walked the catchers inside
+  out in both phases and never stopped). A native listener on that parent runs
+  before or after all of them, not between. `t-on-*.self` on a component means the event targets one of its
   root elements.
 - **A `t-set` body given to an attribute, interpolation, property or `t-att`
   is its string taken during the render** (`attrValue` / `attrsValue`), so the
@@ -345,6 +352,9 @@ plugins: [] })` rendered asynchronously); a resource-driven start belongs to
 - **`String()` of a `t-set` body** throws when the body holds a component
   (which it would create and never mount); a text node stringifies to its text,
   a bigint to its digits (`0n` included), a symbol to its description.
+- **`.passive` with `.prevent` throws** when the template compiles; the
+  modifier mask also carries `.capture`, `.passive` and `.synthetic`, the one
+  parse every listener reads.
 - **`t-tag` rejects prefixed and `block-` names**; a malformed block string and
   a `t-att` given a string (a `Markup` included) or a number throw an
   OwlError. A dynamic `t-call` key cannot collide across loop items, and

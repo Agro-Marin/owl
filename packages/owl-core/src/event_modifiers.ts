@@ -6,9 +6,18 @@ export const EventModifier = {
   SELF: 4,
   PREVENT: 8,
   STOP: 16,
+  CAPTURE: 32,
+  PASSIVE: 64,
+  SYNTHETIC: 128,
 } as const;
 
-const LISTENER_MODIFIERS = ["capture", "passive", "synthetic"];
+export const HANDLER_MODIFIERS = 31;
+
+const LISTENER_MODIFIERS: { [m: string]: number } = {
+  capture: EventModifier.CAPTURE,
+  passive: EventModifier.PASSIVE,
+  synthetic: EventModifier.SYNTHETIC,
+};
 
 export function eventModifierMask(key: string): number {
   const parts = key.split(".");
@@ -23,9 +32,16 @@ export function eventModifierMask(key: string): number {
       mask |= beforeSelf ? EventModifier.PREVENT_ANY : EventModifier.PREVENT;
     } else if (m === "stop") {
       mask |= beforeSelf ? EventModifier.STOP_ANY : EventModifier.STOP;
-    } else if (!LISTENER_MODIFIERS.includes(m)) {
+    } else if (Object.hasOwn(LISTENER_MODIFIERS, m)) {
+      mask |= LISTENER_MODIFIERS[m];
+    } else {
       throw new OwlError(`Unknown event modifier: '${m}'`);
     }
+  }
+  if (mask & EventModifier.PASSIVE && mask & (EventModifier.PREVENT | EventModifier.PREVENT_ANY)) {
+    throw new OwlError(
+      `Invalid event modifiers '${key}': a passive listener cannot prevent the default`
+    );
   }
   return mask;
 }

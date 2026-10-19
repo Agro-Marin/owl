@@ -1,4 +1,10 @@
-import { debug, debugLog, eventModifierMask } from "@odoo/owl-core";
+import {
+  debug,
+  debugLog,
+  EventModifier,
+  eventModifierMask,
+  HANDLER_MODIFIERS,
+} from "@odoo/owl-core";
 import { config, type HandlerFn } from "./config";
 
 export interface HandlerOwner {
@@ -19,10 +25,11 @@ interface EventHandlerCreator {
 
 export function createEventHandler(rawEvent: string, slot: HandlerSlot): EventHandlerCreator {
   const eventName = rawEvent.split(".")[0];
-  const capture = rawEvent.includes(".capture");
-  const passive = rawEvent.includes(".passive");
-  const mods = eventModifierMask(rawEvent);
-  if (rawEvent.includes(".synthetic")) {
+  const mask = eventModifierMask(rawEvent);
+  const capture = !!(mask & EventModifier.CAPTURE);
+  const passive = !!(mask & EventModifier.PASSIVE);
+  const mods = mask & HANDLER_MODIFIERS;
+  if (mask & EventModifier.SYNTHETIC) {
     return createSyntheticHandler(eventName, capture, passive, slot, mods);
   } else {
     return createElementHandler(eventName, capture, passive, slot, mods);
@@ -108,7 +115,7 @@ function createSyntheticHandler(
 function ignore() {}
 
 function replayedRange(path: EventTarget[], root: EventTarget | null): [number, number] {
-  if (!syntheticRootRefs.length) {
+  if (!syntheticRootRefs.length || !pruneRoots()) {
     return [0, path.length - 1];
   }
   let start = 0;
@@ -192,7 +199,24 @@ const syntheticEvents = new Map<string, SyntheticEvent>();
 const syntheticRoots = new WeakSet<Node>();
 const syntheticRootRefs: WeakRef<Node>[] = [];
 
+function pruneRoots(): number {
+  let live = 0;
+  for (let i = 0; i < syntheticRootRefs.length; i++) {
+    if (syntheticRootRefs[i].deref()) {
+      syntheticRootRefs[live++] = syntheticRootRefs[i];
+    }
+  }
+  if (live < syntheticRootRefs.length) {
+    if (debug.event) {
+      debugLog("event", `${syntheticRootRefs.length - live} collected synthetic roots dropped`);
+    }
+    syntheticRootRefs.length = live;
+  }
+  return live;
+}
+
 function roots(): Node[] {
+  pruneRoots();
   const result: Node[] = [document];
   for (const ref of syntheticRootRefs) {
     const root = ref.deref();
@@ -247,6 +271,7 @@ export function addSyntheticRoot(target: Node) {
     return;
   }
   syntheticRoots.add(root);
+  pruneRoots();
   syntheticRootRefs.push(new WeakRef(root));
   for (const syntheticEvent of syntheticEvents.values()) {
     listenOn(root, syntheticEvent);

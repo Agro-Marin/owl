@@ -190,53 +190,60 @@ function expectedLog(target: VEl, event: string): string {
     h.event === event &&
     h.mods.includes("capture") === capture &&
     h.mods.includes("synthetic") === synthetic;
-  const at = (i: number, capture: boolean, synthetic: boolean): [RHandler, boolean][] => {
-    const items: [RHandler, boolean][] = path[i].on
-      .filter((h) => matches(h, capture, synthetic))
-      .map((h) => [h, i === 0]);
+  const at = (i: number, capture: boolean, synthetic: boolean): boolean => {
+    let stop = run(
+      path[i].on.filter((h) => matches(h, capture, synthetic)).map((h) => [h, i === 0])
+    );
     if (i > 0) {
       const child = path[i - 1];
-      for (const catcher of child.catchers) {
-        for (const h of catcher) {
-          if (matches(h, capture, synthetic)) {
-            items.push([h, child === target]);
-          }
+      const nested = child.catchers.map((catcher) =>
+        catcher
+          .filter((h) => matches(h, capture, synthetic))
+          .map((h): [RHandler, boolean] => [h, child === target])
+      );
+      if (capture) {
+        nested.reverse();
+      }
+      for (const items of nested) {
+        if (run(items)) {
+          stop = true;
+          break;
         }
       }
     }
-    return items;
+    return stop;
   };
   const finish = (label: string) => {
     flush(label);
     return groups.join(" ") + (prevented ? " !" : "");
   };
   for (let i = top; i >= 0; i--) {
-    const stop = run(at(i, true, true));
+    const stop = at(i, true, true);
     flush(`${i}sc`);
     if (stop) {
       return finish("");
     }
   }
   for (let i = top; i >= 1; i--) {
-    const stop = run(at(i, true, false));
+    const stop = at(i, true, false);
     flush(`${i}c`);
     if (stop) {
       return finish("");
     }
   }
-  if (run(at(0, true, false)) || run(at(0, false, false))) {
+  if (at(0, true, false) || at(0, false, false)) {
     return finish("0t");
   }
   flush("0t");
   for (let i = 1; i <= top; i++) {
-    const stop = run(at(i, false, false));
+    const stop = at(i, false, false);
     flush(`${i}b`);
     if (stop) {
       return finish("");
     }
   }
   for (let i = 0; i <= top; i++) {
-    const stop = run(at(i, false, true));
+    const stop = at(i, false, true);
     flush(`${i}sb`);
     if (stop) {
       return finish("");
@@ -481,7 +488,7 @@ async function runInteractive(generated: Generated): Promise<string[]> {
   config.mainEventHandler = (fn, mods, ctx, ev, currentTarget, arg) => {
     const outer = world.listener === null;
     if (outer) {
-      world.listener = currentTarget;
+      world.listener = ev.currentTarget instanceof Element ? ev.currentTarget : currentTarget;
     }
     try {
       mainEventHandler(fn, mods, ctx, ev, currentTarget, arg);

@@ -597,3 +597,165 @@ describe("catchers of one site sharing a parent", () => {
     expect(lookups).toEqual([]);
   });
 });
+
+describe("nested catchers follow propagation", () => {
+  const span = createBlock("<span>x</span>");
+  const click = () => fixture.querySelector("span")!.click();
+  const nested = (outerKeys: string[], innerKeys: string[], inner: any[], outer: any[]) => {
+    const spec = (keys: string[]) => Object.fromEntries(keys.map((k, i) => [k, i]));
+    const outerSite = createCatcher(spec(outerKeys), outer);
+    const innerSite = createCatcher(spec(innerKeys), inner);
+    return outerSite(innerSite(span(), {}), {});
+  };
+
+  test("a .stop on the inner one stops the outer one", () => {
+    const calls: string[] = [];
+    mount(
+      nested(["click"], ["click.stop"], [() => calls.push("inner")], [() => calls.push("outer")]),
+      fixture
+    );
+    click();
+    expect(calls).toEqual(["inner"]);
+  });
+
+  test("stopPropagation in the inner one stops the outer one, not the inner one's others", () => {
+    const calls: string[] = [];
+    mount(
+      nested(
+        ["click"],
+        ["click", "click.prevent"],
+        [
+          (_: any, ev: Event) => (calls.push("inner"), ev.stopPropagation()),
+          () => calls.push("inner2"),
+        ],
+        [() => calls.push("outer")]
+      ),
+      fixture
+    );
+    click();
+    expect(calls).toEqual(["inner", "inner2"]);
+  });
+
+  test("stopImmediatePropagation in the inner one stops every other", () => {
+    const calls: string[] = [];
+    mount(
+      nested(
+        ["click"],
+        ["click", "click.prevent"],
+        [
+          (_: any, ev: Event) => (calls.push("inner"), ev.stopImmediatePropagation()),
+          () => calls.push("inner2"),
+        ],
+        [() => calls.push("outer")]
+      ),
+      fixture
+    );
+    let ownStop = false;
+    fixture.addEventListener("click", (ev) => {
+      ownStop = Object.hasOwn(ev, "stopImmediatePropagation");
+    });
+    const ev = new MouseEvent("click", { bubbles: true });
+    fixture.querySelector("span")!.dispatchEvent(ev);
+    expect(calls).toEqual(["inner"]);
+    expect(Object.hasOwn(ev, "stopImmediatePropagation")).toBe(false);
+    expect(ownStop).toBe(false);
+  });
+
+  test("capture handlers run outermost first, and a stop there stops the inner one", () => {
+    const calls: string[] = [];
+    mount(
+      nested(
+        ["click.capture"],
+        ["click.capture"],
+        [() => calls.push("inner-capture")],
+        [() => calls.push("outer-capture")]
+      ),
+      fixture
+    );
+    click();
+    expect(calls).toEqual(["outer-capture", "inner-capture"]);
+    fixture.textContent = "";
+    calls.length = 0;
+    mount(
+      nested(
+        ["click.capture.stop"],
+        ["click.capture"],
+        [() => calls.push("inner-capture")],
+        [() => calls.push("outer-capture")]
+      ),
+      fixture
+    );
+    click();
+    expect(calls).toEqual(["outer-capture"]);
+  });
+
+  test("a passive inner one and a non-passive outer one share one dispatch", () => {
+    const calls: string[] = [];
+    mount(
+      nested(
+        ["click"],
+        ["click.passive.stop"],
+        [(_: any, ev: Event) => (calls.push("inner"), ev.preventDefault())],
+        [() => calls.push("outer")]
+      ),
+      fixture
+    );
+    const ev = new MouseEvent("click", { bubbles: true, cancelable: true });
+    fixture.querySelector("span")!.dispatchEvent(ev);
+    expect(calls).toEqual(["inner"]);
+    expect(ev.defaultPrevented).toBe(false);
+  });
+
+  test("an event stopped before the catchers' listener still reaches them all", () => {
+    const calls: string[] = [];
+    fixture.addEventListener("click", (ev) => ev.stopPropagation());
+    mount(
+      nested(["click"], ["click"], [() => calls.push("inner")], [() => calls.push("outer")]),
+      fixture
+    );
+    click();
+    expect(calls).toEqual(["inner", "outer"]);
+  });
+
+  test("a stop in the inner one keeps the outer one out after a listener of the parent stopped", () => {
+    const calls: string[] = [];
+    fixture.addEventListener("click", (ev) => ev.stopPropagation());
+    mount(
+      nested(["click"], ["click.stop"], [() => calls.push("inner")], [() => calls.push("outer")]),
+      fixture
+    );
+    click();
+    expect(calls).toEqual(["inner"]);
+  });
+});
+
+test("one catcher site over many parents adds one listener function and no per-parent names", () => {
+  const li = createBlock("<li><block-child-0/></li>");
+  const span = createBlock("<span>x</span>");
+  const catcher = createCatcher({ click: 0, "click.synthetic": 1 }, [() => {}, () => {}]);
+  const listeners = new Set<any>();
+  const add = EventTarget.prototype.addEventListener;
+  EventTarget.prototype.addEventListener = function (this: any, name: string, l: any, o: any) {
+    if (this instanceof HTMLLIElement) {
+      listeners.add(l);
+    }
+    return add.call(this, name, l, o);
+  } as any;
+  try {
+    const items = [];
+    for (let i = 0; i < 50; i++) {
+      items.push(Object.assign(li([], [catcher(span(), {})]), { key: i }));
+    }
+    mount(list(items), fixture);
+  } finally {
+    EventTarget.prototype.addEventListener = add;
+  }
+  expect(listeners.size).toBe(1);
+  const names = new Set<string>();
+  for (const el of fixture.querySelectorAll("li")) {
+    for (const name of Object.keys(el)) {
+      names.add(name);
+    }
+  }
+  expect(names.size).toBeLessThanOrEqual(2);
+});

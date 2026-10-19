@@ -96,7 +96,7 @@ export {
 export { Registry } from "./registry";
 export { Resource } from "./resource";
 
-export { EventModifier, eventModifierMask } from "./event_modifiers";
+export { EventModifier, eventModifierMask, HANDLER_MODIFIERS } from "./event_modifiers";
 
 export { Plugin, PluginManager, startPlugins, type PluginConstructor } from "./plugin_manager";
 
