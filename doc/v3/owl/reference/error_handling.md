@@ -40,13 +40,24 @@ There are important things to know:
 - an `onMounted` or `onPatched` callback that throws does not keep the other
   components committed with it from their own: once the error is handled, their
   `onMounted` (or `onPatched`) still runs. Only the failing component and its
-  ancestors in that render wait, without `onMounted`, for the error handler to
-  re-render them, and get both their `onMounted` and, later, their
-  `onWillUnmount` when the recovering render is committed; a component that
-  never gets its `onMounted` gets no `onWillUnmount` either. A component the
-  recovering render removes is destroyed with it, and is set up anew if a
-  later render shows it again. An error nobody handles destroys the
-  application before any other callback runs.
+  ancestors in that render wait: the DOM is already updated, so that render is
+  never committed again, and each of them gets the `onMounted` (and only then
+  its `onWillUnmount`) or `onPatched` it is owed from the next commit that
+  renders it or a component below it, such as the error handler's re-render. A
+  component still owed its `onMounted` gets no `onWillPatch` / `onPatched`
+  before it; one that never gets its `onMounted` gets no `onWillUnmount`
+  either. A component the recovering render removes is destroyed with it, and
+  is set up anew if a later render shows it again. An error nobody handles
+  destroys the application before any other callback runs.
+
+- an `onWillUnmount` callback that throws while a render removes its component
+  does not stop the update: the DOM is patched, then the error is handled,
+  starting from the removed component, before the `onMounted` of the
+  components that render mounted.
+
+- a first mount that throws half way (a ref callback, say) leaves nothing of
+  that root in the target; the handler's re-render mounts it afresh, setting
+  up the components the failed attempt had created again.
 
 ## Example
 

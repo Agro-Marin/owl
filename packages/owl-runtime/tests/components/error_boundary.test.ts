@@ -4,7 +4,11 @@ import {
   ErrorBoundary,
   effect,
   onError,
+  onPatched,
+  onWillPatch,
   onWillStart,
+  props,
+  proxy,
   signal,
   xml,
 } from "../../src";
@@ -263,4 +267,39 @@ test("an error of the fallback goes to the boundary's parent, rendered once", as
   expect(fallbackRenders).toBe(1);
   expect(caught).toEqual(["fallback"]);
   expect(fixture.innerHTML).toBe("<div></div>");
+});
+
+test("an onPatched error a boundary catches runs each ancestor's onWillPatch and onPatched once", async () => {
+  const log: string[] = [];
+  class Child extends Component {
+    static template = xml`<p t-out="this.props.n"/>`;
+    props = props();
+    setup() {
+      onPatched(() => {
+        log.push("Child:patched");
+        if (this.props.n === 2) {
+          throw new Error("boom");
+        }
+      });
+    }
+  }
+  class Root extends Component {
+    static template = xml`
+      <div><t t-out="this.state.n"/><ErrorBoundary>
+        <t t-set-slot="fallback">fallback</t>
+        <Child n="this.state.n"/>
+      </ErrorBoundary></div>`;
+    static components = { ErrorBoundary, Child };
+    state = proxy({ n: 1 });
+    setup() {
+      onWillPatch(() => log.push("Root:willPatch"));
+      onPatched(() => log.push("Root:patched"));
+    }
+  }
+  const root = await mount(Root);
+  root.state.n = 2;
+  await nextTick();
+  await nextTick();
+  expect(fixture.innerHTML).toBe("<div>2fallback</div>");
+  expect(log).toEqual(["Root:willPatch", "Child:patched", "Root:patched"]);
 });

@@ -1,6 +1,6 @@
 import { debug, debugLog } from "@odoo/owl-core";
 import { fibersInError } from "./error_handling";
-import { APPLIED_TO_DOM, Fiber, RootFiber } from "./fibers";
+import { APPLIED_TO_DOM, Fiber, renderMergedAlone, RootFiber } from "./fibers";
 
 function captureAnimationFrame(): Window["requestAnimationFrame"] {
   return typeof window === "undefined"
@@ -34,8 +34,15 @@ export class Scheduler {
     Scheduler.active.add(this);
   }
 
-  forget(fiber: RootFiber) {
-    if (this.tasks.delete(fiber)) {
+  forget(fiber: Fiber) {
+    const delayed = this.delayedRenders;
+    if (delayed.length) {
+      const i = delayed.indexOf(fiber);
+      if (i >= 0) {
+        delayed.splice(i, 1);
+      }
+    }
+    if (fiber.root === fiber && this.tasks.delete(fiber as RootFiber)) {
       if (debug.scheduler) {
         debugLog("scheduler", `drop ${fiber.node.componentName}: destroyed`);
       }
@@ -100,6 +107,9 @@ export class Scheduler {
           }
           this.tasks.delete(fiber);
           failed = true;
+          if (fiber.merged) {
+            renderMergedAlone(fiber);
+          }
           continue;
         }
         if (fiber.counter === 0) {

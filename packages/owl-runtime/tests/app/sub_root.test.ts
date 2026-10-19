@@ -1,6 +1,18 @@
-import { App, Component, onError, onMounted, onWillDestroy, proxy, signal, xml } from "../../src";
+import {
+  App,
+  Component,
+  onError,
+  onMounted,
+  onWillDestroy,
+  onWillUpdateProps,
+  props,
+  proxy,
+  signal,
+  xml,
+} from "../../src";
+import { createSubRoot } from "../../src/app";
 import { status } from "../../src/status";
-import { makeTestFixture, nextTick, snapshotEverything } from "../helpers";
+import { makeDeferred, makeTestFixture, nextTick, snapshotEverything } from "../helpers";
 
 let fixture: HTMLElement;
 
@@ -147,5 +159,40 @@ test("a sub-root error handler runs after the root component's own onError", asy
   await nextTick();
   expect(steps).toEqual(["own: boom"]);
   expect(fixture.innerHTML).toBe("");
+  app.destroy();
+});
+
+test("a sub-root destroyed while its render waits behind its host's pass is not kept by the scheduler", async () => {
+  const late = makeDeferred();
+  class Child extends Component {
+    static template = xml`<i t-out="this.props.v"/>`;
+    props = props();
+    setup() {
+      onWillUpdateProps(() => late);
+    }
+  }
+  class Host extends Component {
+    static template = xml`<div><Child v="this.state.v"/></div>`;
+    static components = { Child };
+    state = proxy({ v: 1 });
+  }
+  class Dialog extends Component {
+    static template = xml`<p t-out="this.state.n"/>`;
+    state = proxy({ n: 1 });
+  }
+  const app = new App();
+  const host = await app.createRoot(Host).mount(fixture);
+  const subRoot = createSubRoot(app, Dialog, { host: host.__owl__ });
+  const dialog = await subRoot.mount(fixture);
+  host.state.v = 2;
+  await nextTick();
+  dialog.state.n = 2;
+  await nextTick();
+  expect(app.scheduler.delayedRenders.map((f) => f.node.componentName)).toEqual(["Dialog"]);
+  subRoot.destroy();
+  expect(app.scheduler.delayedRenders.length).toBe(0);
+  late.resolve();
+  await nextTick();
+  expect(fixture.innerHTML).toBe("<div><i>2</i></div>");
   app.destroy();
 });

@@ -1,7 +1,7 @@
 import { debug, debugLog, isAbortError } from "@odoo/owl-core";
 import type { ComponentNode } from "../component_node";
 import { STATUS } from "../status";
-import type { Fiber } from "./fibers";
+import { APPLIED_TO_DOM, type Fiber } from "./fibers";
 
 export const fibersInError: WeakMap<Fiber, any> = new WeakMap();
 export const nodeErrorHandlers: WeakMap<
@@ -60,8 +60,13 @@ export function handleError(params: ErrorParams) {
   if (fiber) {
     let current: Fiber | null = fiber;
     do {
-      if (current.node.fiber === null) {
-        current.node.fiber = current;
+      const node = current.node;
+      if (node.fiber === null) {
+        if (current.renderState & APPLIED_TO_DOM) {
+          node.forceNextRender = true;
+        } else {
+          node.fiber = current;
+        }
       }
       fibersInError.set(current, error);
       current = current.parent;

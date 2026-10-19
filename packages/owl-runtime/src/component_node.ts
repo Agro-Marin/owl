@@ -18,7 +18,7 @@ import type { App } from "./app";
 import { BDom, RefCallback, VNode } from "./blockdom";
 import { Component, ComponentConstructor } from "./component";
 import { fibersInError, handleError, handleHookRejection } from "./rendering/error_handling";
-import { APPLIED_TO_DOM, Fiber, FiberPhase, makeRootFiber, RootFiber } from "./rendering/fibers";
+import { APPLIED_TO_DOM, Fiber, FiberPhase, forgetOwed, makeRootFiber } from "./rendering/fibers";
 import type { MemoSite } from "./rendering/memo";
 import { STATUS } from "./status";
 
@@ -185,6 +185,13 @@ export class ComponentNode extends Scope<App> implements VNode<ComponentNode> {
         if (deep) {
           current.deep = deep;
         }
+        const root = current.root!;
+        if (root !== current && this.bdom) {
+          const merged = (root.merged ||= []);
+          if (!merged.includes(current)) {
+            merged.push(current);
+          }
+        }
         return;
       }
       deep = deep || current.deep;
@@ -193,6 +200,10 @@ export class ComponentNode extends Scope<App> implements VNode<ComponentNode> {
     }
 
     const fiber = makeRootFiber(this);
+    if (!fiber) {
+      current!.deep ||= deep;
+      return;
+    }
     fiber.deep = deep;
     this.fiber = fiber;
 
@@ -227,8 +238,8 @@ export class ComponentNode extends Scope<App> implements VNode<ComponentNode> {
     const component = this.component;
     const fiber = this.fiber;
     this.fiber = null;
-    if (fiber !== null && fiber.root === fiber) {
-      this.app.scheduler.forget(fiber as RootFiber);
+    if (fiber !== null) {
+      this.app.scheduler.forget(fiber);
     }
     let failure: { error: unknown } | null = null;
     if (debug.lifecycle) {
@@ -246,6 +257,7 @@ export class ComponentNode extends Scope<App> implements VNode<ComponentNode> {
         }
       }
     }
+    forgetOwed(this);
     if (removalDepth && this.trackedRefs) {
       (removed ||= []).push(this);
     }
@@ -257,12 +269,10 @@ export class ComponentNode extends Scope<App> implements VNode<ComponentNode> {
       }
     }
     for (const child of fiber?.childrenMap?.values() || []) {
-      if (child.status === STATUS.NEW) {
-        try {
-          child._destroy();
-        } catch (error) {
-          failure ||= { error };
-        }
+      try {
+        child._destroy();
+      } catch (error) {
+        failure ||= { error };
       }
     }
     this.finalize((e) => {
@@ -303,20 +313,6 @@ export class ComponentNode extends Scope<App> implements VNode<ComponentNode> {
         ref.set(null);
         refs.delete(ref);
       }
-    }
-  }
-
-  updateDom() {
-    if (!this.fiber) {
-      return;
-    }
-    if (this.bdom === this.fiber!.bdom) {
-      for (const child of this.childMap?.values() || []) {
-        child.updateDom();
-      }
-      this.fiber = null;
-    } else {
-      this._patch(true);
     }
   }
 
@@ -371,6 +367,11 @@ export class ComponentNode extends Scope<App> implements VNode<ComponentNode> {
     removalDepth++;
     try {
       this.bdom!.patch(fiber.bdom!, withBeforeRemove);
+    } catch (e) {
+      if (removalDepth === 1 && removalErrors) {
+        reportRemovalErrors();
+      }
+      throw e;
     } finally {
       removalDepth--;
     }
@@ -378,10 +379,20 @@ export class ComponentNode extends Scope<App> implements VNode<ComponentNode> {
     sweepRemovedRefs();
     fiber.renderState |= APPLIED_TO_DOM;
     this.fiber = null;
+    if (removalDepth === 0 && removalErrors) {
+      reportRemovalErrors();
+    }
   }
 
   beforeRemove() {
-    this._destroy();
+    try {
+      this._destroy();
+    } catch (error) {
+      if (debug.error) {
+        debugLog("error", `${this.componentName}: removal error held until the patch is done`);
+      }
+      (removalErrors ||= []).push({ node: this, error });
+    }
   }
 
   remove() {
@@ -391,6 +402,15 @@ export class ComponentNode extends Scope<App> implements VNode<ComponentNode> {
 
 let removalDepth = 0;
 let removed: ComponentNode[] | null = null;
+let removalErrors: { node: ComponentNode; error: unknown }[] | null = null;
+
+function reportRemovalErrors() {
+  const errors = removalErrors!;
+  removalErrors = null;
+  for (const params of errors) {
+    handleError(params);
+  }
+}
 
 function sweepRemovedRefs() {
   if (removalDepth === 0 && removed) {

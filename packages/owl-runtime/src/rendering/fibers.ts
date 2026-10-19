@@ -27,7 +27,7 @@ export function makeChildFiber(node: ComponentNode, parent: Fiber): Fiber {
   return fiber;
 }
 
-export function makeRootFiber(node: ComponentNode): Fiber {
+export function makeRootFiber(node: ComponentNode): Fiber | null {
   const current = node.fiber;
   if (current) {
     const root = current.root!;
@@ -39,6 +39,15 @@ export function makeRootFiber(node: ComponentNode): Fiber {
     ) {
       return recycleFiber(node, current, root);
     }
+    if (!node.bdom) {
+      if (debug.fiber) {
+        debugLog(
+          "fiber",
+          `keep ${node.componentName} in ${root.node.componentName}'s failed pass: never mounted`
+        );
+      }
+      return null;
+    }
     if (debug.fiber) {
       debugLog(
         "fiber",
@@ -46,6 +55,7 @@ export function makeRootFiber(node: ComponentNode): Fiber {
       );
     }
     root.counter -= cancelFibers(current.children);
+    current.children = [];
     current.root = null;
   }
   const fiber = new RootFiber(node, null);
@@ -59,8 +69,33 @@ export function makeRootFiber(node: ComponentNode): Fiber {
   return fiber;
 }
 
+export function renderMergedAlone(root: RootFiber) {
+  const merged = root.merged!;
+  let waiting: Fiber[] | null = null;
+  for (const fiber of merged) {
+    if (fiber.node.fiber !== fiber || fiber.root !== root) {
+      continue;
+    }
+    if (fiber.phase === FiberPhase.NEW) {
+      (waiting ||= []).push(fiber);
+      continue;
+    }
+    if (debug.fiber) {
+      debugLog(
+        "fiber",
+        `${fiber.node.componentName} asked to render during ${root.node.componentName}'s failed pass`
+      );
+    }
+    fiber.node.render(fiber.deep);
+  }
+  root.merged = waiting;
+}
+
 function recycleFiber(node: ComponentNode, current: Fiber, root: RootFiber): Fiber {
   current.renderState += 2;
+  if (current === root) {
+    root.merged = null;
+  }
   if (debug.fiber) {
     debugLog("fiber", `recycle ${node.componentName} (${current.renderState >> 1})`);
   }
@@ -132,7 +167,9 @@ function cancelFibers(fibers: Fiber[]): number {
     if (node.status === STATUS.NEW) {
       node._destroy();
     }
-    node.fiber = null;
+    if (node.fiber === fiber) {
+      node.fiber = null;
+    }
     if (fiber.phase !== FiberPhase.NEW) {
       node.forceNextRender = true;
     } else {
@@ -244,6 +281,9 @@ export class Fiber {
           `render ${node.componentName}${start < 0 ? "" : ` in ${(debugNow() - start).toFixed(2)} ms`}, ${newCounter} left in ${root.node.componentName}'s pass`
         );
       }
+      if (root.merged && fibersInError.has(root)) {
+        renderMergedAlone(root);
+      }
       if (newCounter === 0) {
         if (fibersInError.has(root)) {
           scheduler.requestFrame();
@@ -258,6 +298,7 @@ export class Fiber {
 export class RootFiber extends Fiber {
   counter: number = 1;
   failed: Set<Fiber> | null = null;
+  merged: Fiber[] | null = null;
 
   willPatch: Fiber[] = [];
   patched: Fiber[] = [];
@@ -277,7 +318,7 @@ export class RootFiber extends Fiber {
     try {
       for (current of this.willPatch) {
         let node = current.node;
-        if (node.fiber === current) {
+        if (node.fiber === current && !(owedCount && owedMounted.has(node))) {
           const component = node.component;
           for (let cb of node.willPatch) {
             cb.call(component);
@@ -304,19 +345,88 @@ export class RootFiber extends Fiber {
       return;
     }
 
-    const failed = callCommitHooks(this.mounted, "mounted");
-    if (failed !== null) {
-      callCommitHooks(this.patched, "patched", failed);
-    }
+    commitHooks(this);
   }
 }
 
 const owedMounted = new WeakMap<ComponentNode, Function[]>();
+const owedPatched = new WeakSet<ComponentNode>();
+let owedCount = 0;
 
 function oweMounted(node: ComponentNode) {
   if (!owedMounted.has(node)) {
     owedMounted.set(node, node.willUnmount);
     node.willUnmount = [];
+    owedCount++;
+  }
+}
+
+function owePatched(node: ComponentNode) {
+  if (!owedPatched.has(node)) {
+    owedPatched.add(node);
+    owedCount++;
+  }
+}
+
+function settleOwed(node: ComponentNode, hook: "mounted" | "patched"): boolean {
+  if (hook === "patched") {
+    if (owedPatched.delete(node)) {
+      owedCount--;
+      return true;
+    }
+    return false;
+  }
+  const held = owedMounted.get(node);
+  if (held) {
+    owedMounted.delete(node);
+    node.willUnmount = held;
+    owedCount--;
+    return true;
+  }
+  return false;
+}
+
+export function forgetOwed(node: ComponentNode) {
+  if (owedCount) {
+    if (owedMounted.delete(node)) {
+      owedCount--;
+    }
+    if (owedPatched.delete(node)) {
+      owedCount--;
+    }
+  }
+}
+
+function payOwedAbove(node: ComponentNode) {
+  if (!owedCount) {
+    return;
+  }
+  const owing: ComponentNode[] = [];
+  for (let p = node.parent; p; p = p.parent) {
+    if (owedMounted.has(p) || owedPatched.has(p)) {
+      owing.push(p);
+    }
+  }
+  for (const hook of ["mounted", "patched"] as const) {
+    for (const p of owing) {
+      if (!settleOwed(p, hook)) {
+        continue;
+      }
+      if (debug.lifecycle && p[hook].length) {
+        debugLog(
+          "lifecycle",
+          `${hook} ${p.componentName}: ${p[hook].length} hook(s) owed since a failed commit`
+        );
+      }
+      try {
+        for (let cb of p[hook]) {
+          cb();
+        }
+      } catch (e) {
+        handleError({ node: p, error: e });
+        return;
+      }
+    }
   }
 }
 
@@ -333,32 +443,49 @@ function queueOwedMounted(fiber: Fiber) {
   }
 }
 
+function commitHooks(root: RootFiber) {
+  const { mounted, patched } = root;
+  if (owedCount) {
+    if (owedMounted.has(root.node) && !mounted.includes(root)) {
+      mounted.unshift(root);
+    }
+    if (mounted.length && patched.length) {
+      const mounting = new Set(mounted.map((f) => f.node));
+      root.patched = patched.filter((f) => !mounting.has(f.node));
+    }
+  }
+  const failed = callCommitHooks(mounted, "mounted");
+  if (failed === null) {
+    return;
+  }
+  if (callCommitHooks(root.patched, "patched", failed) === false) {
+    payOwedAbove(root.node);
+  }
+}
+
 function callCommitHooks(
   fibers: Fiber[],
   hook: "mounted" | "patched",
   failed = false
 ): boolean | null {
   const mounting = hook === "mounted";
-  let skipped: Fiber[] | null = failed ? [] : null;
   let current: Fiber | undefined;
   while ((current = fibers.pop())) {
     const node = current.node;
-    if (skipped && (!(current.renderState & APPLIED_TO_DOM) || fibersInError.has(current))) {
+    const applied = current.renderState & APPLIED_TO_DOM;
+    if (failed && (!applied || fibersInError.has(current))) {
       if (mounting) {
         oweMounted(node);
+      } else if (applied) {
+        owePatched(node);
       }
-      skipped.push(current);
       continue;
     }
-    if (!(current.renderState & APPLIED_TO_DOM) || node.status === STATUS.DESTROYED) {
+    if (!applied || node.status === STATUS.DESTROYED) {
       continue;
     }
-    if (mounting) {
-      const held = owedMounted.get(node);
-      if (held) {
-        owedMounted.delete(node);
-        node.willUnmount = held;
-      }
+    if (owedCount) {
+      settleOwed(node, hook);
     }
     if (debug.lifecycle && node[hook].length) {
       debugLog("lifecycle", `${hook} ${node.componentName}: ${node[hook].length} hook(s)`);
@@ -368,7 +495,7 @@ function callCommitHooks(
         cb();
       }
     } catch (e) {
-      skipped ||= [];
+      failed = true;
       const waiting = mounting ? fibers.slice() : [];
       const willUnmount = waiting.map((fiber) => fiber.node.willUnmount);
       for (let fiber of waiting) {
@@ -383,13 +510,7 @@ function callCommitHooks(
       }
     }
   }
-  if (!skipped) {
-    return false;
-  }
-  for (let i = skipped.length - 1; i >= 0; i--) {
-    fibers.push(skipped[i]);
-  }
-  return true;
+  return failed;
 }
 
 type Position = "first-child" | "last-child";
@@ -437,38 +558,42 @@ export class MountFiber extends RootFiber {
   }
 
   private _mount() {
-    let current: Fiber | undefined = this;
     if (debug.fiber) {
       debugLog("fiber", `mount ${this.node.componentName}`, this.target);
     }
+    const node = this.node;
+    const target = this.target!;
+    let next: Node | null = null;
+    let prev: Node | null = null;
     try {
-      const node = this.node;
-      node.childMap = this.childrenMap;
-      (node.app.constructor as any).validateTarget(this.target!, {
+      (node.app.constructor as any).validateTarget(target, {
         attached: !this.allowDetached,
       });
-      if (node.bdom) {
-        node.updateDom();
-      } else {
-        node.bdom = this.bdom;
-        if (this.afterNode) {
-          mount(node.bdom!, this.target!, this.afterNode);
-        } else if (this.position === "last-child" || this.target!.childNodes.length === 0) {
-          mount(node.bdom!, this.target!);
-        } else {
-          const firstChild = this.target!.childNodes[0];
-          mount(node.bdom!, this.target!, firstChild);
-        }
-      }
-
+      next = this.afterNode || (this.position === "last-child" ? null : target.firstChild);
+      prev = next ? next.previousSibling : target.lastChild;
+      node.childMap = this.childrenMap;
+      node.bdom = this.bdom;
+      mount(node.bdom!, target, next);
       node.fiber = null;
-
       node.status = STATUS.MOUNTED;
       this.renderState |= APPLIED_TO_DOM;
     } catch (e) {
-      handleError({ fiber: current as Fiber, error: e });
+      if (node.bdom) {
+        node.bdom = null;
+        node.childMap = null;
+        let n: Node | null = prev ? prev.nextSibling : target.firstChild;
+        while (n && n !== next) {
+          const sibling: Node | null = n.nextSibling;
+          n.parentNode!.removeChild(n);
+          n = sibling;
+        }
+        for (const fiber of this.mounted) {
+          oweMounted(fiber.node);
+        }
+      }
+      handleError({ fiber: this, error: e });
       return;
     }
-    callCommitHooks(this.mounted, "mounted");
+    commitHooks(this);
   }
 }

@@ -4,7 +4,10 @@ import {
   mount,
   onError,
   onMounted,
+  onPatched,
   onWillDestroy,
+  onWillPatch,
+  onWillStart,
   onWillUnmount,
   onWillUpdateProps,
   props,
@@ -235,6 +238,129 @@ describe("a pass failed by one component, handled without a re-render", () => {
     expect(fixture.innerHTML).toBe("<div><a>2-7</a><b>ok</b></div>");
   });
 
+  test("a component the pass created, never mounted, waits for the pass instead of committing alone", async () => {
+    const shared = proxy({ n: 1 });
+    class C extends Component {
+      static template = xml`<c t-out="this.shared.n"/>`;
+      shared = shared;
+    }
+    class Parent extends Component {
+      static template = xml`<div><t t-if="this.state.on"><C/><Bad v="2"/></t></div>`;
+      static components = { C, Bad };
+      state = proxy({ on: false });
+      setup() {
+        onError((e) => log.push(e.message.slice(0, 30)));
+      }
+    }
+    const parent = await mount(Parent, fixture);
+    parent.state.on = true;
+    await nextTick();
+    shared.n = 2;
+    await nextTick();
+    await nextTick();
+    expect(log.length).toBe(1);
+    expect(fixture.innerHTML).toBe("<div></div>");
+    parent.state.on = false;
+    await nextTick();
+    shared.n = 3;
+    await nextTick();
+    expect(log.length).toBe(1);
+  });
+
+  test("a component rendering alone cancels the children it had in the pass once", async () => {
+    const pending: ReturnType<typeof makeDeferred>[] = [];
+    let setups = 0;
+    class D extends Component {
+      static template = xml`<d/>`;
+      setup() {
+        const id = ++setups;
+        const loaded = makeDeferred();
+        pending.push(loaded);
+        onWillStart(() => loaded);
+        onWillDestroy(() => log.push(`D${id}:willDestroy`));
+      }
+    }
+    class C extends Component {
+      static template = xml`<c><t t-out="this.props.v"/>-<t t-out="this.state.n"/><D t-if="this.props.v === 2"/></c>`;
+      static components = { D };
+      props = props();
+      state = proxy({ n: 0 });
+    }
+    class Parent extends Component {
+      static template = xml`<div><C v="this.state.v"/><Bad v="this.state.ok ? 1 : this.state.v"/></div>`;
+      static components = { C, Bad };
+      state = proxy({ v: 1, ok: false });
+      setup() {
+        onError((e) => log.push(e.message.slice(0, 30)));
+      }
+    }
+    const parent = await mount(Parent, fixture);
+    const c = Object.values(parent.__owl__.children)[0].component as C;
+    parent.state.v = 2;
+    await nextTick();
+    c.state.n = 1;
+    await nextTick();
+    parent.state.ok = true;
+    await nextTick();
+    expect(fixture.innerHTML).toBe("<div><c>1-0</c><b>ok</b></div>");
+    for (const loaded of pending) {
+      loaded.resolve();
+    }
+    await nextTick();
+    expect(fixture.innerHTML).toBe("<div><c>2-1<d></d></c><b>ok</b></div>");
+    expect(log.slice(1)).toEqual(["D1:willDestroy", "D2:willDestroy"]);
+    parent.__owl__.app.destroy();
+    expect(setups).toBe(3);
+    expect(log.slice(1)).toEqual(["D1:willDestroy", "D2:willDestroy", "D3:willDestroy"]);
+  });
+
+  test.each([
+    ["after", false],
+    ["before", true],
+  ])(
+    "a render it asks for while its onWillUpdateProps waits, %s the pass failed, renders on its own",
+    async (_, failLate) => {
+      const updated = makeDeferred();
+      const badUpdated = makeDeferred();
+      class Waiting extends Component {
+        static template = xml`<a><t t-out="this.props.v"/>-<t t-out="this.state.n"/></a>`;
+        props = props();
+        state = proxy({ n: 0 });
+        setup() {
+          onWillUpdateProps(() => updated);
+        }
+      }
+      class LateBad extends Bad {
+        setup() {
+          if (failLate) {
+            onWillUpdateProps(() => badUpdated);
+          }
+        }
+      }
+      class Parent extends Component {
+        static template = xml`<div><Waiting v="this.state.v"/><LateBad v="this.state.v"/></div>`;
+        static components = { Waiting, LateBad };
+        state = proxy({ v: 1 });
+        setup() {
+          onError((e) => log.push(e.message.slice(0, 30)));
+        }
+      }
+      const parent = await mount(Parent, fixture);
+      const waiting = Object.values(parent.__owl__.children)[0].component as Waiting;
+      parent.state.v = 2;
+      await nextTick();
+      waiting.state.n = 7;
+      await nextTick();
+      updated.resolve();
+      await nextTick();
+      badUpdated.resolve();
+      await nextTick();
+      await nextTick();
+      expect(log.length).toBe(1);
+      expect(fixture.innerHTML).toBe("<div><a>2-7</a><b>ok</b></div>");
+    }
+  );
+
   test("its own renders do not add up to a render loop", async () => {
     const parent = await mount(Parent, fixture);
     const a = Object.values(parent.__owl__.children)[0].component as A;
@@ -255,7 +381,7 @@ describe("a pass failed by one component, handled without a re-render", () => {
   });
 });
 
-test("a child a commit mounted before its patch threw gets onMounted, then onWillUnmount", async () => {
+test("an onWillUnmount error of a patch is reported before the onMounted of what it mounted", async () => {
   let throwOnce = true;
   class A extends Component {
     static template = xml`<a/>`;
@@ -334,4 +460,158 @@ test("an onMounted error does not drop a render of its component requested earli
   await nextTick();
   expect(fixture.innerHTML).toBe("<div><x>2</x><y></y></div>");
   expect(log).toEqual(["X mounted"]);
+});
+
+test("after an onPatched error handled without a re-render, a later commit below runs the owed onPatched", async () => {
+  let child: any;
+  let boom = true;
+  class Child extends Component {
+    static template = xml`<p><t t-out="this.props.n"/>-<t t-out="this.state.k"/></p>`;
+    props = props();
+    state = proxy({ k: 0 });
+    setup() {
+      child = this;
+      onWillPatch(() => log.push("Child:willPatch"));
+      onPatched(() => {
+        log.push("Child:patched");
+        if (boom) {
+          boom = false;
+          throw new Error("boom");
+        }
+      });
+    }
+  }
+  class Parent extends Component {
+    static template = xml`<div><t t-out="this.state.n"/><Child n="this.state.n"/></div>`;
+    static components = { Child };
+    state = proxy({ n: 1 });
+    setup() {
+      onError((e) => log.push(`caught ${e.message}`));
+      onWillPatch(() => log.push("Parent:willPatch"));
+      onPatched(() => log.push("Parent:patched"));
+    }
+  }
+  const parent = await mount(Parent, fixture);
+  parent.state.n = 2;
+  await nextTick();
+  expect(log.splice(0)).toEqual([
+    "Parent:willPatch",
+    "Child:willPatch",
+    "Child:patched",
+    "caught boom",
+  ]);
+  child.state.k = 1;
+  await nextTick();
+  expect(fixture.innerHTML).toBe("<div>2<p>2-1</p></div>");
+  expect(log.splice(0)).toEqual(["Child:willPatch", "Child:patched", "Parent:patched"]);
+  parent.state.n = 3;
+  await nextTick();
+  expect(log).toEqual(["Parent:willPatch", "Child:willPatch", "Child:patched", "Parent:patched"]);
+});
+
+test("an onWillUnmount error does not stop the patch removing its component", async () => {
+  class Child extends Component {
+    static template = xml`<i>child</i>`;
+    setup() {
+      onWillUnmount(() => {
+        throw new Error("Child willUnmount");
+      });
+    }
+  }
+  class Parent extends Component {
+    static template = xml`<div><t t-if="this.state.on"><Child/></t><span t-out="this.state.n"/></div>`;
+    static components = { Child };
+    state = proxy({ on: true, n: 1 });
+    setup() {
+      onError((e) => log.push(`caught ${e.message}`));
+      onPatched(() => log.push("Parent:patched"));
+    }
+  }
+  const parent = await mount(Parent, fixture);
+  parent.state.on = false;
+  parent.state.n = 2;
+  await nextTick();
+  expect(fixture.innerHTML).toBe("<div><span>2</span></div>");
+  expect(log).toEqual(["caught Child willUnmount", "Parent:patched"]);
+});
+
+describe("a first mount that throws half way", () => {
+  function throwingRef(state: { boom: boolean }) {
+    return {
+      set: (el: HTMLElement | null) => {
+        if (state.boom && el) {
+          state.boom = false;
+          throw new Error("ref");
+        }
+      },
+    };
+  }
+
+  test("is mounted afresh by the recovery, its children set up again", async () => {
+    const state = { boom: true };
+    class Leaf extends Component {
+      static template = xml`<i t-out="this.props.n"/>`;
+      props = props();
+      setup() {
+        trackLifecycle("Leaf");
+        onWillPatch(() => log.push("Leaf:willPatch"));
+        onPatched(() => log.push("Leaf:patched"));
+      }
+    }
+    class Child extends Component {
+      static template = xml`<p t-ref="this.ref"><Leaf n="this.props.n"/></p>`;
+      static components = { Leaf };
+      props = props();
+      ref = throwingRef(state);
+      setup() {
+        trackLifecycle("Child");
+      }
+    }
+    class Root extends Component {
+      static template = xml`<div><Child n="this.state.n"/></div>`;
+      static components = { Child };
+      state = proxy({ n: 1 });
+      setup() {
+        trackLifecycle("Root");
+        onError((e) => {
+          log.push(`caught ${e.message}`);
+          this.state.n = 2;
+        });
+      }
+    }
+    const root = await mount(Root, fixture);
+    expect(fixture.innerHTML).toBe("<div><p><i>2</i></p></div>");
+    expect(log.splice(0)).toEqual([
+      "caught ref",
+      "Leaf:willDestroy",
+      "Child:willDestroy",
+      "Leaf:mounted",
+      "Child:mounted",
+      "Root:mounted",
+    ]);
+    root.__owl__.app.destroy();
+    expect(log).toEqual([
+      "Root:willUnmount",
+      "Child:willUnmount",
+      "Leaf:willUnmount",
+      "Leaf:willDestroy",
+      "Child:willDestroy",
+      "Root:willDestroy",
+    ]);
+  });
+
+  test("leaves none of the nodes it inserted in the target", async () => {
+    const state = { boom: true };
+    class Root extends Component {
+      static template = xml`<a/><b t-ref="this.ref" t-out="this.state.n"/><c/>`;
+      state = proxy({ n: 1 });
+      ref = throwingRef(state);
+      setup() {
+        onError(() => (this.state.n = 2));
+      }
+    }
+    fixture.innerHTML = "<hr/>";
+    await mount(Root, fixture, { position: "first-child" });
+    expect(fixture.innerHTML).toBe("<a></a><b>2</b><c></c><hr>");
+  });
 });

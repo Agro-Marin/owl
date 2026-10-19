@@ -254,9 +254,16 @@ plugins: [] })` rendered asynchronously); a resource-driven start belongs to
 - **A rejected `onWillStart` / `onWillUpdateProps`** of a render a newer one
   replaced, or of a destroyed component, is dropped (logged on `error`).
 - **After a render pass fails** and its error is handled without a re-render,
-  its other components keep rendering on their own; a component a failed
-  commit already mounted gets `onMounted` (and only then `onWillUnmount`) from
-  the next commit.
+  its other mounted components keep rendering on their own, a render one asks
+  for while its `onWillUpdateProps` waits included; a component the pass
+  created waits for the pass. A commit is never committed again: a component a
+  failed commit already patched or mounted gets its `onPatched` or `onMounted`
+  (and only then `onWillUnmount`) from the next commit of it or of a component
+  below it, and no `onWillPatch` / `onPatched` while it is owed `onMounted`.
+- **A first mount that throws half way** removes what it inserted; the
+  recovery mounts it afresh instead of patching a half-mounted tree.
+- **An `onWillUnmount` that throws during a patch** no longer aborts it: the
+  error is handled, from the removed component, once the patch is done.
 - **A Suspense's content belongs to its DOM**: it moves with the Suspense in
   a list, and works under a shadow root.
 - **An error no handler catches under a Portal or Suspense** destroys the app
