@@ -55,6 +55,11 @@ There are important things to know:
   starting from the removed component, before the `onMounted` of the
   components that render mounted.
 
+- an `onWillUpdateProps` callback that throws is handled like one whose
+  promise rejects: by the component's own `onError` first, and the parent's
+  render goes on. A props validation error is the parent's: it fails the
+  parent's render.
+
 - a first mount that throws half way (a ref callback, say) leaves nothing of
   that root in the target; the handler's re-render mounts it afresh, setting
   up the components the failed attempt had created again.

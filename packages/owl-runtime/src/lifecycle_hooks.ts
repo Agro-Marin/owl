@@ -8,7 +8,11 @@ export function onWillUpdateProps(
 ) {
   const scope = getComponentScope();
   function swapped(this: any, s: ComponentNode, nextProps: any) {
-    return fn.call(this, nextProps, s);
+    try {
+      return fn.call(this, nextProps, s);
+    } catch (e) {
+      return Promise.reject(e);
+    }
   }
   scope.addHook("willUpdateProps", scope.decorate(swapped, "onWillUpdateProps"));
 }

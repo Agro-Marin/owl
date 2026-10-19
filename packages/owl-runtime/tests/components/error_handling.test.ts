@@ -250,21 +250,16 @@ describe("basics", () => {
     expect(getCurrentComputation()).toBeUndefined();
   });
 
-  test("a willUpdateProps hook throwing synchronously restores the parent's computation", async () => {
+  test("a props validation error in an update restores the parent's computation", async () => {
     const seen: any[] = [];
     class Child extends Component {
       static template = xml`<div t-out="this.props.n"/>`;
-      props = props();
-      setup() {
-        onWillUpdateProps(() => {
-          throw new Error("boom");
-        });
-      }
+      props = props({ n: types.number() });
     }
     class Parent extends Component {
       static template = xml`<t t-if="!this.state.failed"><Child n="this.state.n"/></t>`;
       static components = { Child };
-      state = proxy({ n: 1, failed: false });
+      state = proxy({ n: 1 as any, failed: false });
       setup() {
         onError(() => {
           seen.push(getCurrentComputation() === this.__owl__.signalComputation);
@@ -272,8 +267,8 @@ describe("basics", () => {
         });
       }
     }
-    const parent = await mount(Parent, fixture);
-    parent.state.n = 2;
+    const parent = await mount(Parent, fixture, { test: true });
+    parent.state.n = "x";
     await nextTick();
     expect(seen).toEqual([true]);
     expect(fixture.innerHTML).toBe("");
@@ -2021,6 +2016,64 @@ describe("errors in onWillUpdateProps", () => {
     await nextTick();
     expect(error).toBeDefined();
     expect(error.message).toBe("async boom");
+  });
+
+  test("sync error in onWillUpdateProps is caught by child's own onError, as an async one", async () => {
+    const errors: string[] = [];
+    class Child extends Component {
+      static template = xml`<div><t t-if="this.state.failed">failed</t><t t-else="" t-out="this.props.val"/></div>`;
+      props = props();
+      state = proxy({ failed: false });
+      setup() {
+        onError((e) => {
+          errors.push(`child: ${e.message}`);
+          this.state.failed = true;
+        });
+        onWillUpdateProps(() => {
+          throw new Error("sync boom from child");
+        });
+      }
+    }
+    class Parent extends Component {
+      static template = xml`<span t-out="this.state.val"/><Child val="this.state.val"/>`;
+      static components = { Child };
+      state = proxy({ val: 0 });
+      setup() {
+        onError((e) => errors.push(`parent: ${e.message}`));
+      }
+    }
+
+    const parent = await mount(Parent, fixture, { test: true });
+    parent.state.val = 1;
+    await nextTick();
+    await nextTick();
+    expect(errors).toEqual(["child: sync boom from child"]);
+    expect(fixture.innerHTML).toBe("<span>1</span><div>failed</div>");
+  });
+
+  test("an invalid prop in an update is still the parent's error", async () => {
+    const errors: string[] = [];
+    class Child extends Component {
+      static template = xml`<div t-out="this.props.val"/>`;
+      props = props({ val: types.number() });
+      setup() {
+        onError((e) => errors.push(`child: ${e.message}`));
+      }
+    }
+    class Parent extends Component {
+      static template = xml`<Child val="this.state.val"/>`;
+      static components = { Child };
+      state = proxy({ val: 0 as any });
+      setup() {
+        onError((e) => errors.push(`parent: ${e.message}`));
+      }
+    }
+
+    const parent = await mount(Parent, fixture, { test: true });
+    parent.state.val = "x";
+    await nextTick();
+    expect(errors.length).toBe(1);
+    expect(errors[0]).toMatch(/^parent: Invalid component props \(Child\)/);
   });
 
   test("async error in onWillUpdateProps is caught by child's own onError", async () => {

@@ -264,6 +264,9 @@ plugins: [] })` rendered asynchronously); a resource-driven start belongs to
   recovery mounts it afresh instead of patching a half-mounted tree.
 - **An `onWillUnmount` that throws during a patch** no longer aborts it: the
   error is handled, from the removed component, once the patch is done.
+- **A synchronous throw in `onWillUpdateProps`** is handled as a rejection is,
+  by the component's own `onError` first; props validation still fails the
+  parent's render.
 - **A Suspense's content belongs to its DOM**: it moves with the Suspense in
   a list, and works under a shadow root.
 - **An error no handler catches under a Portal or Suspense** destroys the app
