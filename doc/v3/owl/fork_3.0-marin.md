@@ -203,6 +203,22 @@ d)` is typed `V | D`; `useListener` takes any function reading a target.
   throws "Circular plugin dependency" instead of overflowing the stack; plugins
   asking for each other in `setup()` each get the other (logged on the `plugin`
   channel). A synchronous start failure leaves no later batch pending.
+- **A plugin without a declared `static id`** is found only for its own class
+  (`getPlugin` / `usePlugin` check `instanceof`): two classes named `Theme`
+  were one plugin. A declared id keeps upstream's shadowing by id. A
+  dependency started implicitly with its dependent's id throws the
+  duplicate-id error instead of being overwritten.
+- **Plugin starts**: plugins started from a plugin's `setup()` hold the
+  manager's `ready`; a plugin of a child manager asking for one its parent has
+  pending throws "not started yet" instead of starting a copy; a plugin deferred
+  behind a pending start is pending too; a rejected start no longer blocks
+  later ones; an empty list or resource leaves the manager ready (`new App({
+plugins: [] })` rendered asynchronously); a resource-driven start belongs to
+  its manager, not to the effect it was called in; `startPlugin` runs in its
+  manager's scope, untracked, and refuses a destroyed manager.
+- **Plugins are torn down before the plugins they use**: each plugin's destroy
+  callbacks are one group, registered when its start ends, so groups run in
+  reverse order of completion. `useConfig` ignores `Object.prototype` members.
 - **An App whose constructor fails while starting plugins** destroys earlier
   plugins and unregisters itself, since its caller gets no App to destroy.
 - **A forced `registry.use()`** restores the entry it overwrote when it ends.

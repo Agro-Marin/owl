@@ -1,3 +1,5 @@
+import { OwlError } from "./owl_error";
+
 export const DEBUG_CHANNELS = [
   "reactivity",
   "effect",
@@ -42,7 +44,7 @@ export function setDebug(channels: boolean | string | readonly string[]): void {
         : channels;
   for (const channel of wanted) {
     if (!(DEBUG_CHANNELS as readonly string[]).includes(channel)) {
-      throw new Error(
+      throw new OwlError(
         `Unknown debug channel "${channel}" (channels: ${DEBUG_CHANNELS.join(", ")})`
       );
     }

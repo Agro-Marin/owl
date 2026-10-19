@@ -1,7 +1,7 @@
 import { debug, debugLog } from "./debug";
 import { effect } from "./effect";
 import { OwlError } from "./owl_error";
-import { Resource } from "./resource";
+import { DEFAULT_SEQUENCE, Resource } from "./resource";
 import { isAbortError, Scope, scopeStack, type ScopeApp } from "./scope";
 import { STATUS } from "./status";
 import { untrack } from "./computations";
@@ -18,7 +18,7 @@ export class Plugin {
     return this.name;
   }
 
-  static sequence = 50;
+  static sequence = DEFAULT_SEQUENCE;
 
   __owl__: PluginManager;
 
@@ -27,6 +27,19 @@ export class Plugin {
   }
 
   setup() {}
+}
+
+function hasDeclaredId(pluginType: Function): boolean {
+  for (let type: any = pluginType; type && type !== Plugin; type = Object.getPrototypeOf(type)) {
+    if (Object.hasOwn(type, "id")) {
+      return true;
+    }
+  }
+  return false;
+}
+
+export function isPluginOf(plugin: Plugin, pluginType: Function): boolean {
+  return plugin instanceof pluginType || hasDeclaredId(pluginType);
 }
 
 interface PluginManagerOptions {
@@ -44,6 +57,7 @@ export class PluginManager<TApp extends ScopeApp = ScopeApp> extends Scope<TApp>
   private pending = new Map<string, PluginConstructor>();
   private startingPath: PluginConstructor[] = [];
   private startedIds: string[] = [];
+  private destroyGroups: Array<Array<() => void>> = [];
 
   constructor(app: TApp, options: PluginManagerOptions = {}) {
     super(app);
@@ -70,7 +84,31 @@ export class PluginManager<TApp extends ScopeApp = ScopeApp> extends Scope<TApp>
   }
 
   getPlugin<T extends PluginConstructor>(pluginConstructor: T): InstanceType<T> | null {
-    return this.getPluginById<InstanceType<T>>(pluginConstructor.id);
+    const plugin = this.getPluginById<InstanceType<T>>(pluginConstructor.id);
+    return plugin && isPluginOf(plugin, pluginConstructor) ? plugin : null;
+  }
+
+  onDestroy(cb: () => void): void {
+    const group = this.destroyGroups[this.destroyGroups.length - 1];
+    if (group && this.status < STATUS.DESTROYED) {
+      group.push(cb);
+    } else {
+      super.onDestroy(cb);
+    }
+  }
+
+  private flushDestroyGroup(): void {
+    for (const cb of this.destroyGroups.pop()!) {
+      super.onDestroy(cb);
+    }
+  }
+
+  private assertAlive(pluginConstructor: Function): void {
+    if (this.status >= STATUS.DESTROYED) {
+      throw new OwlError(
+        `Cannot start plugin "${(pluginConstructor as PluginConstructor).id}": its plugin manager is destroyed`
+      );
+    }
   }
 
   startPlugin<T extends PluginConstructor>(pluginConstructor: T): InstanceType<T> | null {
@@ -80,14 +118,12 @@ export class PluginManager<TApp extends ScopeApp = ScopeApp> extends Scope<TApp>
     }
 
     if (Object.hasOwn(this.plugins, id)) {
-      const existingPluginType = this.plugins[id].constructor;
-      if (existingPluginType !== pluginConstructor) {
-        throw new OwlError(
-          `Trying to start a plugin with the same id as an other plugin (id: '${id}', existing plugin: '${existingPluginType.name}', starting plugin: '${pluginConstructor.name}')`
-        );
+      if (this.plugins[id].constructor !== pluginConstructor) {
+        this.throwDuplicate(id, pluginConstructor);
       }
       return null;
     }
+    this.assertAlive(pluginConstructor);
     this.assertNotStarting(pluginConstructor);
 
     const mark = this.mark();
@@ -101,11 +137,16 @@ export class PluginManager<TApp extends ScopeApp = ScopeApp> extends Scope<TApp>
     }
     let plugin: Plugin;
     this.startingPath.push(pluginConstructor);
+    this.destroyGroups.push([]);
+    scopeStack.push(this);
     try {
-      plugin = new pluginConstructor(this);
+      plugin = untrack(() => new pluginConstructor(this));
+      if (Object.hasOwn(this.plugins, id)) {
+        this.throwDuplicate(id, pluginConstructor);
+      }
       this.plugins[id] = plugin;
       this.startedIds.push(id);
-      plugin.setup();
+      untrack(() => plugin.setup());
     } catch (e) {
       if (debug.plugin) {
         debugLog("plugin", `start of ${id} failed, undo`, this.startedIds.slice(startedMark));
@@ -113,13 +154,25 @@ export class PluginManager<TApp extends ScopeApp = ScopeApp> extends Scope<TApp>
       for (const startedId of this.startedIds.splice(startedMark)) {
         delete this.plugins[startedId];
       }
+      this.flushDestroyGroup();
       this.rollback(mark, (e) => console.error(e));
       throw e;
     } finally {
+      scopeStack.pop();
       this.startingPath.pop();
+    }
+    this.flushDestroyGroup();
+    if (!this.startingPath.length) {
+      this.startedIds.length = 0;
     }
     this.pending.delete(id);
     return plugin as InstanceType<T>;
+  }
+
+  private throwDuplicate(id: string, pluginConstructor: Function): never {
+    throw new OwlError(
+      `Trying to start a plugin with the same id as an other plugin (id: '${id}', existing plugin: '${this.plugins[id].constructor.name}', starting plugin: '${pluginConstructor.name}')`
+    );
   }
 
   isStarting(pluginConstructor: Function): boolean {
@@ -139,15 +192,19 @@ export class PluginManager<TApp extends ScopeApp = ScopeApp> extends Scope<TApp>
   }
 
   isPending(id: string): boolean {
+    return this.pendingIn(id) !== null;
+  }
+
+  pendingIn(id: string): PluginManager | null {
     for (let manager: PluginManager | null = this; manager; manager = manager.parent) {
       if (manager.pending.has(id)) {
-        return true;
+        return manager;
       }
       if (Object.hasOwn(manager.plugins, id)) {
-        return false;
+        return null;
       }
     }
-    return false;
+    return null;
   }
 
   private collect<T>(fn: () => T): T {
@@ -171,8 +228,12 @@ export class PluginManager<TApp extends ScopeApp = ScopeApp> extends Scope<TApp>
       return true;
     });
     if (!fresh.length) {
+      if (!this.hasPendingReady && this.status < STATUS.MOUNTED) {
+        this.status = STATUS.MOUNTED;
+      }
       return;
     }
+    this.assertAlive(fresh[0]);
     fresh.sort((p1, p2) => p1.sequence - p2.sequence);
     const batches: PluginConstructor[][] = [];
     for (const ctor of fresh) {
@@ -183,7 +244,9 @@ export class PluginManager<TApp extends ScopeApp = ScopeApp> extends Scope<TApp>
         batches.push([ctor]);
       }
     }
-    for (const batch of batches.slice(1)) {
+    const readyBefore = this.ready;
+    let chain: Promise<unknown> | null = this.hasPendingReady ? this.ready : null;
+    for (const batch of chain ? batches : batches.slice(1)) {
       for (const ctor of batch) {
         this.pending.set(ctor.id, ctor);
       }
@@ -213,7 +276,6 @@ export class PluginManager<TApp extends ScopeApp = ScopeApp> extends Scope<TApp>
       });
     };
 
-    let chain: Promise<unknown> | null = this.hasPendingReady ? this.ready : null;
     try {
       for (const batch of batches) {
         if (chain) {
@@ -236,6 +298,12 @@ export class PluginManager<TApp extends ScopeApp = ScopeApp> extends Scope<TApp>
       }
       throw e;
     }
+    if (this.ready !== readyBefore && this.hasPendingReady) {
+      if (debug.plugin) {
+        debugLog("plugin", "a start nested in this one is pending, ready waits for it");
+      }
+      chain = chain ? Promise.all([chain, this.ready]) : this.ready;
+    }
     if (!chain) {
       if (this.status < STATUS.MOUNTED) {
         this.status = STATUS.MOUNTED;
@@ -248,11 +316,11 @@ export class PluginManager<TApp extends ScopeApp = ScopeApp> extends Scope<TApp>
         if (debug.plugin) {
           debugLog("plugin", "ready");
         }
-        if (this.status < STATUS.MOUNTED) {
-          this.status = STATUS.MOUNTED;
-        }
         if (this.ready === ready) {
           this.hasPendingReady = false;
+          if (this.status < STATUS.MOUNTED) {
+            this.status = STATUS.MOUNTED;
+          }
         }
       },
       (e) => {
@@ -260,6 +328,9 @@ export class PluginManager<TApp extends ScopeApp = ScopeApp> extends Scope<TApp>
           debugLog("plugin", "start failed, later batches skipped", e);
         }
         this.pending.clear();
+        if (this.ready === ready) {
+          this.hasPendingReady = false;
+        }
         if (this.status >= STATUS.DESTROYED) {
           if (debug.plugin) {
             debugLog(
@@ -283,6 +354,10 @@ export function startPlugins(
   if (Array.isArray(plugins)) {
     manager.startPlugins(plugins);
   } else {
-    manager.onDestroy(effect(() => manager.startPlugins(plugins.items())));
+    manager.onDestroy(
+      effect(() => manager.startPlugins(plugins.items()), {
+        detached: true,
+      })
+    );
   }
 }

@@ -3,6 +3,7 @@ import {
   debug,
   DEBUG_CHANNELS,
   effect,
+  OwlError,
   Plugin,
   PluginManager,
   proxy,
@@ -177,4 +178,5 @@ test("setDebug ignores empty entries of a string", () => {
 
 test("setDebug rejects an unknown channel", () => {
   expect(() => setDebug(["fibre"])).toThrow('Unknown debug channel "fibre"');
+  expect(() => setDebug("fibre")).toThrow(OwlError);
 });

@@ -27,7 +27,9 @@ import {
   PluginManager,
   setDebug,
   setDebugSink,
+  startPlugins,
   types,
+  type PluginConstructor,
 } from "@odoo/owl-core";
 import { STATUS } from "../src/status";
 import { makeDeferred, makeTestFixture, nextMicroTick, nextTick, waitScheduler } from "./helpers";
@@ -152,7 +154,9 @@ describe("basic features", () => {
     class B extends Plugin {
       static id = "plugin";
     }
-    expect(() => new PluginManager(new App()).startPlugins([A])).not.toThrow();
+    expect(() => new PluginManager(new App()).startPlugins([A])).toThrow(
+      `Trying to start a plugin with the same id as an other plugin (id: 'plugin', existing plugin: 'B', starting plugin: 'A')`
+    );
   });
 
   test("plugin depending on another plugin with the same id (start A and B)", () => {
@@ -164,7 +168,7 @@ describe("basic features", () => {
       static id = "plugin";
     }
     expect(() => new PluginManager(new App()).startPlugins([A, B])).toThrow(
-      `Trying to start a plugin with the same id as an other plugin (id: 'plugin', existing plugin: 'A', starting plugin: 'B')`
+      `Trying to start a plugin with the same id as an other plugin (id: 'plugin', existing plugin: 'B', starting plugin: 'A')`
     );
   });
 
@@ -1720,5 +1724,267 @@ describe("plugin start: cycles, failures, ids", () => {
       "SubNamed",
       "declared",
     ]);
+  });
+});
+
+describe("plugin manager: identity, nested and failed starts, teardown", () => {
+  test("a plugin without a declared id is not handed out for another class of that name", async () => {
+    const makeTheme = (color: string) =>
+      class Theme extends Plugin {
+        color = color;
+      };
+    const Blue = makeTheme("blue");
+    const Red = makeTheme("red");
+    const manager = new PluginManager(new App());
+    manager.startPlugins([Blue]);
+    expect(manager.getPlugin(Red)).toBe(null);
+    expect(() => manager.run(() => plugin(Red))).toThrow(
+      "Trying to start a plugin with the same id as an other plugin (id: 'Theme'"
+    );
+    const sub = new PluginManager(manager.app, { parent: manager });
+    expect(sub.run(() => plugin(Red)).color).toBe("red");
+    expect(sub.getPlugin(Blue)).toBe(null);
+    expect(manager.getPlugin(Blue)!.color).toBe("blue");
+
+    let error = "";
+    class Root extends Component {
+      static template = xml`<span/>`;
+      setup() {
+        try {
+          plugin(Red);
+        } catch (e: any) {
+          error = e.message;
+        }
+      }
+    }
+    const app = new App({ plugins: [Blue] });
+    await app.createRoot(Root).mount(makeTestFixture());
+    expect(error).toBe(
+      'Plugin "Theme" is another class with the same id; declare a distinct static id on one of them'
+    );
+    app.destroy();
+  });
+
+  test("plugins started from a plugin's setup are waited for", async () => {
+    const slow = makeDeferred<void>();
+    class B extends Plugin {
+      setup() {
+        onWillStart(() => slow);
+      }
+    }
+    class A extends Plugin {
+      setup() {
+        this.__owl__.startPlugins([B]);
+      }
+    }
+    const manager = new PluginManager(new App());
+    manager.startPlugins([A]);
+    expect(manager.status).toBe(STATUS.NEW);
+    slow.resolve();
+    await manager.ready;
+    expect(manager.status).toBe(STATUS.MOUNTED);
+  });
+
+  test("a plugin's own onWillStart after a nested start does not let ready skip the nested one", async () => {
+    const own = makeDeferred<void>();
+    const nested = makeDeferred<void>();
+    class B extends Plugin {
+      setup() {
+        onWillStart(() => nested);
+      }
+    }
+    class A extends Plugin {
+      setup() {
+        this.__owl__.startPlugins([B]);
+        onWillStart(() => own);
+      }
+    }
+    const manager = new PluginManager(new App());
+    manager.startPlugins([A]);
+    let ready = false;
+    manager.ready.then(() => (ready = true));
+    own.resolve();
+    await nextTick();
+    expect(ready).toBe(false);
+    nested.resolve();
+    await manager.ready;
+    expect(ready).toBe(true);
+  });
+
+  test("a child manager's plugin does not start its own copy of a plugin its parent has pending", async () => {
+    const rpc = makeDeferred<void>();
+    let setups = 0;
+    class Session extends Plugin {
+      static sequence = 10;
+      setup() {
+        onWillStart(() => rpc);
+      }
+    }
+    class Late extends Plugin {
+      setup() {
+        setups++;
+      }
+    }
+    class User extends Plugin {
+      late = plugin(Late);
+    }
+    const parent = new PluginManager(new App());
+    parent.startPlugins([Session, Late]);
+    const child = new PluginManager(parent.app, { parent });
+    expect(() => child.startPlugins([User])).toThrow('Plugin "Late" is not started yet');
+    expect(setups).toBe(0);
+    rpc.resolve();
+    await parent.ready;
+    child.startPlugins([User]);
+    expect(child.getPlugin(User)!.late).toBe(parent.getPlugin(Late));
+    expect(setups).toBe(1);
+  });
+
+  test("a resource-driven start made inside an effect outlives that effect's run", async () => {
+    const plugins = new Resource<PluginConstructor>();
+    class A extends Plugin {}
+    class B extends Plugin {}
+    plugins.add(A);
+    const trigger = signal(0);
+    const manager = new PluginManager(new App());
+    const stop = effect(() => {
+      if (trigger() === 0) {
+        startPlugins(manager, plugins);
+      }
+    });
+    await waitScheduler();
+    trigger.set(1);
+    await waitScheduler();
+    plugins.add(B);
+    await waitScheduler();
+    expect(manager.getPlugin(B)).toBeInstanceOf(B);
+    stop();
+    manager.destroy();
+  });
+
+  test("a rejected start does not hold back later starts", async () => {
+    const failing = makeDeferred<void>();
+    class A extends Plugin {
+      setup() {
+        onWillStart(() => failing);
+      }
+    }
+    class B extends Plugin {}
+    const manager = new PluginManager(new App());
+    manager.startPlugins([A]);
+    failing.reject(new Error("boom"));
+    await expect(manager.ready).rejects.toThrow("boom");
+    manager.startPlugins([B]);
+    expect(manager.getPlugin(B)).toBeInstanceOf(B);
+    expect(manager.status).toBe(STATUS.MOUNTED);
+  });
+
+  test("an empty plugin list leaves the manager ready, as no list does", () => {
+    expect(new App({ plugins: [] }).pluginManager.status).toBe(STATUS.MOUNTED);
+    expect(new App({ plugins: new Resource<PluginConstructor>() }).pluginManager.status).toBe(
+      STATUS.MOUNTED
+    );
+    const manager = new PluginManager(new App());
+    manager.startPlugins([]);
+    expect(manager.status).toBe(STATUS.MOUNTED);
+  });
+
+  test("a plugin started directly runs in its manager's scope", () => {
+    class Dep extends Plugin {
+      value = 1;
+    }
+    class A extends Plugin {
+      dep = plugin(Dep);
+      double = computed(() => this.dep.value * 2);
+    }
+    const manager = new PluginManager(new App());
+    const a = manager.startPlugin(A)!;
+    expect(a.double()).toBe(2);
+    expect(manager.computations.length).toBeGreaterThan(0);
+
+    const other = new PluginManager(new App());
+    class C extends Plugin {
+      value = computed(() => 3);
+    }
+    const before = other.computations.length;
+    other.run(() => manager.startPlugin(C));
+    expect(other.computations.length).toBe(before);
+  });
+
+  test("a destroyed manager starts no plugin", () => {
+    let setups = 0;
+    class A extends Plugin {
+      setup() {
+        setups++;
+      }
+    }
+    const manager = new PluginManager(new App());
+    manager.destroy();
+    expect(() => manager.startPlugin(A)).toThrow("Cannot start plugin");
+    expect(() => manager.startPlugins([A])).toThrow("Cannot start plugin");
+    expect(setups).toBe(0);
+  });
+
+  test("a dependency with the same id started from a field is not left registered", () => {
+    class A extends Plugin {
+      static id = "plugin";
+      b = plugin(B);
+    }
+    class B extends Plugin {
+      static id = "plugin";
+    }
+    const manager = new PluginManager(new App());
+    expect(() => manager.startPlugins([A])).toThrow("same id as an other plugin");
+    expect(manager.getPluginById("plugin")).toBe(null);
+  });
+
+  test("a plugin deferred behind a pending start is reported as not started yet", async () => {
+    const rpc = makeDeferred<void>();
+    class Session extends Plugin {
+      setup() {
+        onWillStart(() => rpc);
+      }
+    }
+    class Late extends Plugin {}
+    const manager = new PluginManager(new App());
+    manager.startPlugins([Session]);
+    manager.startPlugins([Late]);
+    expect(manager.isPending("Late")).toBe(true);
+    rpc.resolve();
+    await manager.ready;
+    expect(manager.isPending("Late")).toBe(false);
+    expect(manager.getPlugin(Late)).toBeInstanceOf(Late);
+  });
+
+  test("a plugin is torn down before the plugins it uses, whenever it asked for them", () => {
+    const steps: string[] = [];
+    class B extends Plugin {
+      setup() {
+        onWillDestroy(() => steps.push("destroy B"));
+      }
+    }
+    class A extends Plugin {
+      b: any;
+      setup() {
+        onWillDestroy(() => steps.push("destroy A"));
+        this.b = plugin(B);
+      }
+    }
+    const manager = new PluginManager(new App());
+    manager.startPlugins([A]);
+    manager.destroy();
+    expect(steps).toEqual(["destroy A", "destroy B"]);
+  });
+
+  test("a config key named like an Object.prototype member is unset", () => {
+    const seen: unknown[] = [];
+    class A extends Plugin {
+      setup() {
+        seen.push(config("toString"), config("constructor", t.function().optional()));
+      }
+    }
+    const manager = new PluginManager(new App({ test: true }), { config: { a: 1 } });
+    manager.startPlugins([A]);
+    expect(seen).toEqual([undefined, undefined]);
   });
 });

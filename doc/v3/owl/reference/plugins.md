@@ -54,6 +54,11 @@ class MyPlugin extends Plugin {
 }
 ```
 
+A plugin without a declared id is found only for its own class: another class
+of the same name is not handed out in its place (`usePlugin` throws, a
+`getPlugin` returns `null`). Declare an id for plugins whose class names a
+minifier may shorten or drop.
+
 ## Using a Plugin
 
 The `usePlugin()` function imports a plugin instance. It can be used in component
@@ -251,7 +256,8 @@ enclosing `providePlugins`, and finally to the app's.
 ## Plugin Shadowing
 
 A child `providePlugins` can override a parent plugin by providing a plugin
-with the same `id`. This is useful to customize behavior for a subtree:
+with the same declared `id` (or a subclass, which inherits it). This is useful
+to customize behavior for a subtree:
 
 ```js
 class ThemePlugin extends Plugin {
@@ -304,6 +310,11 @@ class MyComponent extends Component {
 
 When `MyComponent` is destroyed, its contributed items are automatically
 removed from the resource.
+
+A `Resource` of plugin classes can be given to `startPlugins`, `providePlugins`
+or `new App({ plugins })`: a class added later starts then (after the pending
+batches). Removing a class from it does not stop its plugin, which others may
+hold: a started plugin lives until its manager is destroyed.
 
 ## Async Initialization
 
@@ -370,7 +381,11 @@ Two things to keep in mind:
   early would run its `setup()` before the data it may read is loaded. Its
   children render once every batch is ready, and can use it.
 - If an `onWillStart` callback in a batch rejects, the remaining batches are
-  not started and the mount is rejected.
+  not started and the mount is rejected. A later start is not held back by it.
+- A plugin of a child manager (`providePlugins`) asking for one its parent has
+  in a waiting batch gets the same error, rather than a second instance.
+- Plugins started from a plugin's `setup()` (`this.__owl__.startPlugins(...)`)
+  are waited for as well: the manager is ready once they are.
 
 ## Lifecycle and Cleanup
 
@@ -380,7 +395,10 @@ Plugins follow a simple lifecycle:
 2. `setup()` is called (may register `onWillStart` for async init; calling
    `onWillStart` anywhere else throws)
 3. The plugin is active and can be used
-4. On destroy, cleanup runs in reverse order (LIFO)
+4. On destroy, cleanup runs plugin by plugin, in reverse order of the end of
+   their start, each plugin's own callbacks in reverse order (LIFO): a plugin
+   is torn down before the plugins it used, even one it asked for in `setup()`
+   after registering its `onWillDestroy`
 
 If the constructor or `setup()` throws, the start is undone: the plugin and
 any plugin it started as a dependency are unregistered, their `onWillStart`

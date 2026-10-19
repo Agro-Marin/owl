@@ -1,6 +1,6 @@
 import { debug, debugLog } from "./debug";
 import { OwlError } from "./owl_error";
-import { PluginConstructor, PluginManager } from "./plugin_manager";
+import { isPluginOf, PluginConstructor, PluginManager } from "./plugin_manager";
 import { useScope } from "./scope";
 import { getDefault, types, type Optional, type Schema, type WithDefault } from "./types";
 import { assertType } from "./validation";
@@ -12,18 +12,31 @@ export function usePlugin<T extends PluginConstructor>(pluginType: T): PluginIns
 
   const manager = scope.pluginManager;
   const isPlugin = scope instanceof PluginManager;
-  if (!isPlugin && manager.isPending(pluginType.id)) {
+  const id = pluginType.id;
+  const pendingIn = manager.pendingIn(id);
+  if (pendingIn && (!isPlugin || pendingIn !== manager)) {
+    if (debug.plugin && isPlugin) {
+      debugLog("plugin", `${id} is pending in a parent manager, not started here`);
+    }
     throw new OwlError(
-      `Plugin "${pluginType.id}" is not started yet: its batch waits for the onWillStart of a lower sequence. Use it from a child component, or lower its sequence.`
+      `Plugin "${id}" is not started yet: its batch waits for the onWillStart of a lower sequence. Use it from a child component, or lower its sequence.`
     );
   }
-  const plugin =
-    manager.getPluginById(pluginType.id) ?? (isPlugin ? manager.startPlugin(pluginType) : null);
+  let plugin = manager.getPluginById(id);
+  if (plugin && !isPluginOf(plugin, pluginType)) {
+    if (!isPlugin) {
+      throw new OwlError(
+        `Plugin "${id}" is another class with the same id; declare a distinct static id on one of them`
+      );
+    }
+    plugin = null;
+  }
+  plugin ??= isPlugin ? manager.startPlugin(pluginType) : null;
   if (!plugin) {
-    throw new OwlError(`Unknown plugin "${pluginType.id}"`);
+    throw new OwlError(`Unknown plugin "${id}"`);
   }
   if (isPlugin && debug.plugin && manager.isStarting(plugin.constructor)) {
-    debugLog("plugin", `${pluginType.id} handed out before its setup ends`);
+    debugLog("plugin", `${id} handed out before its setup ends`);
   }
 
   const scoped = (plugin.constructor as PluginConstructor).scoped;
@@ -41,11 +54,28 @@ export function useConfig(key: string, type?: unknown): unknown {
   if (!(scope instanceof PluginManager)) {
     throw new OwlError("Expected to be in a plugin scope");
   }
+  const configValue = readConfig(scope.config, key);
   if (scope.app.dev && type) {
-    assertType(scope.config, types.object({ [key]: type }), "Config does not match the type");
+    assertType(
+      { [key]: configValue },
+      types.object({ [key]: type }),
+      "Config does not match the type"
+    );
   }
-  const configValue = scope.config[key];
   return configValue === undefined ? getDefault(type)?.() : configValue;
+}
+
+function readConfig(config: object, key: string): unknown {
+  for (
+    let level = config;
+    level && level !== Object.prototype;
+    level = Object.getPrototypeOf(level)
+  ) {
+    if (Object.hasOwn(level, key)) {
+      return Reflect.get(level, key, config);
+    }
+  }
+  return undefined;
 }
 
 export const config = useConfig;
