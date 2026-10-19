@@ -582,9 +582,9 @@ describe("a first mount that throws half way", () => {
     const root = await mount(Root, fixture);
     expect(fixture.innerHTML).toBe("<div><p><i>2</i></p></div>");
     expect(log.splice(0)).toEqual([
-      "caught ref",
       "Leaf:willDestroy",
       "Child:willDestroy",
+      "caught ref",
       "Leaf:mounted",
       "Child:mounted",
       "Root:mounted",

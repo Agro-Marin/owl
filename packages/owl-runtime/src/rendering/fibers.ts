@@ -590,6 +590,18 @@ export class MountFiber extends RootFiber {
         for (const fiber of this.mounted) {
           oweMounted(fiber.node);
         }
+        const children = this.childrenMap;
+        if (children?.size) {
+          if (debug.fiber) {
+            debugLog(
+              "fiber",
+              `${node.componentName}'s failed mount destroys the ${children.size} children it made`
+            );
+          }
+          for (const child of children.values()) {
+            child._destroy();
+          }
+        }
       }
       handleError({ fiber: this, error: e });
       return;
