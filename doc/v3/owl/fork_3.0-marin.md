@@ -56,8 +56,11 @@ differently from upstream.
 
 - **Template expressions read JavaScript's standard globals** (`String`,
   `Number`, `Boolean`, `JSON`, `parseInt`, `parseFloat`, `isNaN`, `Map`, `Set`,
-  `Intl`, `Infinity`, the URI functions, …) as the globals, not from the
-  context. Upstream reads them from the component and gets `undefined`.
+  `Intl`, `Infinity`, `Promise`, `Reflect`, `WeakMap`, `globalThis`, the error
+  types, the URI functions, …) as the globals, not from the context. Upstream
+  reads them from the component and gets `undefined`. A `t-set`, `t-as`,
+  `t-slot-scope` or `t-call` argument named like one (or like a keyword such
+  as `null`) throws, since no expression could read it.
 - **`t-else` with a `t-if` on the same node** is an else branch holding the
   `if` — it reads as `t-elif`. Template inheritance produces it when an
   extension adds a `t-if` to an else node. `t-elif` beside another branch

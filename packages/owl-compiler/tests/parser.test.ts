@@ -1573,6 +1573,21 @@ describe("qweb parser", () => {
     expect(ast.slots.b.attrs).toEqual({ y: "2" });
   });
 
+  test("a template variable cannot take a name an expression reads as JavaScript's own", async () => {
+    const error = (name: string, directive: string) =>
+      `'${name}' cannot be a template variable (${directive}): an expression reads it as JavaScript's own`;
+    expect(() => parse(`<t t-set="Map" t-value="1"/>`)).toThrow(error("Map", "t-set"));
+    expect(() => parse(`<t t-foreach="l" t-as="String" t-key="String">x</t>`)).toThrow(
+      error("String", "t-as")
+    );
+    expect(() => parse(`<C t-slot-scope="Error">x</C>`)).toThrow(error("Error", "t-slot-scope"));
+    expect(() => parse(`<C><t t-set-slot="a" t-slot-scope="null">x</t></C>`)).toThrow(
+      error("null", "t-slot-scope")
+    );
+    expect(() => parse(`<t t-call="sub" Promise="1"/>`)).toThrow(error("Promise", "t-call"));
+    expect(() => parse(`<t t-set="maps" t-value="1"/>`)).not.toThrow();
+  });
+
   test("a named slot under a directive inside a component throws", async () => {
     expect(() =>
       parse(`<MyComponent><t t-if="cond"><t t-set-slot="a">foo</t></t></MyComponent>`)

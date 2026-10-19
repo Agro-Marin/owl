@@ -1,5 +1,6 @@
 import type { CustomDirectives } from ".";
 import { OwlError } from "@odoo/owl-core";
+import { checkVariableName } from "./inline_expressions";
 import { parseXML } from "./parse_xml";
 
 export type EventHandlers = { [eventName: string]: string };
@@ -595,6 +596,7 @@ function parseTForEach(node: Element, ctx: ParsingContext): AST | null {
       `Directive t-foreach should always be used with t-as (expression: t-foreach="${collection}")`
     );
   }
+  checkVariableName(elem, "t-as");
   node.removeAttribute("t-as");
   const key = exprAttr(node, "t-key");
   if (!key) {
@@ -715,6 +717,7 @@ function parseTCall(node: Element, ctx: ParsingContext): AST | null {
     if (attributeName.startsWith("t-")) {
       throw unsupportedDirectiveError(attributeName, "a t-call node");
     }
+    checkVariableName(attributeName, "t-call");
     attrs = attrs || {};
     attrs[attributeName] = value;
     node.removeAttribute(attributeName);
@@ -803,6 +806,7 @@ function parseTSetNode(node: Element, ctx: ParsingContext): AST | null {
     return null;
   }
   const name = node.getAttribute("t-set")!;
+  checkVariableName(name, "t-set");
   const value = node.getAttribute("t-value") || null;
   node.removeAttribute("t-set");
   node.removeAttribute("t-value");
@@ -859,6 +863,9 @@ function parseComponent(node: Element, ctx: ParsingContext): AST | null {
   node.removeAttribute("t-props");
 
   const defaultSlotScope = node.getAttribute("t-slot-scope");
+  if (defaultSlotScope !== null) {
+    checkVariableName(defaultSlotScope, "t-slot-scope");
+  }
   node.removeAttribute("t-slot-scope");
   const handlers: NodeHandlers = { on: null, translationCtx: null };
   let props: ASTComponent["props"] = null;
@@ -893,6 +900,7 @@ function parseComponent(node: Element, ctx: ParsingContext): AST | null {
       for (let attributeName of slotNode.getAttributeNames()) {
         const value = slotNode.getAttribute(attributeName)!;
         if (attributeName === "t-slot-scope") {
+          checkVariableName(value, "t-slot-scope");
           scope = value;
         } else if (!collectHandler(slotHandlers, attributeName, value)) {
           continue;

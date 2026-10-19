@@ -3,8 +3,18 @@ import { OwlError } from "@odoo/owl-core";
 const RESERVED_WORDS = /* @__PURE__ */ wordSet(
   "true,false,NaN,null,undefined,debugger,console,window,in,instanceof,new,function,return,eval,void,__globals__," +
     "Math,RegExp,Array,Object,Date,Number,Boolean,String,Symbol,BigInt,Map,Set,JSON,Intl,Error," +
+    "Promise,globalThis,Reflect,Proxy,WeakMap,WeakSet,WeakRef,Iterator,ArrayBuffer,DataView," +
+    "AggregateError,EvalError,RangeError,ReferenceError,SyntaxError,TypeError,URIError," +
     "Infinity,isFinite,isNaN,parseFloat,parseInt,decodeURI,decodeURIComponent,encodeURI,encodeURIComponent"
 );
+
+export function checkVariableName(name: string, directive: string) {
+  if (RESERVED_WORDS.has(name)) {
+    throw new OwlError(
+      `'${name}' cannot be a template variable (${directive}): an expression reads it as JavaScript's own`
+    );
+  }
+}
 
 function wordSet(words: string): Set<string> {
   return new Set(words.split(","));

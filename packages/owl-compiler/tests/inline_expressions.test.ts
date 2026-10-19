@@ -493,6 +493,14 @@ describe("standard globals", () => {
     expect(compileExpr("encodeURIComponent(s)")).toBe("encodeURIComponent(ctx['s'])");
   });
 
+  test("include the other standard built-ins", () => {
+    expect(compileExpr("x instanceof Promise")).toBe("ctx['x'] instanceof Promise");
+    expect(compileExpr("globalThis.a || Reflect.has(o, k)")).toBe(
+      "globalThis.a||Reflect.has(ctx['o'],ctx['k'])"
+    );
+    expect(compileExpr("new WeakMap() && new WeakSet()")).toBe("new WeakMap()&&new WeakSet()");
+  });
+
   test("an arrow's parameter of the same name stays the parameter", () => {
     expect(compileExpr("(String) => String + x")).toBe("(String)=>String+ctx['x']");
   });
