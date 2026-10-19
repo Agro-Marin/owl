@@ -448,9 +448,11 @@ plugins: [] })` rendered asynchronously); a resource-driven start belongs to
   the other's, which crashed when one was a list, and else kept showing the
   first.
 - **A `t-call-block`'s block and a slot output without default content are
-  replaced when their kind changes**: a block of another constructor, or a
-  slot of another render function (a forwarded slot that comes, goes or is
-  swapped), is mounted in place of the previous one. Upstream patched one into
+  replaced when their kind changes**: a block of another constructor (a
+  multi of another length or with children of another kind at a place both
+  fill, a list of items of another kind), or a slot of another render function (a
+  forwarded slot that comes, goes or is swapped), is mounted in place of the
+  previous one. Upstream patched one into
   the other (a text into a `<div>` block rendered an empty `<div>`).
 - **A directive Owl would drop throws**: a `<t>` left bare (also by `t-if`,
   `t-foreach`, …) takes no `t-*` attribute but a template root's `t-name`,

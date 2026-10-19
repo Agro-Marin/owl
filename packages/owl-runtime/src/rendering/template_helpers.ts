@@ -12,7 +12,7 @@ import {
   untrack,
 } from "@odoo/owl-core";
 import { App } from "../app";
-import { BDom, createCatcher, multi, RefCallback, text, toggler } from "../blockdom";
+import { BDom, createCatcher, multi, RefCallback, shapeToggler, text, toggler } from "../blockdom";
 import { html } from "../blockdom/index";
 import { Component } from "../component";
 import { ComponentNode } from "../component_node";
@@ -73,7 +73,7 @@ function callSlot(
 }
 
 function callBlock(bdom: BDom | null | undefined): BDom {
-  return bdom ? toggler(bdom.constructor, bdom) : toggler(null, text(""));
+  return shapeToggler(bdom || text(""));
 }
 
 const MARK = "\u0002";
