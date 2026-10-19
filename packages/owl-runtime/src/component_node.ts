@@ -55,7 +55,6 @@ export class ComponentNode extends Scope<App> implements VNode<ComponentNode> {
   willPatch: LifecycleHook[] = NO_HOOKS;
   patched: LifecycleHook[] = NO_HOOKS;
   signalComputation: ComputationAtom;
-  trackedRefs: Map<any, { value: HTMLElement | null } | Set<HTMLElement>> | null = null;
   refCallbacks: WeakMap<object, RefCallback> | null = null;
   memos: Map<string, MemoSite> | null = null;
   previousMemos: Map<string, MemoSite> | null = null;
@@ -220,14 +219,11 @@ export class ComponentNode extends Scope<App> implements VNode<ComponentNode> {
 
   destroy() {
     let shouldRemove = this.status === STATUS.MOUNTED;
-    removalDepth++;
     try {
       this._destroy();
     } finally {
-      removalDepth--;
       if (shouldRemove) {
         this.bdom!.remove();
-        sweepRemovedRefs();
       }
     }
   }
@@ -259,9 +255,6 @@ export class ComponentNode extends Scope<App> implements VNode<ComponentNode> {
       }
     }
     forgetOwed(this);
-    if (removalDepth && this.trackedRefs) {
-      (removed ||= []).push(this);
-    }
     for (const child of this.childMap?.values() || []) {
       try {
         child._destroy();
@@ -289,34 +282,6 @@ export class ComponentNode extends Scope<App> implements VNode<ComponentNode> {
     }
   }
 
-  sweepRefs() {
-    const refs = this.trackedRefs;
-    if (!refs) {
-      return;
-    }
-    for (const [ref, tracked] of refs) {
-      if (tracked instanceof Set) {
-        for (const el of tracked) {
-          if (!el.isConnected) {
-            ref.delete(el);
-            tracked.delete(el);
-          }
-        }
-        if (!tracked.size) {
-          refs.delete(ref);
-        }
-        continue;
-      }
-      const el = tracked.value;
-      if (!el) {
-        refs.delete(ref);
-      } else if (!el.isConnected) {
-        ref.set(null);
-        refs.delete(ref);
-      }
-    }
-  }
-
   firstNode(): Node | undefined {
     const bdom = this.bdom;
     return bdom ? bdom.firstNode() : undefined;
@@ -340,23 +305,6 @@ export class ComponentNode extends Scope<App> implements VNode<ComponentNode> {
     this.bdom!.moveBeforeVNode(other ? other.bdom : null, afterNode);
   }
 
-  trackRef(ref: { set(v: null): void }, atom: { value: HTMLElement | null }) {
-    (this.trackedRefs ||= new Map()).set(ref, atom);
-  }
-
-  trackRefElement(ref: { delete(el: HTMLElement): void }, el: HTMLElement, bound: boolean) {
-    const refs = (this.trackedRefs ||= new Map());
-    let els = refs.get(ref) as Set<HTMLElement> | undefined;
-    if (bound) {
-      if (!els) {
-        refs.set(ref, (els = new Set()));
-      }
-      els.add(el);
-    } else if (els) {
-      els.delete(el);
-    }
-  }
-
   patch() {
     if (this.fiber && this.fiber.parent) {
       this._patch();
@@ -376,8 +324,6 @@ export class ComponentNode extends Scope<App> implements VNode<ComponentNode> {
     } finally {
       removalDepth--;
     }
-    this.sweepRefs();
-    sweepRemovedRefs();
     fiber.renderState |= APPLIED_TO_DOM;
     this.fiber = null;
     if (removalDepth === 0 && removalErrors) {
@@ -406,7 +352,6 @@ export class ComponentNode extends Scope<App> implements VNode<ComponentNode> {
 }
 
 let removalDepth = 0;
-let removed: ComponentNode[] | null = null;
 let removalErrors: { node: ComponentNode; error: unknown }[] | null = null;
 
 function reportRemovalErrors() {
@@ -414,16 +359,6 @@ function reportRemovalErrors() {
   removalErrors = null;
   for (const params of errors) {
     handleError(params);
-  }
-}
-
-function sweepRemovedRefs() {
-  if (removalDepth === 0 && removed) {
-    const nodes = removed;
-    removed = null;
-    for (let i = 0; i < nodes.length; i++) {
-      nodes[i].sweepRefs();
-    }
   }
 }
 

@@ -353,7 +353,9 @@ plugins: [] })` rendered asynchronously); a resource-driven start belongs to
   the blocks inside it**: every VNode has `detachRefs()` (no DOM work; multi,
   list, toggler, catcher and component nodes forward it), which `remove()` of
   a block calls; upstream called only the removed block's own, and a `{set}`
-  ref kept the removed element.
+  ref kept the removed element. A component tracks no refs: upstream checked
+  `isConnected` on every signal ref and set-like ref element it had bound,
+  after each of its patches.
 - **A `t-set` body given to an attribute, interpolation, property or `t-att`
   is its string taken during the render** (`attrValue` / `attrsValue`), so the
   attribute follows what the body reads.

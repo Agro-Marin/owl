@@ -296,32 +296,23 @@ function createRef(ref: any, node: ComponentNode) {
   const callbacks = (node.refCallbacks ||= new WeakMap());
   let callback = callbacks.get(ref);
   if (!callback) {
-    callback = makeRefCallback(ref, node);
+    callback = makeRefCallback(ref);
     callbacks.set(ref, callback);
   }
   return callback;
 }
 
-function makeRefCallback(ref: any, node: ComponentNode): RefCallback {
+function makeRefCallback(ref: any): RefCallback {
   let add: (el: HTMLElement) => void;
   let remove: (el: HTMLElement) => void;
 
   if (ref.add && ref.delete) {
-    add = (el: HTMLElement) => {
-      ref.add(el);
-      node.trackRefElement(ref, el, true);
-    };
-    remove = (prevEl: HTMLElement) => {
-      ref.delete(prevEl);
-      node.trackRefElement(ref, prevEl, false);
-    };
+    add = (el: HTMLElement) => ref.add(el);
+    remove = (prevEl: HTMLElement) => ref.delete(prevEl);
   } else if (ref.set) {
     const atom = (ref as any)[atomSymbol];
     if (atom) {
-      add = (el: HTMLElement) => {
-        ref.set(el);
-        node.trackRef(ref, atom);
-      };
+      add = (el: HTMLElement) => ref.set(el);
       remove = (prevEl: HTMLElement) => {
         if (atom.value === prevEl) ref.set(null);
       };

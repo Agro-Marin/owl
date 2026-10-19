@@ -95,7 +95,7 @@ describe("t-ref", () => {
     app.addTemplate("sub", sub);
 
     const name = signal<any>(null);
-    const bdom = app.getTemplate("main").call(null, { name }, { trackRef() {} });
+    const bdom = app.getTemplate("main").call(null, { name }, {});
     mount(bdom, document.createElement("div"));
 
     expect(name().tagName).toBe("SPAN");

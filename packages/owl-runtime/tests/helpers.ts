@@ -72,7 +72,7 @@ export function renderToBdom(template: string, context: any = {}, node?: any): B
     } else {
       context.__owl__.component = context;
     }
-    node = { trackRef() {}, trackRefElement() {} };
+    node = {};
   }
   const fn = compile(template);
   if (shouldSnapshot && !snapshottedTemplates.has(template)) {
