@@ -1,19 +1,22 @@
-import { execFileSync, spawnSync } from "child_process";
+import { spawnSync } from "child_process";
 import { build, transform } from "esbuild";
 import { readdirSync, readFileSync } from "fs";
 import { TARGET } from "../build_target.mjs";
-import { dirname, join } from "path";
-import { fileURLToPath } from "url";
+import { join } from "path";
+import { PACKAGE_SOURCES } from "../../../tools/workspace.mjs";
+import { PACKAGE, removeScratchPackage, scratchPackage } from "./scratch_build";
 
-const PACKAGE = join(dirname(fileURLToPath(import.meta.url)), "..");
+let BUILT: string;
 
 beforeAll(() => {
-  execFileSync(process.execPath, ["build.mjs"], { cwd: PACKAGE, stdio: "pipe" });
+  BUILT = scratchPackage("owl-dist-test");
 }, 60000);
+
+afterAll(() => removeScratchPackage(BUILT));
 
 async function bundle(code: string, minify = true): Promise<string> {
   const result = await build({
-    stdin: { contents: code, resolveDir: PACKAGE, loader: "js" },
+    stdin: { contents: code, resolveDir: BUILT, loader: "js" },
     bundle: true,
     format: "esm",
     minify,
@@ -55,7 +58,7 @@ test("importing the compiler module for its effects keeps its registration", asy
 });
 
 test("the build makes ES modules only: no IIFE script, no CommonJS", () => {
-  const files = readdirSync(join(PACKAGE, "dist")).filter((name) => name.endsWith("js"));
+  const files = readdirSync(join(BUILT, "dist")).filter((name) => name.endsWith("js"));
   expect(files.sort()).toEqual(["owl.compiler.es.js", "owl.es.js", "owl.runtime.es.js"]);
 });
 
@@ -73,7 +76,7 @@ describe("require()", () => {
       console.log(JSON.stringify(result));
     `;
     const run = spawnSync(process.execPath, ["--input-type=module", "-e", script], {
-      cwd: PACKAGE,
+      cwd: BUILT,
       encoding: "utf8",
     });
     expect(run.stderr).toBe("");
@@ -176,7 +179,7 @@ function onEveryTarget(api: Api): boolean {
 }
 
 const DIST_FILES = () =>
-  readdirSync(join(PACKAGE, "dist")).filter(
+  readdirSync(join(BUILT, "dist")).filter(
     (name) => name.endsWith(".js") && !name.includes(".min.")
   );
 
@@ -198,7 +201,7 @@ describe("the dist and its targets", () => {
   test("the dist calls no API a target lacks, and of the newer ones only those owl adopted", () => {
     const calls: Record<string, string[]> = {};
     for (const file of DIST_FILES()) {
-      const code = readFileSync(join(PACKAGE, "dist", file), "utf-8");
+      const code = readFileSync(join(BUILT, "dist", file), "utf-8");
       calls[file] = APIS.filter((api) => api.calls.test(code)).map((api) => api.api);
     }
     const lacking = APIS.filter((api) => !onEveryTarget(api)).map((api) => api.api);
@@ -227,11 +230,7 @@ describe("the dist and its targets", () => {
       write: false,
       logLevel: "silent" as const,
       define: { __BUILD_DATE__: '""', __BUILD_HASH__: '""' },
-      alias: {
-        "@odoo/owl-core": "../owl-core/src/index.ts",
-        "@odoo/owl-compiler": "../owl-compiler/src/index.ts",
-        "@odoo/owl-runtime": "../owl-runtime/src/index.ts",
-      },
+      alias: PACKAGE_SOURCES,
       target,
     });
     const [forTargets, asIs] = await Promise.all([
@@ -244,7 +243,7 @@ describe("the dist and its targets", () => {
 
   test("esbuild lowers nothing in the dist for the targets", async () => {
     for (const file of DIST_FILES()) {
-      const code = readFileSync(join(PACKAGE, "dist", file), "utf-8");
+      const code = readFileSync(join(BUILT, "dist", file), "utf-8");
       const forTargets = await transform(code, { target: TARGET, logLevel: "silent" });
       const asIs = await transform(code, { target: "esnext", logLevel: "silent" });
       expect([file, forTargets.code === asIs.code]).toEqual([file, true]);

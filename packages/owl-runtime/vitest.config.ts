@@ -1,5 +1,5 @@
 import { defineConfig } from "vitest/config";
-import { PACKAGE_SOURCES, TEST_DEFAULTS } from "../../tools/testing/workspace.mjs";
+import { PACKAGE_SOURCES, TEST_DEFAULTS } from "../../tools/workspace.mjs";
 
 const NODE_TESTS = ["tests/no_dom.test.ts"];
 const test = { ...TEST_DEFAULTS, setupFiles: ["./tests/setup.ts"] };

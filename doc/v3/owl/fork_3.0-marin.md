@@ -42,6 +42,10 @@ differently from upstream.
   refuses an older one by name),
   runs the compiler's TypeScript sources directly for the standalone
   precompiler, and the internal workspace packages are private.
+- `build.mjs [types] --outdir <dir>` builds into another directory than
+  `dist/`; the package tests build into their own directory under `temp/` and
+  never touch `dist/`, and `build:devtools` builds the package first and
+  compiles the devtools templates into `dist/devtools/`, not the source tree.
 - The standalone precompiler rejects partial output and duplicate names,
   preserves an existing artifact on compilation errors, and stages successful
   output before replacing it. `NODE_DEBUG=owl-compile` traces the operation.
@@ -328,7 +332,9 @@ true })` creates an effect owned by nothing. When a computed and an effect
   chain is ignored (Owl's own contexts hold none).
 - **`__info__.hash`** is the commit, plus `-dirty-<digest>` when the sources
   differ from it (the version file the release script writes excluded);
-  outside a git checkout, `nogit-<digest of the sources>`.
+  outside a git checkout, `nogit-<digest of the sources>`. **`__info__.date`**
+  is `SOURCE_DATE_EPOCH` if set, else the commit's date for a clean build (two
+  builds of a commit are the same bytes), else the build time.
 
 Several debug texts are shorter than in earlier fork builds, and `debug` is
 built from `DEBUG_CHANNELS`.

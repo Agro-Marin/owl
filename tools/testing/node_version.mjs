@@ -1,3 +1,3 @@
-import { checkNodeVersion } from "./workspace.mjs";
+import { checkNodeVersion } from "../workspace.mjs";
 
 export default checkNodeVersion;

@@ -2,7 +2,7 @@ import { execSync } from "child_process";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "fs";
 import { tmpdir } from "os";
 import { join } from "path";
-import { buildHash } from "../build_hash.mjs";
+import { buildDate, buildHash } from "../build_hash.mjs";
 
 const dirs: string[] = [];
 
@@ -80,4 +80,23 @@ test("a checkout of another repository around the sources does not name them", (
     writeFileSync(join(root, path), content);
   }
   expect(buildHash(root)).toMatch(/^nogit-[0-9a-f]{8}$/);
+});
+
+test("a clean build is dated by its commit", () => {
+  const root = makeRepo(SOURCES);
+  const committed = execSync("git log -1 --format=%cI", { cwd: root }).toString().trim();
+  expect(buildDate(root, buildHash(root), {})).toBe(new Date(committed).toISOString());
+});
+
+test("SOURCE_DATE_EPOCH dates any build; a dirty or unversioned one is dated now", () => {
+  const root = makeRepo(SOURCES);
+  expect(buildDate(root, buildHash(root), { SOURCE_DATE_EPOCH: "1767225600" })).toBe(
+    "2026-01-01T00:00:00.000Z"
+  );
+  writeFileSync(join(root, "packages/owl-core/src/a.ts"), "export const a = 2;");
+  const before = Date.now();
+  const dirty = Date.parse(buildDate(root, buildHash(root), {}));
+  expect(dirty).toBeGreaterThanOrEqual(before - 1000);
+  const tree = makeTree(SOURCES);
+  expect(Date.parse(buildDate(tree, buildHash(tree), {}))).toBeGreaterThanOrEqual(before - 1000);
 });

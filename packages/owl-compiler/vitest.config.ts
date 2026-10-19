@@ -1,5 +1,5 @@
 import { defineConfig } from "vitest/config";
-import { PACKAGE_SOURCES, TEST_DEFAULTS } from "../../tools/testing/workspace.mjs";
+import { PACKAGE_SOURCES, TEST_DEFAULTS } from "../../tools/workspace.mjs";
 
 export default defineConfig({
   resolve: {

@@ -1,7 +1,7 @@
 import * as esbuild from "esbuild";
 import { execSync } from "child_process";
-import { cpSync, mkdirSync, readdirSync, unlinkSync, readFileSync } from "fs";
-import { join } from "path";
+import { cpSync, mkdirSync, readFileSync } from "fs";
+import { join, resolve } from "path";
 
 const args = process.argv.slice(2);
 const browser = args.find((a) => a.startsWith("--browser="))?.split("=")[1] || "chrome";
@@ -11,15 +11,17 @@ const isChrome = browser === "chrome";
 
 const DEVTOOLS_SRC = "tools/devtools/src";
 const DEVTOOLS_DIST = "dist/devtools";
+const TEMPLATES = `${DEVTOOLS_DIST}/assets/templates.js`;
 
+execSync("npm run build", { stdio: "inherit" });
+execSync(`npm run compile_templates -- ${DEVTOOLS_SRC} -o ${TEMPLATES}`, { stdio: "inherit" });
 
-if (isProduction) {
-  execSync("npm run build", { stdio: "inherit" });
-}
-execSync("npm run compile_templates -- tools/devtools/src -o tools/devtools/assets/templates.js", {
-  stdio: "inherit",
-});
-
+const templatesPlugin = {
+  name: "compiled-templates",
+  setup(build) {
+    build.onResolve({ filter: /\/assets\/templates\.js$/ }, () => ({ path: resolve(TEMPLATES) }));
+  },
+};
 
 const stringImportPlugin = {
   name: "string-import",
@@ -50,18 +52,26 @@ await Promise.all(
       bundle: true,
       format: "esm",
       minify: isProduction,
-      plugins: [stringImportPlugin],
+      plugins: [stringImportPlugin, templatesPlugin],
       alias: { "@odoo/owl": "./packages/owl/dist/owl.es.js" },
     });
   })
 );
 
-
 const filesToCopy = [
   { src: "tools/devtools/assets", dest: `${DEVTOOLS_DIST}/assets` },
-  { src: `${DEVTOOLS_SRC}/devtools_app/devtools.html`, dest: `${DEVTOOLS_DIST}/devtools_app/devtools.html` },
-  { src: `${DEVTOOLS_SRC}/devtools_app/devtools_panel.html`, dest: `${DEVTOOLS_DIST}/devtools_app/devtools_panel.html` },
-  { src: `${DEVTOOLS_SRC}/page_scripts/owl_devtools_global_hook.js`, dest: `${DEVTOOLS_DIST}/page_scripts/owl_devtools_global_hook.js` },
+  {
+    src: `${DEVTOOLS_SRC}/devtools_app/devtools.html`,
+    dest: `${DEVTOOLS_DIST}/devtools_app/devtools.html`,
+  },
+  {
+    src: `${DEVTOOLS_SRC}/devtools_app/devtools_panel.html`,
+    dest: `${DEVTOOLS_DIST}/devtools_app/devtools_panel.html`,
+  },
+  {
+    src: `${DEVTOOLS_SRC}/page_scripts/owl_devtools_global_hook.js`,
+    dest: `${DEVTOOLS_DIST}/page_scripts/owl_devtools_global_hook.js`,
+  },
   { src: `${DEVTOOLS_SRC}/popup_app/popup.html`, dest: `${DEVTOOLS_DIST}/popup_app/popup.html` },
   { src: `${DEVTOOLS_SRC}/background.html`, dest: `${DEVTOOLS_DIST}/background.html` },
   { src: `${DEVTOOLS_SRC}/main.css`, dest: `${DEVTOOLS_DIST}/popup_app/main.css` },
@@ -78,11 +88,4 @@ cpSync(`${DEVTOOLS_SRC}/fonts`, `${DEVTOOLS_DIST}/fonts`, { recursive: true });
 for (const { src, dest } of filesToCopy) {
   mkdirSync(join(dest, ".."), { recursive: true });
   cpSync(src, dest, { recursive: true });
-}
-
-
-for (const file of readdirSync("tools/devtools/assets")) {
-  if (file.endsWith(".js")) {
-    unlinkSync(join("tools/devtools/assets", file));
-  }
 }

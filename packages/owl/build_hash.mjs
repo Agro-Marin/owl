@@ -32,25 +32,27 @@ function sourceFiles(root, dir) {
     });
 }
 
+function git(root, command) {
+  return execSync(`git ${command}`, { cwd: root, stdio: ["ignore", "pipe", "ignore"] })
+    .toString()
+    .trim();
+}
+
 export function buildHash(root) {
   root = realpathSync(root);
-  const git = (command) =>
-    execSync(`git ${command}`, { cwd: root, stdio: ["ignore", "pipe", "ignore"] })
-      .toString()
-      .trim();
   let commit;
   try {
-    if (realpathSync(git("rev-parse --show-toplevel")) !== root) {
+    if (realpathSync(git(root, "rev-parse --show-toplevel")) !== root) {
       throw new Error("not the root of a checkout");
     }
-    commit = git("rev-parse --short=8 HEAD");
+    commit = git(root, "rev-parse --short=8 HEAD");
   } catch {
     const files = SOURCES.flatMap((dir) => sourceFiles(root, dir));
     return `nogit-${digest(...files.flatMap((file) => [file, "\0", readFileSync(join(root, file)), "\0"]))}`;
   }
   const pathspec = [...SOURCES, ...GENERATED.map((file) => `':(exclude)${file}'`)].join(" ");
-  const changes = git(`diff HEAD -- ${pathspec}`);
-  const untracked = git(`ls-files --others --exclude-standard -- ${pathspec}`)
+  const changes = git(root, `diff HEAD -- ${pathspec}`);
+  const untracked = git(root, `ls-files --others --exclude-standard -- ${pathspec}`)
     .split("\n")
     .filter(Boolean);
   if (!changes && !untracked.length) {
@@ -58,4 +60,14 @@ export function buildHash(root) {
   }
   const contents = untracked.flatMap((file) => [file, "\0", readFileSync(join(root, file)), "\0"]);
   return `${commit}-dirty-${digest(changes, "\0", ...contents)}`;
+}
+
+export function buildDate(root, hash = buildHash(root), env = process.env) {
+  if (env.SOURCE_DATE_EPOCH) {
+    return new Date(Number(env.SOURCE_DATE_EPOCH) * 1000).toISOString();
+  }
+  if (/^[0-9a-f]{8}$/.test(hash)) {
+    return new Date(git(realpathSync(root), "log -1 --format=%cI HEAD")).toISOString();
+  }
+  return new Date().toISOString();
 }

@@ -2,15 +2,28 @@ import { spawnSync } from "node:child_process";
 import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
+import { removeScratchPackage, scratchPackage } from "./scratch_build";
+
+let BUILT: string;
+
+beforeAll(() => {
+  BUILT = scratchPackage("owl-types-test");
+}, 60000);
+
+afterAll(() => removeScratchPackage(BUILT));
 
 test("declarations build with this Node even inside npm exec", () => {
   const cwd = resolve(__dirname, "..");
-  const run = spawnSync(process.execPath, ["build.mjs", "types"], {
-    cwd,
-    encoding: "utf8",
-    timeout: 60000,
-    env: { ...process.env, npm_config_call: "node --version", NODE_DEBUG: "owl-build" },
-  });
+  const run = spawnSync(
+    process.execPath,
+    ["build.mjs", "types", "--outdir", resolve(BUILT, "dist")],
+    {
+      cwd,
+      encoding: "utf8",
+      timeout: 60000,
+      env: { ...process.env, npm_config_call: "node --version", NODE_DEBUG: "owl-build" },
+    }
+  );
   if (run.status !== 0) {
     console.debug("[owl:types-build-test]", run.stdout, run.stderr);
   }
@@ -18,8 +31,8 @@ test("declarations build with this Node even inside npm exec", () => {
   expect(run.stderr).toMatch(/OWL-BUILD \d+: types owl using/);
   expect(run.stderr).toMatch(/OWL-BUILD \d+: types compiler using/);
   expect(run.stdout + run.stderr).not.toContain("type nodes were renamed");
-  expect(readFileSync(resolve(cwd, "dist/types/owl.d.ts"), "utf8")).toContain("signal");
-  expect(readFileSync(resolve(cwd, "dist/types/compiler.d.ts"), "utf8")).toContain("compile");
+  expect(readFileSync(resolve(BUILT, "dist/types/owl.d.ts"), "utf8")).toContain("signal");
+  expect(readFileSync(resolve(BUILT, "dist/types/compiler.d.ts"), "utf8")).toContain("compile");
 }, 60000);
 
 test("a consumer outside the checkout gets complete collection and hook types", () => {
@@ -31,7 +44,7 @@ test("a consumer outside the checkout gets complete collection and hook types", 
     copyFileSync(resolve(packageRoot, "package.json"), resolve(installed, "package.json"));
     for (const entry of ["owl", "compiler"]) {
       copyFileSync(
-        resolve(packageRoot, `dist/types/${entry}.d.ts`),
+        resolve(BUILT, `dist/types/${entry}.d.ts`),
         resolve(installed, `dist/types/${entry}.d.ts`)
       );
     }

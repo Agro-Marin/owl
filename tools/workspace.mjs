@@ -1,7 +1,8 @@
-import { readFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-const at = (path) => fileURLToPath(new URL(`../../${path}`, import.meta.url));
+const at = (path) => fileURLToPath(new URL(`../${path}`, import.meta.url));
 
 export const ROOT = at("");
 
@@ -20,6 +21,12 @@ export function checkNodeVersion() {
       `Owl needs Node >=${REQUIRED_NODE} (found ${process.version}; see .node-version)`
     );
   }
+}
+
+export function scratchDir(prefix) {
+  const parent = join(ROOT, "temp");
+  mkdirSync(parent, { recursive: true });
+  return mkdtempSync(join(parent, `${prefix}-`));
 }
 
 export const TEST_DEFAULTS = {

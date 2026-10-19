@@ -1,35 +1,35 @@
 import * as esbuild from "esbuild";
 import { execFileSync } from "child_process";
 import { createRequire } from "node:module";
-import { debuglog } from "node:util";
-import { buildHash } from "./build_hash.mjs";
+import { debuglog, parseArgs } from "node:util";
+import { buildDate, buildHash } from "./build_hash.mjs";
 import { TARGET } from "./build_target.mjs";
+import { checkNodeVersion, PACKAGE_SOURCES } from "../../tools/workspace.mjs";
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync } from "fs";
 import { join, relative, resolve } from "path";
+
+checkNodeVersion();
 
 const pkg = JSON.parse(readFileSync("./package.json", "utf-8"));
 const log = debuglog("owl-build");
 
-const ES_FILENAME = "dist/owl.es.js";
-
-if (pkg.main !== ES_FILENAME) {
+if (pkg.main !== "dist/owl.es.js") {
   throw new Error("package.json has been modified. Build script should be updated accordingly");
 }
 
+const {
+  values: { outdir },
+  positionals: [target],
+} = parseArgs({
+  allowPositionals: true,
+  options: { outdir: { type: "string", default: "dist" } },
+});
+
+const hash = buildHash("../..");
 const define = {
-  __BUILD_DATE__: JSON.stringify(new Date().toISOString()),
-  __BUILD_HASH__: JSON.stringify(buildHash("../..")),
+  __BUILD_DATE__: JSON.stringify(buildDate("../..", hash)),
+  __BUILD_HASH__: JSON.stringify(hash),
 };
-
-const alias = {
-  "@odoo/owl-core": "../owl-core/src/index.ts",
-  "@odoo/owl-compiler": "../owl-compiler/src/index.ts",
-  "@odoo/owl-runtime": "../owl-runtime/src/index.ts",
-};
-
-function variantName(filename, variant) {
-  return filename.replace(/^dist\/owl\./, `dist/owl.${variant}.`);
-}
 
 const BUNDLED_COMPILER = resolve("src/bundled_compiler.ts");
 const bundledCompilerPlugin = {
@@ -43,14 +43,7 @@ const bundledCompilerPlugin = {
   },
 };
 
-async function buildVariant(entry, suffix) {
-  const esm = suffix ? variantName(ES_FILENAME, suffix) : ES_FILENAME;
-
-  const plugins = suffix ? [] : [bundledCompilerPlugin];
-  const common = { entryPoints: [entry], bundle: true, define, target: TARGET, alias, plugins };
-
-  await esbuild.build({ ...common, outfile: esm, format: "esm" });
-}
+const common = { bundle: true, define, target: TARGET, format: "esm", alias: PACKAGE_SOURCES };
 
 const COMPILER_INPUTS = [
   /^packages\/owl-compiler\/src\//,
@@ -60,18 +53,14 @@ const COMPILER_INPUTS = [
 ];
 
 async function buildCompilerModule() {
-  const common = {
+  const result = await esbuild.build({
+    ...common,
     entryPoints: ["src/compiler.ts"],
-    bundle: true,
-    define,
-    target: TARGET,
-    alias: { ...alias, "@odoo/owl-core": "./src/compiler_core.ts" },
+    outfile: join(outdir, "owl.compiler.es.js"),
+    alias: { ...PACKAGE_SOURCES, "@odoo/owl-core": "./src/compiler_core.ts" },
     metafile: true,
-  };
-  const results = await Promise.all([
-    esbuild.build({ ...common, format: "esm", outfile: "dist/owl.compiler.es.js" }),
-  ]);
-  for (const input of results.flatMap((result) => Object.keys(result.metafile.inputs))) {
+  });
+  for (const input of Object.keys(result.metafile.inputs)) {
     const path = relative("../..", resolve(input));
     if (!COMPILER_INPUTS.some((re) => re.test(path))) {
       throw new Error(`the compiler module must not bundle ${path}: it would be a second copy`);
@@ -84,14 +73,21 @@ function checkExportedFiles() {
     typeof target === "string" ? [target] : Object.values(target)
   );
   for (const target of targets) {
-    if (!target.includes("*") && !target.startsWith("./dist/types/") && !existsSync(target)) {
+    if (
+      target.includes("*") ||
+      target.startsWith("./dist/types/") ||
+      !target.startsWith("./dist/")
+    ) {
+      continue;
+    }
+    if (!existsSync(join(outdir, target.slice("./dist/".length)))) {
       throw new Error(`package.json exports ${target}, which the build does not make`);
     }
   }
 }
 
 function buildTypes() {
-  mkdirSync("dist/types", { recursive: true });
+  mkdirSync(join(outdir, "types"), { recursive: true });
   const cli = createRequire(import.meta.url).resolve(
     "dts-bundle-generator/dist/bin/dts-bundle-generator.js"
   );
@@ -107,7 +103,7 @@ function buildTypes() {
         "--project",
         "tsconfig.types.json",
         "-o",
-        `dist/types/${name}.d.ts`,
+        join(outdir, "types", `${name}.d.ts`),
         `src/${entry}.ts`,
         "--no-banner",
         "--inline-declare-global",
@@ -117,20 +113,28 @@ function buildTypes() {
   }
 }
 
-const target = process.argv[2];
-
 switch (target) {
   case "types":
     buildTypes();
     break;
   default:
-    for (const file of existsSync("dist") ? readdirSync("dist", { withFileTypes: true }) : []) {
+    for (const file of existsSync(outdir) ? readdirSync(outdir, { withFileTypes: true }) : []) {
       if (file.isFile()) {
-        rmSync(join("dist", file.name));
+        rmSync(join(outdir, file.name));
       }
     }
-    await buildVariant("src/index.ts");
-    await buildVariant("src/runtime.ts", "runtime");
+    log("build %s, %s, into %s", define.__BUILD_HASH__, define.__BUILD_DATE__, outdir);
+    await esbuild.build({
+      ...common,
+      entryPoints: ["src/index.ts"],
+      outfile: join(outdir, "owl.es.js"),
+      plugins: [bundledCompilerPlugin],
+    });
+    await esbuild.build({
+      ...common,
+      entryPoints: ["src/runtime.ts"],
+      outfile: join(outdir, "owl.runtime.es.js"),
+    });
     await buildCompilerModule();
     checkExportedFiles();
 }

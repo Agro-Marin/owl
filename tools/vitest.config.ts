@@ -1,5 +1,5 @@
 import { defineConfig } from "vitest/config";
-import { ROOT, TEST_DEFAULTS } from "./testing/workspace.mjs";
+import { ROOT, TEST_DEFAULTS } from "./workspace.mjs";
 
 export default defineConfig({
   test: {
