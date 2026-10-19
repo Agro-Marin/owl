@@ -65,16 +65,22 @@ export class Link {
 }
 
 function seenValue(dep: Atom): unknown {
-  return (dep as ComputationAtom).isDerived ? undefined : dep.value;
+  return dep.isDerived ? undefined : dep.value;
 }
 
 const DEAD = -1;
+
+export interface AtomHolder {
+  release(atom: Atom): void;
+}
 
 export interface Atom<T = any> {
   value: T;
   subs: Link | undefined;
   subsTail: Link | undefined;
   activeLink: Link | undefined;
+  isDerived: boolean;
+  holder: AtomHolder | undefined;
 }
 
 export interface ComputationAtom<T = any> extends Atom<T> {
@@ -101,7 +107,15 @@ export interface ComputationAtom<T = any> extends Atom<T> {
 }
 
 export function createAtom<T, K extends string>(value: T, type: K): Atom<T> & { type: K } {
-  return { type, value, subs: undefined, subsTail: undefined, activeLink: undefined };
+  return {
+    type,
+    value,
+    subs: undefined,
+    subsTail: undefined,
+    activeLink: undefined,
+    isDerived: false,
+    holder: undefined,
+  };
 }
 
 function isLive(link: Link): boolean {
@@ -159,9 +173,10 @@ export function createComputation(
     subs: undefined,
     subsTail: undefined,
     activeLink: undefined,
+    isDerived,
+    holder: undefined,
     compute,
     onUpdated: undefined,
-    isDerived,
     deps: undefined,
     depsTail: undefined,
     version: 0,
@@ -344,6 +359,9 @@ function unlinkSub(link: Link) {
   }
   link.rollback = undefined;
   link.version = DEAD;
+  if (dep.subs === undefined && dep.holder !== undefined) {
+    dep.holder.release(dep);
+  }
 }
 
 export function withObserver<T>(observer: ComputationAtom, fn: () => T): T {
@@ -797,6 +815,7 @@ export function disposeComputation(computation: ComputationAtom) {
     failure = { error };
   }
   computation.state = computation.isDerived ? ComputationState.STALE : ComputationState.EXECUTED;
+  computation.forward = false;
   if (computation.owned !== null) {
     const releaseFailure = releaseOwned(computation, "is disposed");
     failure ||= releaseFailure;

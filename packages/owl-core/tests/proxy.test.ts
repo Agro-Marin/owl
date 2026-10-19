@@ -909,7 +909,7 @@ describe("array searches", () => {
   test("a search subscribes to the items as one atom, not to each index", () => {
     const list = proxy([{ a: 1 }, { a: 2 }, { a: 3 }] as any[]);
     effect(() => list.includes(99));
-    expect(notifiedKeys(() => (list[1] = 0))).toEqual([]);
+    expect(notifiedKeys(() => (list[1] = 0))).toEqual(["items"]);
   });
 
   test("a search re-runs when an item is added, replaced or removed", async () => {
@@ -954,6 +954,49 @@ describe("array searches", () => {
 });
 
 describe("writes nobody observes", () => {
+  test("a key whose last reader is gone is written as if it was never read", async () => {
+    const map = proxy(new Map<string, number>());
+    const stop = effect(() => {
+      for (let i = 0; i < 100; i++) {
+        map.get(`k${i}`);
+      }
+      void map.size;
+    });
+    expect(notifiedKeys(() => map.set("k0", 1))).toEqual(["(keys)", "k0"]);
+    stop();
+    expect(notifiedKeys(() => map.set("k1", 1))).toEqual([]);
+    expect(notifiedKeys(() => map.clear())).toEqual([]);
+
+    const state = proxy<any>({ a: 1, b: 1 });
+    const flag = signal(true);
+    effect(() => (flag() ? state.a : state.b));
+    expect(notifiedKeys(() => (state.a = 2))).toEqual(["a"]);
+    flag.set(false);
+    await waitScheduler();
+    expect(notifiedKeys(() => (state.a = 3))).toEqual([]);
+    expect(notifiedKeys(() => (state.b = 2))).toEqual(["b"]);
+  });
+
+  test("a setter's getter is not called once the key's last reader is disposed", () => {
+    let reads = 0;
+    class Box {
+      _value = 0;
+      get value() {
+        reads++;
+        return this._value;
+      }
+      set value(value: number) {
+        this._value = value;
+      }
+    }
+    const box = proxy({ box: new Box() }).box;
+    const stop = immediateEffect(() => box.value);
+    stop();
+    reads = 0;
+    box.value = 1;
+    expect(reads).toBe(0);
+  });
+
   test("an object written before anything reads it notifies once something does", () => {
     const state = proxy<any>({});
     state.a = 1;

@@ -6,10 +6,9 @@ import {
   onReadAtom,
   onWriteAtom,
   Atom,
+  AtomHolder,
   ComputationState,
-  createAtom,
   createComputation,
-  hasObservers,
   trackLateReads,
   untrack,
   withObserver,
@@ -150,20 +149,124 @@ export function toRaw<T extends Target, U extends Reactive<T>>(value: U | T): T 
   return (targets.get(value) as T | undefined) ?? (value as T);
 }
 
-interface KeyAtoms {
-  keys: WeakMap<Target, Map<PropertyKey, Atom>>;
-  weakKeys: WeakMap<Target, WeakMap<WeakKey, Atom>>;
-}
-
 interface AtomTable {
-  get(key: any): Atom | undefined;
-  set(key: any, atom: Atom): unknown;
+  get(key: any): KeyAtom | undefined;
+  set(key: any, atom: KeyAtom): unknown;
   delete(key: any): boolean;
 }
 
-const itemAtoms: KeyAtoms = { keys: new WeakMap(), weakKeys: new WeakMap() };
-const presenceAtoms: KeyAtoms = { keys: new WeakMap(), weakKeys: new WeakMap() };
-const allAtoms = [itemAtoms, presenceAtoms];
+interface KeyAtom extends Atom<undefined> {
+  type: "key";
+  table: AtomTable | null;
+  key: unknown;
+}
+
+const ITEM = false;
+const PRESENCE = true;
+
+class TargetAtoms implements AtomHolder {
+  items: Map<unknown, KeyAtom> | undefined = undefined;
+  weakItems: WeakMap<WeakKey, KeyAtom> | undefined = undefined;
+  presence: Map<unknown, KeyAtom> | undefined = undefined;
+  weakPresence: WeakMap<WeakKey, KeyAtom> | undefined = undefined;
+  keyChanges: KeyAtom | undefined = undefined;
+  members: KeyAtom | undefined = undefined;
+  count = 0;
+  weakCount = 0;
+
+  table(presence: boolean, weak: boolean): AtomTable {
+    return presence
+      ? weak
+        ? (this.weakPresence ??= new WeakMap())
+        : (this.presence ??= new Map())
+      : weak
+        ? (this.weakItems ??= new WeakMap())
+        : (this.items ??= new Map());
+  }
+
+  atom(key: unknown, presence: boolean, weak: boolean): KeyAtom {
+    const table = this.table(presence, weak);
+    let atom = table.get(key);
+    if (atom === undefined) {
+      table.set(key, (atom = this.create(table, key)));
+      if (weak) {
+        this.weakCount++;
+      }
+    }
+    return atom;
+  }
+
+  find(key: unknown, presence: boolean): KeyAtom | undefined {
+    const table: AtomTable | undefined = isWeakKey(key)
+      ? presence
+        ? this.weakPresence
+        : this.weakItems
+      : presence
+        ? this.presence
+        : this.items;
+    return table?.get(key);
+  }
+
+  keysAtom(): KeyAtom {
+    return (this.keyChanges ??= this.create(null, KEYCHANGES));
+  }
+
+  itemsAtom(): KeyAtom {
+    return (this.members ??= this.create(null, ITEMS));
+  }
+
+  create(table: AtomTable | null, key: unknown): KeyAtom {
+    this.count++;
+    return {
+      type: "key",
+      value: undefined,
+      subs: undefined,
+      subsTail: undefined,
+      activeLink: undefined,
+      isDerived: false,
+      holder: this,
+      table,
+      key,
+    };
+  }
+
+  keyAtomCount(): number {
+    return this.count - (this.keyChanges ? 1 : 0) - (this.members ? 1 : 0);
+  }
+
+  release(atom: Atom): void {
+    const { table, key } = atom as KeyAtom;
+    if (debug.reactivity) {
+      const presence = table !== null && (table === this.presence || table === this.weakPresence);
+      const what = presence ? `presence of ${String(key)}` : describeKey(key);
+      debugLog("reactivity", `release the atom of ${what}, nothing reads it`);
+    }
+    atom.holder = undefined;
+    this.count--;
+    if (table === null) {
+      if (key === KEYCHANGES) {
+        this.keyChanges = undefined;
+      } else {
+        this.members = undefined;
+      }
+      return;
+    }
+    table.delete(key);
+    if (table === this.weakItems || table === this.weakPresence) {
+      this.weakCount--;
+    }
+  }
+}
+
+const targetAtoms = new WeakMap<Target, TargetAtoms>();
+
+function newTargetAtoms(): TargetAtoms {
+  return new TargetAtoms();
+}
+
+function atomsOf(target: Target): TargetAtoms {
+  return (targetAtoms as any).getOrInsertComputed(target, newTargetAtoms);
+}
 
 function isWeakKey(key: unknown): key is WeakKey {
   return (
@@ -175,45 +278,49 @@ function isWeakSymbol(key: unknown): key is symbol {
   return typeof key === "symbol" && Symbol.keyFor(key) === undefined;
 }
 
-function tablesOf(atoms: KeyAtoms, key: unknown): WeakMap<Target, AtomTable> {
-  return isWeakKey(key) ? atoms.weakKeys : atoms.keys;
-}
-
-function keyTable(target: Target, key: unknown, atoms: KeyAtoms): AtomTable {
-  const tables = tablesOf(atoms, key);
-  let table = tables.get(target);
-  if (table === undefined) {
-    tables.set(target, (table = isWeakKey(key) ? new WeakMap() : new Map()));
-  }
-  return table;
-}
-
-function atomOf(table: AtomTable, key: unknown): Atom {
-  let atom = table.get(key);
-  if (atom === undefined) {
-    table.set(key, (atom = createAtom(undefined, "key")));
-  }
-  return atom;
-}
-
-function findAtom(target: Target, key: unknown, atoms: KeyAtoms): Atom | undefined {
-  return tablesOf(atoms, key).get(target)?.get(key);
-}
-
-function onReadTargetKey(target: Target, key: unknown, atoms: KeyAtoms = itemAtoms): void {
+function onReadTargetKey(target: Target, key: unknown, presence: boolean = ITEM): void {
   if (isObserving()) {
     if (debug.reactivity) {
-      debugRead(target, key, atoms);
+      debugRead(target, key, presence);
     }
-    onReadAtom(atomOf(keyTable(target, key, atoms), key));
+    onReadAtom(atomsOf(target).atom(key, presence, isWeakKey(key)));
   }
 }
 
-function onWriteTargetKey(target: Target, key: unknown, atoms: KeyAtoms = itemAtoms): void {
-  const atom = findAtom(target, key, atoms);
-  if (atom) {
+function onReadKeys(target: Target): void {
+  if (isObserving()) {
     if (debug.reactivity) {
-      debugLog("reactivity", `proxy write ${describeKey(key)}`, target);
+      debugRead(target, KEYCHANGES, ITEM);
+    }
+    onReadAtom(atomsOf(target).keysAtom());
+  }
+}
+
+function onReadItems(target: Target): void {
+  if (isObserving()) {
+    if (debug.reactivity) {
+      debugRead(target, ITEMS, ITEM);
+    }
+    onReadAtom(atomsOf(target).itemsAtom());
+  }
+}
+
+function onWriteTargetKey(target: Target, key: unknown, presence: boolean = ITEM): void {
+  notify(target, targetAtoms.get(target)?.find(key, presence));
+}
+
+function onWriteKeys(target: Target): void {
+  notify(target, targetAtoms.get(target)?.keyChanges);
+}
+
+function onWriteItems(target: Target): void {
+  notify(target, targetAtoms.get(target)?.members);
+}
+
+function notify(target: Target, atom: KeyAtom | undefined): void {
+  if (atom !== undefined) {
+    if (debug.reactivity) {
+      debugLog("reactivity", `proxy write ${describeKey(atom.key)}`, target);
     }
     onWriteAtom(atom);
   }
@@ -223,9 +330,9 @@ function describeKey(key: unknown): string {
   return key === KEYCHANGES || key === ITEMS ? key.description! : String(key);
 }
 
-function debugRead(target: Target, key: unknown, atoms: KeyAtoms): void {
+function debugRead(target: Target, key: unknown, presence: boolean): void {
   const reader = getCurrentComputation();
-  const what = atoms === presenceAtoms ? `presence of ${String(key)}` : describeKey(key);
+  const what = presence ? `presence of ${String(key)}` : describeKey(key);
   debugLog(
     "reactivity",
     `proxy read ${what} by ${reader ? reader.name || "a computation" : "an observe() view"}`,
@@ -234,32 +341,36 @@ function debugRead(target: Target, key: unknown, atoms: KeyAtoms): void {
 }
 
 function onWriteKeyPresence(target: Target, key: unknown): void {
-  onWriteTargetKey(target, KEYCHANGES);
-  onWriteTargetKey(target, key, presenceAtoms);
+  onWriteKeys(target);
+  onWriteTargetKey(target, key, PRESENCE);
 }
 
-function releaseKey(target: Target, key: unknown): void {
-  for (const atoms of allAtoms) {
-    const table = tablesOf(atoms, key).get(target);
-    const atom = table?.get(key);
-    if (atom !== undefined && !hasObservers(atom)) {
-      table!.delete(key);
-    }
-  }
+function onWriteRemovedKey(target: Target, key: unknown): void {
+  onWriteKeyPresence(target, key);
+  onWriteTargetKey(target, key);
+}
+
+function hasKeyAtoms(target: Target): boolean {
+  const atoms = targetAtoms.get(target);
+  return atoms !== undefined && atoms.count !== 0;
 }
 
 function onWriteDroppedIndices(target: Target, newLength: number, oldLength: number): void {
-  for (const atoms of allAtoms) {
-    const table = atoms.keys.get(target);
-    if (table !== undefined) {
+  const atoms = targetAtoms.get(target);
+  if (atoms === undefined) {
+    return;
+  }
+  for (const table of [atoms.items, atoms.presence]) {
+    if (table !== undefined && table.size !== 0) {
+      const presence = table === atoms.presence;
       if (oldLength - newLength <= table.size) {
         for (let i = newLength; i < oldLength; i++) {
-          onWriteDroppedIndex(target, String(i), atoms);
+          onWriteTargetKey(target, String(i), presence);
         }
       } else {
         for (const key of table.keys()) {
           if (typeof key === "string" && isIndexIn(key, newLength, oldLength)) {
-            onWriteDroppedIndex(target, key, atoms);
+            onWriteTargetKey(target, key, presence);
           }
         }
       }
@@ -270,11 +381,6 @@ function onWriteDroppedIndices(target: Target, newLength: number, oldLength: num
 function isIndexIn(key: string, start: number, end: number): boolean {
   const index = Number(key);
   return index >= start && index < end && String(index) === key;
-}
-
-function onWriteDroppedIndex(target: Target, key: string, atoms: KeyAtoms): void {
-  onWriteTargetKey(target, key, atoms);
-  releaseKey(target, key);
 }
 
 const targets = new WeakMap<Reactive<Target>, Target>();
@@ -433,13 +539,11 @@ function isIterator(value: any): value is Iterator<any> {
 
 class BasicHandler implements ProxyHandler<any> {
   shallow: boolean;
-  keyAtoms: AtomTable | undefined;
-  weakKeyAtoms: AtomTable | undefined;
+  atoms: TargetAtoms | undefined;
 
   constructor(shallow: boolean) {
     this.shallow = shallow;
-    this.keyAtoms = undefined;
-    this.weakKeyAtoms = undefined;
+    this.atoms = undefined;
   }
 
   host(target: Target): Target {
@@ -449,12 +553,9 @@ class BasicHandler implements ProxyHandler<any> {
   get(target: any, key: PropertyKey, receiver: any): any {
     if (isObserving()) {
       if (debug.reactivity) {
-        debugRead(target, key, itemAtoms);
+        debugRead(target, key, ITEM);
       }
-      const table = isWeakSymbol(key)
-        ? (this.weakKeyAtoms ??= keyTable(this.host(target), key, itemAtoms))
-        : (this.keyAtoms ??= keyTable(this.host(target), key, itemAtoms));
-      onReadAtom(atomOf(table, key));
+      onReadAtom((this.atoms ??= atomsOf(this.host(target))).atom(key, ITEM, isWeakSymbol(key)));
     }
     let value;
     try {
@@ -487,10 +588,7 @@ class BasicHandler implements ProxyHandler<any> {
     const ret = Reflect.deleteProperty(target, key);
     if (hadKey && ret) {
       batch(() => {
-        const atoms = this.host(target);
-        onWriteKeyPresence(atoms, key);
-        onWriteTargetKey(atoms, key);
-        releaseKey(atoms, key);
+        onWriteRemovedKey(this.host(target), key);
         if (Array.isArray(target)) {
           onWriteItems(target);
         }
@@ -500,12 +598,12 @@ class BasicHandler implements ProxyHandler<any> {
   }
 
   ownKeys(target: any): ArrayLike<string | symbol> {
-    onReadTargetKey(this.host(target), KEYCHANGES);
+    onReadKeys(this.host(target));
     return Reflect.ownKeys(target);
   }
 
   has(target: any, key: PropertyKey): boolean {
-    onReadTargetKey(this.host(target), key, presenceAtoms);
+    onReadTargetKey(this.host(target), key, PRESENCE);
     return Reflect.has(target, key);
   }
 }
@@ -552,7 +650,7 @@ function write(
 ): boolean {
   const isArray = Array.isArray(target);
   const length = isArray ? target.length : 0;
-  const compares = isArray || findAtom(atoms, key, itemAtoms) !== undefined;
+  const compares = isArray || targetAtoms.get(atoms)?.find(key, ITEM) !== undefined;
   const before =
     own !== undefined && "value" in own
       ? own.value
@@ -566,7 +664,7 @@ function write(
     if (target.length !== length) {
       onWriteTargetKey(target, key);
       if (target.length < length) {
-        onWriteTargetKey(target, KEYCHANGES);
+        onWriteKeys(target);
         onWriteDroppedIndices(target, target.length, length);
       }
       onWriteItems(target);
@@ -601,13 +699,6 @@ function readForWrite(target: any, key: PropertyKey, receiver: any): unknown {
   }
 }
 
-function onWriteItems(target: Target): void {
-  const atom = findAtom(target, ITEMS, itemAtoms);
-  if (atom !== undefined) {
-    onWriteAtom(atom);
-  }
-}
-
 function isPlainArray(raw: object): boolean {
   return Object.getPrototypeOf(raw) === Array.prototype;
 }
@@ -617,7 +708,7 @@ export function readArrayItems<T>(array: T[]): T[] {
   if (raw === undefined || deepProxies.get(raw) !== array || !isPlainArray(raw)) {
     return array;
   }
-  onReadTargetKey(raw, ITEMS);
+  onReadItems(raw);
   if (Object.isFrozen(raw)) {
     return raw.slice();
   }
@@ -653,7 +744,7 @@ function replaceMethods(): Map<Function, Function> {
       const raw = toRaw(this);
       const plain = isPlainArray(raw);
       if (plain) {
-        onReadTargetKey(raw, ITEMS);
+        onReadItems(raw);
       }
       const result = method.apply(plain ? raw : this, args);
       const item = args[0];
@@ -675,7 +766,7 @@ function replaceMethods(): Map<Function, Function> {
     onReadTargetKey(
       collectionMethods(raw) ? propertyHost(raw) : raw,
       typeof key === "symbol" ? key : String(key),
-      presenceAtoms
+      PRESENCE
     );
     return Object.hasOwn(raw, key);
   };
@@ -699,7 +790,7 @@ function makeMethod(key: PropertyKey, target: any, shallow: boolean): Function {
     case "has":
       return (item: any) => {
         const raw = rawKey(item);
-        onReadTargetKey(target, raw, presenceAtoms);
+        onReadTargetKey(target, raw, PRESENCE);
         return target.has(raw === item ? raw : storedKey(target, item, raw));
       };
     case "get":
@@ -753,7 +844,7 @@ function makeIteratorObserver(methodName: PropertyKey, target: any, shallow: boo
   const entries = methodName === "entries" || (methodName === Symbol.iterator && isMap);
   const readsValues = isMap && methodName !== "keys";
   return function* () {
-    onReadTargetKey(target, KEYCHANGES);
+    onReadKeys(target);
     for (const item of entries || readsValues ? target.entries() : target.keys()) {
       if (readsValues) {
         onReadTargetKey(target, rawKey(item[0]));
@@ -779,7 +870,7 @@ function makeForEachObserver(target: any, shallow: boolean) {
     thisArg?: any
   ) {
     const collection = this ?? reactiveValue(target, shallow);
-    onReadTargetKey(target, KEYCHANGES);
+    onReadKeys(target);
     target.forEach((value: any, key: any) => {
       if (readsValues) {
         onReadTargetKey(target, rawKey(key));
@@ -857,7 +948,7 @@ function rawSetRecord(other: any, mine: Map<any, any>, theirs: Map<any, any>): o
 
 function makeSetOperation(name: string, target: Set<any>) {
   return (other: any) => {
-    onReadTargetKey(target, KEYCHANGES);
+    onReadKeys(target);
     const mine = membersByRaw(target.values());
     const theirs = new Map();
     const record = Object(other) === other ? rawSetRecord(other, mine, theirs) : other;
@@ -914,9 +1005,6 @@ function delegateAndNotify(setterName: "set" | "add" | "delete", target: any, sh
         if (readsValue ? !Object.is(before, after) : hadKey !== hasKey) {
           onWriteTargetKey(target, raw);
         }
-        if (!hasKey) {
-          releaseKey(target, raw);
-        }
       }
       return ret === target ? collection : ret;
     });
@@ -961,19 +1049,11 @@ function makeGetOrInsert(
     });
 }
 
-function hasKeyAtoms(target: Target): boolean {
-  return (
-    itemAtoms.keys.has(target) ||
-    itemAtoms.weakKeys.has(target) ||
-    presenceAtoms.keys.has(target) ||
-    presenceAtoms.weakKeys.has(target)
-  );
-}
-
 function makeClearNotifier(target: Map<any, any> | Set<any>) {
   const prototype = target instanceof Map ? Map.prototype : Set.prototype;
   const size = Object.getOwnPropertyDescriptor(prototype, "size")!.get!;
   const keysOf = prototype.keys;
+  const has = prototype.has;
   const isMap = target instanceof Map;
   const snapshot = () =>
     new Map<any, any>(
@@ -998,34 +1078,56 @@ function makeClearNotifier(target: Map<any, any> | Set<any>) {
             oldKeys.length !== newKeys.length ||
             oldKeys.some((key, i) => !Object.is(key, newKeys[i]))
           ) {
-            onWriteTargetKey(target, KEYCHANGES);
+            onWriteKeys(target);
           }
           for (const key of keys) {
             const hadKey = before.has(key);
             const hasKey = after.has(key);
             const raw = rawKey(key);
-            if (hadKey !== hasKey) onWriteTargetKey(target, raw, presenceAtoms);
+            if (hadKey !== hasKey) onWriteTargetKey(target, raw, PRESENCE);
             if (isMap ? !Object.is(before.get(key), after.get(key)) : hadKey !== hasKey) {
               onWriteTargetKey(target, raw);
             }
-            if (!hasKey) releaseKey(target, raw);
           }
         }
       });
     }
-    const nonempty = size.call(target) !== 0;
-    const keys = nonempty && hasKeyAtoms(target) ? [...keysOf.call(target)] : [];
+    const count = size.call(target);
+    const keys = count !== 0 ? observedKeys(target, count, has, keysOf) : [];
     batch(() => {
       Reflect.apply(clear, target, []);
-      if (nonempty) onWriteTargetKey(target, KEYCHANGES);
+      if (count !== 0) onWriteKeys(target);
       for (const key of keys) {
-        const raw = rawKey(key);
-        onWriteTargetKey(target, raw, presenceAtoms);
-        onWriteTargetKey(target, raw);
-        releaseKey(target, raw);
+        onWriteTargetKey(target, key, PRESENCE);
+        onWriteTargetKey(target, key);
       }
     });
   };
+}
+
+function observedKeys(
+  target: Map<any, any> | Set<any>,
+  size: number,
+  has: (this: object, key: any) => boolean,
+  keysOf: (this: object) => IterableIterator<any>
+): unknown[] {
+  const atoms = targetAtoms.get(target);
+  const count = atoms === undefined ? 0 : atoms.keyAtomCount();
+  if (count === 0) {
+    return [];
+  }
+  if (atoms!.weakCount === 0 && count < size) {
+    const keys = new Set<unknown>();
+    for (const table of [atoms!.items, atoms!.presence]) {
+      for (const key of table?.keys() ?? []) {
+        if (has.call(target, key)) {
+          keys.add(key);
+        }
+      }
+    }
+    return [...keys];
+  }
+  return Array.from(keysOf.call(target), rawKey);
 }
 
 const setLikeMethods: PropertyKey[] = [
@@ -1104,7 +1206,7 @@ class CollectionHandler extends BasicHandler {
       return method;
     }
     if (key === "size" && this.hasSize) {
-      onReadTargetKey(target, KEYCHANGES);
+      onReadKeys(target);
       return target.size;
     }
     return super.get(target, key, receiver);

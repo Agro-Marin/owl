@@ -75,7 +75,11 @@ differently from upstream.
   again for props it already holds.
 - **Proxy reads nobody observes create no atom**; `in` / `has()` subscribe to
   the presence of the key they ask about only. The same holds for a `props()`
-  view: a key read only untracked (in `setup`) gets no atom.
+  view: a key read only untracked (in `setup`) gets no atom. A key's atom is
+  released when its last reader unsubscribes (a re-run that stops reading it,
+  a dispose), so a target nobody reads any more is written as one never read,
+  and `clear()` notifies only the keys something reads, walking those keys
+  instead of the collection when they are fewer and all primitive.
 - **A `props({...})` view inherits from one frozen, empty object** whose own
   prototype is `null`, instead of having a `null` prototype itself: the views
   of a component class then share one hidden class, where upstream's are each

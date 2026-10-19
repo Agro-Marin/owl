@@ -82,6 +82,11 @@ test("the reactivity channel names each tracked proxy read and its reader", () =
     "reactivity: proxy read list by reader",
     "reactivity: proxy read includes by reader",
     "reactivity: proxy read items by reader",
+    "reactivity: release the atom of a, nothing reads it",
+    "reactivity: release the atom of presence of b, nothing reads it",
+    "reactivity: release the atom of list, nothing reads it",
+    "reactivity: release the atom of includes, nothing reads it",
+    "reactivity: release the atom of items, nothing reads it",
   ]);
 });
 
