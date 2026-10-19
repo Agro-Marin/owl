@@ -267,10 +267,14 @@ plugins: [] })` rendered asynchronously); a resource-driven start belongs to
   failed commit already patched or mounted gets its `onPatched` or `onMounted`
   (and only then `onWillUnmount`) from the next commit of it or of a component
   below it, and no `onWillPatch` / `onPatched` while it is owed `onMounted`.
-- **A first mount that throws half way** removes what it inserted; the
-  recovery mounts it afresh instead of patching a half-mounted tree.
+- **A first mount that throws half way** removes what it inserted, unsets the
+  refs it set, and takes the children it mounted back to unmounted (no
+  `onWillUnmount` runs for them); the error is handled first, then the recovery
+  destroys them and mounts afresh instead of patching a half-mounted tree.
+  Nothing handling the error, `mount()` rejects with that error.
 - **An `onWillUnmount` that throws during a patch** no longer aborts it: the
-  error is handled, from the removed component, once the patch is done.
+  error is handled, from the removed component, once the patch is done; a
+  removal outside any patch (`blockDom.remove`) throws it.
 - **A synchronous throw in `onWillUpdateProps`** is handled as a rejection is,
   by the component's own `onError` first; props validation still fails the
   parent's render.

@@ -318,7 +318,11 @@ export class ComponentNode extends Scope<App> implements VNode<ComponentNode> {
       this.bdom!.patch(fiber.bdom!, withBeforeRemove);
     } catch (e) {
       if (removalDepth === 1 && removalErrors) {
-        reportRemovalErrors();
+        try {
+          reportRemovalErrors();
+        } catch (removalError) {
+          console.error(removalError);
+        }
       }
       throw e;
     } finally {
@@ -335,6 +339,9 @@ export class ComponentNode extends Scope<App> implements VNode<ComponentNode> {
     try {
       this._destroy();
     } catch (error) {
+      if (!removalDepth) {
+        throw error;
+      }
       if (debug.error) {
         debugLog("error", `${this.componentName}: removal error held until the patch is done`);
       }

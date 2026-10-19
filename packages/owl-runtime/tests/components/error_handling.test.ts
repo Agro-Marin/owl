@@ -2076,6 +2076,40 @@ describe("errors in onWillUpdateProps", () => {
     expect(errors[0]).toMatch(/^parent: Invalid component props \(Child\)/);
   });
 
+  test("an invalid prop after an onWillUpdateProps that throws leaves no unhandled rejection", async () => {
+    const errors: string[] = [];
+    class Child extends Component {
+      static template = xml`<div t-out="this.props.val"/>`;
+      props: any;
+      setup() {
+        onWillUpdateProps(() => {
+          throw new Error("sync boom");
+        });
+        this.props = props({ val: types.number() });
+      }
+    }
+    class Parent extends Component {
+      static template = xml`<Child val="this.state.val"/>`;
+      static components = { Child };
+      state = proxy({ val: 0 as any });
+      setup() {
+        onError((e) => errors.push(`parent: ${e.message}`));
+      }
+    }
+
+    const unhandled: string[] = [];
+    const onUnhandled = (e: any) => unhandled.push(e.message);
+    process.on("unhandledRejection", onUnhandled);
+    const parent = await mount(Parent, fixture, { test: true });
+    parent.state.val = "x";
+    await nextTick();
+    await new Promise((resolve) => setTimeout(resolve));
+    process.off("unhandledRejection", onUnhandled);
+    expect(unhandled).toEqual([]);
+    expect(errors.length).toBe(1);
+    expect(errors[0]).toMatch(/^parent: Invalid component props \(Child\)/);
+  });
+
   test("async error in onWillUpdateProps is caught by child's own onError", async () => {
     let error: any;
     class Child extends Component {

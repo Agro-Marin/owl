@@ -487,11 +487,18 @@ function callWillUpdateProps(
   const component = node.component;
   let promises: Promise<any>[] | undefined;
   untrack(() => {
-    for (const f of hooks) {
-      const r = f.call(component, nextProps);
-      if (r && typeof r.then === "function") {
-        (promises ||= []).push(r);
+    try {
+      for (const f of hooks) {
+        const r = f.call(component, nextProps);
+        if (r && typeof r.then === "function") {
+          (promises ||= []).push(r);
+        }
       }
+    } catch (e) {
+      for (const promise of promises || []) {
+        promise.catch(() => {});
+      }
+      throw e;
     }
   });
   return promises;

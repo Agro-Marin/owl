@@ -353,8 +353,10 @@ const owedMounted = new WeakMap<ComponentNode, Function[]>();
 const owedPatched = new WeakSet<ComponentNode>();
 let owedCount = 0;
 
+const queuedForOwed = new WeakSet<Fiber>();
+
 function oweMounted(node: ComponentNode) {
-  if (!owedMounted.has(node)) {
+  if (node.status !== STATUS.DESTROYED && !owedMounted.has(node)) {
     owedMounted.set(node, node.willUnmount);
     node.willUnmount = [];
     owedCount++;
@@ -362,7 +364,7 @@ function oweMounted(node: ComponentNode) {
 }
 
 function owePatched(node: ComponentNode) {
-  if (!owedPatched.has(node)) {
+  if (node.status !== STATUS.DESTROYED && !owedPatched.has(node)) {
     owedPatched.add(node);
     owedCount++;
   }
@@ -434,6 +436,7 @@ function queueOwedMounted(fiber: Fiber) {
   const node = fiber.node;
   if (owedMounted.has(node)) {
     const mounted = fiber.root!.mounted;
+    queuedForOwed.add(fiber);
     const i = mounted.findIndex((f) => f.node === node);
     if (i < 0) {
       mounted.push(fiber);
@@ -484,8 +487,12 @@ function callCommitHooks(
     if (!applied || node.status === STATUS.DESTROYED) {
       continue;
     }
-    if (owedCount) {
-      settleOwed(node, hook);
+    const settled = owedCount ? settleOwed(node, hook) : false;
+    if (mounting && queuedForOwed.delete(current) && !settled) {
+      if (debug.lifecycle) {
+        debugLog("lifecycle", `mounted ${node.componentName}: owed hooks already paid`);
+      }
+      continue;
     }
     if (debug.lifecycle && node[hook].length) {
       debugLog("lifecycle", `${hook} ${node.componentName}: ${node[hook].length} hook(s)`);
@@ -511,6 +518,23 @@ function callCommitHooks(
     }
   }
   return failed;
+}
+
+function unmountChildren(children: Map<unknown, ComponentNode>) {
+  for (const child of children.values()) {
+    if (child.status === STATUS.MOUNTED) {
+      if (debug.fiber) {
+        debugLog(
+          "fiber",
+          `${child.componentName} goes back to unmounted with its parent's failed mount`
+        );
+      }
+      child.status = STATUS.NEW;
+      if (child.childMap) {
+        unmountChildren(child.childMap);
+      }
+    }
+  }
 }
 
 type Position = "first-child" | "last-child";
@@ -578,7 +602,9 @@ export class MountFiber extends RootFiber {
       node.status = STATUS.MOUNTED;
       this.renderState |= APPLIED_TO_DOM;
     } catch (e) {
-      if (node.bdom) {
+      let refError: { error: unknown } | null = null;
+      const bdom = node.bdom;
+      if (bdom) {
         node.bdom = null;
         node.childMap = null;
         let n: Node | null = prev ? prev.nextSibling : target.firstChild;
@@ -587,23 +613,26 @@ export class MountFiber extends RootFiber {
           n.parentNode!.removeChild(n);
           n = sibling;
         }
+        try {
+          bdom.detachRefs();
+        } catch (error) {
+          refError = { error };
+        }
         for (const fiber of this.mounted) {
           oweMounted(fiber.node);
         }
-        const children = this.childrenMap;
-        if (children?.size) {
-          if (debug.fiber) {
-            debugLog(
-              "fiber",
-              `${node.componentName}'s failed mount destroys the ${children.size} children it made`
-            );
-          }
-          for (const child of children.values()) {
-            child._destroy();
-          }
+        if (this.childrenMap) {
+          unmountChildren(this.childrenMap);
         }
       }
       handleError({ fiber: this, error: e });
+      if (refError) {
+        if (node.app.destroyed) {
+          console.error(refError.error);
+        } else {
+          handleError({ node, error: refError.error });
+        }
+      }
       return;
     }
     commitHooks(this);
