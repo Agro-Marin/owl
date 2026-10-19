@@ -299,6 +299,7 @@ const OPERAND_PREFIXES = new Set<TKind>([
 ]);
 
 const OPERAND_KEYWORDS = new Set(["void", "return"]);
+const ACCESSOR_WORDS = new Set(["get", "set", "async"]);
 
 const tokenizeRegExp: Tokenizer = function (expr, previous, beforePrevious) {
   const afterKeyword =
@@ -409,18 +410,23 @@ const paddedValues = new Map([
   ["void", "void "],
 ]);
 
+const INTEGER_RE = /^\d[\d_]*$/;
+
 function render(tokens: Token[]): string {
   let code = "";
+  let previous: Token | undefined;
   for (const t of tokens) {
     const value = t.isKeyword ? t.value + " " : paddedValues.get(t.value) || t.value;
     const last = code[code.length - 1];
     if (
       ((last === "+" || last === "-") && value[0] === last) ||
-      (last && IDENTIFIER_CHAR_RE.test(last) && IDENTIFIER_CHAR_RE.test(value[0]))
+      (last && IDENTIFIER_CHAR_RE.test(last) && IDENTIFIER_CHAR_RE.test(value[0])) ||
+      (value === "." && previous?.type === "VALUE" && INTEGER_RE.test(previous.value))
     ) {
       code += " ";
     }
     code += value;
+    previous = t;
   }
   return code;
 }
@@ -684,6 +690,18 @@ export function processExpr(
       } else if (token.value === "await") {
         token.isKeyword = !!scopeStack[scopeStack.length - 1]?.isAsync;
       }
+    }
+    if (
+      token.type === "SYMBOL" &&
+      groupType === "LEFT_BRACE" &&
+      (prevToken.type === "LEFT_BRACE" || prevToken.type === "COMMA") &&
+      (nextToken?.type === "LEFT_PAREN" ||
+        (ACCESSOR_WORDS.has(token.value) &&
+          (nextToken?.type === "SYMBOL" || nextToken?.type === "LEFT_BRACKET")))
+    ) {
+      throw new OwlError(
+        `Object literal methods and accessors are not supported in a template expression (\`${expr}\`): use a property holding an arrow function`
+      );
     }
     let isVar = token.type === "SYMBOL" && !token.isKeyword && !RESERVED_WORDS.has(token.value);
     if (isVar) {

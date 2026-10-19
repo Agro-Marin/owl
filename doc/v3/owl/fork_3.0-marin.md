@@ -428,10 +428,14 @@ plugins: [] })` rendered asynchronously); a resource-driven start belongs to
   section is text**, in an element or a `t-set` body (upstream dropped it).
 - **A directive that needs an expression throws on an empty one**, naming it;
   a `t-set-slot` nested directly in another throws.
+- **`t-out="0"` with blanks around the `0`** outputs the call's body (upstream:
+  the number); **`t-model.trim` on a checkbox** throws (it compiled
+  `ev.target.checked.trim()`).
 - **`t-model.number`** checks the radio, or selects the static option, whose
   value equals the model's number.
 - **Template expressions skip comments**; a statement keyword in an arrow's
-  block body throws a named error; `delete` is an operator (`delete o.x`
+  block body, and an object literal method or accessor (`{ f() {} }`,
+  `{ get g() {} }`), throw a named error; `1 .toString()` keeps its space; `delete` is an operator (`delete o.x`
   compiles; a context variable cannot be named `delete`); `{{ }}` and `#{ }`
   end at the brace that closes them; an arrow prop's free variables include
   those its parameter defaults read.

@@ -11,6 +11,13 @@ describe("t-call (template calling)", () => {
     expect(context.renderToString("caller")).toBe("<div><span>ok</span></div>");
   });
 
+  test("t-out of 0 with blanks around it outputs the call's body", () => {
+    const context = new TestContext();
+    context.addTemplate("sub", `<p><t t-out=" 0 "/></p>`);
+    context.addTemplate("caller", `<t t-call="sub"><b>body</b></t>`);
+    expect(context.renderToString("caller")).toBe("<p><b>body</b></p>");
+  });
+
   test("a static name is a string, whatever it contains", () => {
     const context = new TestContext();
     context.addTemplate("a`b\\c", `<span>ok</span>`);

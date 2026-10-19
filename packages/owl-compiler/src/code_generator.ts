@@ -1037,7 +1037,7 @@ export class CodeGenerator {
     let { block } = ctx;
     block = this.createBlock(block, "html");
     let blockStr;
-    if (ast.expr === "0") {
+    if (ast.expr.trim() === "0") {
       blockStr = this.compileZero(ast, ctx);
     } else {
       const site = this.siteId();

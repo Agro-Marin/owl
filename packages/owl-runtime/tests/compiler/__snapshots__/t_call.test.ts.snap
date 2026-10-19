@@ -1445,6 +1445,42 @@ exports[`t-call (template calling) > t-out inside t-call, with t-set outside 2`]
 }"
 `;
 
+exports[`t-call (template calling) > t-out of 0 with blanks around it outputs the call's body 1`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { zero, zeroCtx, callTemplate } = helpers;
+  
+  let block2 = createBlock(\`<b>body</b>\`);
+  
+  function callBody1(ctx, node, key = "") {
+    return block2();
+  }
+  
+  return function template(ctx, node, key = "") {
+    const ctx1 = Object.create(ctx);
+    ctx1[zero] = callBody1;
+    ctx1[zeroCtx] = ctx;
+    return callTemplate(\`sub\`, this, app, ctx1, node, key + \`\\u00021\`);
+  }
+}"
+`;
+
+exports[`t-call (template calling) > t-out of 0 with blanks around it outputs the call's body 2`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { zero, zeroCtx } = helpers;
+  
+  let block1 = createBlock(\`<p><block-child-0/></p>\`);
+  
+  return function template(ctx, node, key = "") {
+    const b2 = ctx[zero] ? ctx[zero].call(this, ctx[zeroCtx], node, key + \`\\u00021\`) : text("");
+    return block1([], [b2]);
+  }
+}"
+`;
+
 exports[`t-call (template calling) > t-out=0 renders its default body when the t-call has none 1`] = `
 "function anonymous(app, bdom, helpers
 ) {

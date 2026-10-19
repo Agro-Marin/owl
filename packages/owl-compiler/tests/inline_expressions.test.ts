@@ -483,6 +483,26 @@ describe("expression evaluation", () => {
   });
 });
 
+describe("expression edge cases", () => {
+  test("an integer literal followed by a property access keeps its space", () => {
+    expect(compileExpr("1 .toString()")).toBe("1 .toString()");
+    expect(compileExpr("1..toString() + 1.5.toFixed(1) + 0x1.toString()")).toBe(
+      "1..toString()+1.5.toFixed(1)+0x1.toString()"
+    );
+    expect(new Function(`return ${compileExpr("1 .toString()")}`)()).toBe("1");
+  });
+
+  test("an object literal method or accessor throws a named error", () => {
+    const error = "Object literal methods and accessors are not supported in a template expression";
+    expect(() => compileExpr("{ x() { return 1; } }")).toThrow(error);
+    expect(() => compileExpr("{ a: 1, get g() { return 1; } }")).toThrow(error);
+    expect(() => compileExpr("{ async f() {} }")).toThrow(error);
+    expect(compileExpr("{ get: 1, set: f(x), x: () => 1 }")).toBe(
+      "{get:1,set:ctx['f'](ctx['x']),x:()=>1}"
+    );
+  });
+});
+
 describe("standard globals", () => {
   test("are read as JavaScript's own, not from the context", () => {
     expect(compileExpr("String(x)")).toBe("String(ctx['x'])");

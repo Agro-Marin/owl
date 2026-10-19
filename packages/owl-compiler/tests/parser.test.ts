@@ -1480,6 +1480,13 @@ describe("qweb parser", () => {
     );
   });
 
+  test("t-model.trim on a checkbox throws", async () => {
+    expect(() => parse(`<input type="checkbox" t-model.trim="x"/>`)).toThrow(
+      "t-model.trim needs a text input: a checkbox gives a boolean"
+    );
+    expect(() => parse(`<input type="checkbox" t-model.lazy="x"/>`)).not.toThrow();
+  });
+
   test("t-model rejects an unknown modifier or a longer directive name", async () => {
     expect(() => parse(`<input t-model.lazzy="x"/>`)).toThrow("Unknown t-model modifier: 'lazzy'");
     expect(() => parse(`<input t-model.trimmed="x"/>`)).toThrow(

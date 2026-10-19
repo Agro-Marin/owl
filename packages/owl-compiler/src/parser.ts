@@ -480,6 +480,9 @@ function parseDOMNode(node: Element, ctx: ParsingContext): AST | null {
         }
       }
       const hasTrimMod = modifiers.includes("trim");
+      if (hasTrimMod && isCheckboxInput) {
+        throw new OwlError("t-model.trim needs a text input: a checkbox gives a boolean");
+      }
       const hasLazyMod = hasTrimMod || modifiers.includes("lazy");
       const hasNumberMod = modifiers.includes("number");
       const hasProxyMod = modifiers.includes("proxy");
