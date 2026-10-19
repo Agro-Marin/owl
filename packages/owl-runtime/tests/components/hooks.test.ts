@@ -467,7 +467,7 @@ describe("hooks", () => {
       component.state.value++;
       await new Promise((resolve) => requestAnimationFrame(resolve));
       steps.push("after state mutation");
-      await component.__owl__.destroy();
+      component.__owl__.destroy();
 
       expect(steps).toEqual([
         "value is 0",
@@ -546,7 +546,7 @@ describe("hooks", () => {
       component.state.b++;
       await new Promise((resolve) => requestAnimationFrame(resolve));
       steps.push("after state mutation: b");
-      await component.__owl__.destroy();
+      component.__owl__.destroy();
 
       expect(steps).toEqual([
         "before mount",
@@ -600,7 +600,7 @@ describe("hooks", () => {
       await new Promise((resolve) => requestAnimationFrame(resolve));
       expect(elem(component).textContent).toBe("1");
       steps.push("after state mutation");
-      await component.__owl__.destroy();
+      component.__owl__.destroy();
 
       expect(steps).toEqual([
         "value is 0",
@@ -656,7 +656,7 @@ describe("hooks", () => {
       await nextTick();
       expect(["cleaning up for 0", "value is 1"]).toBeLogged();
 
-      await component.__owl__.destroy();
+      component.__owl__.destroy();
       expect(["cleaning up for 1"]).toBeLogged();
     });
 
@@ -687,7 +687,7 @@ describe("hooks", () => {
       await nextTick();
       expect(["cleaning up for 1", "value is 2"]).toBeLogged();
 
-      await component.__owl__.destroy();
+      component.__owl__.destroy();
       expect(["cleaning up for 2"]).toBeLogged();
     });
 

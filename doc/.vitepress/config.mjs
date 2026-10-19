@@ -1,9 +1,6 @@
 import { defineConfig } from "vitepress";
 import { buildNavbar } from "./navbar.mjs";
-import fs from "fs";
-import path from "path";
 import { getShikiGrammars } from "../../tools/shiki-grammars.mjs";
-
 
 const owlSidebar = [
   { text: "Introduction", link: "/v3/owl/" },
@@ -95,12 +92,9 @@ export default defineConfig({
           .replace(/\-\-+/g, "-")
           .replace(/^-+/, "")
           .replace(/-+$/, "");
-      }
+      },
     },
-    languages: [
-      'typescript', 'javascript', 'xml', 'html', 'css',
-      ...getShikiGrammars(),
-    ],
+    languages: ["typescript", "javascript", "xml", "html", "css", ...getShikiGrammars()],
   },
 
   srcExclude: ["v2/**"],

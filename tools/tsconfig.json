@@ -1,0 +1,17 @@
+{
+  "extends": "../tsconfig.base.json",
+  "include": [
+    "*.ts",
+    "*.d.mts",
+    "testing/**/*.ts",
+    "odoo_migration/**/*.ts",
+    "../packages/*/vitest.config.ts",
+    "../packages/*/*.d.mts"
+  ],
+  "compilerOptions": {
+    "noEmit": true,
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "types": ["node", "vitest/globals"]
+  }
+}

@@ -3,7 +3,6 @@ import * as path from "path";
 
 const REPO_ROOT = path.resolve(__dirname, "..");
 
-
 interface MarkDownLink {
   name: string;
   link: string;
@@ -149,7 +148,6 @@ function slugify(str: string): string {
     .replace(/^-+/, "")
     .replace(/-+$/, "");
 }
-
 
 test("All markdown links work", () => {
   let linkNumber = 0;

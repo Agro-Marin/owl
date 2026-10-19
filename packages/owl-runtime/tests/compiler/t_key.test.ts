@@ -29,12 +29,12 @@ describe("t-key", () => {
     const template = `<div t-key="beer.id"><t t-out="beer.name"/></div>`;
     const bd = renderToBdom(template, { beer: { id: 12, name: "Chimay Rouge" } });
     const fixture = makeTestFixture();
-    await mount(bd, fixture);
+    mount(bd, fixture);
     const div = fixture.firstChild;
 
     expect((div as HTMLElement).outerHTML).toBe("<div>Chimay Rouge</div>");
     const bd2 = renderToBdom(template, { beer: { id: 13, name: "Chimay Rouge" } });
-    await patch(bd, bd2);
+    patch(bd, bd2);
     expect(div !== fixture.firstChild).toBeTruthy();
     expect((div as HTMLElement).outerHTML).toBe("<div>Chimay Rouge</div>");
   });

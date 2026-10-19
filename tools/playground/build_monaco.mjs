@@ -5,15 +5,9 @@ import * as esbuild from "esbuild";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.resolve(__dirname, "../..");
-const monacoRoot = path.resolve(
-  rootDir,
-  "node_modules/monaco-editor/esm/vs"
-);
+const monacoRoot = path.resolve(rootDir, "node_modules/monaco-editor/esm/vs");
 
-const outputFile = path.resolve(
-  __dirname,
-  "libs/monaco/monaco.bundle.js"
-);
+const outputFile = path.resolve(__dirname, "libs/monaco/monaco.bundle.js");
 
 const monacoEsmExtensionPlugin = {
   name: "monaco-editor-esm-js-extension",
@@ -28,10 +22,7 @@ const monacoEsmExtensionPlugin = {
   },
 };
 
-const tempEntry = path.resolve(
-  rootDir,
-  "temp_monaco_entry.mjs"
-);
+const tempEntry = path.resolve(rootDir, "temp_monaco_entry.mjs");
 
 fs.writeFileSync(
   tempEntry,
@@ -56,10 +47,7 @@ export { initVimMode };
 `
 );
 
-const tempShikiEntry = path.resolve(
-  rootDir,
-  "temp_shiki_entry.mjs",
-);
+const tempShikiEntry = path.resolve(rootDir, "temp_shiki_entry.mjs");
 
 fs.writeFileSync(
   tempShikiEntry,
@@ -87,10 +75,7 @@ try {
     minify: true,
     target: "es2022",
     alias: {
-      "monaco-vim": path.resolve(
-        rootDir,
-        "node_modules/monaco-vim/dist/index.mjs"
-      ),
+      "monaco-vim": path.resolve(rootDir, "node_modules/monaco-vim/dist/index.mjs"),
     },
     plugins: [monacoEsmExtensionPlugin],
     loader: {
@@ -103,25 +88,13 @@ try {
 
   await esbuild.build({
     entryPoints: {
-      "editor.worker": path.join(
-        monacoRoot,
-        "editor/editor.worker.js"
-      ),
+      "editor.worker": path.join(monacoRoot, "editor/editor.worker.js"),
 
-      "ts.worker": path.join(
-        monacoRoot,
-        "language/typescript/ts.worker.js"
-      ),
+      "ts.worker": path.join(monacoRoot, "language/typescript/ts.worker.js"),
 
-      "css.worker": path.join(
-        monacoRoot,
-        "language/css/css.worker.js"
-      ),
+      "css.worker": path.join(monacoRoot, "language/css/css.worker.js"),
 
-      "html.worker": path.join(
-        monacoRoot,
-        "language/html/html.worker.js"
-      ),
+      "html.worker": path.join(monacoRoot, "language/html/html.worker.js"),
     },
 
     outdir: path.resolve(__dirname, "libs/workers"),
@@ -133,13 +106,8 @@ try {
   });
 
   await esbuild.build({
-    entryPoints: [
-      tempShikiEntry,
-    ],
-    outfile: path.resolve(
-      __dirname,
-      "libs/monaco/shiki.bundle.js"
-    ),
+    entryPoints: [tempShikiEntry],
+    outfile: path.resolve(__dirname, "libs/monaco/shiki.bundle.js"),
     bundle: true,
     format: "esm",
     target: "es2022",
@@ -152,24 +120,16 @@ try {
   const fontFile = path.resolve(__dirname, "libs/monaco/codicon.ttf");
 
   if (fs.existsSync(cssFile)) {
-    fs.renameSync(
-      cssFile,
-      path.join(staticDir, "monaco.bundle.css")
-    );
+    fs.renameSync(cssFile, path.join(staticDir, "monaco.bundle.css"));
   }
 
   if (fs.existsSync(fontFile)) {
-    fs.renameSync(
-      fontFile,
-      path.join(staticDir, "codicon.ttf")
-    );
+    fs.renameSync(fontFile, path.join(staticDir, "codicon.ttf"));
   }
 
   const size = fs.statSync(outputFile);
 
-  console.log(
-    `Bundle size: ${(size.size / 1024 / 1024).toFixed(2)} MB`
-  );
+  console.log(`Bundle size: ${(size.size / 1024 / 1024).toFixed(2)} MB`);
 } finally {
   fs.unlinkSync(tempEntry);
   fs.unlinkSync(tempShikiEntry);

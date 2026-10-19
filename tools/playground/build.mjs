@@ -16,7 +16,7 @@ const externalsPlugin = {
       path: "./libs/monaco/monaco.bundle.js",
       external: true,
     }));
-    build.onResolve({filter: /^@libs\/shiki$/}, () => ({
+    build.onResolve({ filter: /^@libs\/shiki$/ }, () => ({
       path: "./libs/monaco/shiki.bundle.js",
       external: true,
     }));
@@ -32,6 +32,4 @@ await esbuild.build({
   plugins: [externalsPlugin],
 });
 
-writeShikiGrammars(
-  resolve(__dirname, "dist/grammars")
-);
+writeShikiGrammars(resolve(__dirname, "dist/grammars"));

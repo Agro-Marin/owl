@@ -8,7 +8,7 @@
   "scripts": {
     "build": "node build.mjs",
     "build:monaco": "node build_monaco.mjs",
-    "serve": "python3 server.py || python server.py"
+    "serve": "$(command -v python3 || command -v python) server.py"
   },
   "devDependencies": {
     "@shikijs/monaco": "^4.2.0",

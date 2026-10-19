@@ -4,48 +4,30 @@ import { fileURLToPath } from "url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-const GRAMMAR_DIR = path.resolve(
-  __dirname,
-  "./owl-vision/syntaxes"
-);
+const GRAMMAR_DIR = path.resolve(__dirname, "./owl-vision/syntaxes");
 
 const SHIKI_CONFIG = {
   "owl.template.json": {
     name: "owl-template",
     embeddedLangs: ["javascript"],
-    injectTo: [
-      "text.xml",
-    ],
+    injectTo: ["text.xml"],
   },
 
   "owl.template.inline.json": {
     name: "owl-template-inline",
     embeddedLangs: ["xml"],
-    injectTo: [
-      "source.js",
-      "source.ts",
-      "text.html",
-    ],
+    injectTo: ["source.js", "source.ts", "text.html"],
   },
 
   "owl.markup.inline.json": {
     name: "owl-markup-inline",
     embeddedLangs: ["html"],
-    injectTo: [
-      "source.js",
-      "source.ts",
-      "text.html",
-    ],
+    injectTo: ["source.js", "source.ts", "text.html"],
   },
 };
 
 function loadGrammar(filename) {
-  const grammar = JSON.parse(
-    fs.readFileSync(
-      path.join(GRAMMAR_DIR, filename),
-      "utf8"
-    )
-  );
+  const grammar = JSON.parse(fs.readFileSync(path.join(GRAMMAR_DIR, filename), "utf8"));
 
   const config = SHIKI_CONFIG[filename];
 

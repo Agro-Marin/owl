@@ -1,4 +1,3 @@
-
 export function buildNavbar({ docsVersion }) {
   const v3Selected = docsVersion === "3" ? "selected" : "";
   const v2Selected = docsVersion === "2" ? "selected" : "";

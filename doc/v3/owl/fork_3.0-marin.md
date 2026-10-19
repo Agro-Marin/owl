@@ -403,8 +403,15 @@ outside the checkout without its ambient types.
 
 ## Test suites beyond upstream's
 
-`npm run verify` runs package tests, type checks, lint, formatting, tooling
-tests and the devtools/documentation builds. Package tests share the strict
+`npm run verify` (`tools/verify.mjs`) runs every step even after one fails and
+prints a table of results and durations, exiting 1 if any failed: each
+package's tests and type check, the tooling tests (`test:tools`) and type
+check, lint (type-aware, with `await-thenable`), formatting, the package,
+declaration, devtools, playground and both documentation builds, and a parse
+and `ruff --select F,E9` of the Python codemods in `tools/odoo_migration/`
+(skipped without `ruff`); `npm run verify -- <filter>` runs the steps whose
+name contains it. Lint and formatting cover the tooling's `.ts` and `.mjs`
+too. Package tests share the strict
 console check and retain the last 100 debug events on failure. Set
 `OWL_DEBUG=reactivity,effect,scope,lifecycle` to enable traces throughout a
 suite. Tests of the logging defaults explicitly control their channels.

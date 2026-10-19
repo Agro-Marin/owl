@@ -199,7 +199,7 @@ describe("t-component", () => {
     await mount(ParentWidget, fixture);
     expect(fixture.innerHTML).toBe("<div><div>0<button>Inc</button></div></div>");
     const button = fixture.getElementsByTagName("button")[0];
-    await button.click();
+    button.click();
     await nextTick();
     expect(fixture.innerHTML).toBe("<div><div>1<button>Inc</button></div></div>");
   });
