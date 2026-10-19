@@ -3768,7 +3768,8 @@ exports[`the context a slot renders in > a child whose onWillStart waits renders
   return function template(ctx, node, key = "") {
     ctx = Object.create(ctx);
     ctx["x"] = 1;
-    const b3 = comp1({slots: {"default": {__render: slot1, __ctx: slotContext(ctx), __owner: this}}}, key + \`\\u00022\`, node, this, null);
+    const hctx1 = slotContext(ctx);
+    const b3 = comp1({slots: {"default": {__render: slot1, __ctx: hctx1, __owner: this}}}, key + \`\\u00022\`, node, this, null);
     ctx["x"] = 2;
     return block1([], [b3]);
   }
@@ -3912,7 +3913,8 @@ exports[`the context a slot renders in > a loop item's slot keeps the value an o
       ctx["i"] = k_block2[i1];
       const key1 = ctx['i'];
       const skey1 = keyOf(key1);
-      c_block2[i1] = withKey(comp1({slots: {"default": {__render: slot1, __ctx: slotContext(ctx), __owner: this}}}, key + \`\\u00022\\u0002:\${skey1}\`, node, this, null), skey1);
+      const hctx1 = slotContext(ctx);
+      c_block2[i1] = withKey(comp1({slots: {"default": {__render: slot1, __ctx: hctx1, __owner: this}}}, key + \`\\u00022\\u0002:\${skey1}\`, node, this, null), skey1);
       ctx1["x"] = ctx['i'];
     }
     const b2 = list(c_block2);
@@ -4060,7 +4062,8 @@ exports[`the context a slot renders in > a variable set again after the componen
   return function template(ctx, node, key = "") {
     ctx = Object.create(ctx);
     ctx["x"] = 1;
-    const b3 = comp1({slots: {"default": {__render: slot1, __ctx: slotContext(ctx), __owner: this}}}, key + \`\\u00022\`, node, this, null);
+    const hctx1 = slotContext(ctx);
+    const b3 = comp1({slots: {"default": {__render: slot1, __ctx: hctx1, __owner: this}}}, key + \`\\u00022\`, node, this, null);
     ctx["x"] = 2;
     const b4 = safeOutput(ctx['x'], node, key, "\\u00023");
     return block1([], [b3, b4]);

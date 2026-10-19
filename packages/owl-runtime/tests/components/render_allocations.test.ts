@@ -69,6 +69,19 @@ describe("what a render allocates", () => {
     ]);
   });
 
+  test("a slot, a t-call body and a t-set body share the copy of the handlers beside them", () => {
+    const lines = renderFunctionLines(`
+      <t t-set="v" t-value="1"/>
+      <button t-on-click="() => this.a(v)"/>
+      <Child t-on-click="() => this.b(v)"><span t-out="v"/></Child>
+      <t t-call="sub"><i t-out="v"/></t>
+      <t t-set="w"><b t-out="v"/></t>
+      <t t-set="v" t-value="2"/>`);
+    expect(lines.filter((line) => line.includes("slotContext("))).toEqual([
+      "const hctx1 = slotContext(ctx);",
+    ]);
+  });
+
   test("a t-if holding only t-sets makes no block, at the root or as a loop item", () => {
     const atRoot = renderFunctionLines(`
       <t t-if="c"><t t-set="x" t-value="1"/></t><t t-else=""><t t-set="x" t-value="2"/></t>

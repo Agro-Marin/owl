@@ -430,9 +430,10 @@ plugins: [] })` rendered asynchronously); a resource-driven start belongs to
   variable of an enclosing scope, showed through). The compiler copies the
   context there only when a later `t-set` of the same template can write a
   variable that code reads (a called template's reads are not known: any);
-  else it is kept as it is. Handlers and arrow functions with no `t-set`
-  between them share one copy. In Odoo's 3491 templates (2026-10-18), 134
-  places in 56 templates are copied. A `t-set` body reads its variables at its `t-set`
+  else it is kept as it is. Handlers, arrow functions, slots, t-call bodies
+  and `t-set` bodies with no `t-set` between them share one copy (a
+  component's slots too, which took one each). In Odoo's 3491 templates
+  (2026-10-19), 127 places in 55 templates are copied. A `t-set` body reads its variables at its `t-set`
   (upstream: at its output), as QWeb in Python does.
 - **A directive on a `t-set-slot` node makes only its content conditional**,
   as upstream, documented as it works: the slot is always given, so the

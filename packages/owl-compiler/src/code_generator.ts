@@ -374,7 +374,6 @@ export class CodeGenerator {
   ast: AST;
   staticDefs: { id: string; expr: string }[] = [];
   hoistedHandlers: Map<string, string> = new Map();
-  handlerCode: Map<string, string> = new Map();
   helpers: Set<string> = new Set();
   nextBlockId = 1;
   nextDataIds: { [prefix: string]: number } = {};
@@ -527,12 +526,8 @@ export class CodeGenerator {
     return marker;
   }
 
-  capturedContext(reads: Set<string> | null): string {
-    return this.captureMarker("ctx", "slotContext(ctx)", "slotContext", reads);
-  }
-
-  handlerContext(handlerIds: string[]): string {
-    return this.contextCopy(readsOf(handlerIds.map((id) => this.handlerCode.get(id) ?? "")));
+  handlerContext(uses: number): string {
+    return this.contextCopy(readsOf(this.handlerUses.slice(uses)));
   }
 
   contextCopy(reads: Set<string> | null): string {
@@ -821,7 +816,6 @@ export class CodeGenerator {
       id = this.generateId("hdlr_fn");
       this.hoistedHandlers.set(expr, id);
       this.staticDefs.push({ id, expr });
-      this.handlerCode.set(id, expr);
     }
     this.handlerUses.push(expr);
     return id;
@@ -919,6 +913,7 @@ export class CodeGenerator {
         valueCode = `toNumber(${valueCode})`;
       }
       let handlerId: string;
+      const uses = this.handlerUses.length;
       if (isProxy) {
         readExpr = compileExpr(expr);
         handlerId = this.hoistHandler(`(ctx, ev) => { ${readExpr} = ${valueCode}; }`);
@@ -947,7 +942,7 @@ export class CodeGenerator {
         idx = block!.insertData(readExpr, "prop");
         attrs[`block-property-${idx}`] = targetAttr;
       }
-      idx = block!.insertHandler(handlerId, this.handlerContext([handlerId]));
+      idx = block!.insertHandler(handlerId, this.handlerContext(uses));
       attrs[`block-handler-${idx}`] = eventType;
       if (modelId) {
         const argIdx = block!.data.push(modelId) - 1;
@@ -956,8 +951,9 @@ export class CodeGenerator {
     }
 
     for (let ev in ast.on) {
+      const uses = this.handlerUses.length;
       const handlerId = this.generateHandlerCode(ev, ast.on[ev]);
-      const idx = block!.insertHandler(handlerId, this.handlerContext([handlerId]));
+      const idx = block!.insertHandler(handlerId, this.handlerContext(uses));
       attrs[`block-handler-${idx}`] = ev;
     }
 
@@ -1345,7 +1341,7 @@ export class CodeGenerator {
       const name = this.compileInNewTarget("callBody", ast.body, ctx);
       this.helpers.add("zero");
       this.helpers.add("zeroCtx");
-      zero.push(["[zero]", name], ["[zeroCtx]", this.capturedContext(this.readsSince(start))]);
+      zero.push(["[zero]", name], ["[zeroCtx]", this.contextCopy(this.readsSince(start))]);
     } else if (!ast.context) {
       this.helpers.add("zero");
       zero.push(["[zero]", "null"]);
@@ -1420,7 +1416,7 @@ export class CodeGenerator {
       const bodyAst: AST = { type: ASTType.Multi, content: ast.body };
       const start = this.mark();
       const name = this.compileInNewTarget("value", bodyAst, ctx);
-      const kept = this.capturedContext(this.readsSince(start));
+      const kept = this.contextCopy(this.readsSince(start));
       value = `new LazyValue(${name}, ${kept}, this, node, ${this.scopeKey(ctx)})`;
     } else if (ast.defaultValue) {
       value = toStringExpression(
@@ -1550,20 +1546,21 @@ export class CodeGenerator {
 
     let slotDef: string = "";
     if (ast.slots) {
-      let slotCtx: string | null = null;
-      let slotSite: CaptureSite | null = null;
       const start = this.mark();
-      let slotStr: string[] = [];
+      const renders = new Map<string, string>();
       for (let slotName in ast.slots) {
         const slotAst = ast.slots[slotName];
-        const params = [];
         if (slotAst.content) {
-          const name = this.compileInNewTarget("slot", slotAst.content, ctx, slotAst.on);
-          if (!slotCtx) {
-            slotCtx = this.capturedContext(null);
-            slotSite = this.captureSites[this.captureSites.length - 1];
-          }
-          params.push(`__render: ${name}, __ctx: ${slotCtx}, __owner: this`);
+          renders.set(slotName, this.compileInNewTarget("slot", slotAst.content, ctx, slotAst.on));
+        }
+      }
+      const slotCtx = renders.size ? this.contextCopy(this.readsSince(start)) : null;
+      let slotStr: string[] = [];
+      for (let slotName in ast.slots) {
+        const params = [];
+        const render = renders.get(slotName);
+        if (render) {
+          params.push(`__render: ${render}, __ctx: ${slotCtx}, __owner: this`);
         }
         const scope = ast.slots[slotName].scope;
         if (scope) {
@@ -1582,9 +1579,6 @@ export class CodeGenerator {
         slotStr.push(`${JSON.stringify(slotName)}: ${slotInfo}`);
       }
       slotDef = `{${slotStr.join(", ")}}`;
-      if (slotSite) {
-        slotSite.reads = this.readsSince(start);
-      }
     }
 
     if (slotDef && !(ast.dynamicProps || hasSlotsProp)) {
@@ -1643,6 +1637,7 @@ export class CodeGenerator {
     let name = this.generateId("catcher");
     let spec: any = {};
     let handlers: string[] = [];
+    const uses = this.handlerUses.length;
     for (let ev in on) {
       spec[ev] = handlers.push(this.generateHandlerCode(ev, on[ev])) - 1;
     }
@@ -1650,7 +1645,7 @@ export class CodeGenerator {
       id: name,
       expr: `createCatcher(${JSON.stringify(spec)}, [${handlers.join(", ")}])`,
     });
-    return `${name}(${expr}, ${this.handlerContext(handlers)})`;
+    return `${name}(${expr}, ${this.handlerContext(uses)})`;
   }
 
   compileTCallSlot(ast: ASTTCallSlot, ctx: Context): string {
