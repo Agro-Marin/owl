@@ -99,10 +99,13 @@ its own value` instead of recursing (upstream hangs); a computed that catches
   an `immediateEffect` or `observe()` callback reads back through it throws,
   where upstream recomputed it re-entrantly.
 - **Disposing an effect disposes the computeds it was the last observer of**,
-  as destroying a component already did: read again, such a computed
-  recomputes (a new object for an object result), and an effect its getter
-  creates is created again, owned by the computed. `untrack` also stops an
-  `observe()` view from subscribing to its reads.
+  as destroying a component already did; a re-run that stops reading a
+  computed nothing else reads disposes it at the flush (unless read again by
+  then), instead of at the next write to its sources (which a computed
+  reading nothing never got). Read again, such a computed recomputes (a new
+  object for an object result), and an effect its getter creates is created
+  again, owned by the computed. `untrack` also stops an `observe()` view from
+  subscribing to its reads.
 - **An effect belongs to the computation whose run creates it**, tracked or
   not (`untrack` keeps the owner): an effect's, a computed's (detached ones
   included), a selector source's or an `observe()` callback's effect is

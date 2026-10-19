@@ -69,7 +69,7 @@ itself is disposed, the child is disposed too.
 An effect created while a [computed](computed_values.md)'s getter runs belongs
 to that computed in the same way: it is disposed before the getter runs again,
 and when the computed is disposed (with its scope, or once its last observer
-leaves it), so a getter that creates an effect on every run keeps one alive,
+is disposed or stops reading it, at the next flush), so a getter that creates an effect on every run keeps one alive,
 not one per recompute. If both are due after the same change, the computed
 recomputes first: the effect of its previous run is disposed, not run again.
 This holds for a `detached` computed too, and for a

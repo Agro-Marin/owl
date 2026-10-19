@@ -729,6 +729,10 @@ function endTracking(computation: ComputationAtom) {
     do {
       const next: Link | undefined = link.nextDep;
       unlinkSub(link);
+      const dep = link.dep as ComputationAtom;
+      if (dep.isDerived && dep.subs === undefined) {
+        unread(dep, computation);
+      }
       link = next;
     } while (link !== undefined);
   }
@@ -737,6 +741,16 @@ function endTracking(computation: ComputationAtom) {
     link.rollback = undefined;
   }
   computation.observed = null;
+}
+
+function unread(computed: ComputationAtom, reader: ComputationAtom) {
+  if (debug.computed) {
+    debugLog("computed", `${computed.name} unread by ${reader.name}, disposed at the flush`);
+  }
+  pendingDisposals.add(computed);
+  if (!flushScheduled) {
+    scheduleFlush();
+  }
 }
 
 function observedSources(observer: ComputationAtom): Set<Atom> {

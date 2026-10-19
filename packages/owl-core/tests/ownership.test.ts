@@ -101,6 +101,29 @@ describe("an effect created in a computed's getter", () => {
     expect(live).toBe(1);
   });
 
+  test("is disposed when the computed's last reader stops reading it", async () => {
+    const t = signal(0);
+    const flag = signal(true);
+    let innerRuns = 0;
+    const c = computed(
+      () => {
+        effect(() => {
+          t();
+          innerRuns++;
+        });
+        return 1;
+      },
+      { detached: true }
+    );
+    effect(() => (flag() ? c() : 0));
+    expect(innerRuns).toBe(1);
+    flag.set(false);
+    await waitScheduler();
+    t.set(1);
+    await waitScheduler();
+    expect(innerRuns).toBe(1);
+  });
+
   test("is disposed with the computed when its scope is destroyed", () => {
     const scope = new TestScope({});
     const c = scope.run(() =>

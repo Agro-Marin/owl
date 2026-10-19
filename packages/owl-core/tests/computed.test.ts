@@ -449,7 +449,7 @@ describe("detach on write", () => {
     stop();
   });
 
-  test("effect that stops reading a computed lets the next write detach it", async () => {
+  test("effect that stops reading a computed detaches it at the flush", async () => {
     const cond = signal(true);
     const store = signal(1);
     const storeAtom = atomOf(store);
@@ -461,12 +461,28 @@ describe("detach on write", () => {
     cond.set(false);
     await waitScheduler();
     expect(observersOf(atomOf(d)).length).toBe(0);
-    expect(observersOf(storeAtom).length).toBe(1);
+    expect(observersOf(storeAtom).length).toBe(0);
 
     store.set(2);
     await waitScheduler();
-    expect(observersOf(storeAtom).length).toBe(0);
+    expectSpy(d.spy, 1);
+    cond.set(true);
+    await waitScheduler();
+    expectSpy(d.spy, 2);
+    expect(observersOf(storeAtom).length).toBe(1);
     stop();
+  });
+
+  test("a computed one reader stops reading and another reads in the same flush stays", async () => {
+    const which = signal(true);
+    const store = signal(1);
+    const d = spyComputed(() => store() * 2);
+    effect(() => (which() ? d() : 0));
+    effect(() => (which() ? 0 : d()));
+    which.set(false);
+    await waitScheduler();
+    expectSpy(d.spy, 1);
+    expect(observersOf(atomOf(store)).length).toBe(1);
   });
 });
 
