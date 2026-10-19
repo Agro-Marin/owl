@@ -56,13 +56,6 @@ test("an untracked source makes a checkout dirty, by its content", () => {
   expect(buildHash(root)).not.toBe(first);
 });
 
-test("the version the release script writes before building is not a change", () => {
-  const root = makeRepo(SOURCES);
-  const clean = buildHash(root);
-  writeFileSync(join(root, "packages/owl-runtime/src/version.ts"), 'export const version = "2";');
-  expect(buildHash(root)).toBe(clean);
-});
-
 test("without a checkout, the sources are named by their digest", () => {
   const one = makeTree(SOURCES);
   const same = makeTree(SOURCES);

@@ -1,5 +1,5 @@
-import { mkdirSync, mkdtempSync, readFileSync } from "node:fs";
-import { join } from "node:path";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync } from "node:fs";
+import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const at = (path) => fileURLToPath(new URL(`../${path}`, import.meta.url));
@@ -21,6 +21,12 @@ export function checkNodeVersion() {
       `Owl needs Node >=${REQUIRED_NODE} (found ${process.version}; see .node-version)`
     );
   }
+}
+
+export const ODOO_CANDIDATES = [resolve(ROOT, "../odoo"), "/home/marin/Odoo/odoo"];
+
+export function defaultOdoo() {
+  return ODOO_CANDIDATES.find((dir) => existsSync(join(dir, "addons/web")));
 }
 
 export function scratchDir(prefix) {

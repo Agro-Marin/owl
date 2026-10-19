@@ -34,7 +34,7 @@
     "prettier-fast": "git diff-tree --no-commit-id --name-only -r HEAD --diff-filter=d | xargs prettier --write",
     "check-formatting": "prettier {packages/*/src/*.ts,packages/*/src/**/*.ts,packages/*/bench/*.ts,packages/*/tests/*.ts,packages/*/tests/**/*.ts,doc/*.md,doc/**/*.md,tools/devtools/**/*.js,tools/benchmark_*.mjs,tools/benchmarks/**/*.mjs,tools/testing/**/*.ts,tools/odoo_migration/*.test.ts} --check",
     "lint": "eslint 'packages/*/src/**/*.ts' 'packages/*/tests/**/*.ts' 'packages/*/bench/**/*.ts' 'tools/testing/**/*.ts' 'tools/odoo_migration/*.test.ts'",
-    "release": "node tools/release.mjs",
+    "vendor:odoo": "node tools/vendor_odoo.mjs",
     "compile_templates": "node tools/compile_owl_templates.mjs",
     "verify": "npm test && npm run test:types && npm run lint && npm run check-formatting && npm run test:doc-links && npm run build:devtools && npm run build:doc"
   },

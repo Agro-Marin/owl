@@ -7,8 +7,6 @@ export const SOURCES = ["owl-core", "owl-compiler", "owl-runtime", "owl"].map(
   (p) => `packages/${p}/src`
 );
 
-export const GENERATED = ["packages/owl-runtime/src/version.ts"];
-
 function digest(...parts) {
   const hash = createHash("sha256");
   for (const part of parts) {
@@ -50,7 +48,7 @@ export function buildHash(root) {
     const files = SOURCES.flatMap((dir) => sourceFiles(root, dir));
     return `nogit-${digest(...files.flatMap((file) => [file, "\0", readFileSync(join(root, file)), "\0"]))}`;
   }
-  const pathspec = [...SOURCES, ...GENERATED.map((file) => `':(exclude)${file}'`)].join(" ");
+  const pathspec = SOURCES.join(" ");
   const changes = git(root, `diff HEAD -- ${pathspec}`);
   const untracked = git(root, `ls-files --others --exclude-standard -- ${pathspec}`)
     .split("\n")

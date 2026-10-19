@@ -331,8 +331,7 @@ true })` creates an effect owned by nothing. When a computed and an effect
   the new context, so one named like a getter-only property up the context
   chain is ignored (Owl's own contexts hold none).
 - **`__info__.hash`** is the commit, plus `-dirty-<digest>` when the sources
-  differ from it (the version file the release script writes excluded);
-  outside a git checkout, `nogit-<digest of the sources>`. **`__info__.date`**
+  differ from it; outside a git checkout, `nogit-<digest of the sources>`. **`__info__.date`**
   is `SOURCE_DATE_EPOCH` if set, else the commit's date for a clean build (two
   builds of a commit are the same bytes), else the build time.
 
@@ -367,6 +366,15 @@ snapshot of the committed children; `App.version` + `__info__.hash` scope the te
    `owl.runtime.es.js`, `owl.compiler.es.js`): a compiler from another build
    is refused. Odoo's `web/tests/test_esm_pipeline.py` checks the compiler
    module's shape (it imports nothing since the compiler registers itself).
+
+`npm run vendor:odoo` (`tools/vendor_odoo.mjs`) builds the committed checkout
+and copies the three files into Odoo's `web/static/lib/owl/`, writing the full
+commit, the three sha256 and the version into the `owl` entry of
+`web/static/lib/versions.json` (nothing else in it changes); `-- --check` only
+compares the build with both and exits 1 on a difference. A build whose
+sources differ from the commit is refused; `--odoo <path>` names the Odoo
+checkout (default `../odoo` beside this one). Upstream's release script (push
+to master, GitHub release, `npm publish`) is removed.
 
 The compilation checks destroy each temporary App, including failed ones.
 The first exits with a failure status for compilation errors, the inheritance
