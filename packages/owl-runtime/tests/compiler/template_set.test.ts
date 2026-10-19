@@ -152,6 +152,17 @@ describe("template cache", () => {
     expect(setups).toBe(2);
   });
 
+  test("a template looked up while it is set up forwards every argument once it is ready", () => {
+    const context = new TestContext();
+    let early: any;
+    context.addTemplate("fn", ((app: any) => {
+      early = app.getTemplate("fn");
+      return (...args: any[]) => args.join("-");
+    }) as any);
+    context.getTemplate("fn");
+    expect(early("ctx", "node", "key")).toBe("ctx-node-key");
+  });
+
   test("templates can be named after Object.prototype members", () => {
     for (const dev of [false, true]) {
       const context = new TestContext({ dev });

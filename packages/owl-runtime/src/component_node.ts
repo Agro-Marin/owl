@@ -157,8 +157,9 @@ export class ComponentNode extends Scope<App> implements VNode<ComponentNode> {
     if (debug.lifecycle) {
       debugLog("lifecycle", `willStart ${this.componentName}: ${this.willStart.length} hook(s)`);
     }
+    const hooks = this.willStart.splice(0);
     try {
-      await Promise.all(untrack(() => this.willStart.map((f) => f.call(component))));
+      await Promise.all(untrack(() => hooks.map((f) => f.call(component))));
     } catch (e) {
       handleHookRejection(this, fiber, e);
       return;
@@ -212,7 +213,7 @@ export class ComponentNode extends Scope<App> implements VNode<ComponentNode> {
     if (this.status >= STATUS.DESTROYED) {
       return;
     }
-    if (this.fiber === fiber && (current || !fiber.parent)) {
+    if (this.fiber === fiber) {
       fiber.render();
     }
   }

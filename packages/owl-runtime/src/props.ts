@@ -71,7 +71,7 @@ function makeProps(type?: any): Props<{}> {
   }
 
   const keys: string[] = Array.isArray(type) ? type : schemaKeys(type);
-  const state = new TypedProps(node, defaults);
+  const state = new PropReader(node, defaults);
   const result: any = new PropsTable();
   for (const key of keys) {
     Reflect.defineProperty(result, key, {
@@ -113,7 +113,7 @@ function schemaKeys(type: object): string[] {
   return schemaKeyLists.getOrInsertComputed(type, Object.keys);
 }
 
-class TypedProps {
+class PropReader {
   node: ComponentNode;
   defaults: Record<string, any> | null;
   atoms = new AtomTable();
@@ -151,17 +151,14 @@ class TypedProps {
   }
 
   update() {
-    writeAtoms(this.atoms, this);
-  }
-}
-
-function writeAtoms(atoms: Record<string, Atom>, view: { resolve(key: string): any }) {
-  for (const key in atoms) {
-    const atom = atoms[key];
-    const value = view.resolve(key);
-    if (!Object.is(atom.value, value)) {
-      atom.value = value;
-      onWriteAtom(atom, true);
+    const atoms = this.atoms;
+    for (const key in atoms) {
+      const atom = atoms[key];
+      const value = this.resolve(key);
+      if (!Object.is(atom.value, value)) {
+        atom.value = value;
+        onWriteAtom(atom, true);
+      }
     }
   }
 }
@@ -173,14 +170,14 @@ class ObjectReturner {
 }
 
 class StateStamp extends ObjectReturner {
-  #state: TypedProps;
+  #state: PropReader;
 
-  constructor(target: object, state: TypedProps) {
+  constructor(target: object, state: PropReader) {
     super(target);
     this.#state = state;
   }
 
-  static of(view: object | null): TypedProps | undefined {
+  static of(view: object | null): PropReader | undefined {
     while (view !== null && typeof view === "object") {
       if (#state in view) {
         return (view as StateStamp).#state;
@@ -231,9 +228,7 @@ function tableClass<T>(prototype: object): new () => Record<string, T> {
   return Table;
 }
 
-class PropsView {
-  node: ComponentNode;
-  atoms = new AtomTable();
+class PropsView extends PropReader {
   keys: string[] | null = null;
   keyLookup: Set<string> | null = null;
   keysDefaults = 0;
@@ -241,31 +236,7 @@ class PropsView {
   keysVersion = 0;
 
   constructor(node: ComponentNode) {
-    this.node = node;
-  }
-
-  resolve(key: string) {
-    const node = this.node;
-    const value = node.props[key];
-    if (value === undefined) {
-      const declared = node.defaultProps;
-      if (declared && key in declared) {
-        return declared[key];
-      }
-    }
-    return value;
-  }
-
-  read(key: string) {
-    let atom = this.atoms[key];
-    if (atom === undefined) {
-      if (!isObserving()) {
-        return this.resolve(key);
-      }
-      atom = this.atoms[key] = createAtom(this.resolve(key), "prop");
-    }
-    onReadAtom(atom);
-    return atom.value;
+    super(node, null);
   }
 
   currentKeys(): string[] {
@@ -289,7 +260,7 @@ class PropsView {
   }
 
   update() {
-    writeAtoms(this.atoms, this);
+    super.update();
     if (!this.keySet) {
       return;
     }

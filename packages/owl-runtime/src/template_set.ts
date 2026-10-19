@@ -133,8 +133,8 @@ export class TemplateSet {
   }
 
   getTemplate(name: string): Template {
-    const cacheKey = name;
-    if (!(cacheKey in this.templates)) {
+    const templates = this.templates;
+    if (!(name in templates)) {
       const rawTemplate = this.getRawTemplate?.(name) || this.rawTemplates[name];
       if (rawTemplate === undefined) {
         let extraInfo = "";
@@ -155,18 +155,17 @@ export class TemplateSet {
             : `${name}: compiled${start < 0 ? "" : ` in ${(debugNow() - start).toFixed(2)} ms`}, ${String(templateFn).length} chars`
         );
       }
-      const templates = this.templates;
-      this.templates[cacheKey] = function (context, parent) {
-        return templates[cacheKey].call(this, context, parent);
-      };
+      templates[name] = function (this: any, ...args: Parameters<Template>) {
+        return templates[name].apply(this, args);
+      } as Template;
       try {
-        this.templates[cacheKey] = templateFn(this, bdom, this.runtimeUtils);
+        templates[name] = templateFn(this, bdom, this.runtimeUtils);
       } catch (e) {
-        delete this.templates[cacheKey];
+        delete templates[name];
         throw e;
       }
     }
-    return this.templates[cacheKey];
+    return templates[name];
   }
 
   _compileTemplate(name: string, template: string | Element): TemplateFunction {

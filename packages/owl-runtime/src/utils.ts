@@ -50,7 +50,7 @@ export function whenReady(fn?: any): Promise<void> {
     if (document.readyState !== "loading") {
       resolve(true);
     } else {
-      document.addEventListener("DOMContentLoaded", resolve, false);
+      document.addEventListener("DOMContentLoaded", resolve, { once: true });
     }
   }).then(fn || function () {});
 }

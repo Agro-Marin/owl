@@ -400,14 +400,19 @@ function rerenderChild(node: ComponentNode, props: Record<string, any>, parentFi
   if (debug.fiber) {
     debugLog("fiber", `render ${node.componentName} again: its pending render was cancelled`);
   }
+  const fiber = childUpdateFiber(node, parentFiber);
+  node.props = props;
+  fiber.render();
+}
+
+function childUpdateFiber(node: ComponentNode, parentFiber: Fiber): Fiber {
   node.forceNextRender = false;
   const fiber = makeChildFiber(node, parentFiber);
   node.fiber = fiber;
   const parentRoot = parentFiber.root!;
   if (node.willPatch.length) parentRoot.willPatch.push(fiber);
   if (node.patched.length) parentRoot.patched.push(fiber);
-  node.props = props;
-  fiber.render();
+  return fiber;
 }
 
 function updateChild(node: ComponentNode, props: Record<string, any>, parentFiber: Fiber) {
@@ -417,12 +422,7 @@ function updateChild(node: ComponentNode, props: Record<string, any>, parentFibe
       `update ${node.componentName}: ${parentFiber.deep ? "deep render" : "props changed"}${node.willUpdateProps.length ? `, ${node.willUpdateProps.length} willUpdateProps` : ""}`
     );
   }
-  node.forceNextRender = false;
-  const fiber = makeChildFiber(node, parentFiber);
-  node.fiber = fiber;
-  const parentRoot = parentFiber.root!;
-  if (node.willPatch.length) parentRoot.willPatch.push(fiber);
-  if (node.patched.length) parentRoot.patched.push(fiber);
+  const fiber = childUpdateFiber(node, parentFiber);
   const promises = node.willUpdateProps.length ? callWillUpdateProps(node, props) : undefined;
   if (promises) {
     renderAfter(promises, node, fiber, props);
