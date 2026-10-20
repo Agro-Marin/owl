@@ -2,7 +2,9 @@ import fs from "node:fs";
 import { installDom, owlBuild, require } from "./checker_env.mjs";
 import customDirectives from "./custom_directives.mjs";
 import { templateFiles } from "./template_files.mjs";
+import { checkNodeVersion } from "../workspace.mjs";
 
+checkNodeVersion();
 installDom();
 const build = owlBuild();
 const owl = await import(build);

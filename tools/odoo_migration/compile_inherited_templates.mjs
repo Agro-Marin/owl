@@ -2,7 +2,9 @@ import fs from "node:fs";
 import { installDom, oldBuild, owlBuild, requireFromOdoo, webAddon } from "./checker_env.mjs";
 import customDirectives from "./custom_directives.mjs";
 import { templateFiles, viewFiles } from "./template_files.mjs";
+import { checkNodeVersion } from "../workspace.mjs";
 
+checkNodeVersion();
 const dom = installDom();
 globalThis.odoo = { debug: "" };
 const WEB = webAddon();
