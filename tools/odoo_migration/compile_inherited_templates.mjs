@@ -56,7 +56,7 @@ function dependsOf(moduleDir) {
     return [];
   }
 }
-const inputFiles = await templateFiles();
+const inputFiles = await templateFiles(undefined, { orViews: true });
 const moduleDirs = new Map();
 let xmlFailures = 0;
 for (const file of inputFiles) {

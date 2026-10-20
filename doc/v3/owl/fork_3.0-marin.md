@@ -548,8 +548,11 @@ snapshot of the committed children; `App.version` + `__info__.hash` scope the te
    script is in), at its `packages/owl/dist/owl.es.js`, so `npm run build`
    first; a build whose `__info__.hash` names other sources than those beside
    it (a commit whose `packages/*/src` differ, or another dirty state) is
-   refused as stale, as is a root that does not exist or holds no
-   `static/src/**/*.xml`, each with exit 2. The second also reads `WEB`, Odoo's `addons/web` (default: in
+   refused as stale, as is a root that does not exist, each with exit 2. A
+   root holding no `static/src/**/*.xml` (for the second, nor any view file)
+   is skipped with a note on stderr, so a module family can be passed whole;
+   a run in which every root is such is refused with exit 2. Both stop first
+   on a Node older than `.node-version`. The second also reads `WEB`, Odoo's `addons/web` (default: in
    `../odoo` beside the Owl checkout, else `/home/marin/Odoo/odoo`), its
    `template_inheritance.js` and the Odoo checkout's `node_modules/xpath`, and
    `OLD`, the old build's `owl.es.js` (default: the one vendored in `WEB`). A

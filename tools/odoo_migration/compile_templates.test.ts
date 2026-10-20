@@ -114,9 +114,9 @@ test.each(["regression", "coverage"] as const)(
       await writeFile(join(templates, "templates.xml"), source);
       if (scenario === "coverage") await writeFile(join(templates, "broken.xml"), "<templates><t>");
       if (scenario === "regression") {
-        await mkdir(join(scratch, "input/views"), { recursive: true });
+        await mkdir(join(scratch, "views_only/views"), { recursive: true });
         await writeFile(
-          join(scratch, "input/views/views.xml"),
+          join(scratch, "views_only/views/views.xml"),
           `<odoo>
             <record id="kanban" model="ir.ui.view"><field name="arch" type="xml">
               <kanban><templates><t t-name="card"><p/></t><t t-name="arch_rejection"><p t-unknown="1"/></t></templates></kanban>
@@ -153,7 +153,13 @@ test.each(["regression", "coverage"] as const)(
       if (App.apps.size) throw new Error("temporary apps retained");
     `
       );
-      const run = spawnSync(process.execPath, [probe, join(scratch, "input")], {
+      const roots = [join(scratch, "input")];
+      if (scenario === "regression") {
+        await mkdir(join(scratch, "python_only"), { recursive: true });
+        await writeFile(join(scratch, "python_only/__init__.py"), "");
+        roots.push(join(scratch, "views_only"), join(scratch, "python_only"));
+      }
+      const run = spawnSync(process.execPath, [probe, ...roots], {
         encoding: "utf8",
         timeout: 10000,
         env: {
@@ -166,7 +172,11 @@ test.each(["regression", "coverage"] as const)(
       });
       console.debug("[owl:inherited-checker]", scenario, run.status, run.stdout, run.stderr);
       expect(run.status).toBe(1);
-      expect(run.stderr).toBe("");
+      expect(run.stderr).toBe(
+        scenario === "regression"
+          ? `skipped ${join(scratch, "python_only")}: no template file (**/static/src/**/*.xml) and no view file\n`
+          : ""
+      );
       expect(run.stdout).toContain("[owl:inherited-probe] temporary apps retained: 0");
       expect(run.stdout.match(/\[owl:lifecycle\] destroy app/g)).toHaveLength(
         scenario === "regression" ? 8 : 2
@@ -257,7 +267,8 @@ test.each(["compile_templates", "compile_inherited_templates"])(
       console.debug("[owl:checker-roots]", checker, missing.stderr, empty.stderr);
       expect([missing.status, empty.status]).toEqual([2, 2]);
       expect(missing.stderr).toContain(`${join(scratch, "adons")} does not exist`);
-      expect(empty.stderr).toContain(`${join(scratch, "empty")} holds no template file`);
+      expect(empty.stderr).toContain(`skipped ${join(scratch, "empty")}: no template file`);
+      expect(empty.stderr).toContain("nothing to check: every root holds no template file");
     } finally {
       await rm(scratch, { recursive: true, force: true });
     }

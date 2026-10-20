@@ -6,7 +6,10 @@ function refuse(message) {
   process.exit(2);
 }
 
-export async function templateFiles(roots = process.argv.slice(2)) {
+const nothing = (orViews) =>
+  `no template file (**/static/src/**/*.xml)${orViews ? " and no view file" : ""}`;
+
+export async function templateFiles(roots = process.argv.slice(2), { orViews = false } = {}) {
   if (!roots.length) {
     if (process.stdin.isTTY) {
       refuse("usage: <checker> <module roots...>, or the template files' paths on stdin");
@@ -29,9 +32,12 @@ export async function templateFiles(roots = process.argv.slice(2)) {
     })) {
       files.push(join(root, file));
     }
-    if (files.length === before) {
-      refuse(`${root} holds no template file (**/static/src/**/*.xml)`);
+    if (files.length === before && !(orViews && (await viewFiles([root])).length)) {
+      console.error(`skipped ${root}: ${nothing(orViews)}`);
     }
+  }
+  if (!files.length && !(orViews && (await viewFiles(roots)).length)) {
+    refuse(`nothing to check: every root holds ${nothing(orViews)}`);
   }
   return files;
 }
