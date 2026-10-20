@@ -219,6 +219,7 @@ for (const file of await viewFiles(process.argv.slice(2))) {
       regressions.push(`${file} ${name} :: ${fresh.slice(0, 160)}`);
     } else if (fresh && stale) {
       archBothFail++;
+      console.log("BOTH", `${file} ${name} :: ${fresh.slice(0, 160)}`);
     }
   }
   for (const target of doc.querySelectorAll('record [position="attributes"]')) {

@@ -119,7 +119,7 @@ test.each(["regression", "coverage"] as const)(
           join(scratch, "views_only/views/views.xml"),
           `<odoo>
             <record id="kanban" model="ir.ui.view"><field name="arch" type="xml">
-              <kanban><templates><t t-name="card"><p/></t><t t-name="arch_rejection"><p t-unknown="1"/></t></templates></kanban>
+              <kanban><templates><t t-name="card"><p/></t><t t-name="arch_rejection"><p t-unknown="1"/></t><t t-name="arch_both"><p t-unknown="1"/></t></templates></kanban>
             </field></record>
             <record id="kanban_extension" model="ir.ui.view"><field name="arch" type="xml">
               <xpath expr="//t[@t-name='card']" position="attributes"><attribute name="t-att-style">1</attribute></xpath>
@@ -179,7 +179,7 @@ test.each(["regression", "coverage"] as const)(
       );
       expect(run.stdout).toContain("[owl:inherited-probe] temporary apps retained: 0");
       expect(run.stdout.match(/\[owl:lifecycle\] destroy app/g)).toHaveLength(
-        scenario === "regression" ? 8 : 2
+        scenario === "regression" ? 10 : 2
       );
       if (scenario === "regression") {
         expect(run.stdout).toContain("REGRESSION new_rejection");
@@ -188,8 +188,9 @@ test.each(["regression", "coverage"] as const)(
         expect(run.stdout).toMatch(
           /^REGRESSION \S+\/views\/views.xml kanban_extension :: sets t-att-style on a <t>/m
         );
+        expect(run.stdout).toMatch(/^BOTH \S+\/views\/views.xml arch_both :: /m);
         expect(run.stdout).toContain(
-          "view archs: 2 templates, 2 rejected only by the new build (0 by both), 1 inherited attribute sets on a <t>"
+          "view archs: 3 templates, 2 rejected only by the new build (1 by both), 1 inherited attribute sets on a <t>"
         );
       } else {
         expect(run.stdout).toContain("0 rejected only by the new build");
