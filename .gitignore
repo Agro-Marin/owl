@@ -27,6 +27,7 @@ yarn-error.log*
 node_modules
 
 .rpt2_cache
+__pycache__/
 
 /temp
 
