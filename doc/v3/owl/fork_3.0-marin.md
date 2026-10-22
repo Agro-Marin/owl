@@ -1,8 +1,10 @@
 # The 3.0-marin fork
 
 `3.0-marin` (Agro-Marin/owl) is `v3.0.0-alpha.49` plus the fork's commits
-(`git log v3.0.0-alpha.49..3.0-marin`). Odoo vendors its build as
-`web/static/lib/owl/owl.es.js`; `web/static/lib/versions.json` names the commit.
+(`git log v3.0.0-alpha.49..3.0-marin`). Odoo vendors its builds in
+`web/static/lib/owl/`: the browser imports `@odoo/owl` as `owl.runtime.es.js` and
+`@odoo/owl/compiler` as `owl.compiler.es.js`, and the server's template
+precompiler runs the full `owl.es.js`; `web/static/lib/versions.json` names the commit.
 This page lists what the fork adds and where it deliberately behaves
 differently from upstream.
 
