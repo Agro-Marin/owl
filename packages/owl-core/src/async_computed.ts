@@ -24,7 +24,7 @@ export interface AsyncComputed<T> {
   (): T | undefined;
   loading(): boolean;
   error(): Error | null;
-  refresh(): void;
+  refresh(): Promise<void>;
   dispose(): void;
   currentPromise(): Promise<void>;
 }
@@ -68,16 +68,21 @@ export function asyncComputed<T>(
   }
 
   function settle(fn: () => void) {
+    const settlingRun = runId;
     let completed = false;
     try {
       fn();
       completed = true;
     } finally {
-      try {
-        endRun();
-      } catch (error) {
-        if (completed) throw error;
-        Promise.reject(error);
+      // A result/error observer can request the next run synchronously. The
+      // previous settlement must not clear that run's loading state.
+      if (runId === settlingRun || disposed) {
+        try {
+          endRun();
+        } catch (error) {
+          if (completed) throw error;
+          Promise.reject(error);
+        }
       }
     }
   }
@@ -188,7 +193,11 @@ export function asyncComputed<T>(
   read.loading = () => loading();
   read.error = () => error();
   read.refresh = () => {
-    if (disposed) return;
+    if (disposed) return Promise.resolve();
+    // Invalidate the old result before the queued runner can start: its promise
+    // may already have a settlement ahead of that runner in the microtask queue.
+    runId++;
+    inFlight = true;
     if (runner.running) {
       if (!refreshQueued) {
         refreshQueued = true;
@@ -201,6 +210,8 @@ export function asyncComputed<T>(
     } else {
       refreshTick.set(untrack(refreshTick) + 1);
     }
+    loading.set(true);
+    return read.currentPromise();
   };
   read.dispose = dispose;
   read.currentPromise = () => {

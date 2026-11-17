@@ -14,6 +14,7 @@ export interface ValidationContext {
   path: PropertyKey[];
   validate(type: any): void;
   value: any;
+  withEntry(key: PropertyKey | PropertyKey[], value: any): ValidationContext;
   withIssues(issues: ValidationIssue[]): ValidationContext;
   withKey(key: PropertyKey): ValidationContext;
 }
@@ -85,6 +86,14 @@ function typeError(type: unknown): string | null {
   return error;
 }
 
+export function assertSchema(type: unknown, path: PropertyKey[] = []): void {
+  const error = typeError(type);
+  if (error) {
+    const at = path.length ? ` at "${path.map(String).join(" > ")}"` : "";
+    throw new OwlError(`Invalid schema${at}: ${error}`);
+  }
+}
+
 function createContext(
   issues: ValidationIssue[],
   value: any,
@@ -98,7 +107,7 @@ function createContext(
     addIssue(issue) {
       issues.push({
         received: this.value,
-        path: this.path.join(" > "),
+        path: this.path.map(String).join(" > "),
         ...issue,
       });
     },
@@ -107,11 +116,7 @@ function createContext(
       this.issueDepth = Math.max(this.issueDepth, depth);
     },
     validate(type: any) {
-      const error = typeError(type);
-      if (error) {
-        const at = this.path.length ? ` at "${this.path.join(" > ")}"` : "";
-        throw new OwlError(`Invalid schema${at}: ${error}`);
-      }
+      assertSchema(type, this.path);
       const before = issues.length;
       type(this);
       if (issues.length > before && parent) {
@@ -121,8 +126,11 @@ function createContext(
     withIssues(issues) {
       return createContext(issues, this.value, this.path);
     },
+    withEntry(key, value) {
+      return createContext(issues, value, this.path.concat(key), this);
+    },
     withKey(key) {
-      return createContext(issues, this.value[key], this.path.concat(key), this);
+      return this.withEntry(key, this.value[key]);
     },
   };
 }

@@ -333,6 +333,14 @@ export class ComponentsPlugin extends Plugin {
     copyToClipboard(this.activeComponent().name);
   }
 
+  componentNameMenuItem(name) {
+    return {
+      title: "Copy component name",
+      show: typeof name === "string" && name.length > 0,
+      action: () => copyToClipboard(name),
+    };
+  }
+
   refreshComponent(path = this.activeComponent().path) {
     evalFunctionInWindow("refreshComponent", [path], this._store.activeFrame());
   }

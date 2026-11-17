@@ -6,6 +6,8 @@ import {
   setDebugSink,
   signal,
   useEffect,
+  useImmediateEffect,
+  batch,
   useListener,
   useOnChange,
 } from "../src";
@@ -41,6 +43,83 @@ test("useEffect outside a scope does not run or subscribe", () => {
   console.debug("[owl:hook-lifetime-review] invalid effect", calls, subscribers(tick).length);
   expect(calls).toBe(0);
   expect(subscribers(tick)).toEqual([]);
+});
+
+test("useImmediateEffect outside a scope creates no orphan effect", () => {
+  const value = signal(0);
+  let runs = 0;
+  expect(() =>
+    useImmediateEffect(() => {
+      value();
+      runs++;
+    })
+  ).toThrow("No active scope");
+  value.set(1);
+  expect(runs).toBe(0);
+  expect(subscribers(value)).toEqual([]);
+});
+
+test("useImmediateEffect batches writes and releases its subscriptions with the scope", () => {
+  const value = signal(0);
+  const scope = new TestScope({});
+  const seen: number[] = [];
+  let cleanups = 0;
+  scope.run(() =>
+    useImmediateEffect(() => {
+      seen.push(value());
+      return () => {
+        cleanups++;
+      };
+    })
+  );
+  batch(() => {
+    value.set(1);
+    value.set(2);
+  });
+  expect(seen).toEqual([0, 2]);
+  expect(cleanups).toBe(1);
+  scope.finalize(rethrow);
+  value.set(3);
+  expect(seen).toEqual([0, 2]);
+  expect(cleanups).toBe(2);
+  expect(subscribers(value)).toEqual([]);
+});
+
+test("useImmediateEffect releases a callback that destroys its own scope during setup", () => {
+  const value = signal(0);
+  const scope = new TestScope({});
+  let cleanups = 0;
+  scope.run(() =>
+    useImmediateEffect(() => {
+      value();
+      scope.finalize(rethrow);
+      return () => {
+        cleanups++;
+      };
+    })
+  );
+  value.set(1);
+  expect(cleanups).toBe(1);
+  expect(subscribers(value)).toEqual([]);
+});
+
+test("useImmediateEffect leaves no subscription when its first callback throws", () => {
+  const value = signal(0);
+  const scope = new TestScope({});
+  let runs = 0;
+  expect(() =>
+    scope.run(() =>
+      useImmediateEffect(() => {
+        value();
+        runs++;
+        throw new Error("setup failed");
+      })
+    )
+  ).toThrow("setup failed");
+  value.set(1);
+  scope.finalize(rethrow);
+  expect(runs).toBe(1);
+  expect(subscribers(value)).toEqual([]);
 });
 
 test.each([true, false])(

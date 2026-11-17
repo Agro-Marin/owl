@@ -13,6 +13,7 @@ export class DetailsWindow extends Component {
 
   get contextMenuItems() {
     return [
+      this.components.componentNameMenuItem(this.components.activeComponent().name),
       {
         title: "Inspect source code",
         show: true,

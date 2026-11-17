@@ -221,7 +221,12 @@ class VersionPlugin extends Plugin {
 class TemplatePlugin extends Plugin {
   static id = "templates";
 
-  version = usePlugin(VersionPlugin)
+  version = usePlugin(VersionPlugin);
+  code = usePlugin(CodePlugin);
+
+  setup() {
+    this.project = usePlugin(ProjectPlugin);
+  }
 
   examples = computed(() => {
     const version = this.version.version();
@@ -266,8 +271,7 @@ class TemplatePlugin extends Plugin {
 
   async openTutorial(tutorial) {
     const { steps, name, description, id: tutorialId } = tutorial;
-    const project = this.__owl__.plugins["project"];
-    const code = this.__owl__.plugins["code"];
+    const { project, code } = this;
 
     const stepsWithContent = await Promise.all(
       steps.map(async (step) => ({
@@ -308,7 +312,10 @@ class ProjectPlugin extends Plugin {
 
   code = usePlugin(CodePlugin);
   version = usePlugin(VersionPlugin);
-  templates = usePlugin(TemplatePlugin);
+
+  setup() {
+    this.templates = usePlugin(TemplatePlugin);
+  }
 
   projects = signal([]);
   activeProjectId = signal(null);

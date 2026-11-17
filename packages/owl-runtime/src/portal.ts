@@ -1,6 +1,7 @@
-import { Signal } from "@odoo/owl-core";
+import { batched, OwlError, Signal } from "@odoo/owl-core";
 import { createSubRoot } from "./app";
 import { Component } from "./component";
+import type { ComponentNode } from "./component_node";
 import { useEffect } from "./hooks";
 import { onMounted, onWillDestroy } from "./lifecycle_hooks";
 import { props } from "./props";
@@ -32,6 +33,7 @@ export class Portal extends Component {
         t.literal(null),
       ])
       .optional(),
+    position: t.number().optional(),
   });
 
   setup() {
@@ -41,13 +43,21 @@ export class Portal extends Component {
     let root: ReturnType<typeof app.createRoot> | null = null;
     let mountedTarget: HTMLElement | null = null;
     let committed = false;
+    let rank: number | undefined;
+    let placement: Placement | null = null;
+    let placements: TargetPlacements | null = null;
 
     const tearDown = () => {
-      if (root) {
-        root.destroy();
-        root = null;
-        mountedTarget = null;
+      const previous = root;
+      root = null;
+      mountedTarget = null;
+      if (placement) {
+        placements!.entries.delete(placement);
+        placements!.place();
+        placement = null;
+        placements = null;
       }
+      previous?.destroy();
     };
 
     const mountInto = (target: HTMLElement, position?: "first-child") => {
@@ -62,6 +72,18 @@ export class Portal extends Component {
         onError: forwardErrorToParent(portalNode),
         host: portalNode,
       });
+      const mounting = root;
+      mounting.promise.then(
+        (component) => {
+          if (root !== mounting) return;
+          placements = targets.getOrInsertComputed(target, () => new TargetPlacements(target));
+          placement = { node: component.__owl__, position: rank };
+          // Register on mount, rather than creation, so equal ranks keep mount order.
+          placements.entries.add(placement);
+          placements.place();
+        },
+        () => {}
+      );
 
       mountedTarget = target;
       committed = false;
@@ -86,6 +108,18 @@ export class Portal extends Component {
       return tearDown;
     });
 
+    useEffect(() => {
+      const nextRank = this.props.position;
+      if (nextRank !== undefined && !Number.isFinite(nextRank)) {
+        throw new OwlError("Portal position must be a finite number");
+      }
+      rank = nextRank;
+      if (placement) {
+        placement.position = rank;
+        placements!.place();
+      }
+    });
+
     onMounted(() => {
       if (
         root &&
@@ -108,6 +142,44 @@ export class Portal extends Component {
 
     onWillDestroy(tearDown);
   }
+}
+
+interface Placement {
+  node: ComponentNode;
+  position: number | undefined;
+}
+
+const targets = new WeakMap<HTMLElement, TargetPlacements>();
+
+class TargetPlacements {
+  entries = new Set<Placement>();
+
+  constructor(private target: HTMLElement) {}
+
+  place = batched(() => {
+    const mounted = new Map<Node, Placement>();
+    for (const entry of this.entries) {
+      const first = entry.node.firstNode();
+      if (entry.node.status === STATUS.MOUNTED && first?.parentNode === this.target) {
+        mounted.set(first, entry);
+      }
+    }
+    const ordered = [...mounted.values()].filter((entry) => entry.position !== undefined);
+    ordered.sort((a, b) => a.position! - b.position!);
+    if (!ordered.length) return;
+
+    // Compare whole portals by their first nodes: a fragment's later roots must
+    // not make a correctly placed portal move and lose its focused input.
+    let index = 0;
+    for (const node of this.target.childNodes) {
+      const entry = mounted.get(node);
+      if (!entry) continue;
+      if (entry.position === undefined ? index > 0 : entry !== ordered[index++]) {
+        for (const entry of ordered) entry.node.moveBeforeDOMNode(null);
+        return;
+      }
+    }
+  });
 }
 
 function resolveTarget(target: PortalTarget): HTMLElement | null {

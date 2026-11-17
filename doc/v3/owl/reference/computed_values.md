@@ -192,7 +192,7 @@ const user = asyncComputed(
 user(); // current value (initial → resolved → next resolved)
 user.loading(); // reactive boolean: true while a run is in flight
 user.error(); // reactive Error | null
-user.refresh(); // re-run the fetcher even if nothing changed
+await user.refresh(); // re-run the fetcher and wait for the latest run to settle
 user.dispose(); // tear down (auto-called when the surrounding scope dies)
 user.currentPromise(); // promise that resolves once no run is in flight
 ```
@@ -222,6 +222,12 @@ up automatically on destroy. Outside any scope, you must call `.dispose()`
 yourself.
 
 ### Awaiting the current run
+
+`refresh()` immediately marks the value as loading and invalidates the old
+request's result, even if that result is already queued to settle. The fetcher
+still runs in the next effect flush, so several refreshes in one tick share
+one run and one promise. `await user.refresh()` waits for that run, or a later
+run that supersedes it. After disposal, it resolves without starting work.
 
 `currentPromise()` returns a promise that resolves as soon as no run is in
 flight: if a run is currently running, or about to start (a dependency

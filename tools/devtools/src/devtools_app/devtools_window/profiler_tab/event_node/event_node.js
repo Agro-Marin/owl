@@ -43,6 +43,7 @@ export class EventNode extends Component {
 
   get componentContextMenuItems() {
     return [
+      this.components.componentNameMenuItem(this.props.event.component),
       {
         title: "Inspect source code",
         show: true,

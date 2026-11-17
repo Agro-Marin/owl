@@ -100,7 +100,14 @@ export { EventModifier, eventModifierMask, HANDLER_MODIFIERS } from "./event_mod
 
 export { Plugin, PluginManager, startPlugins, type PluginConstructor } from "./plugin_manager";
 
-export { setCurrentEvent, useApp, useEffect, useListener, useOnChange } from "./hooks";
+export {
+  setCurrentEvent,
+  useApp,
+  useEffect,
+  useImmediateEffect,
+  useListener,
+  useOnChange,
+} from "./hooks";
 
 export { onWillDestroy, onWillStart } from "./lifecycle_hooks";
 

@@ -164,6 +164,14 @@ plugins don't have their own lifetime, though: the effect is bound to the
 lifetime of the shared plugin manager, and is disposed only when that manager
 is destroyed.
 
+## useImmediateEffect
+
+`useImmediateEffect(fn)` has `useEffect`'s scope lifetime and cleanup rules,
+but runs synchronously when its dependencies change. Writes inside a `batch`
+still cause one run at the end of the outermost batch. It is available in
+components and plugins; calling it without an active scope throws before
+running the callback or subscribing to anything.
+
 ## untrack
 
 Executes a function without tracking any reactive dependencies. Reads inside

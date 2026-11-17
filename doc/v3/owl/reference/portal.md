@@ -143,6 +143,24 @@ container:
 </t>
 ```
 
+## Ordering with `position`
+
+Pass a finite number as `position` to order portals sharing a target:
+
+```xml
+<Portal t-foreach="this.tabs()" t-as="tab" t-key="tab.id"
+        target="this.tabRoot" position="tab_index">
+  <TabHeader tab="tab"/>
+</Portal>
+```
+
+Positions are compared in ascending order. Equal positions keep actual mount
+order, including when one portal waits for `onWillStart`. Portals without a
+position keep their placement; positioned content is arranged after them.
+Placement is batched in a microtask. A changed position moves the content,
+including all roots of a fragment, without recreating its components.
+Changing the target still creates a fresh sub-root, as described above.
+
 ## How it works
 
 `<Portal>` uses `app.createRoot` plus the

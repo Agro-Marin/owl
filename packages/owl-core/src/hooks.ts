@@ -1,6 +1,6 @@
 import { computed } from "./computed";
 import { untrack } from "./computations";
-import { effect } from "./effect";
+import { effect, immediateEffect } from "./effect";
 import { onWillDestroy } from "./lifecycle_hooks";
 import { useScope, type ScopeApp } from "./scope";
 import { shallowEqual } from "./utils";
@@ -8,6 +8,11 @@ import { shallowEqual } from "./utils";
 export function useEffect(fn: Parameters<typeof effect>[0]): void {
   useScope();
   onWillDestroy(effect(fn));
+}
+
+export function useImmediateEffect(fn: Parameters<typeof immediateEffect>[0]): void {
+  useScope();
+  onWillDestroy(immediateEffect(fn));
 }
 
 type Cleanup = (() => void) | void;

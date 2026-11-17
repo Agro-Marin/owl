@@ -7,6 +7,7 @@ import {
   mkdir,
   readFile,
   readdir,
+  realpath,
   rm,
   stat,
   symlink,
@@ -40,7 +41,7 @@ async function templateNamesInFile(file: string) {
 }
 
 beforeEach(async () => {
-  dir = await mkdtemp(path.join(tmpdir(), "owl-standalone-"));
+  dir = await realpath(await mkdtemp(path.join(tmpdir(), "owl-standalone-")));
   vi.spyOn(process.stdout, "write").mockImplementation(() => true);
 });
 

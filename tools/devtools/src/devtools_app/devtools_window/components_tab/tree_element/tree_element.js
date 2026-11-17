@@ -83,6 +83,7 @@ export class TreeElement extends Component {
 
   get contextMenuItems() {
     return [
+      this.components.componentNameMenuItem(this.props.component.name),
       {
         title: "Expand children",
         show: true,

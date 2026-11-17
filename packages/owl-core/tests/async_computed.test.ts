@@ -1,4 +1,4 @@
-import { asyncComputed, computed, signal } from "../src";
+import { asyncComputed, computed, immediateEffect, signal } from "../src";
 import { waitScheduler } from "./helpers";
 
 function deferred<T>() {
@@ -8,6 +8,74 @@ function deferred<T>() {
 }
 
 describe("asyncComputed", () => {
+  test("refresh waits for the new run and drops a result already queued by the old run", async () => {
+    const first = Promise.withResolvers<number>();
+    const second = Promise.withResolvers<number>();
+    let calls = 0;
+    const data = asyncComputed(() => (++calls === 1 ? first.promise : second.promise));
+    await waitScheduler();
+    first.resolve(1);
+    const refreshed = data.refresh();
+    expect(refreshed).toBe(data.currentPromise());
+    expect(data.loading()).toBe(true);
+    let settled = false;
+    refreshed.then(() => (settled = true));
+    await waitScheduler();
+    expect(data()).toBeUndefined();
+    expect(settled).toBe(false);
+    second.resolve(2);
+    await refreshed;
+    expect(data()).toBe(2);
+    expect(data.loading()).toBe(false);
+    data.dispose();
+    await data.refresh();
+    expect(calls).toBe(2);
+  });
+
+  test("several refresh requests share their waiter and one queued fetch", async () => {
+    let calls = 0;
+    const data = asyncComputed(async () => ++calls);
+    await data.currentPromise();
+    const first = data.refresh();
+    expect(data.refresh()).toBe(first);
+    await first;
+    expect(calls).toBe(2);
+    expect(data()).toBe(2);
+    data.dispose();
+  });
+
+  test("disposing synchronously from the loading notification settles the refresh", async () => {
+    const data = asyncComputed(async () => 1);
+    await data.currentPromise();
+    const stop = immediateEffect(() => {
+      if (data.loading()) data.dispose();
+    });
+    await data.refresh();
+    expect(data.loading()).toBe(false);
+    stop();
+  });
+
+  test("a refresh requested by a result observer stays loading until the new run settles", async () => {
+    const first = Promise.withResolvers<number>();
+    const second = Promise.withResolvers<number>();
+    let calls = 0;
+    const data = asyncComputed(() => (++calls === 1 ? first.promise : second.promise));
+    const loading: boolean[] = [];
+    const stopLoading = immediateEffect(() => loading.push(data.loading()));
+    const stopValue = immediateEffect(() => {
+      if (data() === 1) data.refresh();
+    });
+    first.resolve(1);
+    await waitScheduler();
+    expect(loading).toEqual([true]);
+    second.resolve(2);
+    await data.currentPromise();
+    expect(loading).toEqual([true, false]);
+    stopLoading();
+    stopValue();
+    data.dispose();
+  });
+
   test("currentPromise() right after a dependency changed waits for the run it queued", async () => {
     const id = signal(1);
     const fetches: Array<ReturnType<typeof deferred<number>>> = [];

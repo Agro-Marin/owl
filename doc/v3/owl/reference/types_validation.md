@@ -165,6 +165,19 @@ t.strictObject({ name: t.string(), age: t.number().optional() }); // "name" requ
 // rejects:   { name: "Alice", extra: true }  (unknown key "extra")
 ```
 
+### `t.set(memberSchema?)` and `t.map(keySchema, valueSchema)`
+
+`t.set(t.number())` validates a Set's members and infers `Set<number>`.
+`t.map(t.string(), t.number())` validates both parts of every entry and infers
+`Map<string, number>`. `t.set()` and `t.map()` check only the container; a map
+takes both schemas or neither. These schemas remain validators, rather than
+being typed as collection values.
+
+An invalid map entry is identified by its iteration index and part, for
+example `0 > key` or `0 > value`; a Set uses the member's iteration index.
+Nested collections extend that path. Optional defaults can create a fresh
+container, but `applyDefaults` does not fill or change collection contents.
+
 ### `t.record(valueType?)`
 
 Validates that the value is an object. When `valueType` is provided, every

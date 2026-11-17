@@ -8,6 +8,14 @@ precompiler runs the full `owl.es.js`; `web/static/lib/versions.json` names the 
 This page lists what the fork adds and where it deliberately behaves
 differently from upstream.
 
+The fork also adapts selected changes through upstream `d2c0fa9e`:
+`useImmediateEffect`, awaitable `asyncComputed.refresh()`, collection schemas,
+ordered portals and devtools name copying. Its compatibility hooks, `t-slot`,
+`status()` and `Plugin.__owl__` remain supported. A failed effect's first run
+is disposed even when it has an owner; a self-writing `useOnChange` keeps the
+dependency values its callback read, without an eager reread after the callback.
+These remain deliberate differences from current upstream.
+
 ## Added API
 
 | API                                      | What it does                                                                                                                                                                                                                                  | Reference                                                           |

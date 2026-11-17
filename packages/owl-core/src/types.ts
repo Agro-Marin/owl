@@ -1,6 +1,6 @@
 import { atomSymbol, type ReactiveValue } from "./computations";
 import { OwlError } from "./owl_error";
-import { ValidationContext, ValidationIssue } from "./validation";
+import { assertSchema, ValidationContext, ValidationIssue } from "./validation";
 
 export type Constructor<T = any> = { new (...args: any[]): T };
 
@@ -465,6 +465,49 @@ function recordType(valueType?: any): any {
   });
 }
 
+function setType<T = any>(): Type<Set<T>>;
+function setType<T>(member: Schema<T>): Type<Set<T>>;
+function setType(member?: Schema<unknown>): Type<Set<unknown>> {
+  if (member !== undefined) assertSchema(member);
+  return makeType((context) => {
+    if (!(context.value instanceof Set)) {
+      context.addIssue({ message: "value is not a set" });
+      return;
+    }
+    if (member) {
+      let index = 0;
+      for (const value of context.value) {
+        context.withEntry(index++, value).validate(member);
+      }
+    }
+  });
+}
+
+function mapType<K = any, V = any>(): Type<Map<K, V>>;
+function mapType<K, V>(key: Schema<K>, value: Schema<V>): Type<Map<K, V>>;
+function mapType(key?: Schema<unknown>, value?: Schema<unknown>): Type<Map<unknown, unknown>> {
+  if ((key === undefined) !== (value === undefined)) {
+    throw new OwlError("t.map requires both a key schema and a value schema, or neither");
+  }
+  if (key !== undefined) {
+    assertSchema(key);
+    assertSchema(value);
+  }
+  return makeType((context) => {
+    if (!(context.value instanceof Map)) {
+      context.addIssue({ message: "value is not a map" });
+      return;
+    }
+    if (key && value) {
+      let index = 0;
+      for (const [entryKey, entryValue] of context.value) {
+        context.withEntry([index, "key"], entryKey).validate(key);
+        context.withEntry([index++, "value"], entryValue).validate(value);
+      }
+    }
+  });
+}
+
 function tuple<const T extends unknown[]>(types: T): Type<StripBrandsAll<T>> {
   const validate = makeType(function validateTuple(context: ValidationContext) {
     if (!Array.isArray(context.value)) {
@@ -556,6 +599,7 @@ export const types = {
   function: functionType,
   instanceOf: instanceType,
   literal: literalType,
+  map: mapType,
   number: numberType,
   object: objectType,
   or: union,
@@ -563,6 +607,7 @@ export const types = {
   record: recordType,
   ref,
   selection: literalSelection,
+  set: setType,
   signal: reactiveValueType,
   strictObject: strictObjectType,
   string: stringType,
