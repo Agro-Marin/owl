@@ -466,6 +466,28 @@ test("a portal created by the render that replaces its target goes to the new ta
   expect(fixture.querySelector(".second .target")!.innerHTML).toBe("<p>content</p>");
 });
 
+test("content that finishes rendering after its target left the document still goes into it", async () => {
+  const target = makeOutside("portal-detached-target");
+  target.dataset.testPortal = "1";
+  const def = makeDeferred();
+  class Slow extends Component {
+    static template = xml`<p>slow</p>`;
+    setup() {
+      onWillStart(() => def);
+    }
+  }
+  class Parent extends Component {
+    static components = { Portal, Slow };
+    static template = xml`<div><Portal target="'#portal-detached-target'"><Slow/></Portal></div>`;
+  }
+  await mount(Parent, fixture);
+  target.remove();
+  def.resolve();
+  await nextTick();
+  await nextTick();
+  expect(target.innerHTML).toBe("<p>slow</p>");
+});
+
 test("a target changed after a mount-time lookup leaves no content in the old target", async () => {
   const other = makeOutside("portal-other-target");
   other.dataset.testPortal = "1";

@@ -17,7 +17,13 @@ import {
   status,
   xml,
 } from "../../src";
-import { makeDeferred, makeTestFixture, nextMicroTick, nextTick } from "../helpers";
+import {
+  getConsoleOutput,
+  makeDeferred,
+  makeTestFixture,
+  nextMicroTick,
+  nextTick,
+} from "../helpers";
 
 let fixture: HTMLElement;
 let log: string[];
@@ -261,6 +267,334 @@ test("an onMounted owed since a failed commit runs once when a descendant's comm
   await nextTick();
   expect(fixture.innerHTML).toBe('<div><gp w="1"><x></x><c>1</c></gp></div>');
   expect(log).toEqual(["Child:patched", "GrandParent:mounted", "GrandParent:patched"]);
+});
+
+test("an onMounted owed since a failed commit runs, alone, when its parent's render reaches it", async () => {
+  let root: any;
+  let throws = true;
+  class Failing extends Component {
+    static template = xml`<x/>`;
+    setup() {
+      onMounted(() => {
+        if (throws) {
+          throws = false;
+          throw new Error("x");
+        }
+      });
+    }
+  }
+  class New extends Component {
+    static template = xml`<n/>`;
+    setup() {
+      onMounted(() => log.push("New:mounted"));
+    }
+  }
+  class GrandParent extends Component {
+    static template = xml`<gp t-att-v="this.props.v"><Failing/></gp>`;
+    static components = { Failing };
+    props = props();
+    setup() {
+      onMounted(() => log.push("GrandParent:mounted"));
+      onPatched(() => log.push("GrandParent:patched"));
+    }
+  }
+  class Root extends Component {
+    static template = xml`<div><New t-if="this.state.v > 1"/><GrandParent t-if="this.state.on" v="this.state.v"/></div>`;
+    static components = { GrandParent, New };
+    state = proxy({ on: false, v: 1 });
+    setup() {
+      root = this;
+      onError((e) => log.push(`caught ${e.message}`));
+    }
+  }
+  await mount(Root, fixture);
+  root.state.on = true;
+  await nextTick();
+  expect(log.splice(0)).toEqual(["caught x"]);
+  root.state.v = 2;
+  await nextTick();
+  await nextTick();
+  expect(log).toEqual(["GrandParent:mounted", "New:mounted"]);
+  expect(fixture.innerHTML).toBe('<div><n></n><gp v="2"><x></x></gp></div>');
+});
+
+test("an onMounted owed since a failed commit runs once when its parent renders it twice in one pass", async () => {
+  let root: any;
+  let throws = true;
+  const slow = makeDeferred();
+  class Failing extends Component {
+    static template = xml`<x/>`;
+    setup() {
+      onMounted(() => {
+        if (throws) {
+          throws = false;
+          throw new Error("x");
+        }
+      });
+    }
+  }
+  class Slow extends Component {
+    static template = xml`<s t-out="this.props.v"/>`;
+    props = props();
+    setup() {
+      onWillUpdateProps(() => slow);
+    }
+  }
+  class GrandParent extends Component {
+    static template = xml`<gp t-att-v="this.props.v"><Failing/></gp>`;
+    static components = { Failing };
+    props = props();
+    setup() {
+      onMounted(() => log.push("GrandParent:mounted"));
+    }
+  }
+  class Root extends Component {
+    static template = xml`<div><Slow v="this.state.v"/><GrandParent t-if="this.state.on" v="this.state.v"/></div>`;
+    static components = { GrandParent, Slow };
+    state = proxy({ on: false, v: 1 });
+    setup() {
+      root = this;
+      onError((e) => log.push(`caught ${e.message}`));
+    }
+  }
+  await mount(Root, fixture);
+  root.state.on = true;
+  await nextTick();
+  expect(log.splice(0)).toEqual(["caught x"]);
+  root.state.v = 2;
+  await nextTick();
+  root.state.v = 3;
+  await nextTick();
+  slow.resolve();
+  await nextTick();
+  await nextTick();
+  expect(log).toEqual(["GrandParent:mounted"]);
+  expect(fixture.innerHTML).toBe('<div><s>3</s><gp v="3"><x></x></gp></div>');
+});
+
+test("an onPatched owed since a failed commit, paid by a commit below, runs none of that component's onMounted", async () => {
+  let child: any;
+  let boom = true;
+  class Child extends Component {
+    static template = xml`<p><t t-out="this.props.n"/>-<t t-out="this.state.k"/></p>`;
+    props = props();
+    state = proxy({ k: 0 });
+    setup() {
+      child = this;
+      onPatched(() => {
+        if (boom) {
+          boom = false;
+          throw new Error("boom");
+        }
+      });
+    }
+  }
+  class Parent extends Component {
+    static template = xml`<div><t t-out="this.state.n"/><Child n="this.state.n"/></div>`;
+    static components = { Child };
+    state = proxy({ n: 1 });
+    setup() {
+      onError((e) => log.push(`caught ${e.message}`));
+      onMounted(() => log.push("Parent:mounted"));
+      onPatched(() => log.push("Parent:patched"));
+    }
+  }
+  const parent = await mount(Parent, fixture);
+  expect(log.splice(0)).toEqual(["Parent:mounted"]);
+  parent.state.n = 2;
+  await nextTick();
+  expect(log.splice(0)).toEqual(["caught boom"]);
+  child.state.k = 1;
+  await nextTick();
+  expect(log.splice(0)).toEqual(["Parent:patched"]);
+  child.state.k = 2;
+  await nextTick();
+  expect(log).toEqual([]);
+});
+
+test("an owed onMounted that throws when a descendant's commit pays it goes to the handlers above", async () => {
+  let root: any, child: any;
+  let failingCalls = 0;
+  class Failing extends Component {
+    static template = xml`<x/>`;
+    setup() {
+      onMounted(() => {
+        if (failingCalls++ === 0) {
+          throw new Error("x");
+        }
+      });
+    }
+  }
+  class Child extends Component {
+    static template = xml`<c t-out="this.state.v"/>`;
+    state = proxy({ v: 0 });
+    setup() {
+      child = this;
+    }
+  }
+  class GrandParent extends Component {
+    static template = xml`<gp><Failing/><Child/></gp>`;
+    static components = { Failing, Child };
+    setup() {
+      let calls = 0;
+      onMounted(() => {
+        log.push("GrandParent:mounted");
+        if (calls++ === 0) {
+          throw new Error("owed");
+        }
+      });
+    }
+  }
+  class Root extends Component {
+    static template = xml`<div><GrandParent t-if="this.state.on"/></div>`;
+    static components = { GrandParent };
+    state = proxy({ on: false });
+    setup() {
+      root = this;
+      onError((e) => log.push(`caught ${e.message}`));
+    }
+  }
+  await mount(Root, fixture);
+  root.state.on = true;
+  await nextTick();
+  expect(log.splice(0)).toEqual(["caught x"]);
+  child.state.v++;
+  await nextTick();
+  await nextTick();
+  expect(log).toEqual(["GrandParent:mounted", "caught owed"]);
+  expect(fixture.innerHTML).toBe("<div><gp><x></x><c>1</c></gp></div>");
+});
+
+test("a commit failed by an onWillPatch owes the onMounted of what it mounted, not of the components already mounted", async () => {
+  let boom = true;
+  class Child extends Component {
+    static template = xml`<p t-out="this.props.v"/>`;
+    props = props();
+    setup() {
+      onWillPatch(() => {
+        if (boom) {
+          boom = false;
+          throw new Error("boom");
+        }
+      });
+      trackLifecycle("Child");
+    }
+  }
+  class New extends Component {
+    static template = xml`<n/>`;
+    setup() {
+      onMounted(() => log.push("New:mounted"));
+      onWillUnmount(() => log.push("New:willUnmount"));
+    }
+  }
+  class Parent extends Component {
+    static template = xml`<div><Child v="this.state.v"/><New t-if="this.state.v > 1"/></div>`;
+    static components = { Child, New };
+    state = proxy({ v: 1 });
+    setup() {
+      onMounted(() => log.push("Parent:mounted"));
+      onWillUnmount(() => log.push("Parent:willUnmount"));
+      onError((e) => log.push(e.message));
+    }
+  }
+  const app = new App({ test: true });
+  const parent = await app.createRoot(Parent).mount(fixture);
+  expect(log.splice(0)).toEqual(["Child:mounted", "Parent:mounted"]);
+  parent.state.v = 2;
+  await nextTick();
+  await nextTick();
+  expect(log.splice(0)).toEqual(["boom"]);
+  expect(fixture.innerHTML).toBe("<div><p>1</p></div>");
+  parent.state.v = 3;
+  await nextTick();
+  await nextTick();
+  expect(log.splice(0)).toEqual(["New:mounted"]);
+  expect(fixture.innerHTML).toBe("<div><p>3</p><n></n></div>");
+  app.destroy();
+  expect(log).toEqual([
+    "Parent:willUnmount",
+    "Child:willUnmount",
+    "Child:willDestroy",
+    "New:willUnmount",
+  ]);
+});
+
+test("an onMounted and an onPatched owed by one failed commit are both run by a commit below", async () => {
+  let root: any, leaf: any;
+  let throws = true;
+  class Failing extends Component {
+    static template = xml`<x/>`;
+    setup() {
+      onMounted(() => {
+        if (throws) {
+          throws = false;
+          throw new Error("x");
+        }
+      });
+    }
+  }
+  class Leaf extends Component {
+    static template = xml`<l t-out="this.state.k"/>`;
+    state = proxy({ k: 0 });
+    setup() {
+      leaf = this;
+    }
+  }
+  class Mid extends Component {
+    static template = xml`<m><Failing/><Leaf/></m>`;
+    static components = { Failing, Leaf };
+    setup() {
+      onMounted(() => log.push("Mid:mounted"));
+    }
+  }
+  class Root extends Component {
+    static template = xml`<div t-att-v="this.state.v"><Mid t-if="this.state.v === 2"/></div>`;
+    static components = { Mid };
+    state = proxy({ v: 1 });
+    setup() {
+      root = this;
+      onPatched(() => log.push("Root:patched"));
+      onError((e) => log.push(`caught ${e.message}`));
+    }
+  }
+  await mount(Root, fixture);
+  root.state.v = 2;
+  await nextTick();
+  expect(log.splice(0)).toEqual(["caught x"]);
+  leaf.state.k = 1;
+  await nextTick();
+  await nextTick();
+  expect(log).toEqual(["Mid:mounted", "Root:patched"]);
+  expect(fixture.innerHTML).toBe('<div v="2"><m><x></x><l>1</l></m></div>');
+});
+
+test("a root that handles its own render error by rendering again commits that render", async () => {
+  let comp: any;
+  class Root extends Component {
+    static template = xml`<div t-out="this.read()"/>`;
+    state = proxy({ v: 1, fixed: false });
+    setup() {
+      comp = this;
+      trackLifecycle("Root");
+      onPatched(() => log.push("Root:patched"));
+      onError((e) => {
+        log.push(`caught ${e.message}`);
+        this.state.fixed = true;
+      });
+    }
+    read() {
+      if (this.state.v === 2 && !this.state.fixed) {
+        throw new Error("render");
+      }
+      return this.state.v;
+    }
+  }
+  await mount(Root, fixture);
+  comp.state.v = 2;
+  await nextTick();
+  await nextTick();
+  expect(log).toEqual(["Root:mounted", "caught render", "Root:patched"]);
+  expect(fixture.innerHTML).toBe("<div>2</div>");
 });
 
 test("a removal error outside any patch is thrown by the removal", async () => {
@@ -831,6 +1165,21 @@ describe("a first mount that throws half way", () => {
     expect(fixture.innerHTML).toBe("<a></a><b>2</b><c></c><hr>");
   });
 
+  test("leaves what the target held before it, mounting last", async () => {
+    const state = { boom: true };
+    class Root extends Component {
+      static template = xml`<a/><b t-ref="this.ref" t-out="this.state.n"/><c/>`;
+      state = proxy({ n: 1 });
+      ref = throwingRef(state);
+      setup() {
+        onError(() => (this.state.n = 2));
+      }
+    }
+    fixture.innerHTML = "<hr/>";
+    await mount(Root, fixture);
+    expect(fixture.innerHTML).toBe("<hr><a></a><b>2</b><c></c>");
+  });
+
   test("runs no onWillUnmount of the children it rolled back, and one that would throw does not stop it", async () => {
     const state = { boom: true };
     class Child extends Component {
@@ -864,6 +1213,99 @@ describe("a first mount that throws half way", () => {
     await mount(Root, fixture);
     expect(fixture.innerHTML).toBe('<div n="2"><p>c</p><p>o</p></div>');
     expect(log).toEqual(["caught ref", "Child:willDestroy", "Other:willDestroy"]);
+  });
+
+  test("runs no onWillUnmount of the grandchildren it rolled back either", async () => {
+    const state = { boom: true };
+    class GrandChild extends Component {
+      static template = xml`<i>g</i>`;
+      setup() {
+        trackLifecycle("GrandChild");
+      }
+    }
+    class Child extends Component {
+      static template = xml`<p><GrandChild/></p>`;
+      static components = { GrandChild };
+    }
+    class Root extends Component {
+      static template = xml`<div t-ref="this.ref" t-att-n="this.state.n"><Child t-if="this.state.n === 1"/></div>`;
+      static components = { Child };
+      ref = throwingRef(state);
+      state = proxy({ n: 1 });
+      setup() {
+        onError((e) => {
+          log.push(`caught ${e.message}`);
+          this.state.n = 2;
+        });
+      }
+    }
+    await mount(Root, fixture);
+    expect(fixture.innerHTML).toBe('<div n="2"></div>');
+    expect(log).toEqual(["caught ref", "GrandChild:willDestroy"]);
+  });
+
+  test("reports a ref that also throws when unset, after its own error", async () => {
+    class Root extends Component {
+      static template = xml`<div t-ref="this.ref"/>`;
+      ref = {
+        set: (el: HTMLElement | null) => {
+          throw new Error(el ? "ref" : "unset");
+        },
+      };
+      setup() {
+        onError((e) => log.push(`caught ${e.message}`));
+      }
+    }
+    mount(Root, fixture);
+    await nextTick();
+    await nextTick();
+    expect(log).toEqual(["caught ref", "caught unset"]);
+    expect(fixture.innerHTML).toBe("");
+  });
+
+  test("logs a ref that also throws when unset once nothing handles its own error", async () => {
+    class Root extends Component {
+      static template = xml`<div t-ref="this.ref"/>`;
+      ref = {
+        set: (el: HTMLElement | null) => {
+          throw new Error(el ? "ref" : "unset");
+        },
+      };
+    }
+    await expect(mount(Root, fixture)).rejects.toThrow("ref");
+    expect(getConsoleOutput()).toEqual(["error:Error: unset"]);
+  });
+
+  test("sends the children and grandchildren it mounted back to unmounted when nothing renders again", async () => {
+    const state = { boom: true };
+    let child: any, grandChild: any;
+    class GrandChild extends Component {
+      static template = xml`<i>g</i>`;
+      setup() {
+        grandChild = this;
+      }
+    }
+    class Child extends Component {
+      static template = xml`<p><GrandChild/></p>`;
+      static components = { GrandChild };
+      setup() {
+        child = this;
+      }
+    }
+    class Root extends Component {
+      static template = xml`<div t-ref="this.ref"><Child/></div>`;
+      static components = { Child };
+      ref = throwingRef(state);
+      setup() {
+        onError((e) => log.push(`caught ${e.message}`));
+      }
+    }
+    mount(Root, fixture);
+    await nextTick();
+    await nextTick();
+    expect(log).toEqual(["caught ref"]);
+    expect(fixture.innerHTML).toBe("");
+    expect([status(child), status(grandChild)]).toEqual(["new", "new"]);
   });
 
   test("rejects with its own error when nothing handles it, though a child's onWillDestroy throws", async () => {

@@ -53,6 +53,21 @@ test("prepare() kicks off willStart before mount is called", async () => {
   app.destroy();
 });
 
+test("a prepared root waiting for mount() leaves no task in the scheduler", async () => {
+  class Root extends Component {
+    static template = xml`<span>ok</span>`;
+  }
+  const app = new App({ test: true });
+  const root = app.createRoot(Root);
+  await root.prepare();
+  expect(root.prepared).toBe(true);
+  expect(app.scheduler.tasks.size).toBe(0);
+  await root.mount(fixture);
+  expect(fixture.innerHTML).toBe("<span>ok</span>");
+  expect(app.scheduler.tasks.size).toBe(0);
+  app.destroy();
+});
+
 test("prepare() is idempotent", async () => {
   class Root extends Component {
     static template = xml`<span>ok</span>`;

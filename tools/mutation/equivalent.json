@@ -2689,5 +2689,1247 @@
     "original": "if (Object(iterator) !== iterator) {",
     "replacement": "moved below: const next = iterator.next;",
     "reason": "a keys() result that is not an object makes the set operation throw a TypeError either way, here when its next is read, natively when the native method checks it; only V8's message differs"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 21,
+    "operator": "swap",
+    "original": "if (current) {",
+    "replacement": "moved below: const fiber = new Fiber(node, parent);",
+    "reason": "new Fiber() reads only the parent's root and deep and pushes to the parent's children; the cancelled fiber's children and root are another fiber's, so the order is free (reasoned)"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 22,
+    "operator": "swap",
+    "original": "cancelFibers(current.children);",
+    "replacement": "moved below: current.root = null;",
+    "reason": "cancelFibers reads the children's nodes, phases and children, never the cancelled fiber's root (reasoned)"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 32,
+    "operator": "swap",
+    "original": "if (current) {",
+    "replacement": "moved below: const fiber = new RootFiber(node, null);",
+    "reason": "a RootFiber's constructor only initializes its own fields; when the block returns the recycled fiber the new one is dropped"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 58,
+    "operator": "swap",
+    "original": "current.children = [];",
+    "replacement": "moved below: current.root = null;",
+    "reason": "independent statements: neither reads what the other writes, and neither can throw"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 62,
+    "operator": "swap",
+    "original": "if (node.willPatch.length) {",
+    "replacement": "moved below: if (node.patched.length) {",
+    "reason": "the willPatch and patched lists are separate arrays of the new fiber"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 65,
+    "operator": "swap",
+    "original": "if (node.patched.length) {",
+    "replacement": "moved below: queueOwedMounted(fiber);",
+    "reason": "queueOwedMounted touches the root's mounted list, not its patched list"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 76,
+    "operator": "swap",
+    "original": "if (fiber.node.fiber !== fiber || fiber.root !== root) {",
+    "replacement": "moved below: if (fiber.phase === FiberPhase.NEW) {",
+    "reason": "a stale merged fiber kept as waiting is skipped by the same stale check on the next renderMergedAlone, which is the only reader of root.merged (reasoned)"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 95,
+    "operator": "swap",
+    "original": "current.renderState += 2;",
+    "replacement": "moved below: if (current === root) {",
+    "reason": "independent statements: neither reads what the other writes, and neither can throw"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 102,
+    "operator": "swap",
+    "original": "root.locked = true;",
+    "replacement": "moved below: const rendered = current.phase === FiberPhase.NEW ? 0 : 1;",
+    "reason": "independent statements: neither reads what the other writes, and neither can throw"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 105,
+    "operator": "swap",
+    "original": "root.locked = false;",
+    "replacement": "moved below: current.children = [];",
+    "reason": "independent statements: neither reads what the other writes, and neither can throw"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 106,
+    "operator": "swap",
+    "original": "current.children = [];",
+    "replacement": "moved below: current.childrenMap = null;",
+    "reason": "independent statements: neither reads what the other writes, and neither can throw"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 107,
+    "operator": "swap",
+    "original": "current.childrenMap = null;",
+    "replacement": "moved below: current.bdom = null;",
+    "reason": "independent statements: neither reads what the other writes, and neither can throw"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 108,
+    "operator": "swap",
+    "original": "current.bdom = null;",
+    "replacement": "moved below: current.phase = FiberPhase.NEW;",
+    "reason": "independent statements: neither reads what the other writes, and neither can throw"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 109,
+    "operator": "swap",
+    "original": "current.phase = FiberPhase.NEW;",
+    "replacement": "moved below: if (root instanceof MountFiber && root.prepared) {",
+    "reason": "independent statements: neither reads what the other writes, and neither can throw"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 111,
+    "operator": "swap",
+    "original": "root.prepared = false;",
+    "replacement": "moved below: root.renderState &= ~APPLIED_TO_DOM;",
+    "reason": "independent statements: neither reads what the other writes, and neither can throw"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 127,
+    "operator": "swap",
+    "original": "if (!failedElsewhere) {",
+    "replacement": "moved below: current.renderState &= ~APPLIED_TO_DOM;",
+    "reason": "independent statements: neither reads what the other writes, and neither can throw"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 128,
+    "operator": "swap",
+    "original": "fibersInError.delete(root);",
+    "replacement": "moved below: root.failed = null;",
+    "reason": "independent statements: neither reads what the other writes, and neither can throw"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 131,
+    "operator": "swap",
+    "original": "current.renderState &= ~APPLIED_TO_DOM;",
+    "replacement": "moved below: if (current instanceof RootFiber) {",
+    "reason": "independent statements: neither reads what the other writes, and neither can throw"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 170,
+    "operator": "swap",
+    "original": "if (node.fiber === fiber) {",
+    "replacement": "moved below: if (fiber.phase !== FiberPhase.NEW) {",
+    "reason": "independent statements: neither reads what the other writes, and neither can throw"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 176,
+    "operator": "swap",
+    "original": "result++;",
+    "replacement": "moved below: if (node.bdom) {",
+    "reason": "independent statements: neither reads what the other writes, and neither can throw"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 198,
+    "operator": "swap",
+    "original": "this.node = node;",
+    "replacement": "moved below: this.parent = parent;",
+    "reason": "independent statements: neither reads what the other writes, and neither can throw"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 199,
+    "operator": "swap",
+    "original": "this.parent = parent;",
+    "replacement": "moved below: if (parent) {",
+    "reason": "independent statements: neither reads what the other writes, and neither can throw"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 201,
+    "operator": "swap",
+    "original": "this.deep = parent.deep;",
+    "replacement": "moved below: const root = parent.root!;",
+    "reason": "independent statements: neither reads what the other writes, and neither can throw"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 203,
+    "operator": "swap",
+    "original": "root.counter++;",
+    "replacement": "moved below: this.root = root;",
+    "reason": "independent statements: neither reads what the other writes, and neither can throw"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 204,
+    "operator": "swap",
+    "original": "this.root = root;",
+    "replacement": "moved below: parent.children.push(this);",
+    "reason": "independent statements: neither reads what the other writes, and neither can throw"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 212,
+    "operator": "swap",
+    "original": "const node = this.node;",
+    "replacement": "moved below: const root = this.root!;",
+    "reason": "independent statements: neither reads what the other writes, and neither can throw"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 255,
+    "operator": "swap",
+    "original": "node.signalComputation.state = ComputationState.EXECUTED;",
+    "replacement": "moved below: node.previousMemos = node.memos;",
+    "reason": "independent statements: neither reads what the other writes, and neither can throw"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 258,
+    "operator": "swap",
+    "original": "const outerCollection = memoSuspend();",
+    "replacement": "moved below: this.phase = FiberPhase.RENDERING;",
+    "reason": "independent statements: neither reads what the other writes, and neither can throw"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 259,
+    "operator": "swap",
+    "original": "this.phase = FiberPhase.RENDERING;",
+    "replacement": "moved below: const start = debug.fiber ? debugNow() : -1;",
+    "reason": "independent statements: neither reads what the other writes, and neither can throw"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 307,
+    "operator": "swap",
+    "original": "const node = this.node;",
+    "replacement": "moved below: this.locked = true;",
+    "reason": "independent statements: neither reads what the other writes, and neither can throw"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 326,
+    "operator": "swap",
+    "original": "current = undefined;",
+    "replacement": "moved below: if (node.status === STATUS.DESTROYED) {",
+    "reason": "independent statements: neither reads what the other writes, and neither can throw"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 359,
+    "operator": "swap",
+    "original": "node.willUnmount = [];",
+    "replacement": "moved below: owedCount++;",
+    "reason": "independent statements: neither reads what the other writes, and neither can throw"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 366,
+    "operator": "swap",
+    "original": "owedPatched.add(node);",
+    "replacement": "moved below: owedCount++;",
+    "reason": "independent statements: neither reads what the other writes, and neither can throw"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 381,
+    "operator": "swap",
+    "original": "owedMounted.delete(node);",
+    "replacement": "moved below: node.willUnmount = held;",
+    "reason": "independent statements: neither reads what the other writes, and neither can throw"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 382,
+    "operator": "swap",
+    "original": "node.willUnmount = held;",
+    "replacement": "moved below: owedCount--;",
+    "reason": "independent statements: neither reads what the other writes, and neither can throw"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 391,
+    "operator": "swap",
+    "original": "if (owedMounted.delete(node)) {",
+    "replacement": "moved below: if (owedPatched.delete(node)) {",
+    "reason": "independent statements: neither reads what the other writes, and neither can throw"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 401,
+    "operator": "swap",
+    "original": "if (!owedCount) {",
+    "replacement": "moved below: const owing: ComponentNode[] = [];",
+    "reason": "independent statements: neither reads what the other writes, and neither can throw"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 436,
+    "operator": "swap",
+    "original": "const mounted = fiber.root!.mounted;",
+    "replacement": "moved below: queuedForOwed.add(fiber);",
+    "reason": "independent statements: neither reads what the other writes, and neither can throw"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 437,
+    "operator": "swap",
+    "original": "queuedForOwed.add(fiber);",
+    "replacement": "moved below: const i = mounted.findIndex((f) => f.node === node);",
+    "reason": "independent statements: neither reads what the other writes, and neither can throw"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 475,
+    "operator": "swap",
+    "original": "const node = current.node;",
+    "replacement": "moved below: const applied = current.renderState & APPLIED_TO_DOM;",
+    "reason": "independent statements: neither reads what the other writes, and neither can throw"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 503,
+    "operator": "swap",
+    "original": "failed = true;",
+    "replacement": "moved below: const waiting = mounting ? fibers.slice() : [];",
+    "reason": "independent statements: neither reads what the other writes, and neither can throw"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 530,
+    "operator": "swap",
+    "original": "child.status = STATUS.NEW;",
+    "replacement": "moved below: if (child.childMap) {",
+    "reason": "independent statements: neither reads what the other writes, and neither can throw"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 573,
+    "operator": "swap",
+    "original": "this.target = target;",
+    "replacement": "moved below: this.position = options.position || \"last-child\";",
+    "reason": "independent statements: neither reads what the other writes, and neither can throw"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 574,
+    "operator": "swap",
+    "original": "this.position = options.position || \"last-child\";",
+    "replacement": "moved below: this.afterNode = options.afterNode ?? null;",
+    "reason": "independent statements: neither reads what the other writes, and neither can throw"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 575,
+    "operator": "swap",
+    "original": "this.afterNode = options.afterNode ?? null;",
+    "replacement": "moved below: this.allowDetached = options.allowDetached ?? false;",
+    "reason": "independent statements: neither reads what the other writes, and neither can throw"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 586,
+    "operator": "swap",
+    "original": "const node = this.node;",
+    "replacement": "moved below: const target = this.target!;",
+    "reason": "independent statements: neither reads what the other writes, and neither can throw"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 595,
+    "operator": "swap",
+    "original": "prev = next ? next.previousSibling : target.lastChild;",
+    "replacement": "moved below: node.childMap = this.childrenMap;",
+    "reason": "independent statements: neither reads what the other writes, and neither can throw"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 596,
+    "operator": "swap",
+    "original": "node.childMap = this.childrenMap;",
+    "replacement": "moved below: node.bdom = this.bdom;",
+    "reason": "independent statements: neither reads what the other writes, and neither can throw"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 599,
+    "operator": "swap",
+    "original": "node.fiber = null;",
+    "replacement": "moved below: node.status = STATUS.MOUNTED;",
+    "reason": "independent statements: neither reads what the other writes, and neither can throw"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 606,
+    "operator": "swap",
+    "original": "node.bdom = null;",
+    "replacement": "moved below: node.childMap = null;",
+    "reason": "independent statements: neither reads what the other writes, and neither can throw"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 607,
+    "operator": "swap",
+    "original": "node.childMap = null;",
+    "replacement": "moved below: let n: Node | null = prev ? prev.nextSibling : target.firstChild;",
+    "reason": "independent statements: neither reads what the other writes, and neither can throw"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 614,
+    "operator": "swap",
+    "original": "try {",
+    "replacement": "moved below: for (const fiber of this.mounted) {",
+    "reason": "independent statements: neither reads what the other writes, and neither can throw"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 619,
+    "operator": "swap",
+    "original": "for (const fiber of this.mounted) {",
+    "replacement": "moved below: if (this.childrenMap) {",
+    "reason": "independent statements: neither reads what the other writes, and neither can throw"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 110,
+    "operator": "swap",
+    "original": "if (root instanceof MountFiber && root.prepared) {",
+    "replacement": "moved below: if (fibersInError.has(current)) {",
+    "reason": "both blocks clear the same APPLIED bit (commutative); the prepared block reads only root.prepared, which the other does not write"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 173,
+    "operator": "swap",
+    "original": "if (fiber.phase !== FiberPhase.NEW) {",
+    "replacement": "moved below: result += cancelFibers(fiber.children);",
+    "reason": "the phase block flags this fiber's node; the recursion cancels the children's nodes: disjoint"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 257,
+    "operator": "swap",
+    "original": "node.memos = null;",
+    "replacement": "moved below: const outerCollection = memoSuspend();",
+    "reason": "memoSuspend swaps the module's memo collection; it does not read node.memos"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 260,
+    "operator": "swap",
+    "original": "const start = debug.fiber ? debugNow() : -1;",
+    "replacement": "moved below: this.bdom = runTracked(node.signalComputation, () => {",
+    "reason": "start only feeds the duration of the fiber trace; taken after the render, the duration differs, which no trace consumer can tell from timing noise (reasoned)"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 268,
+    "operator": "swap",
+    "original": "this.phase = FiberPhase.RENDERED;",
+    "replacement": "moved below: memoResume(outerCollection);",
+    "reason": "memoResume only restores the module's memo collection; it neither reads the phase nor throws"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 215,
+    "operator": "swap",
+    "original": "if (scheduler.tasks.size > 1 || Scheduler.active.size > 1) {",
+    "replacement": "moved below: if (this.renderState >> 1 > MAX_RENDER_ITERATIONS) {",
+    "reason": "a fiber both over the render limit and delayed gets the same handleError either way; the original only reports it once the delay ends (reasoned)"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 225,
+    "operator": "path",
+    "original": "pass.node",
+    "replacement": "current.fiber.node",
+    "reason": "the nodes between a node and the root of the pass its fiber belongs to all have fibers in that pass that rendered the node below them, so walking them repeats the check that just held; jumping to the pass root is a shortcut (reasoned)"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 272,
+    "operator": "swap",
+    "original": "if (this.deep && this.bdom) {",
+    "replacement": "moved below: const newCounter = root.counter - 1;",
+    "reason": "renderSubRootsDeep starts the sub-roots' own passes; it does not change this pass's counter (reasoned)"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 283,
+    "operator": "swap",
+    "original": "if (root.merged && fibersInError.has(root)) {",
+    "replacement": "moved below: if (newCounter === 0) {",
+    "reason": "renderMergedAlone starts root fibers of their own and flush only resumes delayed renders and requests a frame; neither reads what the other changes (reasoned)"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 320,
+    "operator": "path",
+    "original": "node.component",
+    "replacement": "this.component",
+    "reason": "every willPatch hook is bound to its component by ComponentNode.decorate (onWillPatch is the only way to add one), so the receiver of cb.call is unused"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 331,
+    "operator": "swap",
+    "original": "this.locked = false;",
+    "replacement": "moved below: return;",
+    "reason": "the root's node is destroyed, so no live node's fiber has this root and nothing reads its lock again (reasoned)"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 338,
+    "operator": "swap",
+    "original": "for (let fiber of this.mounted) {",
+    "replacement": "moved below: this.locked = false;",
+    "reason": "oweMounted does not read the lock"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 341,
+    "operator": "swap",
+    "original": "this.locked = false;",
+    "replacement": "moved below: handleError({ fiber: current || this, error: e });",
+    "reason": "a render asked from the error handler of a locked root waits one microtask, then proceeds the same way; only the timing differs (reasoned)"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 372,
+    "operator": "swap",
+    "original": "if (hook === \"patched\") {",
+    "replacement": "moved below: const held = owedMounted.get(node);",
+    "reason": "owedMounted.get is a pure read"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 374,
+    "operator": "swap",
+    "original": "owedCount--;",
+    "replacement": "moved below: return true;",
+    "reason": "owedCount is only a fast-path gate (payOwedAbove, commitHooks, callCommitHooks, forgetOwed): a count above the true one only takes the slow path, whose map lookups give the same answer (reasoned)"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 453,
+    "operator": "receiver",
+    "original": "mounted.length",
+    "replacement": "patched.length",
+    "reason": "with one of the lists empty the filter keeps every patched fiber; only a copy of the list replaces it (reasoned)"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 453,
+    "operator": "receiver",
+    "original": "patched.length",
+    "replacement": "mounted.length",
+    "reason": "with one of the lists empty the filter keeps every patched fiber; only a copy of the list replaces it (reasoned)"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 459,
+    "operator": "swap",
+    "original": "if (failed === null) {",
+    "replacement": "moved below: if (callCommitHooks(root.patched, \"patched\", failed) === false) {",
+    "reason": "app.destroy() in the handler destroys every node of the tree, so the patched and remaining mounted fibers are skipped as destroyed, and oweMounted/owePatched ignore destroyed nodes (reasoned)"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 509,
+    "operator": "swap",
+    "original": "handleError({ fiber: current, error: e });",
+    "replacement": "moved below: if (node.app.destroyed) {",
+    "reason": "app.destroy() in the handler destroys every node of the tree, so the patched and remaining mounted fibers are skipped as destroyed, and oweMounted/owePatched ignore destroyed nodes (reasoned)"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 510,
+    "operator": "path",
+    "original": "node.app.destroyed",
+    "replacement": "node.destroyed",
+    "reason": "app.destroy() in the handler destroys every node of the tree, so the patched and remaining mounted fibers are skipped as destroyed, and oweMounted/owePatched ignore destroyed nodes (reasoned)"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 510,
+    "operator": "swap",
+    "original": "if (node.app.destroyed) {",
+    "replacement": "moved below: for (let i = 0; i < waiting.length; i++) {",
+    "reason": "the waiting nodes were destroyed by the handler's app.destroy() with empty willUnmount lists; giving the lists back before or after returning changes nothing (reasoned)"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 556,
+    "operator": "swap",
+    "original": "this.target = target;",
+    "replacement": "moved below: this.position = options.position || \"last-child\";",
+    "reason": "MountFiber is only built by App.prepare, with no target and no options; commit() sets the target and the three options before any _mount"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 557,
+    "operator": "swap",
+    "original": "this.position = options.position || \"last-child\";",
+    "replacement": "moved below: this.afterNode = options.afterNode ?? null;",
+    "reason": "MountFiber is only built by App.prepare, with no target and no options; commit() sets the target and the three options before any _mount"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 557,
+    "operator": "receiver",
+    "original": "this.position",
+    "replacement": "options.position",
+    "reason": "MountFiber is only built by App.prepare, with no target and no options; commit() sets the target and the three options before any _mount"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 557,
+    "operator": "receiver",
+    "original": "options.position",
+    "replacement": "this.position",
+    "reason": "MountFiber is only built by App.prepare, with no target and no options; commit() sets the target and the three options before any _mount"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 558,
+    "operator": "swap",
+    "original": "this.afterNode = options.afterNode ?? null;",
+    "replacement": "moved below: this.allowDetached = options.allowDetached ?? false;",
+    "reason": "MountFiber is only built by App.prepare, with no target and no options; commit() sets the target and the three options before any _mount"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 558,
+    "operator": "receiver",
+    "original": "this.afterNode",
+    "replacement": "options.afterNode",
+    "reason": "MountFiber is only built by App.prepare, with no target and no options; commit() sets the target and the three options before any _mount"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 558,
+    "operator": "receiver",
+    "original": "options.afterNode",
+    "replacement": "this.afterNode",
+    "reason": "MountFiber is only built by App.prepare, with no target and no options; commit() sets the target and the three options before any _mount"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 559,
+    "operator": "receiver",
+    "original": "this.allowDetached",
+    "replacement": "options.allowDetached",
+    "reason": "MountFiber is only built by App.prepare, with no target and no options; commit() sets the target and the three options before any _mount"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 559,
+    "operator": "receiver",
+    "original": "options.allowDetached",
+    "replacement": "this.allowDetached",
+    "reason": "MountFiber is only built by App.prepare, with no target and no options; commit() sets the target and the three options before any _mount"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 563,
+    "operator": "swap",
+    "original": "this.prepared = true;",
+    "replacement": "moved below: if (this.target) {",
+    "reason": "onPrepared only resolves the prepare() promise, whose reactions run after complete() returns"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 567,
+    "operator": "swap",
+    "original": "this.renderState |= APPLIED_TO_DOM;",
+    "replacement": "moved below: this.onPrepared?.();",
+    "reason": "onPrepared only resolves the prepare() promise, whose reactions run after complete() returns"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 576,
+    "operator": "swap",
+    "original": "this.allowDetached = options.allowDetached ?? false;",
+    "replacement": "moved below: if (this.prepared) {",
+    "reason": "when the fiber is prepared, commit() mounts at once, right after root.mount() validated the same target as attached, so the attached check passes whatever allowDetached says"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 598,
+    "operator": "path",
+    "original": "node.bdom!",
+    "replacement": "this.bdom!",
+    "reason": "node.bdom was just set to this.bdom on the line above"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 609,
+    "operator": "swap",
+    "original": "while (n && n !== next) {",
+    "replacement": "moved below: try {",
+    "reason": "detachRefs only unsets the refs (setters), which do not read the removed nodes' positions; the removal does not read the refs (reasoned)"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 35,
+    "operator": "ConditionalExpression",
+    "original": "root === current ||\n      current.phase === FiberPhase.NEW",
+    "replacement": "false",
+    "reason": "redundant clauses: a fiber that is its own root makes !fibersInError.has(root) || fibersInError.has(current) true, and a NEW fiber reaches makeRootFiber only in error (render() merges a NEW one that is not), so the last two clauses decide alone (reasoned)"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 35,
+    "operator": "ConditionalExpression",
+    "original": "root === current",
+    "replacement": "false",
+    "reason": "redundant clauses: a fiber that is its own root makes !fibersInError.has(root) || fibersInError.has(current) true, and a NEW fiber reaches makeRootFiber only in error (render() merges a NEW one that is not), so the last two clauses decide alone (reasoned)"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 35,
+    "operator": "LogicalOperator",
+    "original": "root === current ||\n      current.phase === FiberPhase.NEW",
+    "replacement": "root === current && current.phase === FiberPhase.NEW",
+    "reason": "redundant clauses: a fiber that is its own root makes !fibersInError.has(root) || fibersInError.has(current) true, and a NEW fiber reaches makeRootFiber only in error (render() merges a NEW one that is not), so the last two clauses decide alone (reasoned)"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 36,
+    "operator": "ConditionalExpression",
+    "original": "current.phase === FiberPhase.NEW",
+    "replacement": "false",
+    "reason": "redundant clauses: a fiber that is its own root makes !fibersInError.has(root) || fibersInError.has(current) true, and a NEW fiber reaches makeRootFiber only in error (render() merges a NEW one that is not), so the last two clauses decide alone (reasoned)"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 110,
+    "operator": "ConditionalExpression",
+    "original": "root instanceof MountFiber && root.prepared",
+    "replacement": "true",
+    "reason": "a RootFiber that is not a MountFiber has no prepared flag to clear and is not yet applied (its APPLIED bit is set only by a commit, after which its node drops it), so clearing both is a no-op (reasoned)"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 110,
+    "operator": "LogicalOperator",
+    "original": "root instanceof MountFiber && root.prepared",
+    "replacement": "root instanceof MountFiber || root.prepared",
+    "reason": "a MountFiber that is not prepared is not applied either (complete() sets both), so clearing both is a no-op (reasoned)"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 112,
+    "operator": "AssignmentOperator",
+    "original": "root.renderState &= ~APPLIED_TO_DOM",
+    "replacement": "root.renderState |= ~APPLIED_TO_DOM",
+    "reason": "complete() sets APPLIED again before anything reads it (_mount after mounting, or the prepared branch), and the iteration count of a MountFiber is read only by its own render after recycleFiber added to it (reasoned)"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 112,
+    "operator": "UnaryOperator",
+    "original": "~APPLIED_TO_DOM",
+    "replacement": "APPLIED_TO_DOM",
+    "reason": "complete() sets APPLIED again before anything reads it (_mount after mounting, or the prepared branch) (reasoned)"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 146,
+    "operator": "ConditionalExpression",
+    "original": "subRoot.status === STATUS.MOUNTED",
+    "replacement": "true",
+    "reason": "a hosted sub-root that is not mounted is still mounting (a destroyed one leaves hostedSubRoots): render(true) on it only marks its mount fiber deep, a first render that renders everything anyway (reasoned)"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 177,
+    "operator": "ConditionalExpression",
+    "original": "node.bdom",
+    "replacement": "true",
+    "reason": "forceNextRender only makes a parent's next render re-render a child whose props did not change; a node without a bdom never reached the DOM and is created again by its parent's next render (reasoned)"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 224,
+    "operator": "BlockStatement",
+    "original": "{\n            current = pass.node;\n          }",
+    "replacement": "{}",
+    "reason": "the nodes between a node and the root of the pass its fiber belongs to all have fibers in that pass that rendered the node below them, so walking them repeats the check that just held; jumping to the pass root is a shortcut (reasoned)"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 331,
+    "operator": "BooleanLiteral",
+    "original": "false",
+    "replacement": "true",
+    "reason": "the root's node is destroyed, so no live node's fiber has this root and nothing reads its lock again (reasoned)"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 341,
+    "operator": "BooleanLiteral",
+    "original": "false",
+    "replacement": "true",
+    "reason": "a render asked of a node of a locked pass waits one microtask, then proceeds the same way: a root left locked after a failed commit only delays such renders by a microtask (reasoned)"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 365,
+    "operator": "ConditionalExpression",
+    "original": "node.status !== STATUS.DESTROYED && !owedPatched.has(node)",
+    "replacement": "true",
+    "reason": "owePatched adding a node twice is idempotent (a set) and owing a destroyed node is never read (destroyed nodes are skipped by every commit); the only other effect is a higher owedCount, a fast-path gate whose slow path gives the same answer (reasoned)"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 365,
+    "operator": "ConditionalExpression",
+    "original": "node.status !== STATUS.DESTROYED",
+    "replacement": "true",
+    "reason": "owePatched adding a node twice is idempotent (a set) and owing a destroyed node is never read (destroyed nodes are skipped by every commit); the only other effect is a higher owedCount, a fast-path gate whose slow path gives the same answer (reasoned)"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 374,
+    "operator": "UpdateOperator",
+    "original": "owedCount--",
+    "replacement": "owedCount++",
+    "reason": "owedCount is only a fast-path gate: a count above the true one takes the slow path, whose map lookups give the same answer (reasoned)"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 390,
+    "operator": "BlockStatement",
+    "original": "{\n    if (owedMounted.delete(node)) {\n      owedCount--;\n    }\n    if (owedPatched.delete(node)) {\n      owedCount--;\n    }\n  }",
+    "replacement": "{}",
+    "reason": "forgetOwed of a destroyed node: its owed entries are never read again (no commit reaches a destroyed node, and it is no ancestor of a live one), so leaving them only raises owedCount, a fast-path gate whose slow path gives the same answer (reasoned)"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 391,
+    "operator": "BlockStatement",
+    "original": "{\n      owedCount--;\n    }",
+    "replacement": "{}",
+    "reason": "forgetOwed of a destroyed node: its owed entries are never read again (no commit reaches a destroyed node, and it is no ancestor of a live one), so leaving them only raises owedCount, a fast-path gate whose slow path gives the same answer (reasoned)"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 391,
+    "operator": "ConditionalExpression",
+    "original": "owedMounted.delete(node)",
+    "replacement": "false",
+    "reason": "forgetOwed of a destroyed node: its owed entries are never read again (no commit reaches a destroyed node, and it is no ancestor of a live one), so leaving them only raises owedCount, a fast-path gate whose slow path gives the same answer (reasoned)"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 392,
+    "operator": "UpdateOperator",
+    "original": "owedCount--",
+    "replacement": "owedCount++",
+    "reason": "forgetOwed of a destroyed node: its owed entries are never read again (no commit reaches a destroyed node, and it is no ancestor of a live one), so leaving them only raises owedCount, a fast-path gate whose slow path gives the same answer (reasoned)"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 394,
+    "operator": "BlockStatement",
+    "original": "{\n      owedCount--;\n    }",
+    "replacement": "{}",
+    "reason": "forgetOwed of a destroyed node: its owed entries are never read again (no commit reaches a destroyed node, and it is no ancestor of a live one), so leaving them only raises owedCount, a fast-path gate whose slow path gives the same answer (reasoned)"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 394,
+    "operator": "ConditionalExpression",
+    "original": "owedPatched.delete(node)",
+    "replacement": "false",
+    "reason": "forgetOwed of a destroyed node: its owed entries are never read again (no commit reaches a destroyed node, and it is no ancestor of a live one), so leaving them only raises owedCount, a fast-path gate whose slow path gives the same answer (reasoned)"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 395,
+    "operator": "UpdateOperator",
+    "original": "owedCount--",
+    "replacement": "owedCount++",
+    "reason": "forgetOwed of a destroyed node: its owed entries are never read again (no commit reaches a destroyed node, and it is no ancestor of a live one), so leaving them only raises owedCount, a fast-path gate whose slow path gives the same answer (reasoned)"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 404,
+    "operator": "ArrayDeclaration",
+    "original": "[]",
+    "replacement": "[\"Stryker was here\"]",
+    "reason": "a string in the owing list is owed nothing: settleOwed returns false for it (WeakMap/WeakSet lookups of a non-object are false)"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 406,
+    "operator": "ConditionalExpression",
+    "original": "owedMounted.has(p) || owedPatched.has(p)",
+    "replacement": "true",
+    "reason": "an ancestor that owes nothing is skipped by settleOwed returning false"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 438,
+    "operator": "ConditionalExpression",
+    "original": "f.node === node",
+    "replacement": "false",
+    "reason": "not finding the owing node's earlier fiber pushes the new one beside it; the earlier one was cancelled, is never applied, and callCommitHooks skips it (reasoned)"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 438,
+    "operator": "ArrowFunction",
+    "original": "(f) => f.node === node",
+    "replacement": "() => undefined",
+    "reason": "not finding the owing node's earlier fiber pushes the new one beside it; the earlier one was cancelled, is never applied, and callCommitHooks skips it (reasoned)"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 439,
+    "operator": "ConditionalExpression",
+    "original": "i < 0",
+    "replacement": "true",
+    "reason": "pushing instead of replacing the owing node's earlier fiber keeps a cancelled fiber that is never applied and that callCommitHooks skips (reasoned)"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 439,
+    "operator": "EqualityOperator",
+    "original": "i < 0",
+    "replacement": "i <= 0",
+    "reason": "pushing instead of replacing the owing node's earlier fiber keeps a cancelled fiber that is never applied and that callCommitHooks skips (reasoned)"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 453,
+    "operator": "ConditionalExpression",
+    "original": "mounted.length && patched.length",
+    "replacement": "true",
+    "reason": "with one of the lists empty the filter keeps every patched fiber; only a copy of the list replaces it (reasoned)"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 453,
+    "operator": "LogicalOperator",
+    "original": "mounted.length && patched.length",
+    "replacement": "mounted.length || patched.length",
+    "reason": "with one of the lists empty the filter keeps every patched fiber; only a copy of the list replaces it (reasoned)"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 459,
+    "operator": "BlockStatement",
+    "original": "{\n    return;\n  }",
+    "replacement": "{}",
+    "reason": "failed is null only when the app was destroyed: every node is then destroyed, and callCommitHooks skips destroyed fibers and owes nothing for them (reasoned)"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 510,
+    "operator": "ConditionalExpression",
+    "original": "node.app.destroyed",
+    "replacement": "false",
+    "reason": "app.destroy() in the handler destroys every node of the tree, so the remaining mounted fibers and the patched ones are skipped as destroyed, and oweMounted/owePatched ignore destroyed nodes (reasoned)"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 510,
+    "operator": "BlockStatement",
+    "original": "{\n        return null;\n      }",
+    "replacement": "{}",
+    "reason": "app.destroy() in the handler destroys every node of the tree, so the remaining mounted fibers and the patched ones are skipped as destroyed, and oweMounted/owePatched ignore destroyed nodes (reasoned)"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 523,
+    "operator": "ConditionalExpression",
+    "original": "child.status === STATUS.MOUNTED",
+    "replacement": "true",
+    "reason": "the children of a root whose first mount failed are mounted (their mount just ran) or never mounted (status already NEW); destroyed ones left the childMap, so setting NEW on the others is a no-op (reasoned)"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 568,
+    "operator": "OptionalChaining",
+    "original": "this.onPrepared?.()",
+    "replacement": "this.onPrepared()",
+    "reason": "App.prepare sets onPrepared on every MountFiber it builds, before any render, so it is never null in complete()"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 365,
+    "operator": "LogicalOperator",
+    "original": "node.status !== STATUS.DESTROYED && !owedPatched.has(node)",
+    "replacement": "node.status !== STATUS.DESTROYED || !owedPatched.has(node)",
+    "reason": "owePatched adding a node twice is idempotent (a set) and owing a destroyed node is never read (destroyed nodes are skipped by every commit); the only other effect is a higher owedCount, a fast-path gate whose slow path gives the same answer (reasoned)"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 146,
+    "operator": "receiver",
+    "original": "subRoot.status",
+    "replacement": "node.status",
+    "reason": "the host being mounted, the deep render reaches every hosted sub-root: one that is not mounted is still mounting (a destroyed one leaves hostedSubRoots), and render(true) on it only marks its mount fiber deep, a first render that renders everything anyway (reasoned)"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 59,
+    "operator": "path",
+    "original": "current.root",
+    "replacement": "node.root",
+    "reason": "after the node renders alone its old fiber is no longer its node's fiber, and every reader of a fiber's root (renderMergedAlone, the scheduler's delayed renders) checks node.fiber first, so the old fiber's root is never read again (reasoned)"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 36,
+    "operator": "path",
+    "original": "current.phase",
+    "replacement": "node.phase",
+    "reason": "redundant clause: a NEW fiber reaches makeRootFiber only in error (render() merges a NEW one that is not), and fibersInError.has(current) then decides (reasoned)"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 96,
+    "operator": "ConditionalExpression",
+    "original": "current === root",
+    "replacement": "false",
+    "reason": "a recycled root cancels its children, so the merged fibers it keeps are stale (node.fiber no longer them) and renderMergedAlone, the only reader of root.merged, skips them (reasoned)"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 96,
+    "operator": "BlockStatement",
+    "original": "{\n    root.merged = null;\n  }",
+    "replacement": "{}",
+    "reason": "a recycled root cancels its children, so the merged fibers it keeps are stale (node.fiber no longer them) and renderMergedAlone, the only reader of root.merged, skips them (reasoned)"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 280,
+    "operator": "EqualityOperator",
+    "original": "start < 0",
+    "replacement": "start <= 0",
+    "reason": "start is performance.now() (or Date.now()) taken while the channel is on, never 0"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 338,
+    "operator": "BlockStatement",
+    "original": "{\n        oweMounted(fiber.node);\n      }",
+    "replacement": "{}",
+    "reason": "the components a failed update commit mounted are created again by their parent's next render (error_recovery 'a commit failed by an onWillPatch owes ...'), and the owed nodes it queued owe already, so what this loop owes is never read (reasoned)"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 339,
+    "operator": "CallExpression",
+    "original": "oweMounted(fiber.node);",
+    "replacement": ";",
+    "reason": "the components a failed update commit mounted are created again by their parent's next render (error_recovery 'a commit failed by an onWillPatch owes ...'), and the owed nodes it queued owe already, so what this loop owes is never read (reasoned)"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 112,
+    "operator": "receiver",
+    "original": "root.renderState",
+    "replacement": "current.renderState",
+    "reason": "complete() sets APPLIED on the root again before anything reads it (_mount after mounting, or the prepared branch), and a child fiber's APPLIED bit is only set when its node is patched in, after this (reasoned)"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 591,
+    "operator": "swap",
+    "original": "(node.app.constructor as any).validateTarget(target, {",
+    "replacement": "moved below: next = this.afterNode || (this.position === \"last-child\" ? null : target.firstChild);",
+    "reason": "root.mount() validated the target as an element or shadow root, so reading its firstChild before validateTarget cannot throw; validateTarget then throws the same error"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 477,
+    "operator": "swap",
+    "original": "if (failed && (!applied || fibersInError.has(current))) {",
+    "replacement": "moved below: if (!applied || node.status === STATUS.DESTROYED) {",
+    "reason": "every fiber left unapplied in a mounted or patched list belongs to a node its cancellation destroyed (forgetOwed ran, so oweMounted, owePatched and settleOwed do nothing for it) or was replaced in place by queueOwedMounted; a stale patched fiber is popped after the live one that settles its node (reasoned)"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 485,
+    "operator": "swap",
+    "original": "if (!applied || node.status === STATUS.DESTROYED) {",
+    "replacement": "moved below: const settled = owedCount ? settleOwed(node, hook) : false;",
+    "reason": "every fiber left unapplied in a mounted or patched list belongs to a node its cancellation destroyed (forgetOwed ran, so oweMounted, owePatched and settleOwed do nothing for it) or was replaced in place by queueOwedMounted; a stale patched fiber is popped after the live one that settles its node (reasoned)"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 606,
+    "operator": "path",
+    "original": "node.bdom",
+    "replacement": "this.bdom",
+    "reason": "the root of a failed first mount is NEW: its stale bdom is read only by destroy(), which removes only a MOUNTED node's DOM, and the next _mount replaces it (reasoned)"
   }
 ]

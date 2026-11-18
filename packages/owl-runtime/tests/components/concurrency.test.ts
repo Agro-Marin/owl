@@ -4281,6 +4281,97 @@ test("a root fiber whose node was patched through another render is dropped, not
   expect(fixture.innerHTML).toBe("<div>3</div>");
 });
 
+test("a delayed render of a child fiber its pass recycled since is not resumed", async () => {
+  const slow = makeDeferred();
+  const loads = [makeDeferred(), makeDeferred()];
+  const pending = [...loads];
+  class Slow extends Component {
+    static template = xml`<s t-out="this.props.v"/>`;
+    props = props();
+    setup() {
+      onWillUpdateProps(() => slow);
+    }
+  }
+  class C extends Component {
+    static template = xml`<i t-out="this.props.v"/>`;
+    props = props();
+    setup() {
+      onWillUpdateProps(() => pending.shift());
+    }
+  }
+  class R extends Component {
+    static template = xml`<p><C v="this.state.n"/></p>`;
+    static components = { C };
+    state = proxy({ n: 1 });
+  }
+  class P extends Component {
+    static template = xml`<div><Slow v="this.state.v"/><R/></div>`;
+    static components = { Slow, R };
+    state = proxy({ v: 1 });
+  }
+  const p = await mount(P, fixture);
+  const r = Object.values(p.__owl__.children).find((n) => n.component instanceof R)!.component as R;
+  r.state.n = 2;
+  await nextTick();
+  p.state.v = 2;
+  await nextTick();
+  loads[0].resolve();
+  await nextTick();
+  r.state.n = 3;
+  await nextTick();
+  // C's delayed render was abandoned when R's render recycled its fiber: it
+  // left the scheduler then (31eb9fdc), and only R's render waits.
+  expect(lastScheduler.delayedRenders.map((f) => f.node.componentName)).toEqual(["R"]);
+  slow.resolve();
+  await nextTick();
+  await nextTick();
+  expect(fixture.innerHTML).toBe("<div><s>2</s><p><i>1</i></p></div>");
+  loads[1].resolve();
+  await nextTick();
+  await nextTick();
+  expect(fixture.innerHTML).toBe("<div><s>2</s><p><i>3</i></p></div>");
+});
+
+test("a component a pass created and then dropped is destroyed after the children it created", async () => {
+  const slow = makeDeferred();
+  const log: string[] = [];
+  class Slow extends Component {
+    static template = xml`<s t-out="this.props.v"/>`;
+    props = props();
+    setup() {
+      onWillUpdateProps(() => slow);
+    }
+  }
+  class Leaf extends Component {
+    static template = xml`<i/>`;
+    setup() {
+      onWillDestroy(() => log.push("Leaf:willDestroy"));
+    }
+  }
+  class New extends Component {
+    static template = xml`<n><Leaf/></n>`;
+    static components = { Leaf };
+    setup() {
+      onWillDestroy(() => log.push("New:willDestroy"));
+    }
+  }
+  class Root extends Component {
+    static template = xml`<div><Slow v="this.state.v"/><New t-if="this.state.v === 2"/></div>`;
+    static components = { Slow, New };
+    state = proxy({ v: 1 });
+  }
+  const root = await mount(Root, fixture);
+  root.state.v = 2;
+  await nextTick();
+  root.state.v = 3;
+  await nextTick();
+  slow.resolve();
+  await nextTick();
+  await nextTick();
+  expect(log).toEqual(["Leaf:willDestroy", "New:willDestroy"]);
+  expect(fixture.innerHTML).toBe("<div><s>3</s></div>");
+});
+
 test("a render delayed by a rendering ancestor of another app resumes when that app renders", async () => {
   const def = makeDeferred();
   class Slow extends Component {
@@ -4347,6 +4438,49 @@ test("a pass whose last render is a node of another app is committed by the pass
   await nextTick();
   await nextTick();
   expect(fixture.innerHTML).toBe("<div><p>2</p></div>");
+});
+
+test("a render below a node of another app in a rendering pass waits on the pass's app", async () => {
+  const def = makeDeferred();
+  class Slow extends Component {
+    static template = xml`<span><t t-out="this.props.value"/></span>`;
+    props = props();
+    setup() {
+      onWillUpdateProps(() => def);
+    }
+  }
+  class Leaf extends Component {
+    static template = xml`<q t-out="this.state.value"/>`;
+    state = proxy({ value: 1 });
+  }
+  class Mid extends Component {
+    static template = xml`<m t-out="this.props.value"/><Leaf/>`;
+    static components = { Leaf };
+    props = props();
+  }
+  class Parent extends Component {
+    static template = xml`<div><Slow value="this.state.value"/><Mid value="this.state.value"/></div>`;
+    static components = { Slow, Mid };
+    state = proxy({ value: 1 });
+  }
+  const parent = await mount(Parent, fixture);
+  const midNode: any = Object.values((parent as any).__owl__.children).find(
+    (n: any) => n.component instanceof Mid
+  );
+  midNode.app = new App();
+  const leafNode: any = Object.values(midNode.children)[0];
+
+  parent.state.value = 2;
+  await nextMicroTick();
+  await nextMicroTick();
+  leafNode.component.state.value = 2;
+  await nextTick();
+  expect(fixture.innerHTML).toBe("<div><span>1</span><m>1</m><q>1</q></div>");
+
+  def.resolve();
+  await nextTick();
+  await nextTick();
+  expect(fixture.innerHTML).toBe("<div><span>2</span><m>2</m><q>2</q></div>");
 });
 
 test("a node of another app rendering again inside a pending pass leaves no task in its app's scheduler", async () => {
@@ -4721,6 +4855,41 @@ describe("superseded and destroyed renders", () => {
     def.resolve();
     await nextTick();
     expect(app.scheduler.tasks.size).toBe(0);
+    app.destroy();
+  });
+
+  test("a scheduler stays active while one of its tasks waits", async () => {
+    const slowLoad = makeDeferred();
+    class Slow extends Component {
+      static template = xml`<div/>`;
+      setup() {
+        onWillStart(() => slowLoad);
+      }
+    }
+    class Other extends Component {
+      static template = xml`<p/>`;
+      setup() {
+        onWillStart(() => makeDeferred());
+      }
+    }
+    class Fast extends Component {
+      static template = xml`<i/>`;
+    }
+    const app = new App({ test: true });
+    app.createRoot(Slow).mount(fixture);
+    const other = app.createRoot(Other);
+    other.mount(fixture);
+    await app.createRoot(Fast).mount(fixture);
+    expect(app.scheduler.tasks.size).toBe(2);
+    expect(Scheduler.active.has(app.scheduler)).toBe(true);
+    other.destroy();
+    expect(app.scheduler.tasks.size).toBe(1);
+    expect(Scheduler.active.has(app.scheduler)).toBe(true);
+    slowLoad.resolve();
+    await nextTick();
+    expect(fixture.innerHTML).toBe("<i></i><div></div>");
+    expect(app.scheduler.tasks.size).toBe(0);
+    expect(Scheduler.active.has(app.scheduler)).toBe(false);
     app.destroy();
   });
 

@@ -4,6 +4,8 @@ import {
   onError,
   onMounted,
   onWillDestroy,
+  onWillPatch,
+  onWillStart,
   onWillUpdateProps,
   props,
   proxy,
@@ -132,6 +134,57 @@ test("destroy a subroot while another component is mounted in main app", async (
   expect(fixture.innerHTML).toBe("b");
 });
 
+test("a deep render of the host renders its mounted sub-roots again", async () => {
+  const plain = { label: "a" };
+  class Dialog extends Component {
+    static template = xml`<p t-out="this.plain.label"/>`;
+    plain = plain;
+  }
+  class Host extends Component {
+    static template = xml`<div/>`;
+  }
+  const app = new App();
+  const host = await app.createRoot(Host).mount(fixture);
+  await createSubRoot(app, Dialog, { host: host.__owl__ }).mount(fixture);
+  plain.label = "b";
+  host.__owl__.render(true);
+  await nextTick();
+  expect(fixture.innerHTML).toBe("<div></div><p>b</p>");
+  app.destroy();
+});
+
+test("a deep render of the host that fails does not render its sub-roots", async () => {
+  const plain = { label: "a" };
+  const errors: string[] = [];
+  class Dialog extends Component {
+    static template = xml`<p t-out="this.plain.label"/>`;
+    plain = plain;
+  }
+  class Host extends Component {
+    static template = xml`<div t-out="this.read()"/>`;
+    failing = false;
+    setup() {
+      onError((e) => errors.push(e.message));
+    }
+    read() {
+      if (this.failing) {
+        throw new Error("host failed");
+      }
+      return "host";
+    }
+  }
+  const app = new App();
+  const host = await app.createRoot(Host).mount(fixture);
+  await createSubRoot(app, Dialog, { host: host.__owl__ }).mount(fixture);
+  plain.label = "b";
+  host.failing = true;
+  host.__owl__.render(true);
+  await nextTick();
+  expect(errors).toEqual(["host failed"]);
+  expect(fixture.innerHTML).toBe("<div>host</div><p>a</p>");
+  app.destroy();
+});
+
 test("a sub-root error handler runs after the root component's own onError", async () => {
   const steps: string[] = [];
   class Broken extends Component {
@@ -194,5 +247,89 @@ test("a sub-root destroyed while its render waits behind its host's pass is not 
   late.resolve();
   await nextTick();
   expect(fixture.innerHTML).toBe("<div><i>2</i></div>");
+  app.destroy();
+});
+
+test("a destroyed root that never rendered leaves the renders waiting behind another pass", async () => {
+  const late = makeDeferred();
+  class Child extends Component {
+    static template = xml`<i t-out="this.props.v"/>`;
+    props = props();
+    setup() {
+      onWillUpdateProps(() => late);
+    }
+  }
+  class Host extends Component {
+    static template = xml`<div><Child v="this.state.v"/></div>`;
+    static components = { Child };
+    state = proxy({ v: 1 });
+  }
+  class Dialog extends Component {
+    static template = xml`<p t-out="this.state.n"/>`;
+    state = proxy({ n: 1 });
+  }
+  class Slow extends Component {
+    static template = xml`<s/>`;
+    setup() {
+      onWillStart(() => makeDeferred());
+    }
+  }
+  const app = new App();
+  const host = await app.createRoot(Host).mount(fixture);
+  const dialog = await createSubRoot(app, Dialog, { host: host.__owl__ }).mount(fixture);
+  host.state.v = 2;
+  await nextTick();
+  dialog.state.n = 2;
+  await nextTick();
+  const slow = app.createRoot(Slow);
+  slow.mount(fixture);
+  await nextTick();
+  expect(app.scheduler.delayedRenders.map((f) => f.node.componentName)).toEqual(["Dialog"]);
+  slow.destroy();
+  expect(app.scheduler.delayedRenders.map((f) => f.node.componentName)).toEqual(["Dialog"]);
+  late.resolve();
+  await nextTick();
+  expect(app.scheduler.delayedRenders).toEqual([]);
+  expect(fixture.innerHTML).toBe("<div><i>2</i></div><p>2</p>");
+  app.destroy();
+});
+
+test("a pass whose commit fails resumes the renders that waited behind it", async () => {
+  const late = makeDeferred();
+  class Child extends Component {
+    static template = xml`<i t-out="this.props.v"/>`;
+    props = props();
+    setup() {
+      onWillUpdateProps(() => late);
+      onWillPatch(() => {
+        throw new Error("commit failed");
+      });
+    }
+  }
+  class Host extends Component {
+    static template = xml`<div><Child v="this.state.v"/></div>`;
+    static components = { Child };
+    state = proxy({ v: 1 });
+    setup() {
+      onError(() => {});
+    }
+  }
+  class Dialog extends Component {
+    static template = xml`<p t-out="this.state.n"/>`;
+    state = proxy({ n: 1 });
+  }
+  const app = new App();
+  const host = await app.createRoot(Host).mount(fixture);
+  const dialog = await createSubRoot(app, Dialog, { host: host.__owl__ }).mount(fixture);
+  host.state.v = 2;
+  await nextTick();
+  dialog.state.n = 2;
+  await nextTick();
+  expect(app.scheduler.delayedRenders.map((f) => f.node.componentName)).toEqual(["Dialog"]);
+  late.resolve();
+  await nextTick();
+  expect(app.scheduler.delayedRenders).toEqual([]);
+  expect(app.scheduler.tasks.size).toBe(0);
+  expect(fixture.innerHTML).toBe("<div><i>1</i></div><p>2</p>");
   app.destroy();
 });

@@ -80,6 +80,47 @@ exports[`node.renderFn can be wrapped during setup and the original called unbou
 }"
 `;
 
+exports[`render loop detection > a child that keeps rendering itself under an uncommitted root is a render loop too 1`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { createComponent } = helpers;
+  const comp1 = createComponent(app, \`Looping\`, true, false, false, []);
+  const comp2 = createComponent(app, \`AsyncChild\`, true, false, false, []);
+  
+  return function template(ctx, node, key = "") {
+    const props1 = {};
+    const b2 = comp1(props1, key + \`\\u00021\`, node, this, null);
+    const props2 = {};
+    const b3 = comp2(props2, key + \`\\u00022\`, node, this, null);
+    return multi([b2, b3]);
+  }
+}"
+`;
+
+exports[`render loop detection > a child that keeps rendering itself under an uncommitted root is a render loop too 2`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { safeOutput } = helpers;
+  
+  return function template(ctx, node, key = "") {
+    return safeOutput(ctx['this'].bump(), node, key, "\\u00021");
+  }
+}"
+`;
+
+exports[`render loop detection > a child that keeps rendering itself under an uncommitted root is a render loop too 3`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  
+  return function template(ctx, node, key = "") {
+    return text(\`async\`);
+  }
+}"
+`;
+
 exports[`render loop detection > throws a clear error instead of freezing on a render loop (#1968) 1`] = `
 "function anonymous(app, bdom, helpers
 ) {

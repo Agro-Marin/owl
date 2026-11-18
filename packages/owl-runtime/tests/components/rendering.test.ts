@@ -1,6 +1,7 @@
 import {
   Component,
   mount,
+  onError,
   onWillStart,
   onWillUpdateProps,
   OwlError,
@@ -520,6 +521,43 @@ describe("render loop detection", () => {
     expect(error.message).toMatch(/render loop/);
     expect(error.message).toContain("Root");
     expect(getConsoleOutput()).toEqual([]);
+  });
+
+  test("a child that keeps rendering itself under an uncommitted root is a render loop too", async () => {
+    const def = makeDeferred();
+    const errors: string[] = [];
+    class Looping extends Component {
+      static template = xml`<t t-out="this.bump()"/>`;
+      state = proxy({ n: 0 });
+      bump() {
+        this.state.n = this.state.n + 1;
+        return 1;
+      }
+    }
+    class AsyncChild extends Component {
+      static template = xml`async`;
+      setup() {
+        onWillStart(() => def);
+      }
+    }
+    class Root extends Component {
+      static components = { Looping, AsyncChild };
+      static template = xml`<Looping/><AsyncChild/>`;
+      setup() {
+        onError((e) => errors.push(e.message));
+      }
+    }
+
+    mount(Root, fixture, { test: true });
+    await nextTick();
+    await nextTick();
+    expect(errors).toEqual([
+      `Maximum render iterations (1000) exceeded. Component "Looping" is stuck in a render loop: ` +
+        `rendering it keeps triggering another render before the DOM is updated. A common cause ` +
+        `is updating reactive state during render or setup() — e.g. calling a parent's state ` +
+        `setter from a child's setup().`,
+    ]);
+    def.resolve();
   });
 
   test("wide re-render under an uncommitted root is not a render loop", async () => {

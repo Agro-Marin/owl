@@ -5,6 +5,7 @@ import {
   mount,
   onMounted,
   onWillDestroy,
+  onPatched,
   onWillPatch,
   onWillStart,
   props,
@@ -267,6 +268,33 @@ describe("app", () => {
     expect(fixture.innerHTML).toBe("parent<div></div>");
   });
 
+  test("processTasks called again from a commit's onWillPatch does not commit twice", async () => {
+    const log: string[] = [];
+    class Child extends Component {
+      static template = xml`<div t-out="this.props.v"/>`;
+      props = props();
+      setup() {
+        onWillPatch(() => {
+          log.push("willPatch");
+          app.scheduler.processTasks();
+        });
+        onPatched(() => log.push("patched"));
+      }
+    }
+    class SomeComponent extends Component {
+      static template = xml`parent<Child v="this.state.v"/>`;
+      static components = { Child };
+      state = proxy({ v: 1 });
+    }
+
+    const app = new App();
+    const parent = await app.createRoot(SomeComponent).mount(fixture);
+    parent.state.v = 2;
+    await nextTick();
+    expect(fixture.innerHTML).toBe("parent<div>2</div>");
+    expect(log).toEqual(["willPatch", "patched"]);
+  });
+
   test("can add functions to the bdom", async () => {
     const steps: string[] = [];
     class SomeComponent extends Component {
@@ -392,6 +420,26 @@ describe("mount()", () => {
     );
     expect(App.apps.size).toBe(before);
     expect(log).toEqual(["destroyed"]);
+  });
+
+  test("a target that left the document before the render finished is refused, and what it holds is left", async () => {
+    const target = document.createElement("div");
+    target.innerHTML = "<hr>";
+    document.body.appendChild(target);
+    const load = makeDeferred();
+    class Slow extends Component {
+      static template = xml`<p>slow</p>`;
+      setup() {
+        onWillStart(() => load);
+      }
+    }
+    const app = new App({ test: true });
+    const mounting = app.createRoot(Slow).mount(target);
+    target.remove();
+    load.resolve();
+    await expect(mounting).rejects.toThrow("Cannot mount a component on a detached dom node");
+    expect(target.innerHTML).toBe("<hr>");
+    app.destroy();
   });
 
   test("a setup error leaves no app behind", async () => {
