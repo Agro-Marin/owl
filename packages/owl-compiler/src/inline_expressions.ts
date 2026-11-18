@@ -744,7 +744,7 @@ export function processExpr(
     if (
       token.type === "SYMBOL" &&
       token.value === "function" &&
-      !(prevToken?.type === "OPERATOR" && prevToken.value === ".") &&
+      !(prevToken?.type === "OPERATOR" && (prevToken.value === "." || prevToken.value === "?.")) &&
       startsNamedOrParameterizedFunction(tokens, i)
     ) {
       throw new OwlError(

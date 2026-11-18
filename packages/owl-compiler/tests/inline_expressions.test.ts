@@ -516,6 +516,8 @@ describe("expression edge cases", () => {
     expect(() => compileExpr("[1].map(function (x) { return x + 1 })")).toThrow(error);
     expect(compileExpr("function () { return a }")).toBe("function(){return ctx['a']}");
     expect(compileExpr("a.function(1)")).toBe("ctx['a'].function(1)");
+    expect(compileExpr("a?.function(1)")).toBe("ctx['a']?.function(1)");
+    expect(compileExpr("a.b?.function(c)")).toBe("ctx['a'].b?.function(ctx['c'])");
     expect(compileExpr("{function: 1}")).toBe("{function:1}");
   });
 
