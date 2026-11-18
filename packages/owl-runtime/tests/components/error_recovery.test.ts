@@ -346,6 +346,63 @@ describe("a pass failed by one component, handled without a re-render", () => {
     app.destroy();
   });
 
+  test("a component that pass left out, rendering on its own meanwhile, renders once the pass is dropped", async () => {
+    let boom = true;
+    class Child extends Component {
+      static template = xml`<p t-out="this.props.v"/>`;
+      props = props();
+      setup() {
+        onWillPatch(() => {
+          if (boom) {
+            boom = false;
+            throw new Error("boom");
+          }
+        });
+      }
+    }
+    class Item extends Component {
+      static template = xml`<i><t t-out="this.props.id"/>-<t t-out="this.state.n"/></i>`;
+      props = props();
+      state = proxy({ n: 0 });
+    }
+    class Parent extends Component {
+      static template = xml`<div><Child v="this.state.v"/><t t-foreach="this.state.items" t-as="id" t-key="id"><Item id="id"/></t></div>`;
+      static components = { Child, Item };
+      state = proxy({ v: 1, items: [1, 2] });
+      setup() {
+        onError((e) => log.push(e.message));
+      }
+    }
+    const loading = makeDeferred();
+    class Loading extends Component {
+      static template = xml`<span>loaded</span>`;
+      setup() {
+        onWillStart(() => loading);
+      }
+    }
+    const app = new App({ test: true });
+    const parent = await app.createRoot(Parent).mount(fixture);
+    const second = Object.values(parent.__owl__.children)[2].component as Item;
+    app.createRoot(Loading).mount(fixture);
+    parent.state.v = 2;
+    parent.state.items.pop();
+    await nextMicroTick();
+    await nextMicroTick();
+    second.state.n = 1;
+    await nextTick();
+    await nextTick();
+    expect(log).toEqual(["boom"]);
+    expect(fixture.innerHTML).toBe("<div><p>1</p><i>1-0</i><i>2-1</i></div>");
+    second.state.n = 2;
+    await nextTick();
+    expect(fixture.innerHTML).toBe("<div><p>1</p><i>1-0</i><i>2-2</i></div>");
+    loading.resolve();
+    await nextTick();
+    expect(fixture.innerHTML).toBe("<div><p>1</p><i>1-0</i><i>2-2</i></div><span>loaded</span>");
+    expect(app.scheduler.tasks.size).toBe(0);
+    app.destroy();
+  });
+
   test("a component the pass created, never mounted, waits for the pass instead of committing alone", async () => {
     const shared = proxy({ n: 1 });
     class C extends Component {

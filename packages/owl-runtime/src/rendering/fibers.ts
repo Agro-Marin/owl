@@ -221,8 +221,9 @@ export class Fiber {
         if (current.fiber) {
           const pass = current.fiber.root!;
           if (
-            (pass.counter === 0 || fibersInError.has(pass)) &&
-            (!prev.parent || !!current.fiber.childrenMap?.has(prev.parentKey!))
+            fibersInError.has(pass) ||
+            (pass.counter === 0 &&
+              (!prev.parent || !!current.fiber.childrenMap?.has(prev.parentKey!)))
           ) {
             current = pass.node;
           } else {
