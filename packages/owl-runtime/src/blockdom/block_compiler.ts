@@ -180,7 +180,6 @@ interface IntermediateTree {
   isRef?: boolean;
   refIdx?: number;
   refN: number;
-  currentNS: string | null;
 }
 
 function buildTree(
@@ -190,28 +189,23 @@ function buildTree(
 ): IntermediateTree {
   switch (node.nodeType) {
     case Node.ELEMENT_NODE: {
-      let currentNS = domParentTree && domParentTree.currentNS;
       const tagName = (node as Element).tagName;
-      let el: Node | undefined = undefined;
+      let el: Node;
       const info: DynamicInfo[] = [];
       if (tagName.startsWith("block-text-")) {
         const index = parseInt(tagName.slice(11), 10);
         info.push({ type: "text", idx: index });
         el = document.createTextNode("");
-      }
-      if (tagName.startsWith("block-child-")) {
+      } else if (tagName.startsWith("block-child-")) {
         if (!domParentTree!.isRef) {
           addRef(domParentTree!);
         }
         const index = parseInt(tagName.slice(12), 10);
         info.push({ type: "child", idx: index });
         el = document.createTextNode("");
-      }
-      currentNS = (node as Element).namespaceURI;
-      if (!el) {
-        el = currentNS
-          ? document.createElementNS(currentNS, tagName)
-          : document.createElement(tagName);
+      } else {
+        const ns = (node as Element).namespaceURI;
+        el = ns ? document.createElementNS(ns, tagName) : document.createElement(tagName);
       }
       if (el instanceof Element) {
         if (!domParentTree) {
@@ -306,7 +300,6 @@ function buildTree(
         el,
         info,
         refN: 0,
-        currentNS,
       };
 
       if (node.firstChild) {
@@ -344,7 +337,6 @@ function buildTree(
         el: document.createTextNode(node.textContent!),
         info: [],
         refN: 0,
-        currentNS: null,
       };
     }
   }
