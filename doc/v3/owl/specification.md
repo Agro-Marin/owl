@@ -1,6 +1,6 @@
 # Behaviour specification
 
-This page states the behaviour OWL guarantees for its reactivity and proxies, one rule per bullet, each naming the test that asserts it; `node tools/spec_check.mjs`, a verify step, fails any rule whose test is missing.
+This page states the behaviour OWL guarantees, from reactivity and proxies to rendering, events and templates, one rule per bullet, each naming the test that asserts it; `node tools/spec_check.mjs`, a verify step, fails any rule whose test is missing.
 [The 3.0-marin fork page](fork_3.0-marin.md) stays as the history of where the fork differs from upstream.
 
 ## Reactivity
@@ -368,3 +368,390 @@ This page states the behaviour OWL guarantees for its reactivity and proxies, on
 - **A forced `use()`**: a `registry.use()` with `{ force: true }` restores the entry it overwrote when it ends.
   [test: packages/owl-core/tests/registry.test.ts › with { force: true } overwrites an existing key]
   [test: packages/owl-core/tests/registry.test.ts › overrides stacked with { force: true } restore the nearest one still in use]
+
+## Rendering
+
+### Component identity
+
+- **A dynamic `t-component` is keyed by its class**: a dynamic `t-component` keys its child by an id of the class, not its name, so two classes with the same name are two components.
+  [test: packages/owl-runtime/tests/components/t_component.test.ts › the other class, once its pending render resolves, is a new instance of it in place of the mounted one]
+- **Committed children only**: `__owl__.children` lists committed children only; a component a pending render creates appears once that render is committed.
+  [test: packages/owl-runtime/tests/components/t_component.test.ts › the other class, once its pending render resolves, is a new instance of it in place of the mounted one]
+  [test: packages/owl-runtime/tests/components/t_component.test.ts › destroying the app while the other class's render is pending destroys both]
+
+### Hook rejections
+
+- **A stale rejection is dropped**: a rejected `onWillStart` or `onWillUpdateProps` of a render a newer one replaced, or of a removed component, is dropped: no handler sees it and the app keeps rendering.
+  [test: packages/owl-runtime/tests/components/concurrency.test.ts › a rejection of a superseded onWillUpdateProps is dropped, the newer update applies]
+  [test: packages/owl-runtime/tests/components/error_handling.test.ts › an onWillStart rejecting after its component was removed leaves the app and the ancestors alone]
+  [test: packages/owl-runtime/tests/components/error_handling.test.ts › an onWillUpdateProps rejecting after its component was removed leaves the app and the ancestors alone]
+- **Logged**: the dropped rejection is logged on the `error` channel.
+  [test: packages/owl-runtime/tests/specification.test.ts › a rejection of a superseded onWillUpdateProps is logged on the error channel]
+- **A synchronous throw in `onWillUpdateProps`**: it is handled as a rejection is, by the component's own `onError` first.
+  [test: packages/owl-runtime/tests/components/error_handling.test.ts › sync error in onWillUpdateProps is caught by child's own onError, as an async one]
+- **Props validation still fails the parent**: an invalid prop still fails the parent's render after an `onWillUpdateProps` that throws.
+  [test: packages/owl-runtime/tests/components/error_handling.test.ts › an invalid prop after an onWillUpdateProps that throws leaves no unhandled rejection]
+
+### A failed render pass
+
+- **Other components keep rendering**: after a render pass fails and its error is handled without a re-render, its other mounted components keep rendering on their own, a render one asks for while its `onWillUpdateProps` waits included.
+  [test: packages/owl-runtime/tests/components/error_recovery.test.ts › a sibling updated in that pass still renders on its own]
+  [test: packages/owl-runtime/tests/components/error_recovery.test.ts › a render it asks for while its onWillUpdateProps waits, %s the pass failed, renders on its own]
+- **A component the pass created waits**: a component the failed pass created waits for the pass instead of committing alone.
+  [test: packages/owl-runtime/tests/components/error_recovery.test.ts › a component the pass created, never mounted, waits for the pass instead of committing alone]
+- **A commit is never committed again**: a component a failed commit already patched or mounted gets its `onPatched` or `onMounted` from the next commit of it or of a component below it, and no `onPatched` before the `onMounted` it is owed.
+  [test: packages/owl-runtime/tests/components/error_recovery.test.ts › an onMounted owed since a failed commit runs once when a descendant's commit pays it first]
+  [test: packages/owl-runtime/tests/components/error_recovery.test.ts › after an onPatched error handled without a re-render, a later commit below runs the owed onPatched]
+- **`onWillUnmount` after `onMounted`**: such a component gets `onWillUnmount` once it got `onMounted`.
+  [test: packages/owl-runtime/tests/components/error_recovery.test.ts › ancestors mounted by the recovery of a failed first mount keep their onWillUnmount]
+
+### A first mount that throws
+
+- **It removes what it inserted**: a first mount that throws half way removes the nodes it inserted and unsets the refs it set.
+  [test: packages/owl-runtime/tests/components/error_recovery.test.ts › leaves none of the nodes it inserted in the target]
+  [test: packages/owl-runtime/tests/components/error_recovery.test.ts › unsets a ref it set before the throw]
+- **Its children go back to unmounted**: the children it mounted go back to unmounted, and no `onWillUnmount` runs for them.
+  [test: packages/owl-runtime/tests/components/error_recovery.test.ts › runs no onWillUnmount of the children it rolled back, and one that would throw does not stop it]
+- **Recovery mounts afresh**: the error is handled first, then the recovery destroys those children and mounts afresh instead of patching a half-mounted tree.
+  [test: packages/owl-runtime/tests/components/error_recovery.test.ts › is mounted afresh by the recovery, its children set up again]
+- **Nothing handling it**: with no handler, `mount()` rejects with that error.
+  [test: packages/owl-runtime/tests/components/error_recovery.test.ts › rejects with its own error when nothing handles it, though a child's onWillDestroy throws]
+
+### Removal errors
+
+- **During a patch**: an `onWillUnmount` that throws during a patch does not abort it; the error is handled, from the removed component, once the patch is done.
+  [test: packages/owl-runtime/tests/components/error_recovery.test.ts › an onWillUnmount error does not stop the patch removing its component]
+  [test: packages/owl-runtime/tests/components/error_recovery.test.ts › an onWillUnmount error of a patch is reported before the onMounted of what it mounted]
+- **Outside a patch**: a removal outside any patch (`blockDom.remove`) throws it.
+  [test: packages/owl-runtime/tests/components/error_recovery.test.ts › a removal error outside any patch is thrown by the removal]
+
+### Suspense, Portal and ErrorBoundary
+
+- **A Suspense's content belongs to its DOM**: it moves with the Suspense in a list.
+  [test: packages/owl-runtime/tests/components/suspense.test.ts › moves with its Suspense when a list is reordered]
+- **Under a shadow root**: a Suspense works at the top level of a component mounted in a shadow root.
+  [test: packages/owl-runtime/tests/components/suspense.test.ts › is shown at the top level of a component mounted in a shadow root]
+- **An unhandled error under a Suspense or a Portal**: it destroys the app once, like any other.
+  [test: packages/owl-runtime/tests/components/suspense.test.ts › an error nobody handles under Suspense destroys the app, reported as not handled]
+  [test: packages/owl-runtime/tests/specification.test.ts › an error nobody handles under a Portal destroys the app once]
+- **An error of the fallback**: an `ErrorBoundary` passes an error caught while its fallback shows to its parent.
+  [test: packages/owl-runtime/tests/components/error_boundary.test.ts › an error of the fallback goes to the boundary's parent, rendered once]
+
+### mount() and deep renders
+
+- **A failed `mount()`**: `mount()` destroys the App it created when the mount fails.
+  [test: packages/owl-runtime/tests/app/app.test.ts › a failed mount leaves no app behind]
+- **An App destroyed first**: `mount()` rejects with an `AbortError` when its App is destroyed before the mount ends.
+  [test: packages/owl-runtime/tests/plugins.test.ts › mount() rejects with an AbortError when its app dies while plugins start]
+  [test: packages/owl-runtime/tests/plugins.test.ts › mount() rejects with an AbortError when its app dies while the root's onWillStart waits]
+- **`render(true)`**: a deep render renders every `t-memo` item again, and the content of a Portal or a Suspense too.
+  [test: packages/owl-runtime/tests/components/t_memo.test.ts › a deep render renders the children of a memoized item again]
+  [test: packages/owl-runtime/tests/components/portal.test.ts › a deep render renders the components of its content again]
+  [test: packages/owl-runtime/tests/components/suspense.test.ts › a deep render renders the components of its content again]
+
+## Events and blockdom
+
+### Bound properties
+
+- **A bound property is given as its value**: a bound property (`t-att-value`, `t-attf-value`, `t-att-checked`, `disabled`, `readOnly`, `selected`, `indeterminate`) is given to its block as its value, with no wrapper object.
+  [test: packages/owl-runtime/tests/components/render_allocations.test.ts › a bound property makes no wrapper object]
+- **A value is written on every patch**: `value` is written on every patch, even when the element already holds it.
+  [test: packages/owl-runtime/tests/blockdom/block_properties.test.ts › a synced value is written on every patch, even when the element already reads it]
+  [test: packages/owl-runtime/tests/blockdom/block_properties.test.ts › a synced value the user changed is set back by a patch giving the same value]
+- **A flag only when it differs**: `disabled`, `readOnly`, `checked`, `selected` and `indeterminate` are written only when the element holds another value.
+  [test: packages/owl-runtime/tests/blockdom/block_properties.test.ts › a synced flag already holding its value is not written again]
+  [test: packages/owl-runtime/tests/blockdom/block_properties.test.ts › a synced flag the user changed is set back by a patch giving the same value]
+- **`t-model`**: `t-model`'s property is set only when the model changes.
+  [test: packages/owl-runtime/tests/blockdom/block_properties.test.ts › a (t-model) property is written only when its value changes]
+- **`value` last**: a `value` property (`t-att-value`, `t-model`) is set after the element's other attributes and its children, so a select finds its `t-foreach` options and a range input its `max`.
+  [test: packages/owl-runtime/tests/blockdom/block_properties.test.ts › a select's value is set once the options a child mounts exist]
+  [test: packages/owl-runtime/tests/blockdom/block_properties.test.ts › an input's value is set after the attributes bounding it]
+
+### Class, style and t-att objects
+
+- **Applied at every patch**: a `class`, `style` or `t-att` object is applied at every patch, diffed against a normalized copy of what its slot last wrote, so one changed in place shows.
+  [test: packages/owl-runtime/tests/blockdom/block_attributes.test.ts › a class object changed in place is applied again]
+  [test: packages/owl-runtime/tests/blockdom/block_attributes.test.ts › a class array changed in place is applied again]
+  [test: packages/owl-runtime/tests/blockdom/block_attributes.test.ts › a style object changed in place is applied again]
+  [test: packages/owl-runtime/tests/blockdom/block_attributes.test.ts › a t-att object changed in place is applied again]
+- **An equal string is skipped**: a class string equal to the last one is not written again.
+  [test: packages/owl-runtime/tests/specification.test.ts › a class string equal to the last one is not written again]
+- **A truthy class**: a class whose value is truthy but not `true` is not written again.
+  [test: packages/owl-runtime/tests/blockdom/block_attributes.test.ts › an unchanged class whose value is truthy but not true is not written again]
+- **No repair**: Owl never repairs a class, style or attribute changed by other code: it writes what differs from its own last write, so a class removed by other code stays removed while its value stays truthy.
+  [test: packages/owl-runtime/tests/blockdom/block_attributes.test.ts › a class, style or attribute changed by other code is not repaired]
+- **A proxied class or style object is read during the render**: a proxied class or style object (`t-att-class`, `t-att-style`, in a class array, or the `class` / `style` of a `t-att` object) has its keys and values read during the render, so a change made to it in place renders the component again.
+  [test: packages/owl-runtime/tests/components/style_class.test.ts › a proxied class or style object changed in place re-renders on its own]
+  [test: packages/owl-runtime/tests/components/style_class.test.ts › a proxied class object in a class array or a t-att object re-renders on its own]
+- **A `t-att` of a string or a number**: a `t-att` given a string (a `Markup` included) or a number throws an OwlError.
+  [test: packages/owl-runtime/tests/blockdom/block_attributes.test.ts › t-att given a string or a number is an error naming it]
+  [test: packages/owl-runtime/tests/blockdom/block_attributes.test.ts › t-att given a string object is an error]
+
+### Blocks and handlers
+
+- **One block type per block string**: a block string has one block type, given its handlers at each call (`type(data, children, handlers)`); `createBlock(str, list)` checks the list, and a missing list throws at mount.
+  [test: packages/owl-runtime/tests/blockdom/block_event_handling.test.ts › a block string has one block type, given its handlers at each call]
+- **No block type per handler site**: making an App's template functions makes no block type per block with handlers.
+  [test: packages/owl-runtime/tests/components/render_allocations.test.ts › making a template's functions makes no block type per block with handlers]
+- **A handler's code is static**: a render gives a handler only its context and allocates no handler array.
+  [test: packages/owl-runtime/tests/components/render_allocations.test.ts › an event handler makes no array: its code is static, its data the context]
+- **The main event handler**: `config.mainEventHandler` is called once per handler; a synthetic catcher runs its dispatch itself, not through it.
+  [test: packages/owl-runtime/tests/blockdom/event_catcher.test.ts › a synthetic catcher calls the main event handler once per handler, not for its own dispatch]
+- **A mounted block as text**: a mounted block's `toString()` is its element's markup, and the block keeps patching that element.
+  [test: packages/owl-runtime/tests/blockdom/block.test.ts › a mounted block stringifies its own element and keeps patching it]
+- **A malformed block string**: a block string blockdom cannot build throws an OwlError.
+  [test: packages/owl-runtime/tests/blockdom/block.test.ts › a block string blockdom cannot build is an error, not content]
+
+### Child keys
+
+- **A child's key is exact**: site ids, loop keys, `t-key`s and slot and template names are segments of a child's key, so no value of any type or content spells another child's key.
+  [test: packages/owl-runtime/tests/components/component_keys.test.ts › nested loops whose string keys hold the separator of their site ids]
+  [test: packages/owl-runtime/tests/components/component_keys.test.ts › nested loops whose string keys hold the mark of a segment]
+  [test: packages/owl-runtime/tests/components/component_keys.test.ts › random templates with adversarial loop keys give every child a key of its own]
+- **A loop key carries its type**: `1` and `"1"` are two keys.
+  [test: packages/owl-runtime/tests/components/component_keys.test.ts › a value's key carries its type]
+- **An array key is compared by its items**: an array used as a key is the same key as another array of the same items.
+  [test: packages/owl-runtime/tests/components/component_keys.test.ts › arrays of objects as keys are told apart by their items]
+  [test: packages/owl-runtime/tests/components/t_foreach.test.ts › an array key keeps its item's component and element across renders]
+- **A slot's default content**: a slot's default content has its own key segment, so it never shares a component with the slot's content.
+  [test: packages/owl-runtime/tests/components/component_keys.test.ts › a slot's content and its default content never share a component]
+- **A list item is diffed by that key**: an array or `NaN` key keeps its item, its `t-memo` entry and the dev duplicate check.
+  [test: packages/owl-runtime/tests/blockdom/list.test.ts › a NaN key matched through the key map is not used as an anchor again]
+  [test: packages/owl-runtime/tests/components/t_memo.test.ts › an item keyed by an array keeps its previous content]
+  [test: packages/owl-runtime/tests/components/t_foreach.test.ts › crash on two arrays of the same items used as keys in dev mode]
+- **A `t-key` keys every component under it**: through a `t-if`, several children or a nested `t-key`.
+  [test: packages/owl-runtime/tests/components/t_key.test.ts › a t-key on a <t> holding a t-if recreates the component inside when the key changes]
+  [test: packages/owl-runtime/tests/components/t_key.test.ts › a t-key on a <t> holding several components recreates each of them when the key changes]
+  [test: packages/owl-runtime/tests/components/t_key.test.ts › nested t-keys: a change of the outer one recreates the component inside]
+- **Symbol keys**: symbols are valid `t-key`s, told apart by identity.
+  [test: packages/owl-runtime/tests/components/t_key.test.ts › symbol keys are told apart by identity]
+- **A dynamic `t-call` in a loop**: a dynamic `t-call` key cannot collide across loop items.
+  [test: packages/owl-runtime/tests/components/t_call.test.ts › a dynamic t-call in a loop keeps the components of two items apart]
+
+### t-set bodies output elsewhere
+
+- **Rendered in the component that outputs it**: a `t-set` body output by another component renders in that component: its components are that component's children.
+  [test: packages/owl-runtime/tests/components/component_keys.test.ts › a t-set body output by another component renders with it]
+  [test: packages/owl-runtime/tests/components/component_keys.test.ts › a t-set body output by two components gives each its own components]
+- **Given to an attribute**: a `t-set` body given to an attribute, interpolation, property or `t-att` is its string taken during the render, so the attribute follows what the body reads.
+  [test: packages/owl-runtime/tests/components/t_set.test.ts › read only in an attribute: the render follows what the body reads]
+  [test: packages/owl-runtime/tests/components/t_set.test.ts › in t-att, as an object's value or a pair's]
+- **`String()` of a body holding a component**: it throws, since it would create the component and never mount it.
+  [test: packages/owl-runtime/tests/compiler/t_set.test.ts › a t-set body holding a component cannot be stringified]
+- **`String()` of other bodies**: a text node stringifies to its text, and a bigint to its digits, `0n` included.
+  [test: packages/owl-runtime/tests/specification.test.ts › String() of a t-set body gives a text node's text and a bigint's digits]
+  [test: packages/owl-runtime/tests/blockdom/text.test.ts › a text node stringifies to its text, and renders it as text again]
+
+### Component and slot handlers
+
+- **Looked up at the first dispatch**: a `t-on` on a component or slot mounted by its component's own render looks up the handler enclosing it at its first dispatch, not mid-patch, and logs it on the `event` channel.
+  [test: packages/owl-runtime/tests/components/t_on.test.ts › a slot's t-on mounted by its component's own render runs, then the t-on on the component]
+  [test: packages/owl-runtime/tests/specification.test.ts › a slot's t-on mounted by its component's own render finds the enclosing handler at its first dispatch, logged on the event channel]
+- **One listener per kind**: every component `t-on` on a parent element shares one listener per kind (event name, capture, synthetic), kept on no property of the parent.
+  [test: packages/owl-runtime/tests/blockdom/event_catcher.test.ts › one catcher site over many parents adds one listener function and no per-parent names]
+- **Passive only when all are**: that listener is passive only while every handler of its kind on that parent is; a passive handler's `preventDefault` is ignored otherwise.
+  [test: packages/owl-runtime/tests/blockdom/event_catcher.test.ts › a passive inner one and a non-passive outer one share one dispatch]
+  [test: packages/owl-runtime/tests/blockdom/event_catcher.test.ts › a passive registration does not make a later one passive]
+- **Nested order**: the catchers run as nested elements would, whatever site or render made each: a nested component's handler before the enclosing one's as the event bubbles, the enclosing one's first for `.capture`.
+  [test: packages/owl-runtime/tests/blockdom/event_catcher.test.ts › a catcher of another site nested in one runs before it, whichever site listened first]
+  [test: packages/owl-runtime/tests/blockdom/event_catcher.test.ts › capture handlers run outermost first, and a stop there stops the inner one]
+- **Stops**: a stop in one catcher skips the ones around it, and `stopImmediatePropagation()` every other.
+  [test: packages/owl-runtime/tests/blockdom/event_catcher.test.ts › a .stop on the inner one stops the outer one]
+  [test: packages/owl-runtime/tests/blockdom/event_catcher.test.ts › stopImmediatePropagation in the inner one stops every other]
+- **Native listeners of the parent**: a native listener on that parent runs before or after all the catchers, not between; the parent's own native `t-on`s run before them in both phases, and a stop on either side does not skip the other.
+  [test: packages/owl-runtime/tests/blockdom/event_catcher.test.ts › an event stopped before the catchers' listener still reaches them all]
+  [test: packages/owl-runtime/tests/components/t_on.test.ts › a t-on on a component and one on its parent element: synthetic ones nest, native ones do not]
+- **`.self` on a component**: `t-on-*.self` on a component means the event targets one of its root elements.
+  [test: packages/owl-runtime/tests/components/t_on.test.ts › t-on.self on a component runs for an event targeting one of its root nodes]
+- **`.passive` with `.prevent`**: it throws when the template compiles.
+  [test: packages/owl-runtime/tests/compiler/event_handling.test.ts › t-on crashes when a passive handler prevents the default]
+  [test: packages/owl-core/tests/event_modifiers.test.ts › a passive key that prevents the default throws]
+- **One modifier mask**: the modifier mask also carries `.capture`, `.passive` and `.synthetic`.
+  [test: packages/owl-core/tests/event_modifiers.test.ts › capture, passive and synthetic choose the listener, outside the handler modifiers]
+
+### Synthetic handlers
+
+- **Other roots**: synthetic (`.synthetic`) handlers also listen on the shadow root or other document an app is mounted in.
+  [test: packages/owl-runtime/tests/blockdom/event_catcher.test.ts › inside an open shadow root]
+  [test: packages/owl-runtime/tests/blockdom/event_catcher.test.ts › a shadow root of an iframe's document is a root too]
+- **A root is found by a mount into it**: a target mounted detached and moved into a shadow root later is not listened on there, so of the events inside it only the composed ones reach its synthetic handlers.
+  [test: packages/owl-runtime/tests/specification.test.ts › a target mounted detached and moved into a shadow root later gets only the composed events there]
+- **Each root replays its own nodes**: each root replays only the nodes of its own tree, with the target a native listener there would see.
+  [test: packages/owl-runtime/tests/blockdom/event_catcher.test.ts › a composed event from a shadow root: each root replays its own nodes]
+- **Capture in a shadow root**: capture handlers inside a shadow root, closed ones included, run for composed events.
+  [test: packages/owl-runtime/tests/blockdom/event_catcher.test.ts › a capture handler in a closed shadow root runs for a composed event]
+- **One pass**: the handlers of one event and phase, passive or not, are replayed in one pass, in path order, up to a stop; a passive one cannot prevent the default.
+  [test: packages/owl-runtime/tests/blockdom/event_catcher.test.ts › passive and other handlers of an event are replayed in one pass, in path order]
+  [test: packages/owl-runtime/tests/blockdom/event_catcher.test.ts › a passive handler cannot prevent the default when the listener is not passive]
+- **Component handlers as a level**: on one element, the synthetic `t-on`s of components among its children run as a level inside the element's own: before them as the event bubbles, after them for `.capture`, and a stop in one level skips the other.
+  [test: packages/owl-runtime/tests/blockdom/event_catcher.test.ts › the component's runs first as the event bubbles, and its stop keeps the element's out]
+  [test: packages/owl-runtime/tests/blockdom/event_catcher.test.ts › the element's runs first with .capture, and its stop keeps the component's out]
+- **A collected root**: a root that was garbage-collected is dropped, and with none left the events of the document skip the per-root replay again.
+  [test: packages/owl-runtime/tests/blockdom/synthetic_roots.test.ts › a collected shadow root no longer sends the synthetic events of the others on the slow path]
+
+### Lists
+
+- **Emptied at once only when alone**: a list empties its parent at once only when its items, one node each, and its anchor are all the parent holds; otherwise it removes them one by one.
+  [test: packages/owl-runtime/tests/blockdom/list.test.ts › of %s items, one node each, alone in its parent, empties it at once]
+  [test: packages/owl-runtime/tests/blockdom/list.test.ts › of items of several nodes, or among other nodes, removes them one by one]
+- **Foreign nodes survive**: what a Portal or a widget put before, after or among the items survives either way.
+  [test: packages/owl-runtime/tests/blockdom/list.test.ts › an only child emptied keeps the nodes its parent got from elsewhere]
+  [test: packages/owl-runtime/tests/blockdom/list.test.ts › an only child emptied keeps a node put between its items]
+
+### Namespaces
+
+- **An explicit `xmlns`**: an explicit `xmlns` inside a namespaced block is its element's namespace.
+  [test: packages/owl-runtime/tests/blockdom/namespace.test.ts › an explicit xmlns inside a namespaced element is its namespace]
+  [test: packages/owl-runtime/tests/compiler/svg.test.ts › an element given the xhtml namespace in an svg is an html element]
+- **A prefixed dynamic attribute**: a prefixed dynamic attribute (`xlink:`, `xml:`, or a prefix in scope in the block string), a `t-att` name included, is set and removed in its namespace, as a static one is.
+  [test: packages/owl-runtime/tests/blockdom/namespace.test.ts › a prefixed dynamic attribute is set and removed in its namespace]
+  [test: packages/owl-runtime/tests/compiler/svg.test.ts › a prefixed t-att name is set and removed in its namespace]
+- **A prefixed attribute in the block string**: a prefixed attribute (`xml:lang`, `xlink:href`, `xmlns:xlink`, or a prefix the template declares) is given its namespace in the block string, so it keeps it in a block of its own.
+  [test: packages/owl-runtime/tests/compiler/svg.test.ts › prefixed attributes keep their namespace]
+  [test: packages/owl-runtime/tests/compiler/svg.test.ts › a prefixed attribute in a block of its own keeps its namespace]
+  [test: packages/owl-runtime/tests/compiler/svg.test.ts › an attribute of a prefix the template declares keeps its namespace]
+- **`t-tag` names**: `t-tag` rejects prefixed and `block-` names.
+  [test: packages/owl-runtime/tests/compiler/t_tag.test.ts › a tag name the block compiler would read otherwise is rejected]
+
+### Refs
+
+- **Set once in the document, outermost first**: the ref callbacks of a mount run once its outermost block is inserted, a block's before those of the blocks inside it, each block's in document order.
+  [test: packages/owl-runtime/tests/blockdom/block_refs.test.ts › nested ref callbacks run once the outermost block is inserted, parents first]
+  [test: packages/owl-runtime/tests/blockdom/block_refs.test.ts › the ref callbacks of one block run in document order]
+- **Removing a block releases the refs inside it**: a ref is cleared when owl removes its element, however deep.
+  [test: packages/owl-runtime/tests/components/refs.test.ts › a {set} ref inside a removed block's nested block is unset]
+  [test: packages/owl-runtime/tests/components/refs.test.ts › set-like ref drops the elements of an enclosing block removed in bulk]
+- **Removed by other code**: an element removed by other code keeps its ref until owl removes it or binds the ref elsewhere.
+  [test: packages/owl-runtime/tests/components/refs.test.ts › an element removed by other code keeps its ref until owl removes it]
+
+## Templates
+
+### Values at their place
+
+- **Read where the template gives them**: an event handler, a slot's content, a `t-set` body and an arrow function given as a prop read the variables as they were where the template gives them, not as a later `t-set` or loop item left them.
+  [test: packages/owl-runtime/tests/compiler/t_set.test.ts › t-set after a dom element is executed, and a handler before it reads the value at the handler]
+  [test: packages/owl-runtime/tests/components/props.test.ts › an arrow function prop reads the variables as they are where it is given, as a handler does]
+  [test: packages/owl-runtime/tests/components/props.test.ts › an arrow function given to a called template or a slot reads the variables at its place]
+  [test: packages/owl-runtime/tests/components/slots.test.ts › a variable set again after the component keeps its value at the component, whoever renders]
+  [test: packages/owl-runtime/tests/components/slots.test.ts › a loop item's slot keeps the value an outer variable had at its item]
+- **One copy where needed**: the context is copied only when a later `t-set` can write a variable that code reads, and handlers, arrow functions, slots, t-call bodies and `t-set` bodies with no `t-set` between them share one copy.
+  [test: packages/owl-runtime/tests/components/render_allocations.test.ts › handlers and arrow props with no write between them share one context copy]
+  [test: packages/owl-runtime/tests/components/render_allocations.test.ts › a slot, a t-call body and a t-set body share the copy of the handlers beside them]
+- **A `t-set` body reads at its `t-set`**: a `t-set` body reads its variables at its `t-set`, not at its output.
+  [test: packages/owl-runtime/tests/compiler/t_set.test.ts › t-set body is evaluated immediately]
+
+### Scoping
+
+- **A directive on a `t-set-slot`**: a directive on a `t-set-slot` node makes only its content conditional: the slot is always given, so the child's default content never shows and `props.slots.<name>` is always set.
+  [test: packages/owl-runtime/tests/specification.test.ts › a directive on a t-set-slot node makes only its content conditional: the slot is always given]
+- **QWeb scoping**: a `t-if` opens no scope; a loop item does, and writes a variable `t-set` earlier outside it in the same template.
+  [test: packages/owl-runtime/tests/components/t_set.test.ts › t-set outside modified in t-if]
+  [test: packages/owl-runtime/tests/compiler/t_foreach.test.ts › t-foreach with loops and multiple t-set]
+
+### Replaced content
+
+- **Another `t-set` body**: a `t-out` showing one `t-set` body, then another (the variable set again in a branch), replaces the content.
+  [test: packages/owl-runtime/tests/specification.test.ts › a t-out showing one t-set body, then another, replaces the content]
+- **A `t-call-block` of another kind**: a `t-call-block`'s block of another constructor (a multi of another shape, a list of items of another kind) is mounted in place of the previous one.
+  [test: packages/owl-runtime/tests/components/t_call_block.test.ts › a block of another kind replaces the previous one]
+  [test: packages/owl-runtime/tests/components/t_call_block.test.ts › a multi or a list of another shape replaces the previous one]
+- **A slot of another render function**: a slot output without default content is replaced when its render function changes (a forwarded slot that comes, goes or is swapped).
+  [test: packages/owl-runtime/tests/components/slots.test.ts › a forwarded slot that comes and goes replaces the empty content, and is replaced by it]
+  [test: packages/owl-runtime/tests/components/slots.test.ts › a forwarded slot replaced by another slot of the same name replaces its content]
+
+### Rejected templates
+
+- **A directive Owl would drop**: a `<t>` left bare takes no `t-*` attribute but a template root's `t-name`, `t-inherit`, `t-inherit-mode` and translation contexts, and a `t-set` none but `t-value`; anything else throws.
+  [test: packages/owl-compiler/tests/parser.test.ts › a <t> rejects a directive it would drop]
+  [test: packages/owl-compiler/tests/parser.test.ts › a <t> keeps the attributes a template root carries]
+  [test: packages/owl-compiler/tests/parser.test.ts › a t-set rejects a directive it would drop]
+- **`t-call-block` and `t-call-slot`**: they go on a `<t>`, and `t-call-block` takes no content.
+  [test: packages/owl-compiler/tests/parser.test.ts › t-call-block and t-call-slot go on a <t>, and t-call-block takes no content]
+- **A `t-set-slot`'s arguments**: they are the attributes no directive on it consumed.
+  [test: packages/owl-compiler/tests/parser.test.ts › a t-set-slot's arguments are the attributes no directive on it consumed]
+- **An empty expression**: a directive that needs an expression throws on an empty one, naming it, `t-tag` included, as do a `t-call`, `t-call-slot` or `t-slot` with an empty name.
+  [test: packages/owl-compiler/tests/parser.test.ts › an empty one is rejected with the directive's name]
+  [test: packages/owl-compiler/tests/parser.test.ts › an empty name is rejected with the directive's name]
+- **Nested `t-set-slot`**: a `t-set-slot` nested directly in another throws.
+  [test: packages/owl-compiler/tests/parser.test.ts › a t-set-slot directly inside another one is rejected]
+- **`t-model.trim` on a checkbox**: it throws.
+  [test: packages/owl-compiler/tests/parser.test.ts › t-model.trim on a checkbox throws]
+- **Two prop suffixes**: a prop with two suffixes (`a.bind.translate`) throws `Invalid prop suffix`.
+  [test: packages/owl-runtime/tests/components/props.test.ts › throw if prop has more than one suffix]
+
+### Text and values
+
+- **A blank `t-set` body**: a `t-set` with a `t-value` and a blank body takes the value.
+  [test: packages/owl-runtime/tests/compiler/t_set.test.ts › a t-set with a t-value and a blank body takes the value]
+- **CDATA**: a CDATA section is text, in an element or a `t-set` body.
+  [test: packages/owl-runtime/tests/compiler/simple_templates.test.ts › a CDATA section is text]
+- **`t-out="0"` with blanks**: `t-out="0"` with blanks around the `0` outputs the call's body.
+  [test: packages/owl-runtime/tests/compiler/t_call.test.ts › t-out of 0 with blanks around it outputs the call's body]
+- **`t-model.number`**: it checks the radio, or selects the static option, whose value equals the model's number.
+  [test: packages/owl-runtime/tests/components/t_model.test.ts › .number on radio inputs: the input of the model's number is checked]
+  [test: packages/owl-runtime/tests/components/t_model.test.ts › .number on a select: a static option is selected by a number]
+
+### Compile errors
+
+- **An invalid expression is named**: an invalid expression is named with why, and with the attribute and element holding it, whether the tokenizer or JavaScript rejects it, without the generated code.
+  [test: packages/owl-compiler/tests/compile_errors.test.ts › an invalid expression is named with its attribute and element, without the generated code]
+  [test: packages/owl-compiler/tests/compile_errors.test.ts › %s names its attribute]
+  [test: packages/owl-compiler/tests/compile_errors.test.ts › %s]
+- **The template is named**: every compile error of a named template names it, once, on its first line.
+  [test: packages/owl-compiler/tests/compile_errors.test.ts › every message of the corpus names its template once, on its first line]
+  [test: packages/owl-compiler/tests/compile_errors.test.ts › a template error the parser throws names the template once]
+- **`this` is no template variable**: `this` is refused as a template variable, since expressions read it as the component.
+  [test: packages/owl-compiler/tests/compile_errors.test.ts › %s]
+
+### Expressions
+
+- **Comments**: template expressions skip comments.
+  [test: packages/owl-compiler/tests/inline_expressions.test.ts › comments are skipped]
+- **Statements**: a statement keyword in an arrow's block body throws a named error.
+  [test: packages/owl-compiler/tests/inline_expressions.test.ts › a statement is rejected with the keyword it starts with]
+- **Object literal methods**: an object literal method, accessor or generator throws a named error.
+  [test: packages/owl-compiler/tests/inline_expressions.test.ts › an object literal method or accessor throws a named error]
+- **Function expressions**: a function expression with a name or parameters throws a named error.
+  [test: packages/owl-compiler/tests/inline_expressions.test.ts › a function expression with a name or parameters throws a named error]
+- **Spaces and properties of numbers**: `1 .toString()` keeps its space, and `.5.toFixed(1)` keeps its property.
+  [test: packages/owl-compiler/tests/inline_expressions.test.ts › an integer literal followed by a property access keeps its space]
+  [test: packages/owl-compiler/tests/inline_expressions.test.ts › a numeric literal may start with its decimal point]
+- **`delete`**: `delete` is an operator, so `delete o.x` compiles.
+  [test: packages/owl-compiler/tests/inline_expressions.test.ts › a statement is rejected with the keyword it starts with]
+- **Interpolations**: `{{ }}` and `#{ }` end at the brace that closes them, past a regular expression after a division or a division after an object literal.
+  [test: packages/owl-compiler/tests/inline_expressions.test.ts › an interpolation ends at the brace that closes it, not at the first }}]
+  [test: packages/owl-compiler/tests/inline_expressions.test.ts › a / after a division starts a regular expression, after a regular expression or an object it divides]
+- **An arrow prop's free variables**: they include those its parameter defaults read.
+  [test: packages/owl-compiler/tests/inline_expressions.test.ts › processExpr: an arrow's free variables include those its parameter defaults read]
+- **No accidental comments**: a division before a regular expression, and `<` before `!--`, compile apart instead of into a comment.
+  [test: packages/owl-compiler/tests/inline_expressions.test.ts › operators that would join into a comment stay apart]
+
+### Slots and contexts
+
+- **Slots are not marked raw per render**: a slot read through a proxy is rendered from its raw object, and slots put in proxied state come back proxied, like any prop.
+  [test: packages/owl-runtime/tests/components/render_allocations.test.ts › slots are given as they are, not marked raw on every render]
+  [test: packages/owl-runtime/tests/components/render_allocations.test.ts › slots held in proxied state and given with t-props]
+  [test: packages/owl-runtime/tests/components/render_allocations.test.ts › the template channel says a slot rendered from the raw object of a proxy]
+- **Nested loop items**: an item of a loop in a loop, and a t-call context in a loop, are made under the outer item's prototype with a copy of its loop names, unless a `t-set` writes that loop level or an expression assigns a context variable.
+  [test: packages/owl-runtime/tests/components/render_allocations.test.ts › a nested loop's items and a call context copy the loop item's names, made under its prototype]
+  [test: packages/owl-runtime/tests/components/render_allocations.test.ts › a loop item a t-set writes is inherited from: a later write is seen by what reads it then]
+  [test: packages/owl-runtime/tests/components/render_allocations.test.ts › a template assigning a variable in an expression inherits from its loop items]
+- **The given context**: a slot without a slot scope and a t-call with neither attributes nor body render in the context they are given, not a child of it.
+  [test: packages/owl-runtime/tests/components/render_allocations.test.ts › a slot without a slot scope renders in the context it was written in]
+  [test: packages/owl-runtime/tests/components/render_allocations.test.ts › a t-call with neither attributes nor body renders in the caller's context]
+- **No function per render**: a render makes no function for its slots, slot defaults, t-call bodies and t-out bodies.
+  [test: packages/owl-runtime/tests/components/render_allocations.test.ts › slots, slot defaults, t-call bodies and t-out bodies make no function per render]
+- **`t-props` spreads**: `t-props` copies with object spread, so an own `__proto__` key is a prop.
+  [test: packages/owl-runtime/tests/specification.test.ts › t-props copies with object spread: an own __proto__ key is a prop]
+- **t-call attributes are assigned**: a t-call attribute is assigned on the new context, so one named like a getter-only property up the context chain is ignored.
+  [test: packages/owl-runtime/tests/specification.test.ts › a t-call attribute named like a getter-only property up the context chain is ignored]
+
+### Build information
+
+- **`__info__.hash`**: it is the commit, plus `-dirty-<digest>` when the sources differ from it; outside a git checkout, `nogit-<digest of the sources>`.
+  [test: packages/owl/tests/build_hash.test.ts › a clean checkout is named by its commit, a changed source makes it dirty]
+  [test: packages/owl/tests/build_hash.test.ts › without a checkout, the sources are named by their digest]
+- **`__info__.date`**: it is `SOURCE_DATE_EPOCH` if set, whole seconds, anything else failing the build by name; else the commit's date for a clean build; else the build time.
+  [test: packages/owl/tests/build_hash.test.ts › SOURCE_DATE_EPOCH dates any build; a dirty or unversioned one is dated now]
+  [test: packages/owl/tests/build_hash.test.ts › a malformed SOURCE_DATE_EPOCH is refused by name]
+  [test: packages/owl/tests/build_hash.test.ts › a clean build is dated by its commit]

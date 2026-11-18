@@ -463,7 +463,8 @@ plugins: [] })` rendered asynchronously); a resource-driven start belongs to
   attribute follows what the body reads.
 - **`String()` of a `t-set` body** throws when the body holds a component
   (which it would create and never mount); a text node stringifies to its text,
-  a bigint to its digits (`0n` included), a symbol to its description.
+  a bigint to its digits (`0n` included), a symbol as `String()` gives it
+  (`Symbol(s)`).
 - **`.passive` with `.prevent` throws** when the template compiles; the
   modifier mask also carries `.capture`, `.passive` and `.synthetic`, the one
   parse every listener reads.
