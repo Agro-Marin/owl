@@ -11,10 +11,19 @@ const RESERVED_WORDS = /* @__PURE__ */ wordSet(
     "Infinity,isFinite,isNaN,parseFloat,parseInt,decodeURI,decodeURIComponent,encodeURI,encodeURIComponent"
 );
 
+const OPERATOR_WORDS = /* @__PURE__ */ wordSet("and,or,gt,gte,lt,lte,typeof,delete");
+
+const VARIABLE_NAME_RE = /^[\p{ID_Start}_$][\p{ID_Continue}$\u200C\u200D]*$/u;
+
 export function checkVariableName(name: string, directive: string) {
   if (RESERVED_WORDS.has(name)) {
     throw new OwlError(
       `'${name}' cannot be a template variable (${directive}): an expression reads it as JavaScript's own`
+    );
+  }
+  if (OPERATOR_WORDS.has(name) || !VARIABLE_NAME_RE.test(name)) {
+    throw new OwlError(
+      `'${name}' cannot be a template variable (${directive}): no expression can read it`
     );
   }
 }

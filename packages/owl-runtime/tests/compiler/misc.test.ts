@@ -303,23 +303,41 @@ describe("names taken from the template are data in the generated code", () => {
   });
 
   test("t-set name", () => {
-    expect(renderToString(`<t t-set="a&quot;b" t-value="1"/><t t-set="c\`d"><b/></t>ok`)).toBe(
-      "ok"
+    expect(() => renderToString(`<t t-set="a&quot;b" t-value="1"/>ok`)).toThrow(
+      `'a"b' cannot be a template variable (t-set): no expression can read it`
     );
+    expect(() => renderToString(`<t t-set="c\`d"><b/></t>ok`)).toThrow("(t-set)");
   });
 
   test("t-as", () => {
     const template = `<t t-foreach="[1]" t-as="\${globalThis.__nameRan = true}" t-key="1">x</t>`;
-    expect(renderToString(template)).toBe("x");
+    expect(() => renderToString(template)).toThrow("(t-as): no expression can read it");
   });
 
   test("slot names and slot scope", () => {
     const context = new TestContext();
     context.addTemplate(
       "t",
-      `<t t-call-slot="it's" v="1"/><Child><t t-set-slot="it's" t-slot-scope="s&quot;">x</t></Child>`
+      `<t t-call-slot="it's" v="1"/><Child><t t-set-slot="it's" t-slot-scope="s">x</t></Child>`
     );
     expect(() => context.getTemplate("t")).not.toThrow();
+    context.addTemplate("u", `<Child><t t-set-slot="a" t-slot-scope="s&quot;">x</t></Child>`);
+    expect(() => context.getTemplate("u")).toThrow("(t-slot-scope): no expression can read it");
+  });
+
+  test("operator words and names that are not identifiers are refused", () => {
+    expect(() => renderToString(`<t t-set="gt" t-value="1"/>`)).toThrow(
+      "'gt' cannot be a template variable (t-set): no expression can read it"
+    );
+    expect(() => renderToString(`<t t-set="typeof" t-value="1"/>`)).toThrow("(t-set)");
+    const context = new TestContext();
+    context.addTemplate("sub", `<i t-out="label"/>`);
+    context.addTemplate("hyphen", `<t t-call="sub" data-label="'x'"/>`);
+    expect(() => context.getTemplate("hyphen")).toThrow(
+      "'data-label' cannot be a template variable (t-call): no expression can read it"
+    );
+    context.addTemplate("suffix", `<t t-call="sub" label.translate="x"/>`);
+    expect(() => context.getTemplate("suffix")).not.toThrow();
   });
 
   test("template name", () => {

@@ -748,7 +748,7 @@ function parseTCall(node: Element, ctx: ParsingContext): AST | null {
     if (attributeName.startsWith("t-")) {
       throw unsupportedDirectiveError(attributeName, "a t-call node");
     }
-    checkVariableName(attributeName, "t-call");
+    checkVariableName(attributeName.split(".")[0], "t-call");
     attrs = attrs || {};
     attrs[attributeName] = value;
     node.removeAttribute(attributeName);

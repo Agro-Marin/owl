@@ -78,7 +78,10 @@ These remain deliberate differences from current upstream.
   `AsyncDisposableStack` or `SuppressedError` (not in Safari). Upstream
   reads them from the component and gets `undefined`. A `t-set`, `t-as`,
   `t-slot-scope` or `t-call` argument named like one (or like a keyword such
-  as `null`) throws, since no expression could read it.
+  as `null`) throws, since no expression could read it; so does one that is
+  not an identifier (`a-b`, `data-label`, an empty name) or is an operator
+  word (`and`, `or`, `gt`, `gte`, `lt`, `lte`, `typeof`, `delete`). A `t-call`
+  argument's suffix (`label.translate`) is not part of its name.
 - **`t-else` with a `t-if` on the same node** is an else branch holding the
   `if` — it reads as `t-elif`. Template inheritance produces it when an
   extension adds a `t-if` to an else node. `t-elif` beside another branch
