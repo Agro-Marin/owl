@@ -247,6 +247,56 @@ describe("dependency tracking", () => {
     }
   });
 
+  test("a computation disposed during a nested read leaves no source pointing at it", async () => {
+    const s = signal(0);
+    let disposeOuter: (() => void) | undefined;
+    let runs = 0;
+    disposeOuter = effect(() => {
+      runs++;
+      s();
+      computed(() => {
+        s();
+        if (runs > 1) {
+          disposeOuter!();
+        }
+        return 1;
+      })();
+    });
+    s.set(1);
+    await waitScheduler();
+    expect(runs).toBe(2);
+    expect(atomOf(s).subs).toBeUndefined();
+    expect(atomOf(s).activeLink).toBeUndefined();
+  });
+
+  test("a computation disposed during a nested read hands the source back to the one around it", () => {
+    const s = signal(0);
+    const t = signal(0);
+    let armed = false;
+    let activeAfter: unknown = "unset";
+    const outer = computed(() => {
+      s();
+      const dispose: () => void = immediateEffect(() => {
+        s();
+        t();
+        computed(() => {
+          s();
+          if (armed) {
+            dispose();
+          }
+          return 1;
+        })();
+      });
+      armed = true;
+      t.set(1);
+      activeAfter = atomOf(s).activeLink?.sub;
+      return s();
+    });
+    expect(outer()).toBe(0);
+    expect(activeAfter).toBe(atomOf(outer));
+    expect(atomOf(s).activeLink).toBeUndefined();
+  });
+
   test("a write does not reach a running computation through a source it has yet to read again", () => {
     const s = signal(0);
     const t = signal(0);

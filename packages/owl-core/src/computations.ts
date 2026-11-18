@@ -368,6 +368,15 @@ function appendSub(dep: Atom, link: Link) {
   dep.subsTail = link;
 }
 
+// A dead link keeps its rollback: a nested run that saved it hands the source
+// back past it to the live computation around.
+function liveRollback(link: Link | undefined): Link | undefined {
+  while (link !== undefined && link.version === DEAD) {
+    link = link.rollback;
+  }
+  return link;
+}
+
 function unlinkSub(link: Link) {
   const dep = link.dep;
   const prevSub = link.prevSub;
@@ -382,11 +391,10 @@ function unlinkSub(link: Link) {
   } else {
     dep.subsTail = prevSub;
   }
-  if (dep.activeLink === link) {
-    dep.activeLink = link.rollback;
-  }
-  link.rollback = undefined;
   link.version = DEAD;
+  if (dep.activeLink === link) {
+    dep.activeLink = liveRollback(link.rollback);
+  }
   if (dep.subs === undefined && dep.holder !== undefined) {
     dep.holder.release(dep);
   }
@@ -800,7 +808,7 @@ function endTracking(computation: ComputationAtom) {
     } while (link !== undefined);
   }
   for (link = computation.deps; link !== undefined; link = link.nextDep) {
-    link.dep.activeLink = link.rollback;
+    link.dep.activeLink = liveRollback(link.rollback);
     link.rollback = undefined;
   }
   if (computation.running && computation.state !== ComputationState.RUNNING) {
