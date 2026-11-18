@@ -3,6 +3,7 @@ import {
   computed,
   debug,
   debugLog,
+  makeAbortError,
   OwlError,
   readArrayItems,
   ReadonlyReactiveValue,
@@ -594,7 +595,10 @@ function createComponent<P extends Record<string, any>>(
       key = key + classKey(C);
     }
     let node: any = ctx.childMap?.get(key);
-    const parentFiber = ctx.fiber!;
+    const parentFiber = ctx.fiber;
+    if (parentFiber === null) {
+      throw makeAbortError();
+    }
     let signals: Record<string, PropSignal> | undefined;
     if (signalProps) {
       signals = node && propSignals.get(node);

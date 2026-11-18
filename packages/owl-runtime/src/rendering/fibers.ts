@@ -1,4 +1,12 @@
-import { ComputationState, debug, debugLog, debugNow, OwlError, runTracked } from "@odoo/owl-core";
+import {
+  ComputationState,
+  debug,
+  debugLog,
+  debugNow,
+  isAbortError,
+  OwlError,
+  runTracked,
+} from "@odoo/owl-core";
 import { BDom, mount, type MountTarget } from "../blockdom";
 import type { ComponentNode } from "../component_node";
 import { STATUS } from "../status";
@@ -265,7 +273,16 @@ export class Fiber {
       try {
         return node.renderFn() as BDom;
       } catch (e) {
-        handleError({ node, error: e });
+        if (node.fiber !== this && isAbortError(e)) {
+          if (debug.fiber) {
+            debugLog(
+              "fiber",
+              `drop ${node.componentName}'s render: ${node.status === STATUS.DESTROYED ? "destroyed" : "cancelled"} while rendering`
+            );
+          }
+        } else {
+          handleError({ node, error: e });
+        }
         return null;
       } finally {
         this.phase = FiberPhase.RENDERED;

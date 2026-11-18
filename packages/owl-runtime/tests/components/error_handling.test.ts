@@ -106,6 +106,43 @@ describe("basics", () => {
     expect(renders).toBe(1);
   });
 
+  test("a first render error that destroys the app sets up none of the components after it", async () => {
+    const log: string[] = [];
+    class Bad extends Component {
+      static template = xml`<b t-out="this.boom()"/>`;
+      boom() {
+        throw new Error("boom");
+      }
+    }
+    class After extends Component {
+      static template = xml`<i/>`;
+      setup() {
+        log.push("setup");
+        onWillDestroy(() => log.push("willDestroy"));
+      }
+    }
+    class Root extends Component {
+      static template = xml`<div><Bad/><After/></div>`;
+      static components = { Bad, After };
+    }
+    const app = new App({ test: true });
+    const rejections: string[] = [];
+    const onRejection = (e: any) => rejections.push(String(e?.message ?? e));
+    process.on("unhandledRejection", onRejection);
+    let error: any = null;
+    try {
+      await app.createRoot(Root).mount(fixture);
+    } catch (e) {
+      error = e;
+    }
+    await nextTick();
+    process.off("unhandledRejection", onRejection);
+    expect(error.message).toBe("boom");
+    expect(app.destroyed).toBe(true);
+    expect(log).toEqual([]);
+    expect(rejections).toEqual([]);
+  });
+
   test("display a nice error if it cannot find component", async () => {
     class SomeComponent extends Component {}
     class Parent extends Component {
