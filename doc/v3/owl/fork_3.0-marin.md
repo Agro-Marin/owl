@@ -374,7 +374,11 @@ plugins: [] })` rendered asynchronously); a resource-driven start belongs to
   `indeterminate` are written only when the element holds another value;
   `value` is written on every patch, as upstream.
 - **Synthetic (`.synthetic`) handlers** also listen on the shadow root or other
-  document an app is mounted in; each root replays only the nodes of its own
+  document an app is mounted in (a root is found when something mounts into
+  it: a target mounted detached and moved into a shadow root later is not
+  listened on there, so of the events inside it only the composed ones, which
+  the document's listener also sees, reach its synthetic handlers; a `change`
+  or `submit` does not); each root replays only the nodes of its own
   tree, with the target a native listener there would see (capture handlers
   inside a shadow root, closed ones included, run for composed events). The
   handlers of one event and phase, passive or not, are replayed in one pass,
