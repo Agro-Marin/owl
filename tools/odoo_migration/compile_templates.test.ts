@@ -228,7 +228,9 @@ test("the raw checker counts an unknown custom directive as a failure, a missing
     { OWL }
   );
   console.debug("[owl:raw-checker-directive]", run.status, run.stdout, run.stderr);
-  expect(run.stdout).toMatch(/^FAIL .* unknown :: Custom directive "nope" is not defined$/m);
+  expect(run.stdout).toMatch(
+    /^FAIL .* unknown :: Custom directive "nope" is not defined \(in template "unknown"\)$/m
+  );
   expect(run.stdout).toContain("compiled 2 templates, 1 failures");
   expect(run.status).toBe(1);
 });
