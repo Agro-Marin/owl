@@ -1,11 +1,11 @@
 import { spawn, spawnSync } from "node:child_process";
 import { closeSync, globSync, openSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { checkNodeVersion, ROOT, scratchDir } from "./workspace.mjs";
+import { checkNodeVersion, ROOT, scratchDir, workspaceDir } from "./workspace.mjs";
 
 const PACKAGES = ["owl-core", "owl-compiler", "owl-runtime", "owl"];
 const CODEMODS = globSync("tools/odoo_migration/*.py", { cwd: ROOT });
-const RUFF = ["ruff", "/home/marin/Odoo/p314o19m/bin/ruff"].find(
+const RUFF = ["ruff", ...globSync(join(workspaceDir(), "*/bin/ruff"))].find(
   (command) => spawnSync(command, ["--version"], { stdio: "ignore" }).status === 0
 );
 const npm = (...args) => ["npm", ["run", ...args]];

@@ -1,7 +1,8 @@
 # The 3.0-marin fork
 
 `3.0-marin` (Agro-Marin/owl) is `v3.0.0-alpha.49` plus the fork's commits
-(`git log v3.0.0-alpha.49..3.0-marin`). Odoo vendors its builds in
+(`git log 4bd42fe7..3.0-marin`: `4bd42fe7` is upstream's `[REL] v3.0.0-alpha.49`,
+and the fork's clones carry no tags). Odoo vendors its builds in
 `web/static/lib/owl/`: the browser imports `@odoo/owl` as `owl.runtime.es.js` and
 `@odoo/owl/compiler` as `owl.compiler.es.js`, and the server's template
 precompiler runs the full `owl.es.js`; `web/static/lib/versions.json` names the commit.
@@ -563,7 +564,8 @@ snapshot of the committed children; `App.version` + `__info__.hash` scope the te
    is skipped with a note on stderr, so a module family can be passed whole;
    a run in which every root is such is refused with exit 2. Both stop first
    on a Node older than `.node-version`. The second also reads `WEB`, Odoo's `addons/web` (default: in
-   `../odoo` beside the Owl checkout, else `/home/marin/Odoo/odoo`), its
+   `../odoo` beside the Owl checkout, else beside the checkout a worktree was
+   added from), its
    `template_inheritance.js` and the Odoo checkout's `node_modules/xpath`, and
    `OLD`, the old build's `owl.es.js` (default: the one vendored in `WEB`). A
    missing build, `WEB` or `OLD` exits 2 naming it.
@@ -620,7 +622,8 @@ package's tests and type check, the tooling tests (`test:tools`) and type
 check, lint (type-aware, with `await-thenable`), formatting, the package,
 declaration, devtools, playground and both documentation builds, and a parse
 and `ruff --select F,E9` of the Python codemods in `tools/odoo_migration/`
-(skipped without `ruff`); `npm run verify -- <filter>` runs the steps whose
+(skipped without a `ruff` on `PATH` or in a virtualenv of the workspace
+holding the checkout, `<workspace>/*/bin/ruff`); `npm run verify -- <filter>` runs the steps whose
 name contains it. Lint and formatting cover the tooling's `.ts` and `.mjs`
 too. Package tests share the strict
 console check and retain the last 100 debug events on failure. Set

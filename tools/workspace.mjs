@@ -1,5 +1,6 @@
+import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const at = (path) => fileURLToPath(new URL(`../${path}`, import.meta.url));
@@ -25,10 +26,23 @@ export function checkNodeVersion() {
 
 export const SIBLING_ODOO = resolve(ROOT, "../odoo");
 
-export const ODOO_CANDIDATES = [SIBLING_ODOO, "/home/marin/Odoo/odoo"];
+export function workspaceDir() {
+  try {
+    const common = execFileSync(
+      "git",
+      ["rev-parse", "--path-format=absolute", "--git-common-dir"],
+      { cwd: ROOT, stdio: ["ignore", "pipe", "ignore"] }
+    );
+    return resolve(dirname(common.toString().trim()), "..");
+  } catch {
+    return resolve(ROOT, "..");
+  }
+}
 
 export function defaultOdoo() {
-  return ODOO_CANDIDATES.find((dir) => existsSync(join(dir, "addons/web")));
+  return [SIBLING_ODOO, join(workspaceDir(), "odoo")].find((dir) =>
+    existsSync(join(dir, "addons/web"))
+  );
 }
 
 export function scratchDir(prefix) {
