@@ -536,12 +536,13 @@ plugins: [] })` rendered asynchronously); a resource-driven start belongs to
   value equals the model's number.
 - **A template that does not compile names what is wrong**: an invalid
   expression is named with why and with the attribute and element holding it
-  (`invalid expression \`'abc\` in t-att-x="'abc" (on a <i>): unterminated
-  string`), whether the tokenizer rejects it or JavaScript does, instead of
-"could not tokenize" or the bare JavaScript error and the generated code
-(shown only when no single expression is to blame); every compile error of a
-named template names it, on its first line; `this`is refused as a template
-variable (expressions read it as the component).`owl-compiler/tests/compile_errors.test.ts` holds one template per error.
+  (``invalid expression `'abc` in t-att-x="'abc" (on a <i>): unterminated string``),
+  whether the tokenizer rejects it or JavaScript does, instead of "could not
+  tokenize" or the bare JavaScript error and the generated code (shown only
+  when no single expression is to blame); every compile error of a named
+  template names it, on its first line; `this` is refused as a template
+  variable (expressions read it as the component).
+  `owl-compiler/tests/compile_errors.test.ts` holds one template per error.
 - **Template expressions skip comments**; a statement keyword in an arrow's
   block body, and an object literal method, accessor or generator
   (`{ f() {} }`, `{ 'f'() {} }`, `{ [k]() {} }`, `{ get g() {} }`,
