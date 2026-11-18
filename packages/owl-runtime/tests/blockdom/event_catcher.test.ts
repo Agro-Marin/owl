@@ -492,6 +492,42 @@ describe("removing the catchers of a parent releases their listeners", () => {
   });
 });
 
+describe("a parent's catcher listener is passive while its handlers all are", () => {
+  const host = createBlock("<div><block-child-0/><block-child-1/></div>");
+  const span = createBlock("<span>c</span>");
+
+  test("a native kind", () => {
+    const passive = createCatcher({ "wheel.passive": 0 }, [() => {}]);
+    const active = createCatcher({ wheel: 0 }, [() => {}]);
+    const tree = host([], [passive(span(), {}), active(span(), {})]);
+    mount(tree, fixture);
+    const div = fixture.firstChild as HTMLElement;
+    const added: any[] = [];
+    const add = div.addEventListener;
+    div.addEventListener = function (this: HTMLElement, name: string, l: any, o: any) {
+      added.push(o);
+      return add.call(this, name, l, o);
+    } as any;
+    patch(tree, host([], [passive(span(), {}), undefined]));
+    expect(added).toEqual([{ capture: false, passive: true }]);
+    added.length = 0;
+    patch(tree, host([], [passive(span(), {}), active(span(), {})]));
+    expect(added).toEqual([false]);
+  });
+
+  test("a synthetic kind", () => {
+    const passive = createCatcher({ "wheel.synthetic.passive": 0 }, [() => {}]);
+    const active = createCatcher({ "wheel.synthetic": 0 }, [() => {}]);
+    const tree = host([], [passive(span(), {}), active(span(), {})]);
+    mount(tree, fixture);
+    const div = fixture.firstChild as any;
+    const entries = () => Object.values(div["__event__synthetic_wheel"]).map((e: any) => e.passive);
+    expect(entries()).toEqual([false]);
+    patch(tree, host([], [passive(span(), {}), undefined]));
+    expect(entries()).toEqual([true]);
+  });
+});
+
 describe("catchers of one site sharing a parent", () => {
   const span = createBlock("<span><block-text-0/></span>");
   const catcher = createCatcher({ click: 0 }, [run]);

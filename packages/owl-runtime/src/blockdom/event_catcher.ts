@@ -23,7 +23,7 @@ interface ListenerKind {
 
 interface ParentListener {
   count: number;
-  passive: boolean;
+  active: number;
 }
 
 interface SiteKind {
@@ -221,11 +221,11 @@ function listen(siteKinds: SiteKind[], parent: HTMLElement) {
     const listener = listeners.get(kind);
     if (!listener) {
       kind.listen(parent, passive);
-      listeners.set(kind, { count: 1, passive });
+      listeners.set(kind, { count: 1, active: passive ? 0 : 1 });
       continue;
     }
     listener.count++;
-    if (!passive && listener.passive) {
+    if (!passive && listener.active++ === 0) {
       if (debug.event) {
         debugLog(
           "event",
@@ -234,18 +234,27 @@ function listen(siteKinds: SiteKind[], parent: HTMLElement) {
       }
       kind.unlisten(parent, true);
       kind.listen(parent, false);
-      listener.passive = false;
     }
   }
 }
 
 function unlisten(siteKinds: SiteKind[], parent: HTMLElement) {
   const listeners = listenersByParent.get(parent)!;
-  for (const { kind } of siteKinds) {
+  for (const { kind, passive } of siteKinds) {
     const listener = listeners.get(kind)!;
+    const wasPassive = listener.active === 0;
+    if (!passive) {
+      listener.active--;
+    }
     if (--listener.count === 0) {
-      kind.unlisten(parent, listener.passive);
+      kind.unlisten(parent, wasPassive);
       listeners.delete(kind);
+    } else if (listener.active === 0 && !wasPassive) {
+      if (debug.event) {
+        debugLog("event", `${kind.id}: catcher listener passive again, its handlers all are`);
+      }
+      kind.unlisten(parent, false);
+      kind.listen(parent, true);
     }
   }
 }
