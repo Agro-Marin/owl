@@ -160,7 +160,11 @@ true })` creates an effect owned by nothing. When a computed and an effect
   read, as it keeps a signal's: it runs when a later write changes the
   computed from that value, not when the value comes back; the computed
   forwards that write to its readers instead of being recomputed when the run
-  ends. Owl passes the cross-framework conformance suite with no expected
+  ends. So does a computation whose check (bringing its sources up to date to
+  see whether one changed) ran a write to a source it had checked already:
+  it ends up to date on what it checked, and that source forwards it the next
+  write (it held it back for good, the computation never running again for
+  it). Owl passes the cross-framework conformance suite with no expected
   failure.
 - **A cleanup that throws while computeds are disposed** does not stop the
   others: on a recompute it is reported as an unhandled rejection, on a

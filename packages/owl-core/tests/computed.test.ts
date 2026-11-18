@@ -927,6 +927,32 @@ describe("a write during its own run", () => {
   });
 });
 
+describe("a write during a check", () => {
+  test("an effect whose check ran a getter writing a source it checked already follows that source", async () => {
+    const s = signal(0);
+    const t = signal(0);
+    const a = computed(() => s(), { name: "a" });
+    const b = computed(
+      () => {
+        s.set(t() * 2);
+        return 0;
+      },
+      { name: "b" }
+    );
+    const seen: number[] = [];
+    effect(() => {
+      seen.push(a());
+      b();
+    });
+    t.set(1);
+    await waitScheduler();
+    expect(seen).toEqual([0]);
+    s.set(5);
+    await waitScheduler();
+    expect(seen).toEqual([0, 5]);
+  });
+});
+
 describe("a failing source in a pending check", () => {
   test("the reader stays subscribed and runs again on its next change", async () => {
     class IntentionalTestError extends Error {

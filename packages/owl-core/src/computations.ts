@@ -425,7 +425,11 @@ export function trackLateReads(observer: ComputationAtom) {
   }
 }
 
+// Counts writes, for a check to know whether one happened while it ran.
+let writes = 0;
+
 export function onWriteAtom(atom: Atom, comparable: boolean = false) {
+  writes++;
   if (debug.reactivity) {
     const names = observerNames(atom);
     debugLog("reactivity", `write, ${names.length} observer(s)`, names);
@@ -625,6 +629,7 @@ export function updateComputation(computation: ComputationAtom) {
     );
   }
   if (state === ComputationState.PENDING) {
+    const writesBefore = writes;
     try {
       for (let link = computation.deps; link !== undefined; link = link.nextDep) {
         const source = link.dep as ComputationAtom;
@@ -651,6 +656,11 @@ export function updateComputation(computation: ComputationAtom) {
     if (computation.state !== ComputationState.STALE) {
       computation.state = ComputationState.EXECUTED;
       computation.forward = false;
+      if (writes !== writesBefore) {
+        // a source written during the check (by a getter it ran), after it
+        // was checked, forwards the next write, as after a run
+        forwardPendingSources(computation);
+      }
       callOnUpdated(computation);
       return;
     }
@@ -753,6 +763,12 @@ function endInvalidatedRun(computation: ComputationAtom) {
   } else {
     computation.state = ComputationState.EXECUTED;
   }
+  forwardPendingSources(computation);
+}
+
+// A computation that ends up to date on sources a write put out of date
+// meanwhile keeps what it read: those sources pass the next write on to it.
+function forwardPendingSources(computation: ComputationAtom) {
   const stack = graphWalk;
   stack.push(computation);
   let current: ComputationAtom | undefined;
