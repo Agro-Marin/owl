@@ -1,0 +1,2666 @@
+[
+  {
+    "tool": "stryker",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 14,
+    "operator": "BlockStatement",
+    "original": "{\n  return false;\n}",
+    "replacement": "{}",
+    "reason": "neverEqual's result is only tested for truthiness (signal.ts, computed.ts): undefined and false are alike"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 184,
+    "operator": "BooleanLiteral",
+    "original": "false",
+    "replacement": "true",
+    "reason": "runTracked resets prepared to false before every run, and track reads it only during a run"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-runtime/src/rendering/scheduler.ts",
+    "line": 123,
+    "operator": "ConditionalExpression",
+    "original": "fibersInError.has(fiber)",
+    "replacement": "true",
+    "reason": "complete() leaves a pass neither applied nor failed only when onWillPatch destroyed its root, whose forget() already removed the task and whose merged fibers' nodes are destroyed, so dropFailed changes nothing and the extra flush only re-delays renders waiting behind other passes (reasoned)"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-runtime/src/rendering/scheduler.ts",
+    "line": 125,
+    "operator": "BooleanLiteral",
+    "original": "true",
+    "replacement": "false",
+    "reason": "a pass failing at commit has no render delayed behind it (a render waits only while the pass's counter is above 0, and reaching 0 already flushed), and renderMergedAlone's renders request their own frame; the skipped flush would only re-delay renders waiting behind other passes (reasoned)"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-runtime/src/rendering/scheduler.ts",
+    "line": 33,
+    "operator": "swap",
+    "original": "this.tasks.add(fiber.root!);",
+    "replacement": "moved below: Scheduler.active.add(this);",
+    "reason": "two independent set insertions with nothing between them"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-runtime/src/rendering/scheduler.ts",
+    "line": 39,
+    "operator": "swap",
+    "original": "if (delayed.length) {",
+    "replacement": "moved below: if (fiber.root === fiber && this.tasks.delete(fiber as RootFiber)) {",
+    "reason": "the delayed-render list and the task set are separate structures: neither block reads what the other changes"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-runtime/src/rendering/scheduler.ts",
+    "line": 56,
+    "operator": "swap",
+    "original": "if (this.delayedRenders.length) {",
+    "replacement": "moved below: this.requestFrame();",
+    "reason": "requestFrame only asks for an animation frame, which runs after the resumed renders whichever comes first; a resumed render's own flush finds the frame already requested either way"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-runtime/src/rendering/scheduler.ts",
+    "line": 85,
+    "operator": "swap",
+    "original": "this.tasks.delete(fiber);",
+    "replacement": "moved below: if (fiber.merged) {",
+    "reason": "renderMergedAlone renders the merged nodes as new root fibers, never the dropped one, so deleting the dropped task before or after adds the same tasks"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-runtime/src/rendering/scheduler.ts",
+    "line": 107,
+    "operator": "swap",
+    "original": "if (fiber.node.fiber !== fiber) {",
+    "replacement": "moved below: if (fibersInError.has(fiber)) {",
+    "reason": "a root fiber in error whose node moved to another fiber: in error it is dropped and its merged fibers rendered alone, superseded it is dropped; a superseded root's merged nodes have moved to that other fiber's pass, which renders them (reasoned)"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-runtime/src/rendering/scheduler.ts",
+    "line": 115,
+    "operator": "swap",
+    "original": "this.dropFailed(fiber);",
+    "replacement": "moved below: failed = true;",
+    "reason": "failed is a local read only after the loop; dropFailed does not read it, and if dropFailed throws the flag is lost either way"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-runtime/src/rendering/scheduler.ts",
+    "line": 124,
+    "operator": "swap",
+    "original": "this.dropFailed(fiber);",
+    "replacement": "moved below: failed = true;",
+    "reason": "failed is a local read only after the loop; dropFailed does not read it, and if dropFailed throws the flag is lost either way"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-runtime/src/rendering/scheduler.ts",
+    "line": 134,
+    "operator": "swap",
+    "original": "if (failed) {",
+    "replacement": "moved below: if (!this.tasks.size) {",
+    "reason": "flush resumes delayed renders and requests a frame but adds no task (f.render() schedules nothing), so the task count read before or after it is the same (reasoned)"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 211,
+    "operator": "ConditionalExpression",
+    "original": "tail === undefined || tail.dep !== atom",
+    "replacement": "true",
+    "reason": "fast path: track() returns at once for a source whose active link already belongs to this run, as a consecutive re-read's does (a written link is never the tail: writtenWhileRunning puts a mark after it)"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 219,
+    "operator": "ConditionalExpression",
+    "original": "tail === undefined || tail.dep !== atom",
+    "replacement": "true",
+    "reason": "fast path: track() returns at once for a source whose active link already belongs to this run, as a consecutive re-read's does"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 216,
+    "operator": "ConditionalExpression",
+    "original": "observer !== sub",
+    "replacement": "true",
+    "reason": "currentObserver is only set by withObserver from an observe() view, whose computation runs its callback untracked: the observer is never the current computation"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 246,
+    "operator": "ConditionalExpression",
+    "original": "active.version !== DEAD",
+    "replacement": "true",
+    "reason": "a source's active link is never dead: every write of activeLink stores a live link or liveRollback's result, and unlinkSub hands an active link back before it dies (reasoned; the guard looks removable)"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 276,
+    "operator": "ConditionalExpression",
+    "original": "active.version !== DEAD",
+    "replacement": "true",
+    "reason": "a source's active link is never dead: every write of activeLink stores a live link or liveRollback's result, and unlinkSub hands an active link back before it dies (reasoned; the guard looks removable)"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 258,
+    "operator": "ConditionalExpression",
+    "original": "next.dep === dep",
+    "replacement": "false",
+    "reason": "fast path: without it the prepare step makes next the source's active link and reuse() keeps it in place, the same link and order"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 258,
+    "operator": "BlockStatement",
+    "original": "{\n      next.version = version;\n      next.seen = seenValue(dep);\n      next.rollback = active;\n      dep.activeLink = next;\n      sub.depsTail = next;\n      return;\n    }",
+    "replacement": "{}",
+    "reason": "fast path: without it the prepare step makes next the source's active link and reuse() keeps it in place, the same link and order"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 266,
+    "operator": "ConditionalExpression",
+    "original": "!sub.prepared",
+    "replacement": "true",
+    "reason": "preparing again only repeats the first preparation: the remaining links are already their sources' active links"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 267,
+    "operator": "BooleanLiteral",
+    "original": "true",
+    "replacement": "false",
+    "reason": "preparing again only repeats the first preparation: the remaining links are already their sources' active links"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 270,
+    "operator": "ConditionalExpression",
+    "original": "source.activeLink !== link",
+    "replacement": "true",
+    "reason": "no remaining link is its source's active link when the first preparation of a run starts (activeLink is restored at the end of every run), so the guard is never false there (reasoned; fuzzed by the random tracking tests)"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 309,
+    "operator": "BlockStatement",
+    "original": "{\n      link.nextDep.prevDep = mark;\n    }",
+    "replacement": "{}",
+    "reason": "a link moved through the stale prevDep only drops the write mark from the chain early; the mark has no subscription and endWrittenLinks has nothing else to do with it (reasoned; fuzzed by the random read/write tracking test)"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 309,
+    "operator": "ConditionalExpression",
+    "original": "link.nextDep !== undefined",
+    "replacement": "false",
+    "reason": "a link moved through the stale prevDep only drops the write mark from the chain early; the mark has no subscription and endWrittenLinks has nothing else to do with it (reasoned; fuzzed by the random read/write tracking test)"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 319,
+    "operator": "ConditionalExpression",
+    "original": "link.version !== WRITTEN",
+    "replacement": "false",
+    "reason": "after endTracking every remaining link has this run's version except the WRITTEN ones, so rewriting the version of the others changes nothing"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 319,
+    "operator": "BlockStatement",
+    "original": "{\n      continue;\n    }",
+    "replacement": "{}",
+    "reason": "after endTracking every remaining link has this run's version except the WRITTEN ones, so rewriting the version of the others changes nothing"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 451,
+    "operator": "ConditionalExpression",
+    "original": "link.version !== WRITTEN",
+    "replacement": "true",
+    "reason": "a WRITTEN link belongs to a running effect the first write already made STALE or PENDING, and the end of its run sets its state to EXECUTED whatever the second write set"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 458,
+    "operator": "ConditionalExpression",
+    "original": "ctx.subs === undefined",
+    "replacement": "true",
+    "reason": "the flush disposes a queued computation only when hasObservers finds no reader, so queueing an observed one disposes nothing, and a write that reaches a computed schedules its flush anyway (reasoned)"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 533,
+    "operator": "BlockStatement",
+    "original": "{\n      break;\n    }",
+    "replacement": "{}",
+    "reason": "updateComputation always leaves an effect EXECUTED (its finally, or disposal), so the loop ends at its condition without the break"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 533,
+    "operator": "ConditionalExpression",
+    "original": "first === null",
+    "replacement": "false",
+    "reason": "updateComputation always leaves an effect EXECUTED (its finally, or disposal), so the loop ends at its condition without the break"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 581,
+    "operator": "ConditionalExpression",
+    "original": "pendingDisposals.size !== 0",
+    "replacement": "true",
+    "reason": "fast path: iterating an empty set does nothing"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 816,
+    "operator": "ConditionalExpression",
+    "original": "computation.running && computation.state !== ComputationState.RUNNING",
+    "replacement": "true",
+    "reason": "WRITTEN links exist only while a computation runs (running), and a write that marks one also moves its state off RUNNING, so endWrittenLinks has nothing to do in the other cases"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 816,
+    "operator": "ConditionalExpression",
+    "original": "computation.state !== ComputationState.RUNNING",
+    "replacement": "true",
+    "reason": "WRITTEN links exist only while a computation runs (running), and a write that marks one also moves its state off RUNNING, so endWrittenLinks has nothing to do in the other cases"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 816,
+    "operator": "LogicalOperator",
+    "original": "computation.running && computation.state !== ComputationState.RUNNING",
+    "replacement": "computation.running || computation.state !== ComputationState.RUNNING",
+    "reason": "WRITTEN links exist only while a computation runs (running), and a write that marks one also moves its state off RUNNING, so endWrittenLinks has nothing to do in the other cases"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 876,
+    "operator": "BooleanLiteral",
+    "original": "false",
+    "replacement": "true",
+    "reason": "a disposed computation has no sources, so no write reaches it before its next run, which clears forward first"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 915,
+    "operator": "ConditionalExpression",
+    "original": "observer.subs === undefined",
+    "replacement": "true",
+    "reason": "the flush disposes a queued computation only when hasObservers finds no reader, so queueing an observed one disposes nothing (reasoned)"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 951,
+    "operator": "BlockStatement",
+    "original": "{\n    return fn();\n  }",
+    "replacement": "{}",
+    "reason": "fast path: with nothing tracking, the general path saves and restores the same undefined values around fn"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 28,
+    "operator": "BlockStatement",
+    "original": "{\n    return false;\n  }",
+    "replacement": "{}",
+    "reason": "a primitive or null fails the checks below too (toRaw is the identity, not an array, no collection, not [object Object]); the early return only saves work"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 28,
+    "operator": "ConditionalExpression",
+    "original": "typeof value !== \"object\"",
+    "replacement": "false",
+    "reason": "a primitive or null fails the checks below too (toRaw is the identity, not an array, no collection, not [object Object]); the early return only saves work"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 39,
+    "operator": "ConditionalExpression",
+    "original": "value === null",
+    "replacement": "false",
+    "reason": "canBeMadeReactive rejects a primitive or null just below, so the value is returned unchanged either way"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 39,
+    "operator": "ConditionalExpression",
+    "original": "typeof value !== \"object\"",
+    "replacement": "false",
+    "reason": "canBeMadeReactive rejects a primitive or null just below, so the value is returned unchanged either way"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 96,
+    "operator": "ConditionalExpression",
+    "original": "proto !== Array.prototype",
+    "replacement": "true",
+    "reason": "Array.prototype is never in rawPrototypes (markRaw refuses built-in prototypes), so walking one step further changes nothing"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 96,
+    "operator": "ConditionalExpression",
+    "original": "proto !== Object.prototype",
+    "replacement": "true",
+    "reason": "Object.prototype is never in rawPrototypes (markRaw refuses built-in prototypes) and its prototype is null, so walking one step further changes nothing"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 238,
+    "operator": "ArithmeticOperator",
+    "original": "this.count - (this.keyChanges ? 1 : 0) - (this.members ? 1 : 0)",
+    "replacement": "this.count - (this.keyChanges ? 1 : 0) + (this.members ? 1 : 0)",
+    "reason": "observedKeys runs for a Map or Set only, which never has an items atom (only arrays read one), so the members term is 0 either way"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 243,
+    "operator": "ConditionalExpression",
+    "original": "table !== null",
+    "replacement": "true",
+    "reason": "an atom without a table (key list, items) is never the presence table, so it is named the same way"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 367,
+    "operator": "ConditionalExpression",
+    "original": "atoms !== undefined && atoms.count !== 0",
+    "replacement": "true",
+    "reason": "only disables the no-reader fast paths; the general write and clear paths notify the same atoms"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 367,
+    "operator": "ConditionalExpression",
+    "original": "atoms.count !== 0",
+    "replacement": "true",
+    "reason": "only disables the no-reader fast paths; the general write and clear paths notify the same atoms"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 376,
+    "operator": "ConditionalExpression",
+    "original": "table.size !== 0",
+    "replacement": "true",
+    "reason": "an empty table has no atom to notify; either walk finds none"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 473,
+    "operator": "ConditionalExpression",
+    "original": "result !== value",
+    "replacement": "true",
+    "reason": "when the result is the value itself, returning value or result is the same"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 529,
+    "operator": "BooleanLiteral",
+    "original": "true",
+    "replacement": "false",
+    "reason": "the iterator a view wraps is always a generator of makeIteratorObserver; generators have return(), and return() on a finished one does nothing"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 535,
+    "operator": "ConditionalExpression",
+    "original": "!done",
+    "replacement": "true",
+    "reason": "the iterator a view wraps is always a generator of makeIteratorObserver; generators have return(), and return() on a finished one does nothing"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 536,
+    "operator": "OptionalChaining",
+    "original": "iterator.return?.()",
+    "replacement": "iterator.return()",
+    "reason": "the iterator a view wraps is always a generator of makeIteratorObserver; generators have return(), and return() on a finished one does nothing"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 580,
+    "operator": "ConditionalExpression",
+    "original": "result !== value",
+    "replacement": "true",
+    "reason": "when the result is the value itself, returning value or result is the same"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 583,
+    "operator": "ConditionalExpression",
+    "original": "result !== value",
+    "replacement": "true",
+    "reason": "when the result is the value itself, returning value or result is the same"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 604,
+    "operator": "ConditionalExpression",
+    "original": "Array.isArray(target)",
+    "replacement": "true",
+    "reason": "only arrays have an items atom (readArrayItems and array searches read it), so a plain object's finds none"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 632,
+    "operator": "BlockStatement",
+    "original": "{\n    return setKey(target, key, stored, receiver);\n  }",
+    "replacement": "{}",
+    "reason": "the general write path notifies the same atoms; with no key atom it notifies none and logs nothing"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 632,
+    "operator": "ConditionalExpression",
+    "original": "!hasKeyAtoms(atoms) && !debug.reactivity",
+    "replacement": "false",
+    "reason": "the general write path notifies the same atoms; with no key atom it notifies none and logs nothing"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 636,
+    "operator": "ConditionalExpression",
+    "original": "own !== undefined && \"value\" in own && !Array.isArray(target)",
+    "replacement": "false",
+    "reason": "a write to an existing own data property notifies at most one atom, as its last step, so a batch around it changes nothing"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 636,
+    "operator": "StringLiteral",
+    "original": "\"value\"",
+    "replacement": "\"\"",
+    "reason": "a write to an existing own data property notifies at most one atom, as its last step, so a batch around it changes nothing"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 645,
+    "operator": "ConditionalExpression",
+    "original": "key !== \"__proto__\"",
+    "replacement": "true",
+    "reason": "Reflect.set with the proxy as receiver lands on the target as the direct form does (BasicHandler has no defineProperty, getOwnPropertyDescriptor or setPrototypeOf trap); the guard only picks the cheaper form"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 645,
+    "operator": "StringLiteral",
+    "original": "\"__proto__\"",
+    "replacement": "\"\"",
+    "reason": "Reflect.set with the proxy as receiver lands on the target as the direct form does (BasicHandler has no defineProperty, getOwnPropertyDescriptor or setPrototypeOf trap); the guard only picks the cheaper form"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 648,
+    "operator": "StringLiteral",
+    "original": "\"value\"",
+    "replacement": "\"\"",
+    "reason": "Reflect.set with the proxy as receiver lands on the target as the direct form does (BasicHandler has no defineProperty, getOwnPropertyDescriptor or setPrototypeOf trap); the guard only picks the cheaper form"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 649,
+    "operator": "BlockStatement",
+    "original": "{\n    return Reflect.set(target, key, stored);\n  }",
+    "replacement": "{}",
+    "reason": "Reflect.set with the proxy as receiver lands on the target as the direct form does (BasicHandler has no defineProperty, getOwnPropertyDescriptor or setPrototypeOf trap); the guard only picks the cheaper form"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 678,
+    "operator": "EqualityOperator",
+    "original": "target.length < length",
+    "replacement": "target.length <= length",
+    "reason": "inside target.length !== length, <= and < agree"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 720,
+    "operator": "ConditionalExpression",
+    "original": "raw === undefined",
+    "replacement": "false",
+    "reason": "deepProxies.get(undefined) is undefined, so the next test returns the array as well"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 728,
+    "operator": "ArrayDeclaration",
+    "original": "new Array(length)",
+    "replacement": "new Array()",
+    "reason": "every index is assigned in order, so the array ends the same"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 766,
+    "operator": "ConditionalExpression",
+    "original": "plain && (typeof item !== \"object\" || item === null || toRaw(item) === item)",
+    "replacement": "false",
+    "reason": "the second search, on the raw array with toRaw(item), repeats the first one for a primitive or a raw object and gives the same answer; the early return only saves it"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 766,
+    "operator": "ConditionalExpression",
+    "original": "typeof item !== \"object\" || item === null",
+    "replacement": "false",
+    "reason": "the second search, on the raw array with toRaw(item), repeats the first one for a primitive or a raw object and gives the same answer; the early return only saves it"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 766,
+    "operator": "ConditionalExpression",
+    "original": "typeof item !== \"object\"",
+    "replacement": "false",
+    "reason": "the second search, on the raw array with toRaw(item), repeats the first one for a primitive or a raw object and gives the same answer; the early return only saves it"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 766,
+    "operator": "ConditionalExpression",
+    "original": "item === null",
+    "replacement": "false",
+    "reason": "the second search, on the raw array with toRaw(item), repeats the first one for a primitive or a raw object and gives the same answer; the early return only saves it"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 766,
+    "operator": "LogicalOperator",
+    "original": "typeof item !== \"object\" || item === null || toRaw(item) === item",
+    "replacement": "(typeof item !== \"object\" || item === null) && toRaw(item) === item",
+    "reason": "the second search, on the raw array with toRaw(item), repeats the first one for a primitive or a raw object and gives the same answer; the early return only saves it"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 766,
+    "operator": "LogicalOperator",
+    "original": "typeof item !== \"object\" || item === null",
+    "replacement": "typeof item !== \"object\" && item === null",
+    "reason": "the second search, on the raw array with toRaw(item), repeats the first one for a primitive or a raw object and gives the same answer; the early return only saves it"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 766,
+    "operator": "ConditionalExpression",
+    "original": "toRaw(item) === item",
+    "replacement": "false",
+    "reason": "the second search, on the raw array with toRaw(item), repeats the first one for a primitive or a raw object and gives the same answer; the early return only saves it"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 766,
+    "operator": "BlockStatement",
+    "original": "{\n        return result;\n      }",
+    "replacement": "{}",
+    "reason": "the second search, on the raw array with toRaw(item), repeats the first one for a primitive or a raw object and gives the same answer; the early return only saves it"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 806,
+    "operator": "ConditionalExpression",
+    "original": "raw === item",
+    "replacement": "false",
+    "reason": "storedKey returns raw when raw === item, so the shortcut changes nothing"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 808,
+    "operator": "ConditionalExpression",
+    "original": "case \"get\":\n      return (item: any) => {\n        const raw = rawKey(item);\n        onReadTargetKey(target, raw);\n        return reactiveValue(\n          target.get(raw === item ? raw : storedKey(target, item, raw)),\n          shallow\n        );\n      };",
+    "replacement": "case \"get\":",
+    "reason": "makeGetOrInsert called as get calls target.get(key) and reads the same atom, inserting nothing: same result, same notifications"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 813,
+    "operator": "ConditionalExpression",
+    "original": "raw === item",
+    "replacement": "false",
+    "reason": "storedKey returns raw when raw === item, so the shortcut changes nothing"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 855,
+    "operator": "ConditionalExpression",
+    "original": "key !== null",
+    "replacement": "true",
+    "reason": "toRaw is the identity on anything that is not a proxy (primitives and functions are never proxies)"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 855,
+    "operator": "ConditionalExpression",
+    "original": "typeof key === \"object\" && key !== null",
+    "replacement": "true",
+    "reason": "toRaw is the identity on anything that is not a proxy (primitives and functions are never proxies)"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 855,
+    "operator": "LogicalOperator",
+    "original": "typeof key === \"object\" && key !== null",
+    "replacement": "typeof key === \"object\" || key !== null",
+    "reason": "toRaw is the identity on anything that is not a proxy (primitives and functions are never proxies)"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 855,
+    "operator": "ConditionalExpression",
+    "original": "typeof key === \"object\"",
+    "replacement": "true",
+    "reason": "toRaw is the identity on anything that is not a proxy (primitives and functions are never proxies)"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 929,
+    "operator": "BlockStatement",
+    "original": "{\n              return false;\n            }",
+    "replacement": "{}",
+    "reason": "for a primitive or null member of this set the checks that follow answer false too (mine maps it to itself, it has no deep proxy)"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 929,
+    "operator": "ConditionalExpression",
+    "original": "typeof raw !== \"object\"",
+    "replacement": "false",
+    "reason": "for a primitive or null member of this set the checks that follow answer false too (mine maps it to itself, it has no deep proxy)"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 929,
+    "operator": "ConditionalExpression",
+    "original": "typeof raw !== \"object\" || raw === null",
+    "replacement": "false",
+    "reason": "for a primitive or null member of this set the checks that follow answer false too (mine maps it to itself, it has no deep proxy)"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 929,
+    "operator": "LogicalOperator",
+    "original": "typeof raw !== \"object\" || raw === null",
+    "replacement": "typeof raw !== \"object\" && raw === null",
+    "reason": "for a primitive or null member of this set the checks that follow answer false too (mine maps it to itself, it has no deep proxy)"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 929,
+    "operator": "ConditionalExpression",
+    "original": "raw === null",
+    "replacement": "false",
+    "reason": "for a primitive or null member of this set the checks that follow answer false too (mine maps it to itself, it has no deep proxy)"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 933,
+    "operator": "ConditionalExpression",
+    "original": "member !== raw",
+    "replacement": "true",
+    "reason": "that member was already asked about just above, with the same answer"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 937,
+    "operator": "ConditionalExpression",
+    "original": "deep !== member",
+    "replacement": "true",
+    "reason": "that member was already asked about just above, with the same answer"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 946,
+    "operator": "ConditionalExpression",
+    "original": "iterator === null",
+    "replacement": "false",
+    "reason": "a null keys() result throws a TypeError either way (the native check, or reading next of null)"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 953,
+    "operator": "ConditionalExpression",
+    "original": "step === null",
+    "replacement": "false",
+    "reason": "a null iterator step throws a TypeError either way (the native check, or reading its done)"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 974,
+    "operator": "ConditionalExpression",
+    "original": "Object(other) === other",
+    "replacement": "true",
+    "reason": "a primitive or null argument throws a TypeError either way (natively, or from its size)"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 989,
+    "operator": "LogicalOperator",
+    "original": "setterName === \"delete\" && !(target instanceof Set)",
+    "replacement": "setterName === \"delete\" || !(target instanceof Set)",
+    "reason": "a Set's item atoms are never read (Set readers track presence and the key list), so this notifies or compares nothing that has a reader"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 989,
+    "operator": "ConditionalExpression",
+    "original": "setterName === \"set\" || (setterName === \"delete\" && !(target instanceof Set))",
+    "replacement": "true",
+    "reason": "a Set's item atoms are never read (Set readers track presence and the key list), so this notifies or compares nothing that has a reader"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 989,
+    "operator": "ConditionalExpression",
+    "original": "setterName === \"delete\"",
+    "replacement": "true",
+    "reason": "a Set's item atoms are never read (Set readers track presence and the key list), so this notifies or compares nothing that has a reader"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 998,
+    "operator": "ConditionalExpression",
+    "original": "raw === item",
+    "replacement": "false",
+    "reason": "storedKey returns raw when raw === item, so the shortcut changes nothing"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 1007,
+    "operator": "BooleanLiteral",
+    "original": "true",
+    "replacement": "false",
+    "reason": "has.call reads the truth after the call; the shortcut only assumes the native method's outcome"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 1010,
+    "operator": "ConditionalExpression",
+    "original": "completed && method === nativeMethod",
+    "replacement": "false",
+    "reason": "has.call reads the truth after the call; the shortcut only assumes the native method's outcome"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 1015,
+    "operator": "ConditionalExpression",
+    "original": "hadKey !== hasKey",
+    "replacement": "false",
+    "reason": "a Set's item atoms are never read (Set readers track presence and the key list), so this notifies or compares nothing that has a reader"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 1015,
+    "operator": "EqualityOperator",
+    "original": "hadKey !== hasKey",
+    "replacement": "hadKey === hasKey",
+    "reason": "a Set's item atoms are never read (Set readers track presence and the key list), so this notifies or compares nothing that has a reader"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 1015,
+    "operator": "ConditionalExpression",
+    "original": "hadKey !== hasKey",
+    "replacement": "true",
+    "reason": "a Set's item atoms are never read (Set readers track presence and the key list), so this notifies or compares nothing that has a reader"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 1032,
+    "operator": "ConditionalExpression",
+    "original": "raw === item",
+    "replacement": "false",
+    "reason": "storedKey returns raw when raw === item, so the shortcut changes nothing"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 1075,
+    "operator": "ConditionalExpression",
+    "original": "!hasKeyAtoms(target)",
+    "replacement": "false",
+    "reason": "with no key atom the diff path notifies nothing either"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 1096,
+    "operator": "ConditionalExpression",
+    "original": "hadKey !== hasKey",
+    "replacement": "false",
+    "reason": "a Set's item atoms are never read (Set readers track presence and the key list), so this notifies or compares nothing that has a reader"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 1096,
+    "operator": "EqualityOperator",
+    "original": "hadKey !== hasKey",
+    "replacement": "hadKey === hasKey",
+    "reason": "a Set's item atoms are never read (Set readers track presence and the key list), so this notifies or compares nothing that has a reader"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 1096,
+    "operator": "ConditionalExpression",
+    "original": "hadKey !== hasKey",
+    "replacement": "true",
+    "reason": "a Set's item atoms are never read (Set readers track presence and the key list), so this notifies or compares nothing that has a reader"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 1104,
+    "operator": "ArrayDeclaration",
+    "original": "[]",
+    "replacement": "[\"Stryker was here\"]",
+    "reason": "the placeholder key has no atom (and is not in the collection), so it notifies nothing"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 1104,
+    "operator": "ConditionalExpression",
+    "original": "count !== 0",
+    "replacement": "true",
+    "reason": "an empty collection gives no key to notify either way"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 1106,
+    "operator": "ArrayDeclaration",
+    "original": "[]",
+    "replacement": "[\"Stryker was here\"]",
+    "reason": "the native clear ignores its arguments"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 1124,
+    "operator": "ConditionalExpression",
+    "original": "count === 0",
+    "replacement": "false",
+    "reason": "with no key atom the table walk finds none either"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 1124,
+    "operator": "BlockStatement",
+    "original": "{\n    return [];\n  }",
+    "replacement": "{}",
+    "reason": "with no key atom the table walk finds none either"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 1125,
+    "operator": "ArrayDeclaration",
+    "original": "[]",
+    "replacement": "[\"Stryker was here\"]",
+    "reason": "the placeholder key has no atom (and is not in the collection), so it notifies nothing"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 1130,
+    "operator": "ArrayDeclaration",
+    "original": "[]",
+    "replacement": "[\"Stryker was here\"]",
+    "reason": "the placeholder key has no atom (and is not in the collection), so it notifies nothing"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 196,
+    "operator": "BooleanLiteral",
+    "original": "false",
+    "replacement": "true",
+    "reason": "every run clears forward first; before its first run a computation is reachable from a source only as an observe() computation, which is not derived and EXECUTED, where forward changes nothing (reasoned)"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 219,
+    "operator": "path",
+    "original": "tail.dep",
+    "replacement": "observer.dep",
+    "reason": "reads undefined, so the condition is always true: the same mutant as Stryker's 'tail === undefined || tail.dep !== atom -> true', an equivalent fast path (track() returns at once for a source whose active link is this run's)"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 270,
+    "operator": "path",
+    "original": "source.activeLink",
+    "replacement": "link.activeLink",
+    "reason": "reads undefined, so the condition is always true: the same mutant as Stryker's 'source.activeLink !== link -> true': no remaining link is its source's active link at a run's first preparation (reasoned)"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 211,
+    "operator": "path",
+    "original": "tail.dep",
+    "replacement": "sub.dep",
+    "reason": "reads undefined, so the condition is always true: the same mutant as Stryker's 'tail === undefined || tail.dep !== atom -> true', an equivalent fast path (track() returns at once for a source whose active link is this run's)"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 458,
+    "operator": "path",
+    "original": "ctx.subs",
+    "replacement": "link.subs",
+    "reason": "reads undefined, so the condition is always true: the same mutant as Stryker's 'ctx.subs === undefined -> true': queueing an observed computed disposes nothing, the flush checks hasObservers (reasoned)"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 915,
+    "operator": "path",
+    "original": "observer.subs",
+    "replacement": "link.subs",
+    "reason": "reads undefined, so the condition is always true: the same mutant as Stryker's 'observer.subs === undefined -> true': queueing an observed computed disposes nothing, the flush checks hasObservers (reasoned)"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 928,
+    "operator": "path",
+    "original": "observer.notifiesWithoutRecompute",
+    "replacement": "link.notifiesWithoutRecompute",
+    "reason": "always PENDING instead of STALE for a running observe() computation; the end of its run sets it EXECUTED either way (endInvalidatedRun, not derived), and later writes during the run set STALE"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 246,
+    "operator": "receiver",
+    "original": "active.version",
+    "replacement": "sub.version",
+    "reason": "a run's version is never DEAD (-1), so 'sub.version !== DEAD' is always true, like Stryker's equivalent 'active.version !== DEAD -> true': an active link is never dead (reasoned)"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 270,
+    "operator": "receiver",
+    "original": "source.activeLink",
+    "replacement": "dep.activeLink",
+    "reason": "differs only when dep's active link is this link, whose source is then dep, already pointing at it; and no remaining link is its source's active link at a run's first preparation (reasoned)"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 276,
+    "operator": "receiver",
+    "original": "active.version",
+    "replacement": "next.version",
+    "reason": "next is a live link of the deps list and a run's version is never DEAD, so the check is always true, like Stryker's equivalent 'active.version !== DEAD -> true' (reasoned)"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 276,
+    "operator": "receiver",
+    "original": "active.version",
+    "replacement": "sub.version",
+    "reason": "next is a live link of the deps list and a run's version is never DEAD, so the check is always true, like Stryker's equivalent 'active.version !== DEAD -> true' (reasoned)"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 451,
+    "operator": "receiver",
+    "original": "link.version",
+    "replacement": "ctx.version",
+    "reason": "a run's version is never WRITTEN, so this always continues, like Stryker's equivalent 'link.version !== WRITTEN -> true': the end of the run overwrites what the skipped update would set"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 54,
+    "operator": "swap",
+    "original": "this.dep = dep;",
+    "replacement": "moved below: this.sub = sub;",
+    "reason": "two statements that neither read nor write what the other does (constructor field assignments from parameters)"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 55,
+    "operator": "swap",
+    "original": "this.sub = sub;",
+    "replacement": "moved below: this.version = version;",
+    "reason": "two statements that neither read nor write what the other does (constructor field assignments from parameters)"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 56,
+    "operator": "swap",
+    "original": "this.version = version;",
+    "replacement": "moved below: this.prevDep = prevDep;",
+    "reason": "two statements that neither read nor write what the other does (constructor field assignments from parameters)"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 57,
+    "operator": "swap",
+    "original": "this.prevDep = prevDep;",
+    "replacement": "moved below: this.nextDep = nextDep;",
+    "reason": "two statements that neither read nor write what the other does (constructor field assignments from parameters)"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 58,
+    "operator": "swap",
+    "original": "this.nextDep = nextDep;",
+    "replacement": "moved below: this.prevSub = undefined;",
+    "reason": "two statements that neither read nor write what the other does (constructor field assignments from parameters)"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 59,
+    "operator": "swap",
+    "original": "this.prevSub = undefined;",
+    "replacement": "moved below: this.nextSub = undefined;",
+    "reason": "two statements that neither read nor write what the other does (constructor field assignments from parameters)"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 60,
+    "operator": "swap",
+    "original": "this.nextSub = undefined;",
+    "replacement": "moved below: this.rollback = rollback;",
+    "reason": "two statements that neither read nor write what the other does (constructor field assignments from parameters)"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 61,
+    "operator": "swap",
+    "original": "this.rollback = rollback;",
+    "replacement": "moved below: this.seen = seenValue(dep);",
+    "reason": "two statements that neither read nor write what the other does (seenValue reads the dep parameter, not this)"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 209,
+    "operator": "swap",
+    "original": "if (sub !== undefined) {",
+    "replacement": "moved below: const observer = currentObserver;",
+    "reason": "two statements that neither read nor write what the other does: track() does not change currentObserver"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 224,
+    "operator": "swap",
+    "original": "if (observer.state !== ComputationState.EXECUTED) {",
+    "replacement": "moved below: const observed = (observer.observed ??= observedSources(observer));",
+    "reason": "two statements that neither read nor write what the other does: observedSources reads the deps list, lateReads is a separate set"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 229,
+    "operator": "swap",
+    "original": "observed.add(atom);",
+    "replacement": "moved below: const tail = observer.depsTail;",
+    "reason": "two statements that neither read nor write what the other does"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 232,
+    "operator": "swap",
+    "original": "if (tail !== undefined) {",
+    "replacement": "moved below: observer.depsTail = link;",
+    "reason": "two statements that neither read nor write what the other does: tail was read before"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 237,
+    "operator": "swap",
+    "original": "observer.depsTail = link;",
+    "replacement": "moved below: appendSub(atom, link);",
+    "reason": "two statements that neither read nor write what the other does: appendSub touches the atom's subscriber list only"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 244,
+    "operator": "swap",
+    "original": "const version = sub.version;",
+    "replacement": "moved below: let active = dep.activeLink;",
+    "reason": "two statements that neither read nor write what the other does"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 246,
+    "operator": "swap",
+    "original": "if (active !== undefined && active.sub === sub && active.version !== DEAD) {",
+    "replacement": "moved below: const next = tail !== undefined ? tail.nextDep : sub.deps;",
+    "reason": "next is computed from tail and sub.deps, which the early return does not change; computing it first is pure"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 257,
+    "operator": "swap",
+    "original": "if (next !== undefined) {",
+    "replacement": "moved below: const link = new Link(dep, sub, version, tail, next, active);",
+    "reason": "the Link built first gets the same arguments: the fast path and reuse return before using it, and the prepare step changes dep's active link only when it reuses dep's link and returns (reasoned)"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 283,
+    "operator": "swap",
+    "original": "if (next !== undefined) {",
+    "replacement": "moved below: if (tail !== undefined) {",
+    "reason": "two statements that neither read nor write what the other does"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 291,
+    "operator": "swap",
+    "original": "sub.depsTail = link;",
+    "replacement": "moved below: dep.activeLink = link;",
+    "reason": "two statements that neither read nor write what the other does"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 286,
+    "operator": "swap",
+    "original": "if (tail !== undefined) {",
+    "replacement": "moved below: sub.depsTail = link;",
+    "reason": "two statements that neither read nor write what the other does: tail is a parameter"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 292,
+    "operator": "swap",
+    "original": "dep.activeLink = link;",
+    "replacement": "moved below: appendSub(dep, link);",
+    "reason": "two statements that neither read nor write what the other does: appendSub touches the subscriber list only"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 258,
+    "operator": "swap",
+    "original": "if (next.dep === dep) {",
+    "replacement": "moved below: if (!sub.prepared) {",
+    "reason": "preparing first makes next dep's active link with the same rollback the fast path would set, then reuse() keeps it in place: the same link, version, seen value and tail (reasoned)"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 259,
+    "operator": "swap",
+    "original": "next.version = version;",
+    "replacement": "moved below: next.seen = seenValue(dep);",
+    "reason": "two statements that neither read nor write what the other does"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 260,
+    "operator": "swap",
+    "original": "next.seen = seenValue(dep);",
+    "replacement": "moved below: next.rollback = active;",
+    "reason": "two statements that neither read nor write what the other does"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 261,
+    "operator": "swap",
+    "original": "next.rollback = active;",
+    "replacement": "moved below: dep.activeLink = next;",
+    "reason": "two statements that neither read nor write what the other does"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 262,
+    "operator": "swap",
+    "original": "dep.activeLink = next;",
+    "replacement": "moved below: sub.depsTail = next;",
+    "reason": "two statements that neither read nor write what the other does"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 267,
+    "operator": "swap",
+    "original": "sub.prepared = true;",
+    "replacement": "moved below: for (let link: Link | undefined = next; link !== undefined; link = link.nextDep) {",
+    "reason": "two statements that neither read nor write what the other does: the prepare loop does not read prepared"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 306,
+    "operator": "swap",
+    "original": "link.version = WRITTEN;",
+    "replacement": "moved below: if (computation.depsTail === link) {",
+    "reason": "the write mark is built from link.nextDep and the computation, not link.version"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 319,
+    "operator": "swap",
+    "original": "if (link.version !== WRITTEN) {",
+    "replacement": "moved below: if (link.dep !== writeMark) {",
+    "reason": "the other order also rewrites the version of every non-mark link: after endTracking those are this run's or WRITTEN, so the result is the same (as Stryker's 319 equivalents)"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 322,
+    "operator": "swap",
+    "original": "if (link.dep !== writeMark) {",
+    "replacement": "moved below: const prevDep = link.prevDep!;",
+    "reason": "two statements that neither read nor write what the other does (hoisting a read)"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 312,
+    "operator": "swap",
+    "original": "link.nextDep = mark;",
+    "replacement": "moved below: computation.depsTail = mark;",
+    "reason": "two statements that neither read nor write what the other does"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 326,
+    "operator": "swap",
+    "original": "const prevDep = link.prevDep!;",
+    "replacement": "moved below: const nextDep = link.nextDep;",
+    "reason": "two statements that neither read nor write what the other does (two reads)"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 328,
+    "operator": "swap",
+    "original": "prevDep.nextDep = nextDep;",
+    "replacement": "moved below: if (nextDep !== undefined) {",
+    "reason": "two statements that neither read nor write what the other does: prevDep and nextDep were read before"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 338,
+    "operator": "swap",
+    "original": "link.version = version;",
+    "replacement": "moved below: link.seen = seenValue(link.dep);",
+    "reason": "two statements that neither read nor write what the other does"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 339,
+    "operator": "swap",
+    "original": "link.seen = seenValue(link.dep);",
+    "replacement": "moved below: const next = tail !== undefined ? tail.nextDep : sub.deps;",
+    "reason": "two statements that neither read nor write what the other does"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 342,
+    "operator": "swap",
+    "original": "const prevDep = link.prevDep;",
+    "replacement": "moved below: const nextDep = link.nextDep;",
+    "reason": "two statements that neither read nor write what the other does (two reads)"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 344,
+    "operator": "swap",
+    "original": "prevDep!.nextDep = nextDep;",
+    "replacement": "moved below: if (nextDep !== undefined) {",
+    "reason": "two statements that neither read nor write what the other does: prevDep and nextDep were read before"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 345,
+    "operator": "swap",
+    "original": "if (nextDep !== undefined) {",
+    "replacement": "moved below: link.prevDep = tail;",
+    "reason": "two statements that neither read nor write what the other does"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 341,
+    "operator": "swap",
+    "original": "if (link !== next) {",
+    "replacement": "moved below: sub.depsTail = link;",
+    "reason": "the moved block reads tail and next, not sub.depsTail"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 348,
+    "operator": "swap",
+    "original": "link.prevDep = tail;",
+    "replacement": "moved below: link.nextDep = next;",
+    "reason": "two statements that neither read nor write what the other does"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 349,
+    "operator": "swap",
+    "original": "link.nextDep = next;",
+    "replacement": "moved below: next!.prevDep = link;",
+    "reason": "two statements that neither read nor write what the other does"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 350,
+    "operator": "swap",
+    "original": "next!.prevDep = link;",
+    "replacement": "moved below: if (tail !== undefined) {",
+    "reason": "two statements that neither read nor write what the other does"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 362,
+    "operator": "swap",
+    "original": "link.prevSub = subsTail;",
+    "replacement": "moved below: if (subsTail !== undefined) {",
+    "reason": "two statements that neither read nor write what the other does: subsTail was read before"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 363,
+    "operator": "swap",
+    "original": "if (subsTail !== undefined) {",
+    "replacement": "moved below: dep.subsTail = link;",
+    "reason": "two statements that neither read nor write what the other does: subsTail was read before"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 381,
+    "operator": "swap",
+    "original": "const dep = link.dep;",
+    "replacement": "moved below: const prevSub = link.prevSub;",
+    "reason": "two statements that neither read nor write what the other does (two reads)"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 382,
+    "operator": "swap",
+    "original": "const prevSub = link.prevSub;",
+    "replacement": "moved below: const nextSub = link.nextSub;",
+    "reason": "two statements that neither read nor write what the other does (two reads)"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 384,
+    "operator": "swap",
+    "original": "if (prevSub !== undefined) {",
+    "replacement": "moved below: if (nextSub !== undefined) {",
+    "reason": "two statements that neither read nor write what the other does: the two neighbours are updated independently"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 394,
+    "operator": "swap",
+    "original": "link.version = DEAD;",
+    "replacement": "moved below: if (dep.activeLink === link) {",
+    "reason": "liveRollback starts from link.rollback, so the link's own version is not read; a rollback chain never comes back to the link"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 389,
+    "operator": "swap",
+    "original": "if (nextSub !== undefined) {",
+    "replacement": "moved below: link.version = DEAD;",
+    "reason": "two statements that neither read nor write what the other does"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 395,
+    "operator": "swap",
+    "original": "if (dep.activeLink === link) {",
+    "replacement": "moved below: if (dep.subs === undefined && dep.holder !== undefined) {",
+    "reason": "holder.release removes the atom from its table and does not read or change activeLink"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 454,
+    "operator": "swap",
+    "original": "ctx.state =",
+    "replacement": "moved below: if (ctx.isDerived && ctx.subs === undefined) {",
+    "reason": "two statements that neither read nor write what the other does"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 444,
+    "operator": "swap",
+    "original": "if (state === ComputationState.RUNNING) {",
+    "replacement": "moved below: if (ctx.running && !ctx.isDerived) {",
+    "reason": "invalidatedWhileRunning only traces a message; writtenWhileRunning traces nothing"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 554,
+    "operator": "swap",
+    "original": "observers.push(computation);",
+    "replacement": "moved below: flushWanted = true;",
+    "reason": "two statements that neither read nor write what the other does"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 559,
+    "operator": "swap",
+    "original": "pendingDisposals.add(computation);",
+    "replacement": "moved below: flushWanted = true;",
+    "reason": "two statements that neither read nor write what the other does"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 565,
+    "operator": "swap",
+    "original": "flushWanted = false;",
+    "replacement": "moved below: Promise.resolve().then(processEffects);",
+    "reason": "the flush runs in a later microtask, after both statements"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 564,
+    "operator": "swap",
+    "original": "flushScheduled = true;",
+    "replacement": "moved below: flushWanted = false;",
+    "reason": "two statements that neither read nor write what the other does"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 570,
+    "operator": "swap",
+    "original": "flushScheduled = false;",
+    "replacement": "moved below: const pending = observers;",
+    "reason": "two statements that neither read nor write what the other does"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 610,
+    "operator": "swap",
+    "original": "if (state === ComputationState.EXECUTED) {",
+    "replacement": "moved below: if (computation.running) {",
+    "reason": "a computation is both running and EXECUTED only when an effect disposed itself during its run, and nothing updates such an effect then (owners that run are skipped, a disposed effect is reached by no write) (reasoned)"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 652,
+    "operator": "swap",
+    "original": "computation.state = ComputationState.RUNNING;",
+    "replacement": "moved below: computation.forward = false;",
+    "reason": "two statements that neither read nor write what the other does"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 653,
+    "operator": "swap",
+    "original": "computation.forward = false;",
+    "replacement": "moved below: computation.running = true;",
+    "reason": "two statements that neither read nor write what the other does"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 632,
+    "operator": "swap",
+    "original": "updateComputation(source);",
+    "replacement": "moved below: if (computation.state === ComputationState.STALE) {",
+    "reason": "the STALE check moves before the next source's update instead of after this one: no derived source is updated once the computation is known STALE either way, only plain sources' seen values are compared, which is pure (reasoned)"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 646,
+    "operator": "swap",
+    "original": "computation.state = ComputationState.EXECUTED;",
+    "replacement": "moved below: computation.forward = false;",
+    "reason": "two statements that neither read nor write what the other does"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 641,
+    "operator": "swap",
+    "original": "computation.state = ComputationState.EXECUTED;",
+    "replacement": "moved below: computation.forward = false;",
+    "reason": "two statements that neither read nor write what the other does"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 675,
+    "operator": "swap",
+    "original": "computation.running = false;",
+    "replacement": "moved below: if (computation.state === ComputationState.RUNNING) {",
+    "reason": "endInvalidatedRun does not read running, which the finally clears right after"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 742,
+    "operator": "swap",
+    "original": "if (computation.isDerived) {",
+    "replacement": "moved below: const stack = graphWalk;",
+    "reason": "two statements that neither read nor write what the other does"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 763,
+    "operator": "swap",
+    "original": "source.forward = true;",
+    "replacement": "moved below: stack.push(source);",
+    "reason": "two statements that neither read nor write what the other does"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 771,
+    "operator": "swap",
+    "original": "const previousComputation = currentComputation;",
+    "replacement": "moved below: const previousObserver = currentObserver;",
+    "reason": "two statements that neither read nor write what the other does (two reads)"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 772,
+    "operator": "swap",
+    "original": "const previousObserver = currentObserver;",
+    "replacement": "moved below: computation.version++;",
+    "reason": "two statements that neither read nor write what the other does"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 773,
+    "operator": "swap",
+    "original": "computation.version++;",
+    "replacement": "moved below: computation.ownerDepth = scopeStack.length;",
+    "reason": "two statements that neither read nor write what the other does"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 775,
+    "operator": "swap",
+    "original": "computation.depsTail = undefined;",
+    "replacement": "moved below: computation.prepared = false;",
+    "reason": "two statements that neither read nor write what the other does"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 774,
+    "operator": "swap",
+    "original": "computation.ownerDepth = scopeStack.length;",
+    "replacement": "moved below: computation.depsTail = undefined;",
+    "reason": "two statements that neither read nor write what the other does"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 776,
+    "operator": "swap",
+    "original": "computation.prepared = false;",
+    "replacement": "moved below: currentComputation = computation;",
+    "reason": "two statements that neither read nor write what the other does"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 777,
+    "operator": "swap",
+    "original": "currentComputation = computation;",
+    "replacement": "moved below: currentObserver = undefined;",
+    "reason": "two statements that neither read nor write what the other does"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 782,
+    "operator": "swap",
+    "original": "currentComputation = previousComputation;",
+    "replacement": "moved below: currentObserver = previousObserver;",
+    "reason": "two statements that neither read nor write what the other does"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 783,
+    "operator": "swap",
+    "original": "currentObserver = previousObserver;",
+    "replacement": "moved below: endTracking(computation);",
+    "reason": "endTracking unlinks and queues disposals but reads no current observer (reasoned)"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 812,
+    "operator": "swap",
+    "original": "for (link = computation.deps; link !== undefined; link = link.nextDep) {",
+    "replacement": "moved below: if (computation.running && computation.state !== ComputationState.RUNNING) {",
+    "reason": "endWrittenLinks neither reads nor writes active links or rollbacks; restoring a mark's source (the write-mark atom) first is harmless"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 797,
+    "operator": "swap",
+    "original": "if (tail !== undefined) {",
+    "replacement": "moved below: do {",
+    "reason": "the unlink loop walks from the link it already holds; cutting the chain first or after gives the same chain"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 816,
+    "operator": "swap",
+    "original": "if (computation.running && computation.state !== ComputationState.RUNNING) {",
+    "replacement": "moved below: computation.observed = null;",
+    "reason": "two statements that neither read nor write what the other does"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 803,
+    "operator": "swap",
+    "original": "const next: Link | undefined = link.nextDep;",
+    "replacement": "moved below: unlinkSub(link);",
+    "reason": "unlinkSub does not change nextDep"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 804,
+    "operator": "swap",
+    "original": "unlinkSub(link);",
+    "replacement": "moved below: const dep = link.dep as ComputationAtom;",
+    "reason": "two statements that neither read nor write what the other does"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 806,
+    "operator": "swap",
+    "original": "if (dep.isDerived && dep.subs === undefined) {",
+    "replacement": "moved below: link = next;",
+    "reason": "two statements that neither read nor write what the other does: dep was read before"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 826,
+    "operator": "swap",
+    "original": "queueDisposal(computed);",
+    "replacement": "moved below: if (!flushScheduled) {",
+    "reason": "scheduleFlush clears flushWanted and queueDisposal sets it again, but the flush scheduled then clears it when it starts (once processEffects resets flushWanted, the parent's fix of the stale-flushWanted defect); before that fix this mutant is killable (reasoned)"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 843,
+    "operator": "swap",
+    "original": "computation.depsTail = undefined;",
+    "replacement": "moved below: computation.observed = null;",
+    "reason": "two statements that neither read nor write what the other does"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 842,
+    "operator": "swap",
+    "original": "computation.deps = undefined;",
+    "replacement": "moved below: computation.depsTail = undefined;",
+    "reason": "two statements that neither read nor write what the other does"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 844,
+    "operator": "swap",
+    "original": "computation.observed = null;",
+    "replacement": "moved below: computation.lateReads = null;",
+    "reason": "two statements that neither read nor write what the other does"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 849,
+    "operator": "swap",
+    "original": "unlinkSub(link);",
+    "replacement": "moved below: const source = link.dep as ComputationAtom;",
+    "reason": "two statements that neither read nor write what the other does"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 848,
+    "operator": "swap",
+    "original": "const next: Link | undefined = link.nextDep;",
+    "replacement": "moved below: unlinkSub(link);",
+    "reason": "unlinkSub does not change nextDep"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 851,
+    "operator": "swap",
+    "original": "if (source.isDerived && !source.running && !hasObservers(source)) {",
+    "replacement": "moved below: link = next;",
+    "reason": "two statements that neither read nor write what the other does: source was read before"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 870,
+    "operator": "swap",
+    "original": "try {",
+    "replacement": "moved below: computation.state = computation.isDerived ? ComputationState.STALE : ComputationState.EXECUTED;",
+    "reason": "a write reaching the computation through a link removeSources has yet to cut finds it either way with no reader, queued for disposal, or about to be set EXECUTED (reasoned)"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 875,
+    "operator": "swap",
+    "original": "computation.state = computation.isDerived ? ComputationState.STALE : ComputationState.EXECUTED;",
+    "replacement": "moved below: computation.forward = false;",
+    "reason": "two statements that neither read nor write what the other does"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 876,
+    "operator": "swap",
+    "original": "computation.forward = false;",
+    "replacement": "moved below: if (computation.owned !== null) {",
+    "reason": "the computation has no source left when its owned effects' cleanups run, so no write reaches it whatever forward holds (reasoned)"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 888,
+    "operator": "swap",
+    "original": "if (!owned) {",
+    "replacement": "moved below: computation.owned = null;",
+    "reason": "two statements that neither read nor write what the other does"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 906,
+    "operator": "swap",
+    "original": "const stack = graphWalk;",
+    "replacement": "moved below: if (computation.forward) {",
+    "reason": "two statements that neither read nor write what the other does"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 907,
+    "operator": "swap",
+    "original": "if (computation.forward) {",
+    "replacement": "moved below: stack.push(computation);",
+    "reason": "two statements that neither read nor write what the other does"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 915,
+    "operator": "swap",
+    "original": "if (observer.isDerived && observer.subs === undefined) {",
+    "replacement": "moved below: if (link.version !== observer.version) {",
+    "reason": "a derived observer reached through a stale link is running, which took an earlier write that queued it for disposal already while it had no reader (reasoned)"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 918,
+    "operator": "swap",
+    "original": "if (link.version !== observer.version) {",
+    "replacement": "moved below: const state = observer.state;",
+    "reason": "two statements that neither read nor write what the other does (hoisting a read)"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 934,
+    "operator": "swap",
+    "original": "observer.state = observer.notifiesWithoutRecompute",
+    "replacement": "moved below: if (observer.isDerived) {",
+    "reason": "two statements that neither read nor write what the other does: queueEffect and the stack do not read the state"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 924,
+    "operator": "swap",
+    "original": "forwardThrough(observer);",
+    "replacement": "moved below: stack.push(observer);",
+    "reason": "two statements that neither read nor write what the other does"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 927,
+    "operator": "swap",
+    "original": "invalidatedWhileRunning(observer);",
+    "replacement": "moved below: observer.state = observer.notifiesWithoutRecompute",
+    "reason": "invalidatedWhileRunning only traces the observer's name"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 949,
+    "operator": "swap",
+    "original": "const previousComputation = currentComputation;",
+    "replacement": "moved below: const previousObserver = currentObserver;",
+    "reason": "two statements that neither read nor write what the other does (two reads)"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 951,
+    "operator": "swap",
+    "original": "if (previousComputation === undefined && previousObserver === undefined) {",
+    "replacement": "moved below: const previousOwner = currentOwner;",
+    "reason": "two statements that neither read nor write what the other does (hoisting a read)"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 955,
+    "operator": "swap",
+    "original": "currentOwner = previousComputation ?? previousOwner;",
+    "replacement": "moved below: currentComputation = currentObserver = undefined;",
+    "reason": "both use the saved previous values"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 960,
+    "operator": "swap",
+    "original": "currentComputation = previousComputation;",
+    "replacement": "moved below: currentObserver = previousObserver;",
+    "reason": "two statements that neither read nor write what the other does"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 961,
+    "operator": "swap",
+    "original": "currentObserver = previousObserver;",
+    "replacement": "moved below: currentOwner = previousOwner;",
+    "reason": "two statements that neither read nor write what the other does"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 970,
+    "operator": "swap",
+    "original": "const previousObserver = currentObserver;",
+    "replacement": "moved below: const previousOwner = currentOwner;",
+    "reason": "two statements that neither read nor write what the other does (two reads)"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 969,
+    "operator": "swap",
+    "original": "const previousComputation = currentComputation;",
+    "replacement": "moved below: const previousObserver = currentObserver;",
+    "reason": "two statements that neither read nor write what the other does (two reads)"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 976,
+    "operator": "swap",
+    "original": "currentComputation = previousComputation;",
+    "replacement": "moved below: currentObserver = previousObserver;",
+    "reason": "two statements that neither read nor write what the other does"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/computations.ts",
+    "line": 977,
+    "operator": "swap",
+    "original": "currentObserver = previousObserver;",
+    "replacement": "moved below: currentOwner = previousOwner;",
+    "reason": "two statements that neither read nor write what the other does"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 25,
+    "operator": "path",
+    "original": "Object.prototype.hasOwnProperty",
+    "replacement": "Object.hasOwnProperty",
+    "reason": "Object.hasOwnProperty and Function.toString are inherited: the same functions as Object.prototype.hasOwnProperty and Function.prototype.toString"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 28,
+    "operator": "swap",
+    "original": "if (typeof value !== \"object\" || value === null) {",
+    "replacement": "moved below: const raw = toRaw(value);",
+    "reason": "the statement moved above the guard only looks a primitive or null up in a WeakMap, which answers undefined without throwing, and the guard returns the same"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 39,
+    "operator": "swap",
+    "original": "if (shallow || typeof value !== \"object\" || value === null) {",
+    "replacement": "moved below: const reactive = deepProxies.get(value);",
+    "reason": "the statement moved above the guard only looks a primitive or null up in a WeakMap, which answers undefined without throwing, and the guard returns the same"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 73,
+    "operator": "swap",
+    "original": "skipped.add(raw);",
+    "replacement": "moved below: if (isClassPrototype(raw)) {",
+    "reason": "the two statements touch disjoint state (local constants, module tables or fields nothing reads in between), so either order gives the same result"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 75,
+    "operator": "swap",
+    "original": "rawPrototypes.add(raw);",
+    "replacement": "moved below: hasRawPrototypes = true;",
+    "reason": "the two statements touch disjoint state (local constants, module tables or fields nothing reads in between), so either order gives the same result"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 142,
+    "operator": "path",
+    "original": "Function.prototype.toString.call",
+    "replacement": "Function.toString.call",
+    "reason": "Object.hasOwnProperty and Function.toString are inherited: the same functions as Object.prototype.hasOwnProperty and Function.prototype.toString"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 195,
+    "operator": "swap",
+    "original": "table.set(key, (atom = this.create(table, key)));",
+    "replacement": "moved below: if (weak) {",
+    "reason": "the two statements touch disjoint state (local constants, module tables or fields nothing reads in between), so either order gives the same result"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 256,
+    "operator": "swap",
+    "original": "atom.holder = undefined;",
+    "replacement": "moved below: this.count--;",
+    "reason": "the two statements touch disjoint state (local constants, module tables or fields nothing reads in between), so either order gives the same result"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 266,
+    "operator": "swap",
+    "original": "table.delete(key);",
+    "replacement": "moved below: if (table === this.weakItems || table === this.weakPresence) {",
+    "reason": "the two statements touch disjoint state (local constants, module tables or fields nothing reads in between), so either order gives the same result"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 346,
+    "operator": "swap",
+    "original": "const reader = getCurrentComputation();",
+    "replacement": "moved below: const what = presence ? `presence of ${String(key)}` : describeKey(key);",
+    "reason": "the two statements touch disjoint state (local constants, module tables or fields nothing reads in between), so either order gives the same result"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 417,
+    "operator": "swap",
+    "original": "if (isMarkedRaw(target)) {",
+    "replacement": "moved below: const cache = shallow ? shallowProxies : deepProxies;",
+    "reason": "the two statements touch disjoint state (local constants, module tables or fields nothing reads in between), so either order gives the same result"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 432,
+    "operator": "swap",
+    "original": "cache.set(target, proxy);",
+    "replacement": "moved below: targets.set(proxy, target);",
+    "reason": "the two statements touch disjoint state (local constants, module tables or fields nothing reads in between), so either order gives the same result"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 455,
+    "operator": "swap",
+    "original": "computation.notifiesWithoutRecompute = true;",
+    "replacement": "moved below: const views = new WeakMap<Target, any>();",
+    "reason": "the two statements touch disjoint state (local constants, module tables or fields nothing reads in between), so either order gives the same result"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 456,
+    "operator": "swap",
+    "original": "const views = new WeakMap<Target, any>();",
+    "replacement": "moved below: const read = <R>(fn: () => R): R => withObserver(computation, fn);",
+    "reason": "the two statements touch disjoint state (local constants, module tables or fields nothing reads in between), so either order gives the same result"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 457,
+    "operator": "swap",
+    "original": "const read = <R>(fn: () => R): R => withObserver(computation, fn);",
+    "replacement": "moved below: const wrap = (value: any): any => (targets.has(value) ? view(value) : value);",
+    "reason": "the two statements touch disjoint state (local constants, module tables or fields nothing reads in between), so either order gives the same result"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 462,
+    "operator": "swap",
+    "original": "if (known) {",
+    "replacement": "moved below: const raw = toRaw(reactive);",
+    "reason": "the two statements touch disjoint state (local constants, module tables or fields nothing reads in between), so either order gives the same result"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 467,
+    "operator": "swap",
+    "original": "let methods: Map<Function, Function> | undefined;",
+    "replacement": "moved below: const self: any = new Proxy(reactive, {",
+    "reason": "the variable is read only by trap closures that run after the view is built"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 478,
+    "operator": "swap",
+    "original": "if (!methodKeys?.has(key) && !viewReaders.has(value)) {",
+    "replacement": "moved below: let method = (methods ??= new Map()).get(value);",
+    "reason": "the two statements touch disjoint state (local constants, module tables or fields nothing reads in between), so either order gives the same result"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 493,
+    "operator": "swap",
+    "original": "const result = read(() => value.apply(r, args));",
+    "replacement": "moved below: const entries =",
+    "reason": "raw instanceof Map reaches user code only for a Proxy-wrapped Map, whose methods cannot run on the proxy anyway"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 518,
+    "operator": "swap",
+    "original": "views.set(reactive, self);",
+    "replacement": "moved below: viewBases.set(self, reactive);",
+    "reason": "the two statements touch disjoint state (local constants, module tables or fields nothing reads in between), so either order gives the same result"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 519,
+    "operator": "swap",
+    "original": "viewBases.set(self, reactive);",
+    "replacement": "moved below: targets.set(self, raw);",
+    "reason": "the two statements touch disjoint state (local constants, module tables or fields nothing reads in between), so either order gives the same result"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 529,
+    "operator": "swap",
+    "original": "done = true;",
+    "replacement": "moved below: return step.value;",
+    "reason": "the iterator is a generator of makeIteratorObserver; return() on a finished generator does nothing"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 557,
+    "operator": "swap",
+    "original": "this.shallow = shallow;",
+    "replacement": "moved below: this.atoms = undefined;",
+    "reason": "field initialization order in the constructor; neither field is read before both are set"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 578,
+    "operator": "swap",
+    "original": "if (typeof value === \"function\") {",
+    "replacement": "moved below: const result = reactiveValue(value, this.shallow);",
+    "reason": "reactiveValue returns a function unchanged without touching it"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 587,
+    "operator": "swap",
+    "original": "const shallow = this.shallow;",
+    "replacement": "moved below: const atoms = this.host(target);",
+    "reason": "this.host only looks the target's property host up or creates it, with no observable effect"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 664,
+    "operator": "swap",
+    "original": "const length = isArray ? target.length : 0;",
+    "replacement": "moved below: const compares = isArray || targetAtoms.get(atoms)?.find(key, ITEM) !== undefined;",
+    "reason": "the two statements touch disjoint state (local constants, module tables or fields nothing reads in between), so either order gives the same result"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 675,
+    "operator": "swap",
+    "original": "if (isArray && key === \"length\") {",
+    "replacement": "moved below: const created = own === undefined && Object.hasOwn(target, key);",
+    "reason": "for an array's length, own is its descriptor, so created short-circuits without asking the target"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 687,
+    "operator": "swap",
+    "original": "const changed =",
+    "replacement": "moved below: if (created) {",
+    "reason": "inside the batch every write path is in, notifying runs no user code, so reading the new value before or after the presence notification gives the same"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 740,
+    "operator": "swap",
+    "original": "for (const name of [\"copyWithin\", \"fill\", \"reverse\", \"sort\"] as const) {",
+    "replacement": "moved below: for (const name of [\"pop\", \"push\", \"shift\", \"splice\", \"unshift\"] as const) {",
+    "reason": "module initialization order of independent method tables and sets, read only after all of them are filled"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 746,
+    "operator": "swap",
+    "original": "for (const name of [\"pop\", \"push\", \"shift\", \"splice\", \"unshift\"] as const) {",
+    "replacement": "moved below: for (const name of [\"includes\", \"indexOf\", \"lastIndexOf\"] as const) {",
+    "reason": "module initialization order of independent method tables and sets, read only after all of them are filled"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 753,
+    "operator": "swap",
+    "original": "for (const name of [\"includes\", \"indexOf\", \"lastIndexOf\"] as const) {",
+    "replacement": "moved below: const hasOwnPropertyReader = function (this: object, key: PropertyKey) {",
+    "reason": "module initialization order of independent method tables and sets, read only after all of them are filled"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 754,
+    "operator": "swap",
+    "original": "const method = Array.prototype[name] as Function;",
+    "replacement": "moved below: const search = function (this: unknown[], ...args: unknown[]) {",
+    "reason": "module initialization order of independent method tables and sets, read only after all of them are filled"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 758,
+    "operator": "swap",
+    "original": "if (plain) {",
+    "replacement": "moved below: const result = method.apply(plain ? raw : this, args);",
+    "reason": "the search of the raw array runs no user code and reads no reactive atom, so tracking the items before or after it is the same; the found result is returned either way"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 761,
+    "operator": "swap",
+    "original": "const result = method.apply(plain ? raw : this, args);",
+    "replacement": "moved below: const item = args[0];",
+    "reason": "the two statements touch disjoint state (local constants, module tables or fields nothing reads in between), so either order gives the same result"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 762,
+    "operator": "swap",
+    "original": "const item = args[0];",
+    "replacement": "moved below: if (result !== -1 && result !== false) {",
+    "reason": "the two statements touch disjoint state (local constants, module tables or fields nothing reads in between), so either order gives the same result"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 763,
+    "operator": "swap",
+    "original": "if (result !== -1 && result !== false) {",
+    "replacement": "moved below: if (plain && (typeof item !== \"object\" || item === null || toRaw(item) === item)) {",
+    "reason": "the search of the raw array runs no user code and reads no reactive atom, so tracking the items before or after it is the same; the found result is returned either way"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 766,
+    "operator": "swap",
+    "original": "if (plain && (typeof item !== \"object\" || item === null || toRaw(item) === item)) {",
+    "replacement": "moved below: args[0] = toRaw(item as object);",
+    "reason": "the two statements touch disjoint state (local constants, module tables or fields nothing reads in between), so either order gives the same result"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 772,
+    "operator": "swap",
+    "original": "replaced.set(method, search);",
+    "replacement": "moved below: viewReaders.add(search);",
+    "reason": "module initialization order of independent method tables and sets, read only after all of them are filled"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 785,
+    "operator": "swap",
+    "original": "replaced.set(objectHasOwnProperty, hasOwnPropertyReader);",
+    "replacement": "moved below: viewReaders.add(hasOwnPropertyReader);",
+    "reason": "module initialization order of independent method tables and sets, read only after all of them are filled"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 860,
+    "operator": "swap",
+    "original": "const entries = methodName === \"entries\" || (methodName === Symbol.iterator && isMap);",
+    "replacement": "moved below: const readsValues = isMap && methodName !== \"keys\";",
+    "reason": "the two statements touch disjoint state (local constants, module tables or fields nothing reads in between), so either order gives the same result"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 892,
+    "operator": "swap",
+    "original": "const collection = this ?? proxyOf(target, shallow);",
+    "replacement": "moved below: onReadKeys(target);",
+    "reason": "the two statements touch disjoint state (local constants, module tables or fields nothing reads in between), so either order gives the same result"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 929,
+    "operator": "swap",
+    "original": "if (typeof raw !== \"object\" || raw === null) {",
+    "replacement": "moved below: const member = mine.get(raw);",
+    "reason": "mine.get and deepProxies.get are lookups without side effects; the order of the early return changes nothing"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 933,
+    "operator": "swap",
+    "original": "if (member !== raw && Reflect.apply(has, other, [member])) {",
+    "replacement": "moved below: const deep = deepProxies.get(raw);",
+    "reason": "mine.get and deepProxies.get are lookups without side effects; the order of the early return changes nothing"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 971,
+    "operator": "swap",
+    "original": "onReadKeys(target);",
+    "replacement": "moved below: const mine = membersByRaw(target.values());",
+    "reason": "the target is the raw Set and membersByRaw reads it natively, so tracking the key list before or after is the same; a boolean result returns before the local map is used"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 972,
+    "operator": "swap",
+    "original": "const mine = membersByRaw(target.values());",
+    "replacement": "moved below: const theirs = new Map();",
+    "reason": "the target is the raw Set and membersByRaw reads it natively, so tracking the key list before or after is the same; a boolean result returns before the local map is used"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 976,
+    "operator": "swap",
+    "original": "if (typeof result === \"boolean\") {",
+    "replacement": "moved below: for (const [raw, member] of theirs) {",
+    "reason": "the target is the raw Set and membersByRaw reads it natively, so tracking the key list before or after is the same; a boolean result returns before the local map is used"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 989,
+    "operator": "swap",
+    "original": "const readsValue = setterName === \"set\" || (setterName === \"delete\" && !(target instanceof Set));",
+    "replacement": "moved below: const prototype = nativePrototype(target);",
+    "reason": "native lookups on the prototype and the raw collection, with no observable effect, in either order"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 991,
+    "operator": "swap",
+    "original": "const has = prototype.has;",
+    "replacement": "moved below: const get = readsValue ? prototype.get : undefined;",
+    "reason": "native lookups on the prototype and the raw collection, with no observable effect, in either order"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 992,
+    "operator": "swap",
+    "original": "const get = readsValue ? prototype.get : undefined;",
+    "replacement": "moved below: const nativeMethod = prototype[setterName];",
+    "reason": "native lookups on the prototype and the raw collection, with no observable effect, in either order"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 993,
+    "operator": "swap",
+    "original": "const nativeMethod = prototype[setterName];",
+    "replacement": "moved below: const collection = proxyOf(target, shallow);",
+    "reason": "native lookups on the prototype and the raw collection, with no observable effect, in either order"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 1011,
+    "operator": "swap",
+    "original": "if (hadKey !== hasKey) {",
+    "replacement": "moved below: const after = get && hasKey ? get.call(target, key) : undefined;",
+    "reason": "native lookups on the prototype and the raw collection, with no observable effect, in either order"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 1034,
+    "operator": "swap",
+    "original": "const before = hadKey ? get.call(target, key) : undefined;",
+    "replacement": "moved below: const argument =",
+    "reason": "native lookups on the prototype and the raw collection, with no observable effect, in either order"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 1062,
+    "operator": "swap",
+    "original": "const size = Object.getOwnPropertyDescriptor(prototype, \"size\")!.get!;",
+    "replacement": "moved below: const keysOf = prototype.keys;",
+    "reason": "native lookups on the prototype and the raw collection, with no observable effect, in either order"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 1063,
+    "operator": "swap",
+    "original": "const keysOf = prototype.keys;",
+    "replacement": "moved below: const has = prototype.has;",
+    "reason": "native lookups on the prototype and the raw collection, with no observable effect, in either order"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 1064,
+    "operator": "swap",
+    "original": "const has = prototype.has;",
+    "replacement": "moved below: const isMap = target instanceof Map;",
+    "reason": "native lookups on the prototype and the raw collection, with no observable effect, in either order"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 1065,
+    "operator": "swap",
+    "original": "const isMap = target instanceof Map;",
+    "replacement": "moved below: const snapshot = () =>",
+    "reason": "native lookups on the prototype and the raw collection, with no observable effect, in either order"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 1074,
+    "operator": "swap",
+    "original": "if (clear !== prototype.clear) {",
+    "replacement": "moved below: const count = size.call(target);",
+    "reason": "native lookups on the prototype and the raw collection, with no observable effect, in either order"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 1075,
+    "operator": "swap",
+    "original": "if (!hasKeyAtoms(target)) return Reflect.apply(clear, target, []);",
+    "replacement": "moved below: const before = snapshot();",
+    "reason": "taking the snapshot reads the raw collection natively, without user code, so taking it before the no-reader return changes nothing"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 1082,
+    "operator": "swap",
+    "original": "const keys = new Set([...before.keys(), ...after.keys()]);",
+    "replacement": "moved below: const oldKeys = [...before.keys()];",
+    "reason": "the two statements touch disjoint state (local constants, module tables or fields nothing reads in between), so either order gives the same result"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 1083,
+    "operator": "swap",
+    "original": "const oldKeys = [...before.keys()];",
+    "replacement": "moved below: const newKeys = [...after.keys()];",
+    "reason": "the two statements touch disjoint state (local constants, module tables or fields nothing reads in between), so either order gives the same result"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 1092,
+    "operator": "swap",
+    "original": "const hadKey = before.has(key);",
+    "replacement": "moved below: const hasKey = after.has(key);",
+    "reason": "the two statements touch disjoint state (local constants, module tables or fields nothing reads in between), so either order gives the same result"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 1093,
+    "operator": "swap",
+    "original": "const hasKey = after.has(key);",
+    "replacement": "moved below: const raw = rawKey(key);",
+    "reason": "the two statements touch disjoint state (local constants, module tables or fields nothing reads in between), so either order gives the same result"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 1106,
+    "operator": "swap",
+    "original": "Reflect.apply(clear, target, []);",
+    "replacement": "moved below: if (count !== 0) onWriteKeys(target);",
+    "reason": "the native clear runs inside a batch, and notifying runs no user code, so notifying the key list just before clearing is the same"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 1200,
+    "operator": "swap",
+    "original": "this.methodKeys = methodKeys;",
+    "replacement": "moved below: this.hasSize = methodKeys !== weakMapMethods;",
+    "reason": "field initialization order in the constructor; neither field is read before both are set"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-core/src/proxy.ts",
+    "line": 1208,
+    "operator": "swap",
+    "original": "if (this.methodKeys.has(key)) {",
+    "replacement": "moved below: if (key === \"size\" && this.hasSize) {",
+    "reason": "size is never one of the method keys, so testing it first answers the same"
+  }
+]

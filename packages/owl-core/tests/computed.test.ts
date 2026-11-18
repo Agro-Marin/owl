@@ -782,6 +782,49 @@ describe("cycles", () => {
     expect(runs).toBe(1);
   });
 
+  test("an unnamed computation reading itself is called a computation in the cycle error", () => {
+    const self: ComputationAtom = createComputation(() => updateComputation(self), true);
+    expect(() => updateComputation(self)).toThrow(
+      "Cycle detected: a computation reads its own value"
+    );
+  });
+
+  test("a computed that writes a source it read and then reads itself fails with a cycle error, after one run", () => {
+    const s = signal(0);
+    let runs = 0;
+    const self: ReadonlyReactiveValue<number> = computed(
+      () => {
+        runs++;
+        s();
+        s.set(runs);
+        return self();
+      },
+      { name: "self" }
+    );
+    expect(() => self()).toThrow("Cycle detected: self reads its own value");
+    expect(runs).toBe(1);
+  });
+
+  test("a computed that reads itself after writes that cancel out fails with a cycle error", () => {
+    const s = signal(5);
+    const t = signal(0);
+    const self: ReadonlyReactiveValue<number> = computed(
+      () => {
+        const value = s();
+        if (t() === 1) {
+          s.set(7);
+          s.set(5);
+          return self();
+        }
+        return value;
+      },
+      { name: "self" }
+    );
+    expect(self()).toBe(5);
+    t.set(1);
+    expect(() => self()).toThrow("Cycle detected: self reads its own value");
+  });
+
   test("two computeds reading each other fail with a cycle error", () => {
     let runs = 0;
     const a: ReadonlyReactiveValue<number> = computed(() => (++runs > 50 ? 0 : b() + 1), {
@@ -953,7 +996,130 @@ describe("a write during a check", () => {
   });
 });
 
+describe("an owned effect whose cleanup throws when its owner runs again", () => {
+  class IntentionalTestError extends Error {
+    override name = "IntentionalTestError";
+  }
+  const createOwnedEffect = () =>
+    effect(() => () => {
+      throw new IntentionalTestError("cleanup failed");
+    });
+
+  test("a computation that is not derived throws the cleanup's error after its run", async () => {
+    const rejections = captureUnhandledRejections();
+    const runs: number[] = [];
+    const owner = createComputation(() => {
+      runs.push(runs.length);
+      createOwnedEffect();
+    }, false);
+    updateComputation(owner);
+    owner.state = ComputationState.STALE;
+    expect(() => updateComputation(owner)).toThrow("cleanup failed");
+    expect(runs).toEqual([0, 1]);
+    expect(await rejections()).toEqual([]);
+  });
+
+  test("a derived computation reports the cleanup's error as unhandled and returns its value", async () => {
+    const rejections = captureUnhandledRejections();
+    const owner = createComputation(() => {
+      createOwnedEffect();
+      return 1;
+    }, true);
+    updateComputation(owner);
+    owner.state = ComputationState.STALE;
+    updateComputation(owner);
+    expect(owner.value).toBe(1);
+    expect(await rejections()).toEqual(["IntentionalTestError: cleanup failed"]);
+  });
+
+  test("a run that throws too reports the cleanup's error as unhandled and throws its own", async () => {
+    const rejections = captureUnhandledRejections();
+    const owner = createComputation(() => {
+      createOwnedEffect();
+      if (owner.value === undefined && owner.version > 1) {
+        throw new IntentionalTestError("run failed");
+      }
+      return 1;
+    }, false);
+    updateComputation(owner);
+    owner.value = undefined;
+    owner.state = ComputationState.STALE;
+    expect(() => updateComputation(owner)).toThrow("run failed");
+    expect(await rejections()).toEqual(["IntentionalTestError: cleanup failed"]);
+  });
+
+  test("a notification that throws too reports the cleanup's error as unhandled and throws its own", async () => {
+    const rejections = captureUnhandledRejections();
+    const owner = createComputation(() => {
+      createOwnedEffect();
+      return 1;
+    }, false);
+    updateComputation(owner);
+    owner.onUpdated = () => {
+      throw new IntentionalTestError("notification failed");
+    };
+    owner.state = ComputationState.STALE;
+    expect(() => updateComputation(owner)).toThrow("notification failed");
+    expect(await rejections()).toEqual(["IntentionalTestError: cleanup failed"]);
+  });
+
+  test("disposing a reader throws the error of disposing the source it was the last to read", () => {
+    const source = createComputation(() => {
+      createOwnedEffect();
+      return 1;
+    }, true);
+    const reader = createComputation(() => {
+      updateComputation(source);
+      onReadAtom(source);
+    }, false);
+    updateComputation(reader);
+    let error: unknown;
+    try {
+      disposeComputation(reader);
+    } catch (e) {
+      error = e;
+    }
+    expect(error).toBeInstanceOf(IntentionalTestError);
+    expect((error as Error).message).toBe("cleanup failed");
+  });
+});
+
 describe("a failing source in a pending check", () => {
+  test("the reader forwards no write after the failed check, nor after a notification that threw", () => {
+    class IntentionalTestError extends Error {
+      override name = "IntentionalTestError";
+    }
+    const s = signal(0);
+    const failing = createComputation(() => {
+      if (s() > 0) {
+        throw new IntentionalTestError("source failed");
+      }
+      return s();
+    }, true);
+    const reader = createComputation(() => {
+      updateComputation(failing);
+      onReadAtom(failing);
+    }, true);
+    updateComputation(reader);
+    s.set(1);
+    reader.state = ComputationState.PENDING;
+    reader.forward = true;
+    expect(() => updateComputation(reader)).toThrow("source failed");
+    expect(reader.forward).toBe(false);
+
+    const t = signal(0);
+    const steady = createComputation(() => t(), true);
+    updateComputation(steady);
+    steady.onUpdated = () => {
+      throw new IntentionalTestError("notification failed");
+    };
+    steady.state = ComputationState.PENDING;
+    steady.forward = true;
+    expect(() => updateComputation(steady)).toThrow("notification failed");
+    expect(steady.state).toBe(ComputationState.EXECUTED);
+    expect(steady.forward).toBe(false);
+  });
+
   test("the reader stays subscribed and runs again on its next change", async () => {
     class IntentionalTestError extends Error {
       override name = "IntentionalTestError";

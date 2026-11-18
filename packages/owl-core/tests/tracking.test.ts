@@ -1,5 +1,6 @@
 import {
   atomSymbol,
+  batch,
   ComputationState,
   computed,
   getCurrentComputation,
@@ -17,7 +18,7 @@ import {
   type Atom,
   type ComputationAtom,
 } from "../src";
-import { updateComputation } from "../src/computations";
+import { runUnowned, updateComputation, type Link } from "../src/computations";
 import { waitScheduler } from "./helpers";
 
 const atomOf = (reactive: any): ComputationAtom => reactive[atomSymbol];
@@ -65,6 +66,22 @@ describe("dependency tracking", () => {
     first();
     expect(observersOf(atomOf(s))).toEqual([atomOf(first), atomOf(second)]);
     expect(observersOf(atomOf(x))).toEqual([atomOf(first)]);
+  });
+
+  test("a source read earlier than in the last run keeps its place among the observers", () => {
+    const flip = signal(false);
+    const s = signal(1);
+    const x = signal(1);
+    const first = computed(() => (flip() ? x() + s() : s() + x()));
+    const second = computed(() => x());
+    first();
+    second();
+    expect(observersOf(atomOf(x))).toEqual([atomOf(first), atomOf(second)]);
+
+    flip.set(true);
+    first();
+    expect(sourcesOf(atomOf(first))).toEqual([atomOf(flip), atomOf(x), atomOf(s)]);
+    expect(observersOf(atomOf(x))).toEqual([atomOf(first), atomOf(second)]);
   });
 
   test("dropped sources are unsubscribed, added ones subscribed, kept ones untouched", () => {
@@ -195,6 +212,109 @@ describe("dependency tracking", () => {
     stop();
   });
 
+  test("an observe() view links each source once, and its callback's run unlinks them all", () => {
+    const s = signal(1);
+    const t = signal(1);
+    const state = proxy({
+      get x() {
+        return s();
+      },
+      get y() {
+        return t();
+      },
+    });
+    let calls = 0;
+    const view = observe(state, () => calls++);
+    view.x;
+    view.x;
+    view.y;
+    expect(observersOf(atomOf(s))).toHaveLength(1);
+    expect(observersOf(atomOf(t))).toHaveLength(1);
+    s.set(2);
+    expect(calls).toBe(1);
+    expect(atomOf(s).subs).toBeUndefined();
+    expect(atomOf(t).subs).toBeUndefined();
+  });
+
+  test("a source an observe() callback read in its run is not linked again by a later read", () => {
+    const s = signal(1);
+    const state = proxy({
+      get x() {
+        return s();
+      },
+    });
+    let calls = 0;
+    const view = observe(state, () => {
+      calls++;
+      view.x;
+    });
+    view.x;
+    s.set(2);
+    expect(calls).toBe(1);
+    expect(observersOf(atomOf(s))).toHaveLength(1);
+    view.x;
+    expect(observersOf(atomOf(s))).toHaveLength(1);
+    s.set(3);
+    expect(calls).toBe(2);
+  });
+
+  test("a source an observe() callback read in one run is dropped by the next run that does not read it", () => {
+    const state = proxy({ a: 1, b: 1 });
+    let calls = 0;
+    let readA = true;
+    const view = observe(state, () => {
+      calls++;
+      if (readA) {
+        view.a;
+      }
+    });
+    view.b;
+    state.b = 2;
+    expect(calls).toBe(1);
+    readA = false;
+    state.a = 2;
+    expect(calls).toBe(2);
+    state.a = 3;
+    expect(calls).toBe(2);
+  });
+
+  test("an observe() view is called back when a signal its getter read is set", () => {
+    const s = signal(1);
+    const state = proxy({
+      get x() {
+        return s();
+      },
+    });
+    let calls = 0;
+    const view = observe(state, () => calls++);
+    view.x;
+    s.set(2);
+    expect(calls).toBe(1);
+    view.x;
+    batch(() => {
+      s.set(3);
+      s.set(2);
+    });
+    expect(calls).toBe(2);
+  });
+
+  test("an observe() view getter that runs a computed observes the computed, not its sources, and the reads after it", () => {
+    const s = signal(1);
+    const t = signal(1);
+    const c = computed(() => s());
+    const state = proxy({
+      get x() {
+        return c() + t();
+      },
+    });
+    let calls = 0;
+    const view = observe(state, () => calls++);
+    view.x;
+    expect(observersOf(atomOf(s))).toEqual([atomOf(c)]);
+    t.set(2);
+    expect(calls).toBe(1);
+  });
+
   test("random read orders keep sources and observers consistent", () => {
     let seed = 7;
     const random = () => {
@@ -245,6 +365,60 @@ describe("dependency tracking", () => {
         signals[Math.floor(random() * signals.length)].set(Math.floor(random() * 100));
       }
     }
+  });
+
+  test("random reads and writes during an effect's runs keep its links consistent", () => {
+    let seed = 11;
+    const random = () => {
+      seed = (seed * 16807) % 2147483647;
+      return seed / 2147483647;
+    };
+    const signals = Array.from({ length: 8 }, (_, i) => signal(i));
+    const plan = signal<Array<[boolean, number]>>([]);
+    let writes = 0;
+    let runner: ComputationAtom | undefined;
+    const dispose = immediateEffect(() => {
+      runner = getCurrentComputation();
+      for (const [write, i] of plan()) {
+        if (write) {
+          signals[i].set(1000 + writes++);
+        } else {
+          signals[i]();
+        }
+      }
+    });
+    for (let round = 0; round < 300; round++) {
+      plan.set(
+        Array.from({ length: Math.floor(random() * 12) }, () => [
+          random() < 0.35,
+          Math.floor(random() * signals.length),
+        ])
+      );
+      const order: Atom[] = [atomOf(plan)];
+      for (const [write, i] of plan()) {
+        if (!write && !order.includes(atomOf(signals[i]))) {
+          order.push(atomOf(signals[i]));
+        }
+      }
+      const links: Link[] = [];
+      for (let link = runner!.deps; link !== undefined; link = link.nextDep) {
+        expect(link.prevDep).toBe(links[links.length - 1]);
+        expect(link.version).toBe(runner!.version);
+        links.push(link);
+      }
+      expect(runner!.depsTail).toBe(links[links.length - 1]);
+      expect(links.map((link) => link.dep)).toEqual(order);
+      for (const s of signals) {
+        const observers = observersOf(atomOf(s));
+        expect(new Set(observers).size).toBe(observers.length);
+        expect(observers.includes(runner!)).toBe(order.includes(atomOf(s)));
+        expect(atomOf(s).activeLink).toBeUndefined();
+      }
+      if (random() < 0.3) {
+        signals[Math.floor(random() * signals.length)].set(Math.floor(random() * 100));
+      }
+    }
+    dispose();
   });
 
   test("a computation disposed during a nested read leaves no source pointing at it", async () => {
@@ -340,6 +514,23 @@ describe("dependency tracking", () => {
     expect(render.state).toBe(ComputationState.PENDING);
   });
 
+  test("a computation that tracks elsewhere ignores a write, during its next tracking run, to a source it has yet to read", () => {
+    const s = signal(1);
+    const t = signal(2);
+    const render = createComputation(() => undefined, false, ComputationState.EXECUTED);
+    render.tracksElsewhere = true;
+    runTracked(render, () => s() + t());
+    render.state = ComputationState.STALE;
+    updateComputation(render);
+    runTracked(render, () => {
+      s();
+      t.set(3);
+      return t();
+    });
+    expect(render.state).toBe(ComputationState.EXECUTED);
+    expect(observersOf(atomOf(t))).toEqual([render]);
+  });
+
   test("a computed a detached computation stops reading is collected by the next write", async () => {
     const s = signal(1);
     const c = computed(() => s() * 2);
@@ -372,6 +563,25 @@ describe("untrack", () => {
     expect(view.a).toBe(1);
     other.x = 2;
     expect(calls).toBe(0);
+  });
+});
+
+describe("runUnowned", () => {
+  test("inside untrack, it hands the owner back to the effects created after it", async () => {
+    let disposed = 0;
+    const s = signal(0);
+    const dispose = effect(() => {
+      s();
+      untrack(() => {
+        runUnowned(() => {});
+        effect(() => () => disposed++);
+      });
+    });
+    s.set(1);
+    await waitScheduler();
+    expect(disposed).toBe(1);
+    dispose();
+    expect(disposed).toBe(2);
   });
 });
 

@@ -267,6 +267,36 @@ describe("effect", () => {
     }
   });
 
+  test("an effect a proxy write made stale still runs after a signal it read is set and set back", async () => {
+    const state = proxy({ a: 1 });
+    const s = signal(0);
+    const seen: number[] = [];
+    effect(() => {
+      seen.push(state.a);
+      s();
+    });
+    state.a = 2;
+    s.set(1);
+    s.set(0);
+    await waitSchedulerThenMicroTick();
+    expect(seen).toEqual([1, 2]);
+  });
+
+  test("an effect a proxy write made stale still runs when a computed it read recomputes an equal value", async () => {
+    const state = proxy({ a: 1 });
+    const s = signal(0);
+    const parity = computed(() => s() % 2);
+    const seen: number[] = [];
+    effect(() => {
+      seen.push(state.a);
+      parity();
+    });
+    state.a = 2;
+    s.set(2);
+    await waitSchedulerThenMicroTick();
+    expect(seen).toEqual([1, 2]);
+  });
+
   test("a write that invalidates a chain of computeds a run read reaches it again", async () => {
     const s = signal(0);
     const c1 = computed(() => s() + 1);

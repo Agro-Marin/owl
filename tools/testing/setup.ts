@@ -15,12 +15,17 @@ for (const method of ["warn", "info", "log", "error"] as const) {
 }
 
 const traces: Array<{ channel: DebugChannel; message: string; details: unknown[] }> = [];
+const offChannelTraces: string[] = [];
 const TRACE_LIMIT = 100;
 let totalTraces = 0;
 
 beforeEach(() => {
   traces.length = 0;
+  offChannelTraces.length = 0;
   setDebugSink((channel, message, details) => {
+    if (!debug[channel]) {
+      offChannelTraces.push(`[owl:${channel}] ${message}`);
+    }
     totalTraces++;
     if (traces.length === TRACE_LIMIT) traces.shift();
     traces.push({ channel, message, details });
@@ -44,8 +49,12 @@ afterEach((context) => {
     if (remaining.length) {
       throw new Error(`Unexpected console output:\n${remaining.join("\n")}`);
     }
+    if (offChannelTraces.length) {
+      throw new Error(`Trace on a debug channel that is off:\n${offChannelTraces.join("\n")}`);
+    }
   } finally {
     traces.length = 0;
+    offChannelTraces.length = 0;
     setDebug(false);
     setDebugSink(null);
   }

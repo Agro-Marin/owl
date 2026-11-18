@@ -432,4 +432,36 @@ describe("observe", () => {
     other.n = 3;
     expect(calls).toEqual(["cb", "cb"]);
   });
+
+  test("a view reads a Map through its methods", () => {
+    let calls = 0;
+    const map = proxy(new Map([["a", 1]]));
+    const view = observe(map, () => calls++);
+    expect(view.get).toBe(view.get);
+    expect(view.get("a")).toBe(1);
+    map.set("a", 2);
+    expect(calls).toBe(1);
+  });
+
+  test("a view lists the keys and describes the properties of its object", () => {
+    const view = observe({ a: 1 }, () => {});
+    expect(Object.keys(view)).toEqual(["a"]);
+    expect(Object.getOwnPropertyDescriptor(view, "a")?.value).toBe(1);
+  });
+
+  test("a view hands out a Map's null value and an object holding a next method as they are", () => {
+    const stepper = { next: () => 1 };
+    const view = observe(
+      proxy(
+        new Map<string, any>([
+          ["none", null],
+          ["stepper", stepper],
+        ])
+      ),
+      () => {}
+    );
+    expect(view.get("none")).toBe(null);
+    expect(toRaw(view.get("stepper"))).toBe(stepper);
+    expect(view.get("stepper").next()).toBe(1);
+  });
 });

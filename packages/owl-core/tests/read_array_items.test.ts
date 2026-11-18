@@ -1,4 +1,14 @@
-import { computed, markRaw, proxy, readArrayItems, signal, toRaw } from "../src";
+import {
+  atomSymbol,
+  computed,
+  effect,
+  markRaw,
+  proxy,
+  readArrayItems,
+  signal,
+  sourcesOf,
+  toRaw,
+} from "../src";
 
 function itemsReader<T>(array: T[]) {
   let runs = 0;
@@ -39,6 +49,30 @@ describe("readArrayItems", () => {
     const array = proxy(Object.freeze([item]) as { id: number }[]);
     expect(array[0]).toBe(item);
     expect(readArrayItems(array)[0]).toBe(item);
+  });
+
+  test("keeps a raw array as it is inside a reader too, subscribing to nothing", () => {
+    const raw = [1, 2];
+    let seen: unknown;
+    effect(() => {
+      seen = readArrayItems(raw);
+    });
+    expect(seen).toBe(raw);
+  });
+
+  test("subscribes to a frozen array's items too", () => {
+    const array = proxy(Object.freeze([1, 2]) as number[]);
+    const read = computed(() => readArrayItems(array));
+    read();
+    expect(sourcesOf((read as any)[atomSymbol]).length).toBe(1);
+  });
+
+  test("hands out a copy of a frozen array, never the array itself", () => {
+    const raw = Object.freeze([{ id: 1 }]);
+    const items = readArrayItems(proxy(raw as { id: number }[]));
+    expect(items).not.toBe(raw);
+    expect(Object.isFrozen(items)).toBe(false);
+    expect(items).toEqual(raw);
   });
 
   test("one read subscribes to every write of an index or of the length", () => {
