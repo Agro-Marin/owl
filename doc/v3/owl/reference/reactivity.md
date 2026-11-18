@@ -104,3 +104,9 @@ batch(() => {
   b.set(6);
 }); // an immediateEffect reading a and b runs once, and sees 5 and 6
 ```
+
+Bringing a computed up to date holds them the same way: an immediate effect
+that a write in a getter, or a computed's change, queues while computeds are
+evaluated runs once the outermost of them is up to date (for a read, once
+the reader holds its value), never in the middle of an evaluation it could
+read.

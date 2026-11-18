@@ -123,10 +123,19 @@ These remain deliberate differences from current upstream.
 
 - **A computation read while it runs throws** `Cycle detected: <name> reads
 its own value` instead of recursing (upstream hangs); a computed that catches
-  it recovers once it stops reading itself. This includes a read by an
-  observer its own write triggered: a computed whose getter writes state that
-  an `immediateEffect` or `observe()` callback reads back through it throws,
-  where upstream recomputed it re-entrantly.
+  it recovers once it stops reading itself.
+- **Bringing a computed up to date is a batch**: an `immediateEffect` or
+  `observe()` callback that a write or a computed's change queues meanwhile
+  runs once the outermost computed being evaluated is up to date (for a
+  read, once the reader holds its value), never in the middle of an
+  evaluation it could read. One that reads back through a computed what its
+  getter wrote, or that reads a computed which changed while another reader
+  pulled it (an immediate effect that wrote that computed's source), no
+  longer throws `Cycle detected` (upstream recomputed the computed
+  re-entrantly). What it writes reaches the reader as any later write does.
+  An owner whose sources are being checked does not run before the effect it
+  owns, and a computation disposed while its sources are checked stops
+  checking them (it brought its remaining sources up to date for nothing).
 - **Disposing an effect disposes the computeds it was the last observer of**,
   as destroying a component already did; a re-run that stops reading a
   computed nothing else reads disposes it at the flush (unless read again by

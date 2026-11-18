@@ -168,7 +168,9 @@ is destroyed.
 
 `useImmediateEffect(fn)` has `useEffect`'s scope lifetime and cleanup rules,
 but runs synchronously when its dependencies change. Writes inside a `batch`
-still cause one run at the end of the outermost batch. It is available in
+still cause one run at the end of the outermost batch, and writes or changes
+while computeds are brought up to date one run once they are (see
+[batching](reactivity.md#batching)). It is available in
 components and plugins; calling it without an active scope throws before
 running the callback or subscribing to anything.
 

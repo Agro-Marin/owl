@@ -100,6 +100,7 @@ export interface ComputationAtom<T = any> extends Atom<T> {
   owner: ComputationAtom | null;
   isEffect: boolean;
   running: boolean;
+  checking: boolean;
   ownerDepth: number;
   forward: boolean;
   name: string;
@@ -194,6 +195,7 @@ export function createComputation(
     owner: null,
     isEffect: false,
     running: false,
+    checking: false,
     ownerDepth: 0,
     forward: false,
     name,
@@ -488,19 +490,23 @@ export function batch<T>(fn: () => T): T {
     return result;
   } finally {
     if (--batchDepth === 0 && immediateObservers.length) {
-      const toRun = immediateObservers;
-      immediateObservers = [];
-      if (debug.effect) {
-        debugLog("effect", `batch end, ${toRun.length} immediate effect(s)`);
-      }
-      const errors = updateEach(toRun);
-      if (completed) {
-        rethrow(errors);
-      } else if (errors) {
-        for (const error of errors) {
-          Promise.reject(error);
-        }
-      }
+      runImmediates(completed, "batch end");
+    }
+  }
+}
+
+function runImmediates(completed: boolean, why: string) {
+  const toRun = immediateObservers;
+  immediateObservers = [];
+  if (debug.effect) {
+    debugLog("effect", `${why}, ${toRun.length} immediate effect(s)`);
+  }
+  const errors = updateEach(toRun);
+  if (completed) {
+    rethrow(errors);
+  } else if (errors) {
+    for (const error of errors) {
+      Promise.reject(error);
     }
   }
 }
@@ -523,6 +529,7 @@ function updateOwnerFirst(
       if (
         owner.state !== ComputationState.EXECUTED &&
         !owner.running &&
+        !owner.checking &&
         (owner.isDerived || owner.immediate === computation.immediate)
       ) {
         first = owner;
@@ -615,11 +622,31 @@ export function setComputation(computation: ComputationAtom | undefined) {
   currentComputation = computation;
 }
 
+// Bringing a computed up to date is a batch: the immediate effects a write
+// or a change queues meanwhile run once the outermost computed is, never in
+// the middle of an evaluation they could read.
 export function updateComputation(computation: ComputationAtom) {
-  const state = computation.state;
-  if (state === ComputationState.EXECUTED) {
+  if (computation.state === ComputationState.EXECUTED) {
     return;
   }
+  if (!computation.isDerived || computation.running || batchDepth !== 0) {
+    refresh(computation);
+    return;
+  }
+  batchDepth++;
+  let completed = false;
+  try {
+    refresh(computation);
+    completed = true;
+  } finally {
+    if (--batchDepth === 0 && immediateObservers.length) {
+      runImmediates(completed, `${computation.name} up to date`);
+    }
+  }
+}
+
+function refresh(computation: ComputationAtom) {
+  const state = computation.state;
   if (computation.running) {
     if (debug.error) {
       debugLog("error", `cycle: ${computation.name}`);
@@ -630,35 +657,14 @@ export function updateComputation(computation: ComputationAtom) {
   }
   if (state === ComputationState.PENDING) {
     const writesBefore = writes;
-    try {
-      for (let link = computation.deps; link !== undefined; link = link.nextDep) {
-        const source = link.dep as ComputationAtom;
-        if (!source.isDerived) {
-          if (!Object.is(link.seen, source.value)) {
-            computation.state = ComputationState.STALE;
-            break;
-          }
-          continue;
-        }
-        updateComputation(source);
-        if (computation.state === ComputationState.STALE) {
-          break;
-        }
-      }
-    } catch (error) {
-      if (debug.error) {
-        debugLog("error", `${computation.name}: a source threw`, error);
-      }
-      computation.state = ComputationState.EXECUTED;
-      computation.forward = false;
-      throw error;
-    }
+    checkSources(computation);
     if (computation.state !== ComputationState.STALE) {
       computation.state = ComputationState.EXECUTED;
       computation.forward = false;
       if (writes !== writesBefore) {
-        // a source written during the check (by a getter it ran), after it
-        // was checked, forwards the next write, as after a run
+        // a source written during the check (by a getter, or an immediate
+        // effect, it ran), after it was checked, forwards the next write, as
+        // after a run
         forwardPendingSources(computation);
       }
       callOnUpdated(computation);
@@ -702,6 +708,37 @@ export function updateComputation(computation: ComputationAtom) {
     } else {
       throw releaseFailure.error;
     }
+  }
+}
+
+function checkSources(computation: ComputationAtom) {
+  // an owner being checked may not run: what it owns does not wait for it
+  computation.checking = true;
+  try {
+    for (let link = computation.deps; link !== undefined; link = link.nextDep) {
+      const source = link.dep as ComputationAtom;
+      if (!source.isDerived) {
+        if (!Object.is(link.seen, source.value)) {
+          computation.state = ComputationState.STALE;
+          return;
+        }
+        continue;
+      }
+      updateComputation(source);
+      // stale, or disposed by what bringing the source up to date ran
+      if (computation.state !== ComputationState.PENDING) {
+        return;
+      }
+    }
+  } catch (error) {
+    if (debug.error) {
+      debugLog("error", `${computation.name}: a source threw`, error);
+    }
+    computation.state = ComputationState.EXECUTED;
+    computation.forward = false;
+    throw error;
+  } finally {
+    computation.checking = false;
   }
 }
 

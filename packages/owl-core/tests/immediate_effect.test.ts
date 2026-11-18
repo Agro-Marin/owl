@@ -1,5 +1,5 @@
 import { computed, immediateEffect, effect, proxy, signal, untrack } from "../src";
-import { expectSpy, waitSchedulerThenMicroTick } from "./helpers";
+import { captureUnhandledRejections, expectSpy, waitSchedulerThenMicroTick } from "./helpers";
 
 describe("immediateEffect", () => {
   test("immediateEffect runs directly", () => {
@@ -383,4 +383,146 @@ test("a microtask an immediate effect queues runs before the effects the same wr
   disposeEffect();
   disposeImmediate();
   expect(order).toEqual(["microtask", "effect"]);
+});
+
+describe("while computeds are brought up to date", () => {
+  test("an immediate effect that put a computed out of date runs once it is recomputed, not inside it", () => {
+    const s = signal(0);
+    const c = computed(() => s() % 2, { name: "c" });
+    const seen: number[] = [];
+    immediateEffect(() => {
+      const value = c();
+      seen.push(value);
+      if (value === 1) s.set(2);
+    });
+    s.set(1);
+    expect(c()).toBe(0);
+    expect(seen).toEqual([0, 1, 0]);
+  });
+
+  test("an immediate effect reading back through a computed what its getter wrote runs once it is up to date", async () => {
+    const rejections = captureUnhandledRejections();
+    const s = signal(0);
+    const written = signal(0);
+    const c = computed(
+      () => {
+        written.set(s() + 1);
+        return s();
+      },
+      { name: "c" }
+    );
+    effect(() => {
+      c();
+    });
+    const seen: number[] = [];
+    immediateEffect(() => {
+      seen.push(written() > 3 ? c() : -1);
+    });
+    s.set(5);
+    await waitSchedulerThenMicroTick();
+    expect(await rejections()).toEqual([]);
+    expect(seen).toEqual([-1, 5]);
+  });
+
+  test("a reader keeps following a computed whose evaluation queued an immediate effect writing its source", async () => {
+    const s = signal(1);
+    const t = signal(0);
+    const c = computed(
+      () => {
+        const value = s();
+        t.set(value);
+        return value;
+      },
+      { name: "c" }
+    );
+    immediateEffect(() => {
+      if (t() === 1) s.set(2);
+    });
+    const seen: number[] = [];
+    effect(() => {
+      seen.push(c());
+    });
+    await waitSchedulerThenMicroTick();
+    s.set(3);
+    await waitSchedulerThenMicroTick();
+    expect(seen).toEqual([1, 3]);
+  });
+
+  test("an effect whose check ran an immediate effect writing a source it checked follows that source", async () => {
+    const s = signal(0);
+    const c = computed(() => s(), { name: "c" });
+    const parity = computed(() => c() % 2, { name: "parity" });
+    const seen: number[] = [];
+    effect(() => {
+      seen.push(parity());
+    });
+    immediateEffect(() => {
+      const value = c();
+      if (value === 2) s.set(4);
+      if (value === 4) s.set(5);
+    });
+    s.set(2);
+    await waitSchedulerThenMicroTick();
+    s.set(7);
+    await waitSchedulerThenMicroTick();
+    s.set(8);
+    await waitSchedulerThenMicroTick();
+    expect(seen).toEqual([0, 1, 0]);
+  });
+
+  test("an owner whose sources are being checked does not run before the effect it owns", () => {
+    const s = signal(0);
+    const t = signal(0);
+    const c = computed(
+      () => {
+        const value = s();
+        immediateEffect(() => t.set(value));
+        return value % 2;
+      },
+      { name: "c" }
+    );
+    const log: string[] = [];
+    immediateEffect(() => {
+      log.push(`owner ${c()}`);
+      immediateEffect(() => {
+        log.push(`owned ${t()}`);
+      });
+    });
+    s.set(2);
+    expect(log).toEqual(["owner 0", "owned 0", "owned 2"]);
+  });
+
+  test("an effect disposed while its sources are checked stops checking them", async () => {
+    const s = signal(0);
+    const t = signal(0);
+    const log: string[] = [];
+    const c = computed(
+      () => {
+        t.set(s());
+        return 0;
+      },
+      { name: "c" }
+    );
+    const d = computed(
+      () => {
+        log.push(`d ${s()}`);
+        return 0;
+      },
+      { name: "d" }
+    );
+    let first = true;
+    immediateEffect(() => {
+      t();
+      const readD = first;
+      first = false;
+      effect(() => {
+        c();
+        if (readD) d();
+      });
+    });
+    log.length = 0;
+    s.set(1);
+    await waitSchedulerThenMicroTick();
+    expect(log).toEqual([]);
+  });
 });

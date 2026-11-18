@@ -1,5 +1,6 @@
 import {
   atomSymbol,
+  batch,
   ComputationState,
   Equals,
   onReadAtom,
@@ -71,11 +72,20 @@ export function computed<TRead, TWrite = TRead>(
   }, true);
   computation.name = options.name || (debug.computed && getter.name) || "computed";
 
+  // Reading it out of date is a batch that ends once the reader holds it:
+  // what the immediate effects its evaluation queued write then reaches the
+  // reader as any later write does.
+  function updateAndRead() {
+    updateComputation(computation);
+    onReadAtom(computation);
+  }
+
   function readComputed() {
     if (computation.state !== ComputationState.EXECUTED) {
-      updateComputation(computation);
+      batch(updateAndRead);
+    } else {
+      onReadAtom(computation);
     }
-    onReadAtom(computation);
     if (failure) {
       throw failure.error;
     }
