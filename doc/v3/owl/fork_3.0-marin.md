@@ -746,6 +746,18 @@ agent reporter, which hides passing-test console output.
   against native evaluation.
 - `owl-runtime/tests/compiler/template_fuzz.test.ts`: random templates,
   rendered and patched, against a reference renderer.
+- `owl-core/tests/reactivity_model.test.ts`: random programs of signals,
+  computeds (reading computeds, writing signals, creating effects), effects
+  and immediate effects (nested, detached, disposed), batches, `untrack` and
+  promise callbacks queued among the writes, against the executable model of
+  `reactivity_model.ts`: which effect or computed ran, on which values, and
+  when each promise callback ran, must match (`OWL_REACTIVITY_CASES`, default
+  2000; a failure prints its seed and the program reduced to what still
+  fails). With `OWL_REACTIVITY_BUILD` naming an `owl.es.js` and
+  `OWL_REACTIVITY_BUILD_MODE=af18b4f5`, it also runs af18b4f5's build, on the
+  programs that build already ran as the model says, against the model in
+  that build's mode. It fails on the ordering 3bd30878 fixed, and found the
+  defects fixed in 15677748 to f9212707.
 - `owl-runtime/tests/components/model_based.test.ts`: random render sequences
   (slow hooks resolved out of order, lists, `t-memo`, `selector`, a slot, an
   error boundary) settling on the render of the final state.
