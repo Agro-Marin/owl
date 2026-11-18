@@ -41,6 +41,8 @@ const ITEM_KEY_MARK = "\u0001ikey";
 const CONTEXT_WRITE =
   /ctx\['[^']*'\]\s*(?:[-+*/%&|^]|\*\*|<<|>>>?|&&|\|\||\?\?)?=(?![=>])|ctx\['[^']*'\]\s*(?:\+\+|--)|(?:\+\+|--)\s*ctx\[|delete\s+ctx\[|[[,{:]\s*ctx\['[^']*'\]\s*[,\]}][^;=\n]*?=(?![=>])/;
 
+const CONTEXT_READ = /ctx\['([^']*)'\]/g;
+
 function readsOf(code: string[]): Set<string> | null {
   const names = new Set<string>();
   for (const line of code) {
@@ -53,7 +55,6 @@ function readsOf(code: string[]): Set<string> | null {
   }
   return names;
 }
-const CONTEXT_READ = /ctx\['([^']*)'\]/g;
 
 const MAX_LAZY_LOOP_KEYS = 3;
 

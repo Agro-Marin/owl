@@ -88,15 +88,10 @@ type Tokenizer = (
   beforePrevious?: Token | undefined
 ) => Token | false;
 
-let tokenizeString: Tokenizer = function (expr) {
-  let s = expr[0];
-  let start = s;
-  if (s !== "'" && s !== '"' && s !== "`") {
-    return false;
-  }
-  if (start === "`") {
-    const end = findTemplateEnd(expr, 0);
-    const value = expr.slice(0, end + 1);
+const tokenizeString: Tokenizer = function (expr) {
+  const quote = expr[0];
+  if (quote === "`") {
+    const value = expr.slice(0, findTemplateEnd(expr, 0) + 1);
     return {
       type: "TEMPLATE_STRING",
       value,
@@ -105,26 +100,19 @@ let tokenizeString: Tokenizer = function (expr) {
       },
     };
   }
-  let i = 1;
-  let cur;
-  while (expr[i] && expr[i] !== start) {
-    cur = expr[i];
-    s += cur;
-    if (cur === "\\") {
-      i++;
-      cur = expr[i];
-      if (!cur) {
-        throw new OwlError("Invalid expression");
-      }
-      s += cur;
-    }
-    i++;
+  if (quote !== "'" && quote !== '"') {
+    return false;
   }
-  if (expr[i] !== start) {
+  let i = 1;
+  for (; expr[i] && expr[i] !== quote; i++) {
+    if (expr[i] === "\\") {
+      i++;
+    }
+  }
+  if (expr[i] !== quote) {
     throw new OwlError("Invalid expression");
   }
-  s += start;
-  return { type: "VALUE", value: s };
+  return { type: "VALUE", value: expr.slice(0, i + 1) };
 };
 
 function findTemplateEnd(str: string, start: number): number {
@@ -270,7 +258,7 @@ function commentEnd(str: string, start: number): number {
 const NUMBER_RE =
   /^(?:0[xX][\da-fA-F_]+|0[bB][01_]+|0[oO][0-7_]+|(?:\d[\d_]*(?:\.[\d_]*)?|\.\d[\d_]*)(?:[eE][+-]?\d[\d_]*)?)n?/;
 
-let tokenizeNumber: Tokenizer = function (expr) {
+const tokenizeNumber: Tokenizer = function (expr) {
   const match = NUMBER_RE.exec(expr);
   return match ? { type: "VALUE", value: match[0] } : false;
 };
@@ -280,7 +268,7 @@ const IDENTIFIER_CHAR_RE = /[\p{ID_Continue}$\u200C\u200D]/u;
 
 const OBJECT_KEY_END_RE = /^\s*[:,}]/;
 
-let tokenizeSymbol: Tokenizer = function (expr, previous) {
+const tokenizeSymbol: Tokenizer = function (expr, previous) {
   const match = SYMBOL_RE.exec(expr);
   if (!match) {
     return false;

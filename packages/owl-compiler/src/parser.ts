@@ -606,18 +606,12 @@ function parseTOutNode(node: Element, ctx: ParsingContext): AST | null {
     tOut.body = body.length ? body : null;
     return tOut;
   }
-  const ref = exprAttr(node, "t-ref");
-  node.removeAttribute("t-ref");
   const ast = parseNode(node, ctx);
   if (ast?.type !== ASTType.DomNode) {
     throw new OwlError(`t-out cannot be used on a <${node.tagName}> with this combination`);
   }
   tOut.body = ast.content.length ? ast.content : null;
-  return {
-    ...ast,
-    ref,
-    content: [tOut],
-  };
+  return { ...ast, content: [tOut] };
 }
 
 function parseTForEach(node: Element, ctx: ParsingContext): AST | null {
