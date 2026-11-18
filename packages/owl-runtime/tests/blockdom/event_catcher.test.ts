@@ -424,6 +424,30 @@ describe("synthetic events in a shadow root", () => {
     expect(calls).toEqual(["inner", "outer"]);
   });
 
+  test("a shadow root of an iframe's document is a root too", async () => {
+    const iframe = document.createElement("iframe");
+    fixture.appendChild(iframe);
+    const doc = iframe.contentDocument!;
+    const host = doc.body.appendChild(doc.createElement("div"));
+    const shadow = host.attachShadow({ mode: "open" });
+    const calls: string[] = [];
+    const block_handlers = [run];
+    const block = createBlock('<p block-handler-0="click.synthetic">x</p>', block_handlers);
+    mount(block([() => calls.push("click")], null, block_handlers), shadow);
+    (shadow.firstChild as HTMLElement).click();
+    expect(calls).toEqual(["click"]);
+  });
+
+  test("a detached element with a host property is no root", async () => {
+    const link = document.createElement("a");
+    const calls: string[] = [];
+    const catcher = createCatcher({ "click.synthetic": 0 }, [() => calls.push("comp")]);
+    mount(catcher(createBlock("<span>c</span>")(), {}), link);
+    fixture.appendChild(link);
+    (link.firstChild as HTMLElement).click();
+    expect(calls).toEqual(["comp"]);
+  });
+
   test("an event type first used after the mount reaches a handler there", async () => {
     const calls: string[] = [];
     const shadow = shadowRoot();

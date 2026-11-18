@@ -278,7 +278,10 @@ export function addSyntheticRoot(target: Node) {
   if (
     root === document ||
     syntheticRoots.has(root) ||
-    !(root instanceof ShadowRoot || root.nodeType === Node.DOCUMENT_NODE)
+    !(
+      root.nodeType === Node.DOCUMENT_NODE ||
+      (root.nodeType === Node.DOCUMENT_FRAGMENT_NODE && "host" in root)
+    )
   ) {
     return;
   }
