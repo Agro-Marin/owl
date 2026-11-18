@@ -54,6 +54,27 @@ test("positioned portals follow rank and remain after a later unpositioned porta
   expect(target.textContent).toBe("UAB");
 });
 
+test("tearing a portal down puts the positioned portals of its target back in rank order", async () => {
+  const showC = signal(true);
+  class Root extends Component {
+    static components = { Portal };
+    static template = xml`
+      <Portal target="this.target" position="1"><b>A</b></Portal>
+      <Portal target="this.target" position="2"><b>B</b></Portal>
+      <t t-if="this.showC()"><Portal target="this.target"><b>C</b></Portal></t>`;
+    target = target;
+    showC = showC;
+  }
+  await mount(Root);
+  const [a, b] = [...target.children].filter((el) => el.textContent !== "C");
+  target.insertBefore(b, a);
+  expect(target.textContent).toBe("CBA");
+  showC.set(false);
+  await nextTick();
+  await nextTick();
+  expect(target.textContent).toBe("AB");
+});
+
 test("equal positions retain actual mount order when one portal starts slowly", async () => {
   const ready = makeDeferred();
   class Slow extends Component {
