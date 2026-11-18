@@ -1097,6 +1097,26 @@ describe("a first mount that throws half way", () => {
     };
   }
 
+  test("is taken out of the target before the error handler runs", async () => {
+    const state = { boom: true };
+    const seen: string[] = [];
+    class Child extends Component {
+      static template = xml`<p t-ref="this.ref">child</p>`;
+      ref = throwingRef(state);
+    }
+    class Root extends Component {
+      static template = xml`<div><Child/></div>`;
+      static components = { Child };
+      setup() {
+        onError(() => seen.push(fixture.innerHTML));
+      }
+    }
+    mount(Root, fixture);
+    await nextTick();
+    await nextTick();
+    expect(seen).toEqual([""]);
+  });
+
   test("is mounted afresh by the recovery, its children set up again", async () => {
     const state = { boom: true };
     class Leaf extends Component {

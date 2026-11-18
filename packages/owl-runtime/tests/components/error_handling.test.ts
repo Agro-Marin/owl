@@ -2540,6 +2540,56 @@ describe("errors in a pending render pass", () => {
     expect(parent.__owl__.app.scheduler.tasks.size).toBe(0);
   });
 
+  test("a render asked in a failing pass by a node its parent rendered again since runs only through the parent", async () => {
+    const load = makeDeferred();
+    const renders: string[] = [];
+    class A extends Component {
+      static template = xml`<a><t t-out="this.props.value"/></a>`;
+      props = props();
+      setup() {
+        onWillUpdateProps(() => load);
+      }
+    }
+    class C extends Component {
+      static template = xml`<c><t t-out="this.log()"/><t t-out="this.props.value"/><t t-out="this.state.value"/></c>`;
+      props = props();
+      state = proxy({ value: 1 });
+      log() {
+        renders.push("C");
+        return "";
+      }
+    }
+    class M extends Component {
+      static template = xml`<m><t t-out="this.props.value"/><t t-out="this.state.value"/><C value="this.props.value"/></m>`;
+      static components = { C };
+      props = props();
+      state = proxy({ value: 1 });
+    }
+    class Parent extends Component {
+      static template = xml`<div><A value="this.state.value"/><M value="this.state.value"/></div>`;
+      static components = { A, M };
+      state = proxy({ value: 1 });
+      setup() {
+        onError(() => {});
+      }
+    }
+    const parent = await mount(Parent, fixture);
+    const m = Object.values(parent.__owl__.children)[1].component as M;
+    const c = Object.values(m.__owl__.children)[0].component as C;
+    parent.state.value = 2;
+    await nextTick();
+    c.state.value = 2;
+    await nextTick();
+    m.state.value = 2;
+    await nextTick();
+    renders.length = 0;
+    load.reject(new Error("load failed"));
+    await nextTick();
+    await nextTick();
+    expect(fixture.innerHTML).toBe("<div><a>1</a><m>22<c>22</c></m></div>");
+    expect(renders).toEqual(["C"]);
+  });
+
   test("a pass failing in onWillUpdateProps of a node of another app resumes the renders it delayed", async () => {
     const load = makeDeferred();
     const errors: string[] = [];

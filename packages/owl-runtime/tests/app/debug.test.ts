@@ -560,6 +560,96 @@ test("the fiber channel measures a render, and gives no time to one it did not s
   expect(durations[0]).toBeLessThanOrEqual(elapsed);
 });
 
+test("the fiber channel names only the live renders asked during a failed pass", async () => {
+  const load = makeDeferred();
+  class A extends Component {
+    static template = xml`<a><t t-out="this.props.value"/></a>`;
+    props = props();
+    setup() {
+      onWillUpdateProps(() => load);
+    }
+  }
+  class C extends Component {
+    static template = xml`<c><t t-out="this.props.value"/><t t-out="this.state.value"/></c>`;
+    props = props();
+    state = proxy({ value: 1 });
+  }
+  class M extends Component {
+    static template = xml`<m><t t-out="this.state.value"/><C value="this.props.value"/></m>`;
+    static components = { C };
+    props = props();
+    state = proxy({ value: 1 });
+  }
+  class Parent extends Component {
+    static template = xml`<div><A value="this.state.value"/><M value="this.state.value"/></div>`;
+    static components = { A, M };
+    state = proxy({ value: 1 });
+    setup() {
+      onError(() => {});
+    }
+  }
+  const parent = await mount(Parent, fixture);
+  const m = Object.values(parent.__owl__.children)[1].component as M;
+  const c = Object.values(m.__owl__.children)[0].component as C;
+  parent.state.value = 2;
+  await nextTick();
+  c.state.value = 2;
+  await nextTick();
+  m.state.value = 2;
+  await nextTick();
+  setDebug("fiber");
+  load.reject(new Error("load failed"));
+  await nextTick();
+  await nextTick();
+  expect(lines).toEqual([
+    "fiber: M asked to render during Parent's failed pass",
+    "fiber: render M alone: Parent's pass failed",
+    "fiber: render C again: its pending render was cancelled",
+    "fiber: render C in _ ms, 1 left in M's pass",
+    "fiber: render M in _ ms, 0 left in M's pass",
+    "fiber: commit M: 0 willPatch, 0 mounted, 0 patched",
+  ]);
+  expect(fixture.innerHTML).toBe("<div><a>1</a><m>2<c>22</c></m></div>");
+});
+
+test("the fiber channel does not ask a never-mounted node of a failed pass to render alone", async () => {
+  const load = makeDeferred();
+  let fresh: Fresh | null = null;
+  class A extends Component {
+    static template = xml`<a><t t-out="this.props.value"/></a>`;
+    props = props();
+    setup() {
+      onWillUpdateProps(() => load);
+    }
+  }
+  class Fresh extends Component {
+    static template = xml`<f><t t-out="this.state.value"/></f>`;
+    state = proxy({ value: 1 });
+    setup() {
+      fresh = this;
+    }
+  }
+  class Parent extends Component {
+    static template = xml`<div><A value="this.state.value"/><Fresh t-if="this.state.value > 1"/></div>`;
+    static components = { A, Fresh };
+    state = proxy({ value: 1 });
+    setup() {
+      onError(() => {});
+    }
+  }
+  const parent = await mount(Parent, fixture);
+  parent.state.value = 2;
+  await nextTick();
+  fresh!.state.value = 2;
+  await nextTick();
+  setDebug("fiber");
+  load.reject(new Error("load failed"));
+  await nextTick();
+  await nextTick();
+  expect(lines).toEqual([]);
+  expect(fixture.innerHTML).toBe("<div><a>1</a></div>");
+});
+
 test("the error channel says who handled an error", async () => {
   class Boom extends Component {
     static template = xml`<b t-out="this.fail()"/>`;

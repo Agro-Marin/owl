@@ -3931,5 +3931,32 @@
     "original": "node.bdom",
     "replacement": "this.bdom",
     "reason": "the root of a failed first mount is NEW: its stale bdom is read only by destroy(), which removes only a MOUNTED node's DOM, and the next _mount replaces it (reasoned)"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 76,
+    "operator": "ConditionalExpression",
+    "original": "fiber.root !== root",
+    "replacement": "false",
+    "reason": "a merged fiber leaves its pass only when makeChildFiber or makeRootFiber clears its root, and both give its node a new fiber, which the first half of the check already sees (reasoned)"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 600,
+    "operator": "swap",
+    "original": "mount(node.bdom!, target, next);",
+    "replacement": "moved below: node.fiber = null;",
+    "reason": "if mount() throws with node.fiber already cleared, handleError puts the unapplied fiber back on its node (node.fiber === null and not APPLIED_TO_DOM), so the catch path sees the same state (reasoned)"
+  },
+  {
+    "tool": "custom",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 602,
+    "operator": "swap",
+    "original": "node.status = STATUS.MOUNTED;",
+    "replacement": "moved below: this.renderState |= APPLIED_TO_DOM;",
+    "reason": "two independent assignments, to the node's status and to the fiber's renderState, with nothing between them"
   }
 ]
