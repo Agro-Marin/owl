@@ -530,6 +530,22 @@ describe("contexts made under a loop item", () => {
     expect(seen).toEqual(["set", "set!"]);
   });
 
+  test("a template assigning a variable by a rest element inherits from its loop items", async () => {
+    const seen: any[] = [];
+    class Parent extends Component {
+      static template = xml`
+        <t t-foreach="[1]" t-as="a" t-key="a">
+          <button class="w" t-on-click="() => { [...v] = 'ab'; ({ ...o } = { k: 1 }); }"/>
+          <t t-foreach="[1]" t-as="b" t-key="b"><button class="r" t-on-click="() => this.seen.push(v, o)"/></t>
+        </t>`;
+      seen = seen;
+    }
+    await mount(Parent, fixture);
+    fixture.querySelector<HTMLElement>(".w")!.click();
+    fixture.querySelector<HTMLElement>(".r")!.click();
+    expect(seen).toEqual([["a", "b"], { k: 1 }]);
+  });
+
   test("a call context in nested loops sees every loop's names and its own attributes", async () => {
     const seen: any[] = [];
     const sub = xml`<button t-on-click="() => this.seen.push([a, a_index, b, b_index, x].join())"/>`;
