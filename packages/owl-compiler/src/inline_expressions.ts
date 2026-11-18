@@ -265,7 +265,7 @@ function commentEnd(str: string, start: number): number {
 }
 
 const NUMBER_RE =
-  /^(?:0[xX][\da-fA-F_]+|0[bB][01_]+|0[oO][0-7_]+|\d[\d_]*(?:\.[\d_]*)?(?:[eE][+-]?\d[\d_]*)?)n?/;
+  /^(?:0[xX][\da-fA-F_]+|0[bB][01_]+|0[oO][0-7_]+|(?:\d[\d_]*(?:\.[\d_]*)?|\.\d[\d_]*)(?:[eE][+-]?\d[\d_]*)?)n?/;
 
 let tokenizeNumber: Tokenizer = function (expr) {
   const match = NUMBER_RE.exec(expr);

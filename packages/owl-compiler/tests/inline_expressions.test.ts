@@ -221,6 +221,12 @@ describe("expression evaluation", () => {
     expect(compileExpr("1_000 + 10n")).toBe("1_000+10n");
   });
 
+  test("a numeric literal may start with its decimal point", () => {
+    expect(compileExpr(".5.toFixed(1) + .5e1")).toBe(".5.toFixed(1)+.5e1");
+    expect(compileExpr("a ? .5.toFixed(1) : b")).toBe("ctx['a']?.5.toFixed(1):ctx['b']");
+    expect(new Function(`return ${compileExpr(".25.toFixed(1)")}`)()).toBe("0.3");
+  });
+
   test("unicode identifiers", () => {
     expect(compileExpr("año + 1")).toBe("ctx['año']+1");
     expect(compileExpr("état.ça")).toBe("ctx['état'].ça");
