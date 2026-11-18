@@ -12,6 +12,18 @@ afterEach(() => {
 });
 
 describe("adding/patching blocks", () => {
+  test("a mounted block stringifies its own element and keeps patching it", async () => {
+    const block = createBlock("<p><block-text-0/><block-child-0/></p>");
+    const tree = block(["a"], [text("x")]);
+    mount(tree, fixture);
+    const el = tree.el;
+    expect(tree.toString()).toBe("<p>ax</p>");
+    expect(tree.el).toBe(el);
+    patch(tree, block(["b"], [text("y")]));
+    expect(fixture.innerHTML).toBe("<p>by</p>");
+    expect(tree.toString()).toBe("<p>by</p>");
+  });
+
   test("simple block", async () => {
     const block = createBlock("<div>foo</div>");
     const tree = block();

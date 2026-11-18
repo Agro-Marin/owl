@@ -655,6 +655,9 @@ function createBlockClass(template: HTMLElement, ctx: BlockCtx, str: string): Bl
     }
 
     toString() {
+      if (this.el) {
+        return (this.el as Element).outerHTML;
+      }
       const div = document.createElement("div");
       stringifying++;
       try {
