@@ -59,8 +59,10 @@ These remain deliberate differences from current upstream.
   never touch `dist/` or `/tmp`, and `build:devtools` builds the package first and
   compiles the devtools templates into `dist/devtools/`, not the source tree.
 - The standalone precompiler rejects partial output and duplicate names,
-  preserves an existing artifact on compilation errors, and stages successful
-  output before replacing it. `NODE_DEBUG=owl-compile` traces the operation.
+  preserves an existing artifact on compilation errors, and writes the output
+  only once it compiled whole, into the existing file (which keeps its
+  permissions and hard links; a write that fails half way, such as on a full
+  disk, leaves it truncated). `NODE_DEBUG=owl-compile` traces the operation.
 - In the full build, `TemplateSet.compiler = undefined` restores its bundled
   compiler.
 
