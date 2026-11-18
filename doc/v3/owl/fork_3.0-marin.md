@@ -498,8 +498,13 @@ plugins: [] })` rendered asynchronously); a resource-driven start belongs to
   (`{ f() {} }`, `{ 'f'() {} }`, `{ [k]() {} }`, `{ get g() {} }`,
   `{ *g() {} }`), throw a named error; `1 .toString()` keeps its space; `delete` is an operator (`delete o.x`
   compiles; a context variable cannot be named `delete`); `{{ }}` and `#{ }`
-  end at the brace that closes them; an arrow prop's free variables include
-  those its parameter defaults read.
+  end at the brace that closes them, past a regular expression after a
+  division or a division after an object literal; an arrow prop's free
+  variables include those its parameter defaults read; a division before a
+  regular expression, and `<` before `!--`, compile apart instead of into a
+  comment, and `.5.toFixed(1)` keeps its property.
+- **A prop, t-call or slot argument with two suffixes** (`a.bind.translate`)
+  throws `Invalid prop suffix`; upstream applied one of them.
 - **Slots are not marked raw per render**: `callSlot` renders a descriptor
   read through a proxy from its raw object (logged on `template`); slots put in
   proxied state come back proxied, like any prop.
