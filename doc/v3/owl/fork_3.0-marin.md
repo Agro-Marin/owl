@@ -156,8 +156,10 @@ true })` creates an effect owned by nothing. When a computed and an effect
   failure.
 - **A cleanup that throws while computeds are disposed** does not stop the
   others: on a recompute it is reported as an unhandled rejection, on a
-  cascade the dispose throws after releasing everything, and in bulk the
-  error goes to the flush or to `reportError`.
+  cascade the dispose throws after releasing everything (the disposed
+  effect's own cleanup and children included), and in bulk the error goes
+  to the flush or to `reportError`. An effect whose failed first run is
+  disposed throws the run's error and reports the dispose's.
 - **An effect its own cleanup disposes does not run again**, one its own run
   disposes keeps no subscription (also when the run then throws: an error
   dropping its sources or releasing it goes to `Promise.reject`, the run's
