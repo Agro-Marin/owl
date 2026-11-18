@@ -1,7 +1,7 @@
 import { spawn, spawnSync } from "node:child_process";
-import { closeSync, globSync, openSync, readFileSync } from "node:fs";
+import { closeSync, existsSync, globSync, openSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { checkNodeVersion, ROOT, scratchDir, workspaceDir } from "./workspace.mjs";
+import { checkNodeVersion, defaultOdoo, ROOT, scratchDir, workspaceDir } from "./workspace.mjs";
 
 const PACKAGES = ["owl-core", "owl-compiler", "owl-runtime", "owl"];
 const CODEMODS = globSync("tools/odoo_migration/*.py", { cwd: ROOT });
@@ -9,6 +9,14 @@ const RUFF = ["ruff", ...globSync(join(workspaceDir(), "*/bin/ruff"))].find(
   (command) => spawnSync(command, ["--version"], { stdio: "ignore" }).status === 0
 );
 const npm = (...args) => ["npm", ["run", ...args]];
+const ODOO = defaultOdoo();
+const TEMPLATE_ROOTS = ODOO
+  ? [
+      join(ODOO, "addons"),
+      join(ODOO, "odoo/addons"),
+      ...["l10n", "agromarin", "design-themes"].map((name) => join(workspaceDir(), name)),
+    ].filter((root) => existsSync(root))
+  : [];
 
 const STEPS = [
   ...PACKAGES.map((name) => [`test ${name}`, npm("test", "-w", `packages/${name}`)]),
@@ -18,6 +26,11 @@ const STEPS = [
   ["lint", npm("lint")],
   ["check-formatting", npm("check-formatting")],
   ["build", npm("build")],
+  [
+    "codegen vs vendored",
+    ODOO && [process.execPath, ["tools/odoo_migration/compare_codegen.mjs", ...TEMPLATE_ROOTS]],
+    "no Odoo checkout beside this one or its workspace",
+  ],
   ["build:types", npm("build:types")],
   ["build:devtools", npm("build:devtools")],
   ["build:playground", npm("build:playground")],
@@ -33,6 +46,7 @@ const STEPS = [
   [
     "codemods ruff F,E9",
     RUFF && [RUFF, ["check", "--isolated", "--no-cache", "--select", "F,E9", ...CODEMODS]],
+    "no ruff on PATH or in a virtualenv of the workspace",
   ],
 ];
 
@@ -55,13 +69,13 @@ checkNodeVersion();
 const only = process.argv.slice(2);
 const logs = scratchDir("verify");
 const results = [];
-for (const [name, command] of STEPS) {
+for (const [name, command, skipReason] of STEPS) {
   if (only.length && !only.some((filter) => name.includes(filter))) {
     continue;
   }
   if (!command) {
     results.push({ name, result: "skipped", seconds: 0 });
-    console.log(`${name}: skipped (no ruff on PATH)`);
+    console.log(`${name}: skipped (${skipReason})`);
     continue;
   }
   const log = join(logs, `${name.replace(/[^\w-]+/g, "_")}.log`);

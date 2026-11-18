@@ -1,7 +1,13 @@
 import { execSync } from "node:child_process";
 import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { pinErrors, releaseVersion, updateVersions, vendor } from "./vendor_odoo.mjs";
+import {
+  pinErrors,
+  releaseVersion,
+  remoteBranchesContaining,
+  updateVersions,
+  vendor,
+} from "./vendor_odoo.mjs";
 import { scratchDir } from "./workspace.mjs";
 
 const VERSIONS = `{
@@ -175,5 +181,45 @@ test("an untracked file outside the sources does not stop vendoring", () => {
     );
   } finally {
     rmSync(root, { recursive: true, force: true });
+  }
+});
+
+function odooWithVersions(): string {
+  const odoo = scratchDir("owl-vendor-odoo");
+  mkdirSync(join(odoo, "addons/web/static/lib/owl"), { recursive: true });
+  writeFileSync(join(odoo, "addons/web/static/lib/versions.json"), VERSIONS);
+  return odoo;
+}
+
+test("a commit no remote branch contains is not vendored unless asked for explicitly", () => {
+  const root = scratchRepo(TREE);
+  const odoo = odooWithVersions();
+  try {
+    expect(remoteBranchesContaining(root, "HEAD")).toEqual([]);
+    expect(() => vendor({ odoo, check: false, root, log: () => {} })).toThrow(
+      /refusing to vendor: [0-9a-f]{40} is on no remote branch .* pass --allow-unpushed/
+    );
+    expect(() =>
+      vendor({ odoo, check: false, allowUnpushed: true, root, log: () => {} })
+    ).not.toThrow(/no remote branch/);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+    rmSync(odoo, { recursive: true, force: true });
+  }
+});
+
+test("a pushed commit is found on its remote branch", () => {
+  const root = scratchRepo(TREE);
+  const remote = scratchDir("owl-vendor-remote");
+  try {
+    const git = (command: string) => execSync(`git ${command}`, { cwd: root, stdio: "ignore" });
+    execSync(`git init -q --bare ${remote}`, { stdio: "ignore" });
+    git(`remote add origin ${remote}`);
+    git("push -q origin HEAD:refs/heads/main");
+    git("fetch -q origin");
+    expect(remoteBranchesContaining(root, "HEAD")).toEqual(["origin/main"]);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+    rmSync(remote, { recursive: true, force: true });
   }
 });

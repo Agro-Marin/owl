@@ -130,6 +130,17 @@ export function uncommittedChanges(root) {
   return [...changed, ...untracked];
 }
 
+export function remoteBranchesContaining(root, commit) {
+  try {
+    return git(root, "branch", "-r", "--contains", commit)
+      .split("\n")
+      .map((line) => line.trim())
+      .filter(Boolean);
+  } catch {
+    return [];
+  }
+}
+
 function firstDifferences(built, vendored, limit = 3) {
   const a = built.toString("utf8").split("\n");
   const b = vendored.toString("utf8").split("\n");
@@ -145,7 +156,7 @@ function firstDifferences(built, vendored, limit = 3) {
   return lines;
 }
 
-export function vendor({ odoo, check, root = ROOT, log = console.log }) {
+export function vendor({ odoo, check, allowUnpushed = false, root = ROOT, log = console.log }) {
   checkNodeVersion();
   const hash = buildHash(root);
   if (hash.startsWith("nogit-")) {
@@ -162,6 +173,12 @@ export function vendor({ odoo, check, root = ROOT, log = console.log }) {
   const versionsFile = join(lib, "versions.json");
   if (!existsSync(versionsFile)) {
     throw new Error(`${versionsFile} not found: --odoo must name an Odoo checkout`);
+  }
+  if (!check && !allowUnpushed && !remoteBranchesContaining(root, commit).length) {
+    throw new Error(
+      `refusing to vendor: ${commit} is on no remote branch (as of the last fetch), so Odoo would ` +
+        "pin a commit no other clone can fetch: push it (or fetch), or pass --allow-unpushed"
+    );
   }
   const packageVersion = JSON.parse(
     readFileSync(join(root, "packages/owl/package.json"), "utf8")
@@ -220,6 +237,10 @@ export function vendor({ odoo, check, root = ROOT, log = console.log }) {
         log(`  differs   versions.json ${key}: ${pinned[key]}, built ${value}`);
       }
     }
+    if (!remoteBranchesContaining(root, pinned.commit).length) {
+      differences++;
+      log(`  rejected  the pinned commit ${pinned.commit} is on no remote branch of this clone`);
+    }
     for (const error of pinErrors(pinned, vendoredFiles)) {
       differences++;
       log(`  rejected  ${error}`);
@@ -233,7 +254,11 @@ export function vendor({ odoo, check, root = ROOT, log = console.log }) {
 
 if (import.meta.main) {
   const { values } = parseArgs({
-    options: { check: { type: "boolean", default: false }, odoo: { type: "string" } },
+    options: {
+      check: { type: "boolean", default: false },
+      "allow-unpushed": { type: "boolean", default: false },
+      odoo: { type: "string" },
+    },
   });
   const odoo = resolve(values.odoo ?? SIBLING_ODOO);
   if (!existsSync(join(odoo, "addons/web"))) {
@@ -245,7 +270,11 @@ if (import.meta.main) {
     process.exitCode = 2;
   } else {
     try {
-      process.exitCode = vendor({ odoo, check: values.check });
+      process.exitCode = vendor({
+        odoo,
+        check: values.check,
+        allowUnpushed: values["allow-unpushed"],
+      });
     } catch (error) {
       console.error(error.message);
       process.exitCode = 2;

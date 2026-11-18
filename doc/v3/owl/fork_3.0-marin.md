@@ -596,6 +596,14 @@ snapshot of the committed children; `App.version` + `__info__.hash` scope the te
    `OLD`, the old build's `owl.es.js` (default: the one vendored in `WEB`). A
    missing build, `WEB` or `OLD` exits 2 naming it.
 
+   `node tools/odoo_migration/compare_codegen.mjs <roots>` goes further than
+   acceptance: it compiles every static template and every inline `xml` ``
+template of the roots (`static/{src,tests}/\*_/_.js`) with the vendored
+compiler and the new one and exits 1 on any whose code differs or that only
+the new one rejects (`--old`, `--new`name other compiler modules).`npm run
+   verify` runs it over the Odoo checkout and its sibling module repos, after
+   the build.
+
 3. Every HOOT suite, with the old and the new build, compared test by
    test, on a database where every module whose tests they run is
    installed: `@web`'s `WebSuite`, `MobileWebSuite`, `AddonSuite` and
@@ -622,8 +630,11 @@ Odoo's probe reads); a `packages/owl/package.json` saying otherwise is
 refused. A checkout with any uncommitted change to a tracked file (sources,
 build scripts, `package.json` files, the lockfile, tsconfigs alike) or an
 untracked file under `packages/*/src` is refused; other untracked files are
-not. `--odoo <path>` names the Odoo checkout, default only `../odoo` beside
-this one. Upstream's release script (push
+not. A commit no remote branch contains (as of the last fetch) is refused too,
+so Odoo never pins a commit no other clone can fetch (`--allow-unpushed`
+overrides it); `--check` reports a pinned commit no remote branch contains.
+`--odoo <path>` names the Odoo checkout, default only `../odoo` beside this one.
+Upstream's release script (push
 to master, GitHub release, `npm publish`) is removed.
 
 The compilation checks destroy each temporary App, including failed ones.

@@ -17,9 +17,11 @@ export declare function releaseVersion(
 ): string;
 export declare function pinErrors(pin: OwlPin, files: Record<string, Buffer | null>): string[];
 export declare function uncommittedChanges(root: string): string[];
+export declare function remoteBranchesContaining(root: string, commit: string): string[];
 export declare function vendor(options: {
   odoo: string;
   check: boolean;
+  allowUnpushed?: boolean;
   root?: string;
   log?: (line: string) => void;
 }): number;
