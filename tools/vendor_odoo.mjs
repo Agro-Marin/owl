@@ -130,6 +130,10 @@ export function uncommittedChanges(root) {
   return [...changed, ...untracked];
 }
 
+export function releaseTags(root, commit) {
+  return git(root, "tag", "--points-at", commit).split("\n").filter(Boolean);
+}
+
 export function remoteBranchesContaining(root, commit) {
   try {
     return git(root, "branch", "-r", "--contains", commit)
@@ -156,7 +160,14 @@ function firstDifferences(built, vendored, limit = 3) {
   return lines;
 }
 
-export function vendor({ odoo, check, allowUnpushed = false, root = ROOT, log = console.log }) {
+export function vendor({
+  odoo,
+  check,
+  allowUnpushed = false,
+  allowUntagged = false,
+  root = ROOT,
+  log = console.log,
+}) {
   checkNodeVersion();
   const hash = buildHash(root);
   if (hash.startsWith("nogit-")) {
@@ -183,6 +194,12 @@ export function vendor({ odoo, check, allowUnpushed = false, root = ROOT, log = 
   const packageVersion = JSON.parse(
     readFileSync(join(root, "packages/owl/package.json"), "utf8")
   ).version;
+  if (!check && !allowUntagged && !releaseTags(root, commit).includes(`v${packageVersion}`)) {
+    throw new Error(
+      `refusing to vendor: ${commit} is not tagged v${packageVersion}, so Odoo would ship a build ` +
+        "no release names: release it (node tools/release.mjs <version>), or pass --allow-untagged"
+    );
+  }
   const out = scratchDir("owl-vendor");
   try {
     execFileSync(process.execPath, ["build.mjs", "--outdir", out], {
@@ -257,6 +274,7 @@ if (import.meta.main) {
     options: {
       check: { type: "boolean", default: false },
       "allow-unpushed": { type: "boolean", default: false },
+      "allow-untagged": { type: "boolean", default: false },
       odoo: { type: "string" },
     },
   });
@@ -274,6 +292,7 @@ if (import.meta.main) {
         odoo,
         check: values.check,
         allowUnpushed: values["allow-unpushed"],
+        allowUntagged: values["allow-untagged"],
       });
     } catch (error) {
       console.error(error.message);

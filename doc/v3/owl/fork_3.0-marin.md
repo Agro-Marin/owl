@@ -643,9 +643,22 @@ untracked file under `packages/*/src` is refused; other untracked files are
 not. A commit no remote branch contains (as of the last fetch) is refused too,
 so Odoo never pins a commit no other clone can fetch (`--allow-unpushed`
 overrides it); `--check` reports a pinned commit no remote branch contains.
+A commit not tagged `v<version>` is refused as well (`--allow-untagged`
+overrides it), so every vendored build is a release.
 `--odoo <path>` names the Odoo checkout, default only `../odoo` beside this one.
-Upstream's release script (push
-to master, GitHub release, `npm publish`) is removed.
+
+`npm run release -- <version>` (`tools/release.mjs`) makes that release: the
+fork's versions are `3.0.0-marin.N`, which semver orders after upstream's
+`3.0.0-alpha.49`, and a version that does not follow the current one is
+refused, as is a checkout with an uncommitted change. It writes the version
+into `owl-runtime/src/version.ts`, every package's `package.json` (the
+`@odoo/owl*` dependencies too) and the lockfile, prepends to
+`doc/v3/owl/changelog_marin.md` the subjects of the commits since the previous
+`v*` tag (since `4bd42fe7`, upstream's `[REL] v3.0.0-alpha.49`, for the first
+release), grouped by tag, commits `[REL] v<version>` and tags it. Push the tag
+with the branch (`git push origin 3.0-marin v<version>`), then vendor.
+Upstream's release script (push to master, GitHub release, `npm publish`) is
+removed.
 
 The compilation checks destroy each temporary App, including failed ones.
 The first exits with a failure status for compilation errors, the inheritance

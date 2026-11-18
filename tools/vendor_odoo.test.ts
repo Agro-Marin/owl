@@ -4,6 +4,7 @@ import { join } from "node:path";
 import {
   pinErrors,
   releaseVersion,
+  releaseTags,
   remoteBranchesContaining,
   updateVersions,
   vendor,
@@ -137,6 +138,7 @@ const TREE = {
   "packages/owl-core/src/a.ts": "export const a = 1;",
   "packages/owl/build_target.mjs": 'export const TARGET = ["chrome154"];',
   "package-lock.json": "{}",
+  "packages/owl/package.json": '{ "version": "3.0.0-marin.1" }',
 };
 
 test.each([
@@ -202,6 +204,23 @@ test("a commit no remote branch contains is not vendored unless asked for explic
     expect(() =>
       vendor({ odoo, check: false, allowUnpushed: true, root, log: () => {} })
     ).not.toThrow(/no remote branch/);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+    rmSync(odoo, { recursive: true, force: true });
+  }
+});
+
+test("a commit not tagged with its version is not vendored unless asked for explicitly", () => {
+  const root = scratchRepo(TREE);
+  const odoo = odooWithVersions();
+  try {
+    expect(releaseTags(root, "HEAD")).toEqual([]);
+    expect(() => vendor({ odoo, check: false, allowUnpushed: true, root, log: () => {} })).toThrow(
+      /refusing to vendor: [0-9a-f]{40} is not tagged v3\.0\.0-marin\.1, .* pass --allow-untagged/
+    );
+    expect(() =>
+      vendor({ odoo, check: false, allowUnpushed: true, allowUntagged: true, root, log: () => {} })
+    ).toThrow(/^Command failed: .* build\.mjs/);
   } finally {
     rmSync(root, { recursive: true, force: true });
     rmSync(odoo, { recursive: true, force: true });
