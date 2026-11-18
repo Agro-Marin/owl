@@ -15,7 +15,7 @@ import {
   STATUS,
   toRaw,
 } from "@odoo/owl-core";
-import { nodeErrorHandlers } from "./rendering/error_handling";
+import { fibersInError, nodeErrorHandlers } from "./rendering/error_handling";
 import {
   Fiber,
   hostedSubRoots,
@@ -220,7 +220,7 @@ export class App extends TemplateSet {
 
     const root = {
       get prepared() {
-        return fiber ? fiber.counter === 0 : false;
+        return fiber ? fiber.counter === 0 && !fibersInError.has(fiber) : false;
       },
       get destroyed() {
         return destroyed;

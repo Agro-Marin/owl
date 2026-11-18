@@ -543,6 +543,38 @@ test("an error nobody handles under Suspense destroys the app, reported as not h
   ]);
 });
 
+test("content whose first render fails, handled without a re-render, keeps the fallback until it renders", async () => {
+  const log: string[] = [];
+  const state = proxy({ broken: true });
+  class Content extends Component {
+    static template = xml`<span t-out="this.value()"/>`;
+    value() {
+      if (state.broken) {
+        throw new Error("broken");
+      }
+      return "content";
+    }
+  }
+  class Parent extends Component {
+    static template = xml`<div><Suspense><Content/><t t-set-slot="fallback">wait</t></Suspense></div>`;
+    static components = { Suspense, Content };
+    setup() {
+      onError((e) => log.push(e.message));
+    }
+  }
+  const app = new App({ test: true });
+  await app.createRoot(Parent).mount(fixture);
+  await nextTick();
+  expect(log).toEqual(["broken"]);
+  expect(fixture.innerHTML).toBe("<div>wait</div>");
+  state.broken = false;
+  await nextTick();
+  await nextTick();
+  expect(fixture.innerHTML).toBe("<div><span>content</span></div>");
+  expect(app.scheduler.tasks.size).toBe(0);
+  app.destroy();
+});
+
 test("a deep render renders the components of its content again", async () => {
   const data = { label: "a" };
   class Label extends Component {
