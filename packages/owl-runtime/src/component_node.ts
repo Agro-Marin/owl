@@ -210,7 +210,7 @@ export class ComponentNode extends Scope<App> implements VNode<ComponentNode> {
     fiber.deep = deep;
     this.fiber = fiber;
 
-    this.app.scheduler.addFiber(fiber);
+    fiber.root!.node.app.scheduler.addFiber(fiber);
     await Promise.resolve();
     if (this.status >= STATUS.DESTROYED) {
       return;

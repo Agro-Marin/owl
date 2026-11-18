@@ -4349,6 +4349,47 @@ test("a pass whose last render is a node of another app is committed by the pass
   expect(fixture.innerHTML).toBe("<div><p>2</p></div>");
 });
 
+test("a node of another app rendering again inside a pending pass leaves no task in its app's scheduler", async () => {
+  const def = makeDeferred();
+  class Slow extends Component {
+    static template = xml`<span><t t-out="this.props.value"/></span>`;
+    props = props();
+    setup() {
+      onWillUpdateProps(() => def);
+    }
+  }
+  class Child extends Component {
+    static template = xml`<p><t t-out="this.props.value"/><t t-out="this.state.n"/></p>`;
+    props = props();
+    state = proxy({ n: 0 });
+  }
+  class Parent extends Component {
+    static template = xml`<div><Child value="this.state.value"/><Slow value="this.state.value"/></div>`;
+    static components = { Slow, Child };
+    state = proxy({ value: 1 });
+  }
+  const parent = await mount(Parent, fixture);
+  const childNode: any = Object.values((parent as any).__owl__.children).find(
+    (n: any) => n.component instanceof Child
+  );
+  const otherApp = new App();
+  childNode.app = otherApp;
+
+  parent.state.value = 2;
+  await nextMicroTick();
+  await nextMicroTick();
+  childNode.component.state.n = 1;
+  await nextTick();
+  expect(fixture.innerHTML).toBe("<div><p>10</p><span>1</span></div>");
+
+  def.resolve();
+  await nextTick();
+  await nextTick();
+  expect(fixture.innerHTML).toBe("<div><p>21</p><span>2</span></div>");
+  expect(otherApp.scheduler.tasks.size).toBe(0);
+  expect(Scheduler.active.has(otherApp.scheduler)).toBe(false);
+});
+
 test("a single render below a rendering ancestor of another app is delayed too", async () => {
   const def = makeDeferred();
   class Slow extends Component {
