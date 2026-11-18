@@ -116,6 +116,15 @@ describe("expression evaluation", () => {
     expect(compileExpr("x++ + y")).toBe("ctx['x']++ +ctx['y']");
   });
 
+  test("operators that would join into a comment stay apart", () => {
+    const run = (expr: string, ctx: any) => new Function("ctx", `return ${compileExpr(expr)}`)(ctx);
+    expect(run("a / /e/.source.length", { a: 6 })).toBe(6);
+    expect(run("/abcd/.source.length / /ab/.source.length", {})).toBe(2);
+    const ctx = { a: 1, b: 1 };
+    expect(run("a < !--b", ctx)).toBe(false);
+    expect(ctx.b).toBe(0);
+  });
+
   test("a destructured parameter's shorthand default keeps its key", () => {
     const run = (expr: string, ...args: any[]) =>
       new Function("ctx", `return (${compileExpr(expr)})`)({ z: 9 })(...args);

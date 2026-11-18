@@ -422,7 +422,8 @@ function render(tokens: Token[]): string {
     const value = t.isKeyword ? t.value + " " : paddedValues.get(t.value) || t.value;
     const last = code[code.length - 1];
     if (
-      ((last === "+" || last === "-") && value[0] === last) ||
+      ((last === "+" || last === "-" || last === "/") && value[0] === last) ||
+      (last === "<" && value[0] === "!") ||
       (last && IDENTIFIER_CHAR_RE.test(last) && IDENTIFIER_CHAR_RE.test(value[0])) ||
       (value === "." && previous?.type === "VALUE" && INTEGER_RE.test(previous.value))
     ) {
