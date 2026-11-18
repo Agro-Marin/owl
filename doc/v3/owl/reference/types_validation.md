@@ -466,7 +466,10 @@ applyDefaults(value, type);
 Returns `value` with the defaults declared in `type` filled in, at any depth:
 a default fires when the value at its schema position is `undefined`. The
 input is never mutated; objects are copied along the changed paths only, so
-if nothing is filled in, the value is returned as is.
+if nothing is filled in, the value is returned as is. Only plain data is
+filled in: an instance of a class (a `Map`, an `Array` subclass, an object
+with private members) is returned as it is, since a copy would lose its
+prototype and private members.
 
 ```js
 const optionsType = t.object({

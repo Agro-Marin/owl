@@ -1160,6 +1160,29 @@ describe("applyDefaults", () => {
     expect(result).not.toBe(value);
   });
 
+  test("leaves an instance of a class as it is, its kind kept", () => {
+    class Options {
+      depth?: number;
+      #secret = 1;
+      get secret() {
+        return this.#secret;
+      }
+    }
+    class Items extends Array<{ depth?: number }> {}
+    const options = new Options();
+    const items = Items.from([{}]);
+    const depth = t.object({ depth: t.number().optional(3) });
+    const result = applyDefaults(options, depth) as unknown as Options;
+    expect(result).toBe(options);
+    expect(result.secret).toBe(1);
+    expect(applyDefaults(items, t.array(depth))).toBe(items);
+    expect(applyDefaults({ inner: options }, t.object({ inner: depth })).inner).toBe(options);
+    expect(applyDefaults(Object.create(null), depth)).toEqual({ depth: 3 });
+    expect(applyDefaults(Object.create(Object.freeze(Object.create(null))), depth)).toEqual({
+      depth: 3,
+    });
+  });
+
   test("returns the input as is when there is nothing to fill in", () => {
     const type = t.object({ depth: t.number().optional(3) });
     const value = { depth: 5 };

@@ -166,6 +166,15 @@ function applyDefaultsRec(value: any, type: any): any {
   if (typeof inner !== "function" || !value || typeof value !== "object") {
     return value;
   }
+  const prototype = Object.getPrototypeOf(value);
+  if (
+    prototype !== Object.prototype &&
+    prototype !== Array.prototype &&
+    prototype !== null &&
+    Object.hasOwn(prototype, "constructor")
+  ) {
+    return value;
+  }
   const members = inner[intersectionSymbol];
   if (members) {
     let result = value;
