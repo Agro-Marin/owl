@@ -1,9 +1,8 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
 
-const at = (path) => fileURLToPath(new URL(`../${path}`, import.meta.url));
+const at = (path) => resolve(import.meta.dirname, "..", path);
 
 export const ROOT = at("");
 

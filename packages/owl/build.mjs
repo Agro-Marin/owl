@@ -1,12 +1,12 @@
 import * as esbuild from "esbuild";
-import { execFileSync } from "child_process";
+import { execFileSync } from "node:child_process";
 import { createRequire } from "node:module";
 import { debuglog, parseArgs } from "node:util";
 import { buildDate, buildHash } from "./build_hash.mjs";
 import { TARGET } from "./build_target.mjs";
 import { checkNodeVersion, PACKAGE_SOURCES } from "../../tools/workspace.mjs";
-import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync } from "fs";
-import { join, relative, resolve } from "path";
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync } from "node:fs";
+import { join, relative, resolve } from "node:path";
 
 checkNodeVersion();
 
@@ -119,7 +119,7 @@ switch (target) {
   case "types":
     buildTypes();
     break;
-  default:
+  case undefined:
     for (const file of existsSync(outdir) ? readdirSync(outdir, { withFileTypes: true }) : []) {
       if (file.isFile() && BUILT_FILE.test(file.name)) {
         rmSync(join(outdir, file.name));
@@ -139,4 +139,9 @@ switch (target) {
     });
     await buildCompilerModule();
     checkExportedFiles();
+    break;
+  default:
+    throw new Error(
+      `unknown build target ${JSON.stringify(target)}: build.mjs [types] [--outdir <dir>]`
+    );
 }

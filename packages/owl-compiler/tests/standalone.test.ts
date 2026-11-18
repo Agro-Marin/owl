@@ -3,7 +3,6 @@ import {
   chmod,
   link,
   lstat,
-  mkdtemp,
   mkdir,
   readFile,
   readdir,
@@ -13,8 +12,8 @@ import {
   symlink,
   writeFile,
 } from "fs/promises";
-import { tmpdir } from "os";
 import path from "path";
+import { scratchDir } from "../../../tools/workspace.mjs";
 import { compileTemplates } from "../src/standalone";
 import { getConsoleOutput } from "./helpers";
 
@@ -41,7 +40,7 @@ async function templateNamesInFile(file: string) {
 }
 
 beforeEach(async () => {
-  dir = await realpath(await mkdtemp(path.join(tmpdir(), "owl-standalone-")));
+  dir = await realpath(scratchDir("owl-standalone"));
   vi.spyOn(process.stdout, "write").mockImplementation(() => true);
 });
 

@@ -1,7 +1,7 @@
-import { execSync } from "child_process";
-import { createHash } from "crypto";
-import { readdirSync, readFileSync, realpathSync } from "fs";
-import { join, resolve } from "path";
+import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
+import { readdirSync, readFileSync, realpathSync } from "node:fs";
+import { join, resolve } from "node:path";
 
 export const SOURCES = ["owl-core", "owl-compiler", "owl-runtime", "owl"].map(
   (p) => `packages/${p}/src`
@@ -30,8 +30,8 @@ function sourceFiles(root, dir) {
     });
 }
 
-function git(root, command) {
-  return execSync(`git ${command}`, { cwd: root, stdio: ["ignore", "pipe", "ignore"] })
+function git(root, ...args) {
+  return execFileSync("git", args, { cwd: root, stdio: ["ignore", "pipe", "ignore"] })
     .toString()
     .trim();
 }
@@ -40,17 +40,16 @@ export function buildHash(root) {
   root = realpathSync(root);
   let commit;
   try {
-    if (realpathSync(git(root, "rev-parse --show-toplevel")) !== root) {
+    if (realpathSync(git(root, "rev-parse", "--show-toplevel")) !== root) {
       throw new Error("not the root of a checkout");
     }
-    commit = git(root, "rev-parse --short=8 HEAD");
+    commit = git(root, "rev-parse", "--short=8", "HEAD");
   } catch {
     const files = SOURCES.flatMap((dir) => sourceFiles(root, dir));
     return `nogit-${digest(...files.flatMap((file) => [file, "\0", readFileSync(join(root, file)), "\0"]))}`;
   }
-  const pathspec = SOURCES.join(" ");
-  const changes = git(root, `diff HEAD -- ${pathspec}`);
-  const untracked = git(root, `ls-files --others --exclude-standard -- ${pathspec}`)
+  const changes = git(root, "diff", "HEAD", "--", ...SOURCES);
+  const untracked = git(root, "ls-files", "--others", "--exclude-standard", "--", ...SOURCES)
     .split("\n")
     .filter(Boolean);
   if (!changes && !untracked.length) {
@@ -68,7 +67,7 @@ export function sameSources(root, built, current = buildHash(root)) {
     return false;
   }
   try {
-    git(realpathSync(root), `diff --quiet ${built} ${current} -- ${SOURCES.join(" ")}`);
+    git(realpathSync(root), "diff", "--quiet", built, current, "--", ...SOURCES);
     return true;
   } catch {
     return false;
@@ -86,7 +85,7 @@ export function buildDate(root, hash = buildHash(root), env = process.env) {
     return date.toISOString();
   }
   if (/^[0-9a-f]{8}$/.test(hash)) {
-    return new Date(git(realpathSync(root), "log -1 --format=%cI HEAD")).toISOString();
+    return new Date(git(realpathSync(root), "log", "-1", "--format=%cI", "HEAD")).toISOString();
   }
   return new Date().toISOString();
 }

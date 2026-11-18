@@ -147,7 +147,8 @@ function firstDifferences(built, vendored, limit = 3) {
 
 export function vendor({ odoo, check, root = ROOT, log = console.log }) {
   checkNodeVersion();
-  if (buildHash(root).startsWith("nogit-")) {
+  const hash = buildHash(root);
+  if (hash.startsWith("nogit-")) {
     throw new Error(`refusing to vendor: ${root} is not the root of a git checkout`);
   }
   const changes = uncommittedChanges(root);
@@ -156,7 +157,6 @@ export function vendor({ odoo, check, root = ROOT, log = console.log }) {
       `refusing to vendor: the checkout differs from its commit (${changes.join(", ")}): commit it first`
     );
   }
-  const hash = buildHash(root);
   const commit = git(root, "rev-parse", "HEAD").trim();
   const lib = join(odoo, "addons/web/static/lib");
   const versionsFile = join(lib, "versions.json");

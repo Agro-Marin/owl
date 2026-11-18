@@ -1,13 +1,13 @@
 import { spawnSync } from "node:child_process";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
+import { rm, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
+import { scratchDir } from "../workspace.mjs";
 
 test.each(["consumed console", "unexpected console", "assertion failure"] as const)(
   "the shared harness keeps its console and debug contract for %s",
   async (scenario) => {
     const root = resolve(__dirname, "../..");
-    const scratch = await mkdtemp(resolve(tmpdir(), "owl-harness-"));
+    const scratch = scratchDir("owl-harness");
     try {
       await writeFile(
         resolve(scratch, "vitest.config.mjs"),
