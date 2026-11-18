@@ -469,6 +469,24 @@ test("throw if prop uses an unknown suffix", async () => {
   }).rejects.toThrow("Invalid prop suffix: somesuffix");
 });
 
+test("throw if prop has more than one suffix", async () => {
+  class Child extends Component {
+    static template = xml`<t t-out="this.props.val"/>`;
+    props = props();
+  }
+
+  for (const prop of ["val.bind.translate", "val.translate.bind"]) {
+    class Parent extends Component {
+      static template = xml`<Child ${prop}="this.state.val"/>`;
+      static components = { Child };
+    }
+
+    await expect(async () => {
+      await mount(Parent, fixture);
+    }).rejects.toThrow(`Invalid prop suffix: ${prop.slice(4)}`);
+  }
+});
+
 test(".alike suffix in a simple case", async () => {
   class Child extends Component {
     static template = xml`<t t-out="this.props.fn()"/>`;

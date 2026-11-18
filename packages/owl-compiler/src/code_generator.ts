@@ -1478,10 +1478,13 @@ export class CodeGenerator {
     ctx: Context,
     allowSignal: boolean = false
   ): PropEntry {
-    const [name, suffix] = prop.split(".");
+    const [name, suffix, ...more] = prop.split(".");
+    if (more.length) {
+      throw new OwlError(`Invalid prop suffix: ${prop.slice(name.length + 1)}`);
+    }
     let code: string;
     let freeVariables: string[] | null = null;
-    if (prop.endsWith(".translate")) {
+    if (suffix === "translate") {
       const attrTranslationCtx = attrsTranslationCtx?.[prop] || ctx.translationCtx;
       code = toStringExpression(ctx.translate ? this.translate(value, attrTranslationCtx) : value);
     } else {
