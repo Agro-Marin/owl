@@ -333,6 +333,7 @@ export class ComponentNode extends Scope<App> implements VNode<ComponentNode> {
     }
     fiber.renderState |= APPLIED_TO_DOM;
     this.fiber = null;
+    this.forceNextRender = false;
     if (removalDepth === 0 && removalErrors) {
       reportRemovalErrors();
     }

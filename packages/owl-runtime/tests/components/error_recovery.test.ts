@@ -674,6 +674,57 @@ test("after an onPatched error handled without a re-render, a later commit below
   expect(log).toEqual(["Parent:willPatch", "Child:willPatch", "Child:patched", "Parent:patched"]);
 });
 
+test("a component that commits on its own after its onPatched error is not rendered again by an unchanged parent", async () => {
+  let boom = false;
+  class Child extends Component {
+    static template = xml`<p><t t-out="this.props.v"/>-<t t-out="this.state.n"/></p>`;
+    props = props();
+    state = proxy({ n: 0 });
+    setup() {
+      onPatched(() => {
+        if (boom) {
+          boom = false;
+          throw new Error("patched");
+        }
+      });
+    }
+  }
+  class Parent extends Component {
+    static template = xml`<div><t t-out="this.state.x"/><Child v="1"/><t t-foreach="[1]" t-as="i" t-key="i" t-memo="[]"><Child v="2"/></t></div>`;
+    static components = { Child };
+    state = proxy({ x: 0 });
+    setup() {
+      onError((e) => log.push(e.message));
+    }
+  }
+  const parent = await mount(Parent, fixture);
+  const children = Object.values(parent.__owl__.children).map((n) => n.component as Child);
+  for (const child of children) {
+    boom = true;
+    child.state.n = 1;
+    await nextTick();
+  }
+  expect(log).toEqual(["patched", "patched"]);
+  for (const child of children) {
+    child.state.n = 2;
+  }
+  await nextTick();
+  expect(fixture.innerHTML).toBe("<div>0<p>1-2</p><p>2-2</p></div>");
+  const renders: string[] = [];
+  for (const child of children) {
+    const node = child.__owl__;
+    const render = node.renderFn;
+    node.renderFn = () => {
+      renders.push(`Child ${child.props.v}`);
+      return render();
+    };
+  }
+  parent.state.x = 1;
+  await nextTick();
+  expect(fixture.innerHTML).toBe("<div>1<p>1-2</p><p>2-2</p></div>");
+  expect(renders).toEqual([]);
+});
+
 test("an onWillUnmount error does not stop the patch removing its component", async () => {
   class Child extends Component {
     static template = xml`<i>child</i>`;
