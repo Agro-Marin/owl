@@ -96,3 +96,7 @@ test("every behavioral case has a pinned verdict, and every pinned verdict a cas
     .flatMap(({ cases }) => Object.keys(cases));
   expect(names.sort()).toEqual(Object.keys(BEHAVIOR).sort());
 });
+
+test("no conformance case is an expected failure", () => {
+  expect([...KNOWN_DIVERGENCES]).toEqual([]);
+});

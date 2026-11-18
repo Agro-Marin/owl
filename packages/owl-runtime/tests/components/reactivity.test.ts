@@ -745,6 +745,38 @@ describe("ownership of the effects a component creates", () => {
     expect(live).toBe(0);
   });
 
+  test("an effect its render creates outlives the component's re-renders, until it is destroyed", async () => {
+    const n = signal(0);
+    let live = 0;
+    let runs = 0;
+    class Comp extends Component {
+      static template = xml`<div t-out="this.label()"/>`;
+      created = false;
+      label() {
+        if (!this.created) {
+          this.created = true;
+          untrack(() =>
+            effect(() => {
+              runs++;
+              live++;
+              return () => live--;
+            })
+          );
+        }
+        return String(n());
+      }
+    }
+    const comp = await mount(Comp, fixture);
+    n.set(1);
+    await nextTick();
+    n.set(2);
+    await nextTick();
+    expect(fixture.innerHTML).toBe("<div>2</div>");
+    expect([live, runs]).toEqual([1, 1]);
+    comp.__owl__.app.destroy();
+    expect(live).toBe(0);
+  });
+
   test("an effect a child's setup creates while its parent renders is not the parent render's", async () => {
     const n = signal(0);
     let live = 0;

@@ -1,13 +1,14 @@
 # The 3.0-marin fork
 
 `3.0-marin` (Agro-Marin/owl) is `v3.0.0-alpha.49` plus the fork's commits
-(`git log 4bd42fe7..3.0-marin`: `4bd42fe7` is upstream's `[REL] v3.0.0-alpha.49`,
-and the fork's clones carry no tags). Odoo vendors its builds in
+(`git log 4bd42fe7..3.0-marin`: `4bd42fe7` is upstream's `[REL] v3.0.0-alpha.49`;
+the fork's releases are tagged `v3.0.0-marin.N` by `npm run release`, below). Odoo vendors its builds in
 `web/static/lib/owl/`: the browser imports `@odoo/owl` as `owl.runtime.es.js` and
 `@odoo/owl/compiler` as `owl.compiler.es.js`, and the server's template
 precompiler runs the full `owl.es.js`; `web/static/lib/versions.json` names the commit.
 This page lists what the fork adds and where it deliberately behaves
-differently from upstream.
+differently from upstream; [the behaviour specification](specification.md)
+states the contract of reactivity and proxies, each rule naming its test.
 
 The fork also adapts selected changes through upstream `d2c0fa9e`:
 `useImmediateEffect`, awaitable `asyncComputed.refresh()`, collection schemas,

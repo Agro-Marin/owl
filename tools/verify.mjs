@@ -23,6 +23,7 @@ const STEPS = [
   ["test:tools", npm("test:tools")],
   ...PACKAGES.map((name) => [`types ${name}`, npm("test:types", "-w", `packages/${name}`)]),
   ["types tools", npm("test:types:tools")],
+  ["specification", [process.execPath, ["tools/spec_check.mjs"]]],
   ["lint", npm("lint")],
   ["check-formatting", npm("check-formatting")],
   ["build", npm("build")],
