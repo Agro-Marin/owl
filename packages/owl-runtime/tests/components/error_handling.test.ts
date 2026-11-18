@@ -284,20 +284,7 @@ describe("basics", () => {
     } catch (e) {
       error = e as Error;
     }
-    const expectedErrorMessage = `Failed to compile anonymous template: missing ) after argument list
-
-generated code:
-function(app, bdom, helpers) {
-  let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { objectAttrValue } = helpers;
-  
-  let block1 = createBlock(\`<div block-attribute-0="class">test</div>\`);
-  
-  return function template(ctx, node, key = "") {
-    let attr1 = objectAttrValue(ctx['a']ctx['b']);
-    return block1([attr1]);
-  }
-}`;
+    const expectedErrorMessage = `Failed to compile anonymous template: invalid expression \`a b\` in t-att-class="a b" (on a <div>): Unexpected identifier 'ctx'`;
     expect(error!).toBeDefined();
     expect((error! as any).message).toBe(expectedErrorMessage);
   });
@@ -310,20 +297,7 @@ function(app, bdom, helpers) {
       static components = { Child };
       static template = xml`<Child/>`;
     }
-    const expectedErrorMessage = `Failed to compile anonymous template: missing ) after argument list
-
-generated code:
-function(app, bdom, helpers) {
-  let { text, createBlock, list, multi, html, toggler } = bdom;
-  let { objectAttrValue } = helpers;
-  
-  let block1 = createBlock(\`<div block-attribute-0="class">test</div>\`);
-  
-  return function template(ctx, node, key = "") {
-    let attr1 = objectAttrValue(ctx['a']ctx['b']);
-    return block1([attr1]);
-  }
-}`;
+    const expectedErrorMessage = `Failed to compile anonymous template: invalid expression \`a b\` in t-att-class="a b" (on a <div>): Unexpected identifier 'ctx'`;
     let error: any;
     try {
       await mount(Parent, fixture);

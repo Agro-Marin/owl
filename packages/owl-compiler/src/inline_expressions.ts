@@ -847,13 +847,27 @@ export function processExpr(
           params: render(tokens.slice(...topLevelParams!)),
           body: render(tokens.slice(topLevelArrowIndex + 1)),
         };
+  const compiled = render(tokens);
+  recordedExpressions?.push([expr, compiled]);
   return {
-    expr: render(tokens),
+    expr: compiled,
     freeVariables,
     variables: collectVariables(tokens, 0),
     arrow,
     hasArrow,
   };
+}
+
+let recordedExpressions: [source: string, compiled: string][] | null = null;
+
+export function recordExpressions<T>(record: [string, string][], fn: () => T): T {
+  const previous = recordedExpressions;
+  recordedExpressions = record;
+  try {
+    return fn();
+  } finally {
+    recordedExpressions = previous;
+  }
 }
 
 export function compileExpr(expr: string): string {
