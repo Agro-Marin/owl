@@ -4,6 +4,8 @@
     "*.ts",
     "*.d.mts",
     "testing/**/*.ts",
+    "hooks/**/*.ts",
+    "hooks/**/*.d.mts",
     "odoo_migration/**/*.ts",
     "../packages/*/vitest.config.ts",
     "../packages/*/*.d.mts"
