@@ -45,11 +45,19 @@ export function compareVersions(a, b) {
   return 0;
 }
 
+// The docs site (vitepress) reads Markdown as a Vue template: a subject's `<t>`
+// would open an element and its `{{` an interpolation.
+function escapeForVue(text) {
+  return text.replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll("{{", "&#123;&#123;");
+}
+
 export function changelogSection(version, date, subjects) {
   const groups = new Map();
   for (const subject of subjects) {
     const tag = /^\[([A-Z]+)\]/.exec(subject)?.[1] ?? "OTHER";
-    groups.getOrInsertComputed(tag, () => []).push(subject.replace(/^\[[A-Z]+\]\s*/, ""));
+    groups
+      .getOrInsertComputed(tag, () => [])
+      .push(escapeForVue(subject.replace(/^\[[A-Z]+\]\s*/, "")));
   }
   const order = ["FIX", "IMP", "PERF", "REF", "ADD", "REM"];
   const tags = [...groups.keys()].sort(

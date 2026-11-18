@@ -13,6 +13,12 @@ test("versions are ordered as semver orders them", () => {
   expect(() => compareVersions("3.0", "3.0.0")).toThrow("not a version: 3.0");
 });
 
+test("a changelog entry escapes what the docs site would read as an element or an interpolation", () => {
+  expect(
+    changelogSection("1.0.0", "d", ["[FIX] compiler: a <t> with t-attf {{ x }} -> y"])
+  ).toContain("- compiler: a &lt;t&gt; with t-attf &#123;&#123; x }} -&gt; y\n");
+});
+
 test("a changelog section groups the commit subjects by their tag", () => {
   expect(
     changelogSection("3.0.0-marin.1", "2026-11-18", [
