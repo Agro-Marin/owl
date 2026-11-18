@@ -49,7 +49,6 @@ export class Link {
     version: number,
     prevDep: Link | undefined,
     nextDep: Link | undefined,
-    prevSub: Link | undefined,
     rollback: Link | undefined
   ) {
     this.dep = dep;
@@ -57,7 +56,7 @@ export class Link {
     this.version = version;
     this.prevDep = prevDep;
     this.nextDep = nextDep;
-    this.prevSub = prevSub;
+    this.prevSub = undefined;
     this.nextSub = undefined;
     this.rollback = rollback;
     this.seen = seenValue(dep);
@@ -87,7 +86,6 @@ export interface Atom<T = any> {
 export interface ComputationAtom<T = any> extends Atom<T> {
   compute: () => T;
   onUpdated?: () => void;
-  isDerived: boolean;
   deps: Link | undefined;
   depsTail: Link | undefined;
   version: number;
@@ -230,15 +228,7 @@ export function onReadAtom(atom: Atom) {
     if (!observed.has(atom)) {
       observed.add(atom);
       const tail = observer.depsTail;
-      const link = new Link(
-        atom,
-        observer,
-        observer.version,
-        tail,
-        undefined,
-        atom.subsTail,
-        undefined
-      );
+      const link = new Link(atom, observer, observer.version, tail, undefined, undefined);
       if (tail !== undefined) {
         tail.nextDep = link;
       } else {
@@ -289,7 +279,7 @@ function track(dep: Atom, sub: ComputationAtom, tail: Link | undefined) {
       }
     }
   }
-  const link = new Link(dep, sub, version, tail, next, dep.subsTail, active);
+  const link = new Link(dep, sub, version, tail, next, active);
   if (next !== undefined) {
     next.prevDep = link;
   }
@@ -315,15 +305,7 @@ const writeMark = createAtom(undefined, "write mark");
 function writtenWhileRunning(computation: ComputationAtom, link: Link) {
   link.version = WRITTEN;
   if (computation.depsTail === link) {
-    const mark = new Link(
-      writeMark,
-      computation,
-      WRITTEN,
-      link,
-      link.nextDep,
-      undefined,
-      undefined
-    );
+    const mark = new Link(writeMark, computation, WRITTEN, link, link.nextDep, undefined);
     if (link.nextDep !== undefined) {
       link.nextDep.prevDep = mark;
     }
@@ -377,6 +359,7 @@ function reuse(link: Link, sub: ComputationAtom, tail: Link | undefined, version
 
 function appendSub(dep: Atom, link: Link) {
   const subsTail = dep.subsTail;
+  link.prevSub = subsTail;
   if (subsTail !== undefined) {
     subsTail.nextSub = link;
   } else {
@@ -729,7 +712,7 @@ export function releaseOwned(computation: ComputationAtom, why: string): { error
 
 function detachAndRun(computation: ComputationAtom) {
   computation.version++;
-  return runUnowned(computation.compute, undefined);
+  return runUnowned(computation.compute);
 }
 
 function forwardThrough(computation: ComputationAtom) {

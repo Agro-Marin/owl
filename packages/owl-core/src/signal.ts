@@ -11,9 +11,7 @@ import {
 import { proxifyTarget } from "./proxy";
 import type { Constructor } from "./types";
 
-export interface Signal<T> extends ReactiveValue<T> {
-  set(nextValue: T): void;
-}
+export interface Signal<T> extends ReactiveValue<T> {}
 
 interface SignalOptions<TValue, TElem = TValue> {
   type?: TElem;
