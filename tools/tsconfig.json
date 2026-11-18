@@ -6,6 +6,8 @@
     "testing/**/*.ts",
     "hooks/**/*.ts",
     "hooks/**/*.d.mts",
+    "mutation/**/*.ts",
+    "mutation/**/*.d.mts",
     "odoo_migration/**/*.ts",
     "mutation/**/*.ts",
     "mutation/*.d.mts",

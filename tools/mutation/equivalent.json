@@ -20,7 +20,7 @@
   {
     "tool": "stryker",
     "file": "packages/owl-runtime/src/rendering/scheduler.ts",
-    "line": 123,
+    "line": 145,
     "operator": "ConditionalExpression",
     "original": "fibersInError.has(fiber)",
     "replacement": "true",
@@ -38,7 +38,7 @@
   {
     "tool": "custom",
     "file": "packages/owl-runtime/src/rendering/scheduler.ts",
-    "line": 33,
+    "line": 48,
     "operator": "swap",
     "original": "this.tasks.add(fiber.root!);",
     "replacement": "moved below: Scheduler.active.add(this);",
@@ -56,7 +56,7 @@
   {
     "tool": "custom",
     "file": "packages/owl-runtime/src/rendering/scheduler.ts",
-    "line": 56,
+    "line": 70,
     "operator": "swap",
     "original": "if (this.delayedRenders.length) {",
     "replacement": "moved below: this.requestFrame();",
@@ -74,7 +74,7 @@
   {
     "tool": "custom",
     "file": "packages/owl-runtime/src/rendering/scheduler.ts",
-    "line": 107,
+    "line": 129,
     "operator": "swap",
     "original": "if (fiber.node.fiber !== fiber) {",
     "replacement": "moved below: if (fibersInError.has(fiber)) {",
@@ -83,7 +83,7 @@
   {
     "tool": "custom",
     "file": "packages/owl-runtime/src/rendering/scheduler.ts",
-    "line": 115,
+    "line": 146,
     "operator": "swap",
     "original": "this.dropFailed(fiber);",
     "replacement": "moved below: failed = true;",
@@ -92,7 +92,7 @@
   {
     "tool": "custom",
     "file": "packages/owl-runtime/src/rendering/scheduler.ts",
-    "line": 124,
+    "line": 137,
     "operator": "swap",
     "original": "this.dropFailed(fiber);",
     "replacement": "moved below: failed = true;",
@@ -101,7 +101,7 @@
   {
     "tool": "custom",
     "file": "packages/owl-runtime/src/rendering/scheduler.ts",
-    "line": 134,
+    "line": 156,
     "operator": "swap",
     "original": "if (failed) {",
     "replacement": "moved below: if (!this.tasks.size) {",
@@ -2693,7 +2693,7 @@
   {
     "tool": "custom",
     "file": "packages/owl-runtime/src/rendering/fibers.ts",
-    "line": 21,
+    "line": 29,
     "operator": "swap",
     "original": "if (current) {",
     "replacement": "moved below: const fiber = new Fiber(node, parent);",
@@ -2711,7 +2711,7 @@
   {
     "tool": "custom",
     "file": "packages/owl-runtime/src/rendering/fibers.ts",
-    "line": 32,
+    "line": 41,
     "operator": "swap",
     "original": "if (current) {",
     "replacement": "moved below: const fiber = new RootFiber(node, null);",
@@ -2720,7 +2720,7 @@
   {
     "tool": "custom",
     "file": "packages/owl-runtime/src/rendering/fibers.ts",
-    "line": 58,
+    "line": 67,
     "operator": "swap",
     "original": "current.children = [];",
     "replacement": "moved below: current.root = null;",
@@ -2729,7 +2729,7 @@
   {
     "tool": "custom",
     "file": "packages/owl-runtime/src/rendering/fibers.ts",
-    "line": 62,
+    "line": 71,
     "operator": "swap",
     "original": "if (node.willPatch.length) {",
     "replacement": "moved below: if (node.patched.length) {",
@@ -2738,7 +2738,7 @@
   {
     "tool": "custom",
     "file": "packages/owl-runtime/src/rendering/fibers.ts",
-    "line": 65,
+    "line": 74,
     "operator": "swap",
     "original": "if (node.patched.length) {",
     "replacement": "moved below: queueOwedMounted(fiber);",
@@ -2747,7 +2747,7 @@
   {
     "tool": "custom",
     "file": "packages/owl-runtime/src/rendering/fibers.ts",
-    "line": 76,
+    "line": 85,
     "operator": "swap",
     "original": "if (fiber.node.fiber !== fiber || fiber.root !== root) {",
     "replacement": "moved below: if (fiber.phase === FiberPhase.NEW) {",
@@ -2756,7 +2756,7 @@
   {
     "tool": "custom",
     "file": "packages/owl-runtime/src/rendering/fibers.ts",
-    "line": 95,
+    "line": 104,
     "operator": "swap",
     "original": "current.renderState += 2;",
     "replacement": "moved below: if (current === root) {",
@@ -2765,7 +2765,7 @@
   {
     "tool": "custom",
     "file": "packages/owl-runtime/src/rendering/fibers.ts",
-    "line": 104,
+    "line": 113,
     "operator": "swap",
     "original": "root.locked = true;",
     "replacement": "moved below: const rendered = current.phase === FiberPhase.NEW ? 0 : 1;",
@@ -2774,7 +2774,7 @@
   {
     "tool": "custom",
     "file": "packages/owl-runtime/src/rendering/fibers.ts",
-    "line": 107,
+    "line": 116,
     "operator": "swap",
     "original": "root.locked = false;",
     "replacement": "moved below: current.children = [];",
@@ -2783,7 +2783,7 @@
   {
     "tool": "custom",
     "file": "packages/owl-runtime/src/rendering/fibers.ts",
-    "line": 108,
+    "line": 117,
     "operator": "swap",
     "original": "current.children = [];",
     "replacement": "moved below: current.childrenMap = null;",
@@ -2792,7 +2792,7 @@
   {
     "tool": "custom",
     "file": "packages/owl-runtime/src/rendering/fibers.ts",
-    "line": 109,
+    "line": 118,
     "operator": "swap",
     "original": "current.childrenMap = null;",
     "replacement": "moved below: current.bdom = null;",
@@ -2801,7 +2801,7 @@
   {
     "tool": "custom",
     "file": "packages/owl-runtime/src/rendering/fibers.ts",
-    "line": 110,
+    "line": 119,
     "operator": "swap",
     "original": "current.bdom = null;",
     "replacement": "moved below: current.phase = FiberPhase.NEW;",
@@ -2810,7 +2810,7 @@
   {
     "tool": "custom",
     "file": "packages/owl-runtime/src/rendering/fibers.ts",
-    "line": 111,
+    "line": 120,
     "operator": "swap",
     "original": "current.phase = FiberPhase.NEW;",
     "replacement": "moved below: if (root instanceof MountFiber && root.prepared) {",
@@ -2819,7 +2819,7 @@
   {
     "tool": "custom",
     "file": "packages/owl-runtime/src/rendering/fibers.ts",
-    "line": 113,
+    "line": 122,
     "operator": "swap",
     "original": "root.prepared = false;",
     "replacement": "moved below: root.renderState &= ~APPLIED_TO_DOM;",
@@ -2828,7 +2828,7 @@
   {
     "tool": "custom",
     "file": "packages/owl-runtime/src/rendering/fibers.ts",
-    "line": 129,
+    "line": 138,
     "operator": "swap",
     "original": "if (!failedElsewhere) {",
     "replacement": "moved below: current.renderState &= ~APPLIED_TO_DOM;",
@@ -2837,7 +2837,7 @@
   {
     "tool": "custom",
     "file": "packages/owl-runtime/src/rendering/fibers.ts",
-    "line": 130,
+    "line": 139,
     "operator": "swap",
     "original": "fibersInError.delete(root);",
     "replacement": "moved below: root.failed = null;",
@@ -2846,7 +2846,7 @@
   {
     "tool": "custom",
     "file": "packages/owl-runtime/src/rendering/fibers.ts",
-    "line": 133,
+    "line": 142,
     "operator": "swap",
     "original": "current.renderState &= ~APPLIED_TO_DOM;",
     "replacement": "moved below: if (current instanceof RootFiber) {",
@@ -2855,7 +2855,7 @@
   {
     "tool": "custom",
     "file": "packages/owl-runtime/src/rendering/fibers.ts",
-    "line": 172,
+    "line": 214,
     "operator": "swap",
     "original": "if (node.fiber === fiber) {",
     "replacement": "moved below: if (fiber.phase !== FiberPhase.NEW) {",
@@ -2864,7 +2864,7 @@
   {
     "tool": "custom",
     "file": "packages/owl-runtime/src/rendering/fibers.ts",
-    "line": 178,
+    "line": 220,
     "operator": "swap",
     "original": "result++;",
     "replacement": "moved below: if (node.bdom) {",
@@ -2873,7 +2873,7 @@
   {
     "tool": "custom",
     "file": "packages/owl-runtime/src/rendering/fibers.ts",
-    "line": 200,
+    "line": 242,
     "operator": "swap",
     "original": "this.node = node;",
     "replacement": "moved below: this.parent = parent;",
@@ -2882,7 +2882,7 @@
   {
     "tool": "custom",
     "file": "packages/owl-runtime/src/rendering/fibers.ts",
-    "line": 201,
+    "line": 243,
     "operator": "swap",
     "original": "this.parent = parent;",
     "replacement": "moved below: if (parent) {",
@@ -2891,7 +2891,7 @@
   {
     "tool": "custom",
     "file": "packages/owl-runtime/src/rendering/fibers.ts",
-    "line": 203,
+    "line": 245,
     "operator": "swap",
     "original": "this.deep = parent.deep;",
     "replacement": "moved below: const root = parent.root!;",
@@ -2900,7 +2900,7 @@
   {
     "tool": "custom",
     "file": "packages/owl-runtime/src/rendering/fibers.ts",
-    "line": 205,
+    "line": 247,
     "operator": "swap",
     "original": "root.counter++;",
     "replacement": "moved below: this.root = root;",
@@ -2909,7 +2909,7 @@
   {
     "tool": "custom",
     "file": "packages/owl-runtime/src/rendering/fibers.ts",
-    "line": 206,
+    "line": 248,
     "operator": "swap",
     "original": "this.root = root;",
     "replacement": "moved below: parent.children.push(this);",
@@ -2918,7 +2918,7 @@
   {
     "tool": "custom",
     "file": "packages/owl-runtime/src/rendering/fibers.ts",
-    "line": 214,
+    "line": 256,
     "operator": "swap",
     "original": "const node = this.node;",
     "replacement": "moved below: const root = this.root!;",
@@ -2927,7 +2927,7 @@
   {
     "tool": "custom",
     "file": "packages/owl-runtime/src/rendering/fibers.ts",
-    "line": 257,
+    "line": 280,
     "operator": "swap",
     "original": "node.signalComputation.state = ComputationState.EXECUTED;",
     "replacement": "moved below: node.previousMemos = node.memos;",
@@ -2936,7 +2936,7 @@
   {
     "tool": "custom",
     "file": "packages/owl-runtime/src/rendering/fibers.ts",
-    "line": 260,
+    "line": 283,
     "operator": "swap",
     "original": "const outerCollection = memoSuspend();",
     "replacement": "moved below: this.phase = FiberPhase.RENDERING;",
@@ -2945,7 +2945,7 @@
   {
     "tool": "custom",
     "file": "packages/owl-runtime/src/rendering/fibers.ts",
-    "line": 261,
+    "line": 284,
     "operator": "swap",
     "original": "this.phase = FiberPhase.RENDERING;",
     "replacement": "moved below: const start = debug.fiber ? debugNow() : -1;",
@@ -2954,7 +2954,7 @@
   {
     "tool": "custom",
     "file": "packages/owl-runtime/src/rendering/fibers.ts",
-    "line": 309,
+    "line": 342,
     "operator": "swap",
     "original": "const node = this.node;",
     "replacement": "moved below: this.locked = true;",
@@ -2963,7 +2963,7 @@
   {
     "tool": "custom",
     "file": "packages/owl-runtime/src/rendering/fibers.ts",
-    "line": 328,
+    "line": 361,
     "operator": "swap",
     "original": "current = undefined;",
     "replacement": "moved below: if (node.status === STATUS.DESTROYED) {",
@@ -2972,7 +2972,7 @@
   {
     "tool": "custom",
     "file": "packages/owl-runtime/src/rendering/fibers.ts",
-    "line": 361,
+    "line": 394,
     "operator": "swap",
     "original": "node.willUnmount = [];",
     "replacement": "moved below: owedCount++;",
@@ -2981,7 +2981,7 @@
   {
     "tool": "custom",
     "file": "packages/owl-runtime/src/rendering/fibers.ts",
-    "line": 368,
+    "line": 401,
     "operator": "swap",
     "original": "owedPatched.add(node);",
     "replacement": "moved below: owedCount++;",
@@ -2990,7 +2990,7 @@
   {
     "tool": "custom",
     "file": "packages/owl-runtime/src/rendering/fibers.ts",
-    "line": 383,
+    "line": 416,
     "operator": "swap",
     "original": "owedMounted.delete(node);",
     "replacement": "moved below: node.willUnmount = held;",
@@ -2999,7 +2999,7 @@
   {
     "tool": "custom",
     "file": "packages/owl-runtime/src/rendering/fibers.ts",
-    "line": 384,
+    "line": 417,
     "operator": "swap",
     "original": "node.willUnmount = held;",
     "replacement": "moved below: owedCount--;",
@@ -3008,7 +3008,7 @@
   {
     "tool": "custom",
     "file": "packages/owl-runtime/src/rendering/fibers.ts",
-    "line": 393,
+    "line": 426,
     "operator": "swap",
     "original": "if (owedMounted.delete(node)) {",
     "replacement": "moved below: if (owedPatched.delete(node)) {",
@@ -3017,7 +3017,7 @@
   {
     "tool": "custom",
     "file": "packages/owl-runtime/src/rendering/fibers.ts",
-    "line": 403,
+    "line": 436,
     "operator": "swap",
     "original": "if (!owedCount) {",
     "replacement": "moved below: const owing: ComponentNode[] = [];",
@@ -3026,7 +3026,7 @@
   {
     "tool": "custom",
     "file": "packages/owl-runtime/src/rendering/fibers.ts",
-    "line": 438,
+    "line": 471,
     "operator": "swap",
     "original": "const mounted = fiber.root!.mounted;",
     "replacement": "moved below: queuedForOwed.add(fiber);",
@@ -3035,7 +3035,7 @@
   {
     "tool": "custom",
     "file": "packages/owl-runtime/src/rendering/fibers.ts",
-    "line": 439,
+    "line": 472,
     "operator": "swap",
     "original": "queuedForOwed.add(fiber);",
     "replacement": "moved below: const i = mounted.findIndex((f) => f.node === node);",
@@ -3044,7 +3044,7 @@
   {
     "tool": "custom",
     "file": "packages/owl-runtime/src/rendering/fibers.ts",
-    "line": 477,
+    "line": 510,
     "operator": "swap",
     "original": "const node = current.node;",
     "replacement": "moved below: const applied = current.renderState & APPLIED_TO_DOM;",
@@ -3053,7 +3053,7 @@
   {
     "tool": "custom",
     "file": "packages/owl-runtime/src/rendering/fibers.ts",
-    "line": 505,
+    "line": 538,
     "operator": "swap",
     "original": "failed = true;",
     "replacement": "moved below: const waiting = mounting ? fibers.slice() : [];",
@@ -3062,7 +3062,7 @@
   {
     "tool": "custom",
     "file": "packages/owl-runtime/src/rendering/fibers.ts",
-    "line": 532,
+    "line": 565,
     "operator": "swap",
     "original": "child.status = STATUS.NEW;",
     "replacement": "moved below: if (child.childMap) {",
@@ -3071,7 +3071,7 @@
   {
     "tool": "custom",
     "file": "packages/owl-runtime/src/rendering/fibers.ts",
-    "line": 575,
+    "line": 591,
     "operator": "swap",
     "original": "this.target = target;",
     "replacement": "moved below: this.position = options.position || \"last-child\";",
@@ -3080,7 +3080,7 @@
   {
     "tool": "custom",
     "file": "packages/owl-runtime/src/rendering/fibers.ts",
-    "line": 576,
+    "line": 592,
     "operator": "swap",
     "original": "this.position = options.position || \"last-child\";",
     "replacement": "moved below: this.afterNode = options.afterNode ?? null;",
@@ -3089,7 +3089,7 @@
   {
     "tool": "custom",
     "file": "packages/owl-runtime/src/rendering/fibers.ts",
-    "line": 577,
+    "line": 593,
     "operator": "swap",
     "original": "this.afterNode = options.afterNode ?? null;",
     "replacement": "moved below: this.allowDetached = options.allowDetached ?? false;",
@@ -3098,7 +3098,7 @@
   {
     "tool": "custom",
     "file": "packages/owl-runtime/src/rendering/fibers.ts",
-    "line": 588,
+    "line": 621,
     "operator": "swap",
     "original": "const node = this.node;",
     "replacement": "moved below: const target = this.target!;",
@@ -3107,7 +3107,7 @@
   {
     "tool": "custom",
     "file": "packages/owl-runtime/src/rendering/fibers.ts",
-    "line": 597,
+    "line": 630,
     "operator": "swap",
     "original": "prev = next ? next.previousSibling : target.lastChild;",
     "replacement": "moved below: node.childMap = this.childrenMap;",
@@ -3116,7 +3116,7 @@
   {
     "tool": "custom",
     "file": "packages/owl-runtime/src/rendering/fibers.ts",
-    "line": 598,
+    "line": 631,
     "operator": "swap",
     "original": "node.childMap = this.childrenMap;",
     "replacement": "moved below: node.bdom = this.bdom;",
@@ -3125,7 +3125,7 @@
   {
     "tool": "custom",
     "file": "packages/owl-runtime/src/rendering/fibers.ts",
-    "line": 601,
+    "line": 634,
     "operator": "swap",
     "original": "node.fiber = null;",
     "replacement": "moved below: node.status = STATUS.MOUNTED;",
@@ -3134,7 +3134,7 @@
   {
     "tool": "custom",
     "file": "packages/owl-runtime/src/rendering/fibers.ts",
-    "line": 608,
+    "line": 641,
     "operator": "swap",
     "original": "node.bdom = null;",
     "replacement": "moved below: node.childMap = null;",
@@ -3143,7 +3143,7 @@
   {
     "tool": "custom",
     "file": "packages/owl-runtime/src/rendering/fibers.ts",
-    "line": 609,
+    "line": 642,
     "operator": "swap",
     "original": "node.childMap = null;",
     "replacement": "moved below: let n: Node | null = prev ? prev.nextSibling : target.firstChild;",
@@ -3152,7 +3152,7 @@
   {
     "tool": "custom",
     "file": "packages/owl-runtime/src/rendering/fibers.ts",
-    "line": 616,
+    "line": 649,
     "operator": "swap",
     "original": "try {",
     "replacement": "moved below: for (const fiber of this.mounted) {",
@@ -3161,7 +3161,7 @@
   {
     "tool": "custom",
     "file": "packages/owl-runtime/src/rendering/fibers.ts",
-    "line": 621,
+    "line": 654,
     "operator": "swap",
     "original": "for (const fiber of this.mounted) {",
     "replacement": "moved below: if (this.childrenMap) {",
@@ -3170,7 +3170,7 @@
   {
     "tool": "custom",
     "file": "packages/owl-runtime/src/rendering/fibers.ts",
-    "line": 112,
+    "line": 121,
     "operator": "swap",
     "original": "if (root instanceof MountFiber && root.prepared) {",
     "replacement": "moved below: if (fibersInError.has(current)) {",
@@ -3179,7 +3179,7 @@
   {
     "tool": "custom",
     "file": "packages/owl-runtime/src/rendering/fibers.ts",
-    "line": 175,
+    "line": 217,
     "operator": "swap",
     "original": "if (fiber.phase !== FiberPhase.NEW) {",
     "replacement": "moved below: result += cancelFibers(fiber.children);",
@@ -3188,7 +3188,7 @@
   {
     "tool": "custom",
     "file": "packages/owl-runtime/src/rendering/fibers.ts",
-    "line": 259,
+    "line": 282,
     "operator": "swap",
     "original": "node.memos = null;",
     "replacement": "moved below: const outerCollection = memoSuspend();",
@@ -3206,7 +3206,7 @@
   {
     "tool": "custom",
     "file": "packages/owl-runtime/src/rendering/fibers.ts",
-    "line": 270,
+    "line": 302,
     "operator": "swap",
     "original": "this.phase = FiberPhase.RENDERED;",
     "replacement": "moved below: memoResume(outerCollection);",
@@ -3224,7 +3224,7 @@
   {
     "tool": "custom",
     "file": "packages/owl-runtime/src/rendering/fibers.ts",
-    "line": 227,
+    "line": 198,
     "operator": "path",
     "original": "pass.node",
     "replacement": "current.fiber.node",
@@ -3233,7 +3233,7 @@
   {
     "tool": "custom",
     "file": "packages/owl-runtime/src/rendering/fibers.ts",
-    "line": 274,
+    "line": 306,
     "operator": "swap",
     "original": "if (this.deep && this.bdom) {",
     "replacement": "moved below: const newCounter = root.counter - 1;",
@@ -3242,7 +3242,7 @@
   {
     "tool": "custom",
     "file": "packages/owl-runtime/src/rendering/fibers.ts",
-    "line": 285,
+    "line": 317,
     "operator": "swap",
     "original": "if (root.merged && fibersInError.has(root)) {",
     "replacement": "moved below: if (newCounter === 0) {",
@@ -3251,7 +3251,7 @@
   {
     "tool": "custom",
     "file": "packages/owl-runtime/src/rendering/fibers.ts",
-    "line": 322,
+    "line": 355,
     "operator": "path",
     "original": "node.component",
     "replacement": "this.component",
@@ -3260,7 +3260,7 @@
   {
     "tool": "custom",
     "file": "packages/owl-runtime/src/rendering/fibers.ts",
-    "line": 333,
+    "line": 366,
     "operator": "swap",
     "original": "this.locked = false;",
     "replacement": "moved below: return;",
@@ -3269,7 +3269,7 @@
   {
     "tool": "custom",
     "file": "packages/owl-runtime/src/rendering/fibers.ts",
-    "line": 340,
+    "line": 373,
     "operator": "swap",
     "original": "for (let fiber of this.mounted) {",
     "replacement": "moved below: this.locked = false;",
@@ -3278,7 +3278,7 @@
   {
     "tool": "custom",
     "file": "packages/owl-runtime/src/rendering/fibers.ts",
-    "line": 343,
+    "line": 376,
     "operator": "swap",
     "original": "this.locked = false;",
     "replacement": "moved below: handleError({ fiber: current || this, error: e });",
@@ -3287,7 +3287,7 @@
   {
     "tool": "custom",
     "file": "packages/owl-runtime/src/rendering/fibers.ts",
-    "line": 374,
+    "line": 407,
     "operator": "swap",
     "original": "if (hook === \"patched\") {",
     "replacement": "moved below: const held = owedMounted.get(node);",
@@ -3296,7 +3296,7 @@
   {
     "tool": "custom",
     "file": "packages/owl-runtime/src/rendering/fibers.ts",
-    "line": 376,
+    "line": 409,
     "operator": "swap",
     "original": "owedCount--;",
     "replacement": "moved below: return true;",
@@ -3305,7 +3305,7 @@
   {
     "tool": "custom",
     "file": "packages/owl-runtime/src/rendering/fibers.ts",
-    "line": 455,
+    "line": 488,
     "operator": "receiver",
     "original": "mounted.length",
     "replacement": "patched.length",
@@ -3314,7 +3314,7 @@
   {
     "tool": "custom",
     "file": "packages/owl-runtime/src/rendering/fibers.ts",
-    "line": 455,
+    "line": 488,
     "operator": "receiver",
     "original": "patched.length",
     "replacement": "mounted.length",
@@ -3323,7 +3323,7 @@
   {
     "tool": "custom",
     "file": "packages/owl-runtime/src/rendering/fibers.ts",
-    "line": 461,
+    "line": 494,
     "operator": "swap",
     "original": "if (failed === null) {",
     "replacement": "moved below: if (callCommitHooks(root.patched, \"patched\", failed) === false) {",
@@ -3332,7 +3332,7 @@
   {
     "tool": "custom",
     "file": "packages/owl-runtime/src/rendering/fibers.ts",
-    "line": 511,
+    "line": 544,
     "operator": "swap",
     "original": "handleError({ fiber: current, error: e });",
     "replacement": "moved below: if (node.app.destroyed) {",
@@ -3341,7 +3341,7 @@
   {
     "tool": "custom",
     "file": "packages/owl-runtime/src/rendering/fibers.ts",
-    "line": 512,
+    "line": 545,
     "operator": "path",
     "original": "node.app.destroyed",
     "replacement": "node.destroyed",
@@ -3350,7 +3350,7 @@
   {
     "tool": "custom",
     "file": "packages/owl-runtime/src/rendering/fibers.ts",
-    "line": 512,
+    "line": 545,
     "operator": "swap",
     "original": "if (node.app.destroyed) {",
     "replacement": "moved below: for (let i = 0; i < waiting.length; i++) {",
@@ -3359,7 +3359,7 @@
   {
     "tool": "custom",
     "file": "packages/owl-runtime/src/rendering/fibers.ts",
-    "line": 558,
+    "line": 608,
     "operator": "swap",
     "original": "this.target = target;",
     "replacement": "moved below: this.position = options.position || \"last-child\";",
@@ -3368,7 +3368,7 @@
   {
     "tool": "custom",
     "file": "packages/owl-runtime/src/rendering/fibers.ts",
-    "line": 559,
+    "line": 609,
     "operator": "swap",
     "original": "this.position = options.position || \"last-child\";",
     "replacement": "moved below: this.afterNode = options.afterNode ?? null;",
@@ -3377,7 +3377,7 @@
   {
     "tool": "custom",
     "file": "packages/owl-runtime/src/rendering/fibers.ts",
-    "line": 559,
+    "line": 592,
     "operator": "receiver",
     "original": "this.position",
     "replacement": "options.position",
@@ -3386,7 +3386,7 @@
   {
     "tool": "custom",
     "file": "packages/owl-runtime/src/rendering/fibers.ts",
-    "line": 559,
+    "line": 592,
     "operator": "receiver",
     "original": "options.position",
     "replacement": "this.position",
@@ -3395,7 +3395,7 @@
   {
     "tool": "custom",
     "file": "packages/owl-runtime/src/rendering/fibers.ts",
-    "line": 560,
+    "line": 610,
     "operator": "swap",
     "original": "this.afterNode = options.afterNode ?? null;",
     "replacement": "moved below: this.allowDetached = options.allowDetached ?? false;",
@@ -3404,7 +3404,7 @@
   {
     "tool": "custom",
     "file": "packages/owl-runtime/src/rendering/fibers.ts",
-    "line": 560,
+    "line": 593,
     "operator": "receiver",
     "original": "this.afterNode",
     "replacement": "options.afterNode",
@@ -3413,7 +3413,7 @@
   {
     "tool": "custom",
     "file": "packages/owl-runtime/src/rendering/fibers.ts",
-    "line": 560,
+    "line": 593,
     "operator": "receiver",
     "original": "options.afterNode",
     "replacement": "this.afterNode",
@@ -3422,7 +3422,7 @@
   {
     "tool": "custom",
     "file": "packages/owl-runtime/src/rendering/fibers.ts",
-    "line": 561,
+    "line": 594,
     "operator": "receiver",
     "original": "this.allowDetached",
     "replacement": "options.allowDetached",
@@ -3431,7 +3431,7 @@
   {
     "tool": "custom",
     "file": "packages/owl-runtime/src/rendering/fibers.ts",
-    "line": 561,
+    "line": 594,
     "operator": "receiver",
     "original": "options.allowDetached",
     "replacement": "this.allowDetached",
@@ -3440,7 +3440,7 @@
   {
     "tool": "custom",
     "file": "packages/owl-runtime/src/rendering/fibers.ts",
-    "line": 565,
+    "line": 598,
     "operator": "swap",
     "original": "this.prepared = true;",
     "replacement": "moved below: if (this.target) {",
@@ -3449,7 +3449,7 @@
   {
     "tool": "custom",
     "file": "packages/owl-runtime/src/rendering/fibers.ts",
-    "line": 569,
+    "line": 602,
     "operator": "swap",
     "original": "this.renderState |= APPLIED_TO_DOM;",
     "replacement": "moved below: this.onPrepared?.();",
@@ -3458,7 +3458,7 @@
   {
     "tool": "custom",
     "file": "packages/owl-runtime/src/rendering/fibers.ts",
-    "line": 578,
+    "line": 611,
     "operator": "swap",
     "original": "this.allowDetached = options.allowDetached ?? false;",
     "replacement": "moved below: if (this.prepared) {",
@@ -3467,7 +3467,7 @@
   {
     "tool": "custom",
     "file": "packages/owl-runtime/src/rendering/fibers.ts",
-    "line": 600,
+    "line": 633,
     "operator": "path",
     "original": "node.bdom!",
     "replacement": "this.bdom!",
@@ -3476,7 +3476,7 @@
   {
     "tool": "custom",
     "file": "packages/owl-runtime/src/rendering/fibers.ts",
-    "line": 611,
+    "line": 644,
     "operator": "swap",
     "original": "while (n && n !== next) {",
     "replacement": "moved below: try {",
@@ -3485,7 +3485,7 @@
   {
     "tool": "stryker",
     "file": "packages/owl-runtime/src/rendering/fibers.ts",
-    "line": 35,
+    "line": 44,
     "operator": "ConditionalExpression",
     "original": "root === current ||\n      current.phase === FiberPhase.NEW",
     "replacement": "false",
@@ -3494,7 +3494,7 @@
   {
     "tool": "stryker",
     "file": "packages/owl-runtime/src/rendering/fibers.ts",
-    "line": 35,
+    "line": 44,
     "operator": "ConditionalExpression",
     "original": "root === current",
     "replacement": "false",
@@ -3503,7 +3503,7 @@
   {
     "tool": "stryker",
     "file": "packages/owl-runtime/src/rendering/fibers.ts",
-    "line": 35,
+    "line": 44,
     "operator": "LogicalOperator",
     "original": "root === current ||\n      current.phase === FiberPhase.NEW",
     "replacement": "root === current && current.phase === FiberPhase.NEW",
@@ -3512,7 +3512,7 @@
   {
     "tool": "stryker",
     "file": "packages/owl-runtime/src/rendering/fibers.ts",
-    "line": 36,
+    "line": 45,
     "operator": "ConditionalExpression",
     "original": "current.phase === FiberPhase.NEW",
     "replacement": "false",
@@ -3539,7 +3539,7 @@
   {
     "tool": "stryker",
     "file": "packages/owl-runtime/src/rendering/fibers.ts",
-    "line": 114,
+    "line": 123,
     "operator": "AssignmentOperator",
     "original": "root.renderState &= ~APPLIED_TO_DOM",
     "replacement": "root.renderState |= ~APPLIED_TO_DOM",
@@ -3548,7 +3548,7 @@
   {
     "tool": "stryker",
     "file": "packages/owl-runtime/src/rendering/fibers.ts",
-    "line": 114,
+    "line": 123,
     "operator": "UnaryOperator",
     "original": "~APPLIED_TO_DOM",
     "replacement": "APPLIED_TO_DOM",
@@ -3557,7 +3557,7 @@
   {
     "tool": "stryker",
     "file": "packages/owl-runtime/src/rendering/fibers.ts",
-    "line": 148,
+    "line": 157,
     "operator": "ConditionalExpression",
     "original": "subRoot.status === STATUS.MOUNTED",
     "replacement": "true",
@@ -3566,7 +3566,7 @@
   {
     "tool": "stryker",
     "file": "packages/owl-runtime/src/rendering/fibers.ts",
-    "line": 179,
+    "line": 221,
     "operator": "ConditionalExpression",
     "original": "node.bdom",
     "replacement": "true",
@@ -3584,7 +3584,7 @@
   {
     "tool": "stryker",
     "file": "packages/owl-runtime/src/rendering/fibers.ts",
-    "line": 333,
+    "line": 376,
     "operator": "BooleanLiteral",
     "original": "false",
     "replacement": "true",
@@ -3593,7 +3593,7 @@
   {
     "tool": "stryker",
     "file": "packages/owl-runtime/src/rendering/fibers.ts",
-    "line": 343,
+    "line": 366,
     "operator": "BooleanLiteral",
     "original": "false",
     "replacement": "true",
@@ -3602,7 +3602,7 @@
   {
     "tool": "stryker",
     "file": "packages/owl-runtime/src/rendering/fibers.ts",
-    "line": 367,
+    "line": 400,
     "operator": "ConditionalExpression",
     "original": "node.status !== STATUS.DESTROYED && !owedPatched.has(node)",
     "replacement": "true",
@@ -3611,7 +3611,7 @@
   {
     "tool": "stryker",
     "file": "packages/owl-runtime/src/rendering/fibers.ts",
-    "line": 367,
+    "line": 400,
     "operator": "ConditionalExpression",
     "original": "node.status !== STATUS.DESTROYED",
     "replacement": "true",
@@ -3620,7 +3620,7 @@
   {
     "tool": "stryker",
     "file": "packages/owl-runtime/src/rendering/fibers.ts",
-    "line": 376,
+    "line": 430,
     "operator": "UpdateOperator",
     "original": "owedCount--",
     "replacement": "owedCount++",
@@ -3638,7 +3638,7 @@
   {
     "tool": "stryker",
     "file": "packages/owl-runtime/src/rendering/fibers.ts",
-    "line": 393,
+    "line": 429,
     "operator": "BlockStatement",
     "original": "{\n      owedCount--;\n    }",
     "replacement": "{}",
@@ -3656,7 +3656,7 @@
   {
     "tool": "stryker",
     "file": "packages/owl-runtime/src/rendering/fibers.ts",
-    "line": 394,
+    "line": 427,
     "operator": "UpdateOperator",
     "original": "owedCount--",
     "replacement": "owedCount++",
@@ -3665,7 +3665,7 @@
   {
     "tool": "stryker",
     "file": "packages/owl-runtime/src/rendering/fibers.ts",
-    "line": 396,
+    "line": 426,
     "operator": "BlockStatement",
     "original": "{\n      owedCount--;\n    }",
     "replacement": "{}",
@@ -3674,7 +3674,7 @@
   {
     "tool": "stryker",
     "file": "packages/owl-runtime/src/rendering/fibers.ts",
-    "line": 396,
+    "line": 429,
     "operator": "ConditionalExpression",
     "original": "owedPatched.delete(node)",
     "replacement": "false",
@@ -3683,7 +3683,7 @@
   {
     "tool": "stryker",
     "file": "packages/owl-runtime/src/rendering/fibers.ts",
-    "line": 397,
+    "line": 409,
     "operator": "UpdateOperator",
     "original": "owedCount--",
     "replacement": "owedCount++",
@@ -3692,7 +3692,7 @@
   {
     "tool": "stryker",
     "file": "packages/owl-runtime/src/rendering/fibers.ts",
-    "line": 406,
+    "line": 439,
     "operator": "ArrayDeclaration",
     "original": "[]",
     "replacement": "[\"Stryker was here\"]",
@@ -3701,7 +3701,7 @@
   {
     "tool": "stryker",
     "file": "packages/owl-runtime/src/rendering/fibers.ts",
-    "line": 408,
+    "line": 441,
     "operator": "ConditionalExpression",
     "original": "owedMounted.has(p) || owedPatched.has(p)",
     "replacement": "true",
@@ -3710,7 +3710,7 @@
   {
     "tool": "stryker",
     "file": "packages/owl-runtime/src/rendering/fibers.ts",
-    "line": 440,
+    "line": 473,
     "operator": "ConditionalExpression",
     "original": "f.node === node",
     "replacement": "false",
@@ -3719,7 +3719,7 @@
   {
     "tool": "stryker",
     "file": "packages/owl-runtime/src/rendering/fibers.ts",
-    "line": 440,
+    "line": 473,
     "operator": "ArrowFunction",
     "original": "(f) => f.node === node",
     "replacement": "() => undefined",
@@ -3728,7 +3728,7 @@
   {
     "tool": "stryker",
     "file": "packages/owl-runtime/src/rendering/fibers.ts",
-    "line": 441,
+    "line": 474,
     "operator": "ConditionalExpression",
     "original": "i < 0",
     "replacement": "true",
@@ -3737,7 +3737,7 @@
   {
     "tool": "stryker",
     "file": "packages/owl-runtime/src/rendering/fibers.ts",
-    "line": 441,
+    "line": 474,
     "operator": "EqualityOperator",
     "original": "i < 0",
     "replacement": "i <= 0",
@@ -3746,7 +3746,7 @@
   {
     "tool": "stryker",
     "file": "packages/owl-runtime/src/rendering/fibers.ts",
-    "line": 455,
+    "line": 488,
     "operator": "ConditionalExpression",
     "original": "mounted.length && patched.length",
     "replacement": "true",
@@ -3755,7 +3755,7 @@
   {
     "tool": "stryker",
     "file": "packages/owl-runtime/src/rendering/fibers.ts",
-    "line": 455,
+    "line": 488,
     "operator": "LogicalOperator",
     "original": "mounted.length && patched.length",
     "replacement": "mounted.length || patched.length",
@@ -3764,7 +3764,7 @@
   {
     "tool": "stryker",
     "file": "packages/owl-runtime/src/rendering/fibers.ts",
-    "line": 461,
+    "line": 494,
     "operator": "BlockStatement",
     "original": "{\n    return;\n  }",
     "replacement": "{}",
@@ -3773,7 +3773,7 @@
   {
     "tool": "stryker",
     "file": "packages/owl-runtime/src/rendering/fibers.ts",
-    "line": 512,
+    "line": 545,
     "operator": "ConditionalExpression",
     "original": "node.app.destroyed",
     "replacement": "false",
@@ -3782,7 +3782,7 @@
   {
     "tool": "stryker",
     "file": "packages/owl-runtime/src/rendering/fibers.ts",
-    "line": 512,
+    "line": 545,
     "operator": "BlockStatement",
     "original": "{\n        return null;\n      }",
     "replacement": "{}",
@@ -3791,7 +3791,7 @@
   {
     "tool": "stryker",
     "file": "packages/owl-runtime/src/rendering/fibers.ts",
-    "line": 525,
+    "line": 558,
     "operator": "ConditionalExpression",
     "original": "child.status === STATUS.MOUNTED",
     "replacement": "true",
@@ -3800,7 +3800,7 @@
   {
     "tool": "stryker",
     "file": "packages/owl-runtime/src/rendering/fibers.ts",
-    "line": 570,
+    "line": 603,
     "operator": "OptionalChaining",
     "original": "this.onPrepared?.()",
     "replacement": "this.onPrepared()",
@@ -3809,7 +3809,7 @@
   {
     "tool": "stryker",
     "file": "packages/owl-runtime/src/rendering/fibers.ts",
-    "line": 367,
+    "line": 400,
     "operator": "LogicalOperator",
     "original": "node.status !== STATUS.DESTROYED && !owedPatched.has(node)",
     "replacement": "node.status !== STATUS.DESTROYED || !owedPatched.has(node)",
@@ -3818,7 +3818,7 @@
   {
     "tool": "custom",
     "file": "packages/owl-runtime/src/rendering/fibers.ts",
-    "line": 148,
+    "line": 157,
     "operator": "receiver",
     "original": "subRoot.status",
     "replacement": "node.status",
@@ -3827,7 +3827,7 @@
   {
     "tool": "custom",
     "file": "packages/owl-runtime/src/rendering/fibers.ts",
-    "line": 59,
+    "line": 68,
     "operator": "path",
     "original": "current.root",
     "replacement": "node.root",
@@ -3836,7 +3836,7 @@
   {
     "tool": "custom",
     "file": "packages/owl-runtime/src/rendering/fibers.ts",
-    "line": 36,
+    "line": 45,
     "operator": "path",
     "original": "current.phase",
     "replacement": "node.phase",
@@ -3863,7 +3863,7 @@
   {
     "tool": "stryker",
     "file": "packages/owl-runtime/src/rendering/fibers.ts",
-    "line": 282,
+    "line": 314,
     "operator": "EqualityOperator",
     "original": "start < 0",
     "replacement": "start <= 0",
@@ -3872,7 +3872,7 @@
   {
     "tool": "stryker",
     "file": "packages/owl-runtime/src/rendering/fibers.ts",
-    "line": 340,
+    "line": 373,
     "operator": "BlockStatement",
     "original": "{\n        oweMounted(fiber.node);\n      }",
     "replacement": "{}",
@@ -3881,7 +3881,7 @@
   {
     "tool": "stryker",
     "file": "packages/owl-runtime/src/rendering/fibers.ts",
-    "line": 341,
+    "line": 374,
     "operator": "CallExpression",
     "original": "oweMounted(fiber.node);",
     "replacement": ";",
@@ -3890,7 +3890,7 @@
   {
     "tool": "custom",
     "file": "packages/owl-runtime/src/rendering/fibers.ts",
-    "line": 114,
+    "line": 123,
     "operator": "receiver",
     "original": "root.renderState",
     "replacement": "current.renderState",
@@ -3899,7 +3899,7 @@
   {
     "tool": "custom",
     "file": "packages/owl-runtime/src/rendering/fibers.ts",
-    "line": 593,
+    "line": 626,
     "operator": "swap",
     "original": "(node.app.constructor as any).validateTarget(target, {",
     "replacement": "moved below: next = this.afterNode || (this.position === \"last-child\" ? null : target.firstChild);",
@@ -3908,7 +3908,7 @@
   {
     "tool": "custom",
     "file": "packages/owl-runtime/src/rendering/fibers.ts",
-    "line": 479,
+    "line": 512,
     "operator": "swap",
     "original": "if (failed && (!applied || fibersInError.has(current))) {",
     "replacement": "moved below: if (!applied || node.status === STATUS.DESTROYED) {",
@@ -3917,7 +3917,7 @@
   {
     "tool": "custom",
     "file": "packages/owl-runtime/src/rendering/fibers.ts",
-    "line": 487,
+    "line": 520,
     "operator": "swap",
     "original": "if (!applied || node.status === STATUS.DESTROYED) {",
     "replacement": "moved below: const settled = owedCount ? settleOwed(node, hook) : false;",
@@ -3926,7 +3926,7 @@
   {
     "tool": "custom",
     "file": "packages/owl-runtime/src/rendering/fibers.ts",
-    "line": 608,
+    "line": 641,
     "operator": "path",
     "original": "node.bdom",
     "replacement": "this.bdom",
@@ -3935,7 +3935,7 @@
   {
     "tool": "stryker",
     "file": "packages/owl-runtime/src/rendering/fibers.ts",
-    "line": 76,
+    "line": 85,
     "operator": "ConditionalExpression",
     "original": "fiber.root !== root",
     "replacement": "false",
@@ -3944,7 +3944,7 @@
   {
     "tool": "custom",
     "file": "packages/owl-runtime/src/rendering/fibers.ts",
-    "line": 600,
+    "line": 633,
     "operator": "swap",
     "original": "mount(node.bdom!, target, next);",
     "replacement": "moved below: node.fiber = null;",
@@ -3953,7 +3953,7 @@
   {
     "tool": "custom",
     "file": "packages/owl-runtime/src/rendering/fibers.ts",
-    "line": 602,
+    "line": 635,
     "operator": "swap",
     "original": "node.status = STATUS.MOUNTED;",
     "replacement": "moved below: this.renderState |= APPLIED_TO_DOM;",

@@ -3,7 +3,7 @@ import { join, relative, resolve } from "node:path";
 import { parseArgs } from "node:util";
 import { ROOT } from "../workspace.mjs";
 import { runCustom } from "./custom.mjs";
-import { loadEquivalents, staleEquivalents } from "./equivalents.mjs";
+import { loadEquivalents, staleEquivalents, writeEquivalentLines } from "./equivalents.mjs";
 import { runStryker } from "./stryker.mjs";
 import { PACKAGES, REPORTS, packageOf } from "./targets.mjs";
 
@@ -96,6 +96,14 @@ for (const entry of stale) {
   console.log(
     `  stale equivalent (matches no surviving mutant): ${entry.file}:${entry.line} ${entry.operator}`
   );
+}
+if (full) {
+  const moved = writeEquivalentLines();
+  if (moved) {
+    console.log(
+      `  ${moved} equivalent(s) found a few lines from where they were written: lines updated`
+    );
+  }
 }
 console.log(`\nReports: ${relative(ROOT, REPORTS)}/`);
 process.exitCode = survivors.length ? 1 : 0;
