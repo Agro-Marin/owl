@@ -211,7 +211,7 @@ export class Fiber {
   render() {
     const node = this.node;
     const root = this.root!;
-    const scheduler = node.app.scheduler;
+    const scheduler = root.node.app.scheduler;
     if (scheduler.tasks.size > 1 || Scheduler.active.size > 1) {
       let prev = root.node;
       let current = above(prev);
