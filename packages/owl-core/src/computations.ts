@@ -511,16 +511,15 @@ export function batch<T>(fn: () => T): T {
 function updateEach(computations: ComputationAtom[]): unknown[] | null {
   let errors: unknown[] | null = null;
   for (let i = 0; i < computations.length; i++) {
-    try {
-      updateOwnerFirst(computations[i]);
-    } catch (error) {
-      (errors ||= []).push(error);
-    }
+    errors = updateOwnerFirst(computations[i], errors);
   }
   return errors;
 }
 
-function updateOwnerFirst(computation: ComputationAtom) {
+function updateOwnerFirst(
+  computation: ComputationAtom,
+  errors: unknown[] | null
+): unknown[] | null {
   while (computation.state !== ComputationState.EXECUTED) {
     let first: ComputationAtom | null = null;
     for (let owner = computation.owner; owner !== null; owner = owner.owner) {
@@ -532,15 +531,19 @@ function updateOwnerFirst(computation: ComputationAtom) {
         first = owner;
       }
     }
-    if (first === null) {
-      updateComputation(computation);
-      return;
-    }
-    if (debug.effect) {
+    if (first !== null && debug.effect) {
       debugLog("effect", `run owner ${first.name} before ${computation.name}`);
     }
-    updateComputation(first);
+    try {
+      updateComputation(first ?? computation);
+    } catch (error) {
+      (errors ||= []).push(error);
+    }
+    if (first === null) {
+      break;
+    }
   }
+  return errors;
 }
 
 function rethrow(errors: unknown[] | null) {

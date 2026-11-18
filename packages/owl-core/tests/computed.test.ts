@@ -936,6 +936,36 @@ describe("a failing source in a pending check", () => {
     await waitScheduler();
     expect(runs).toBe(2);
   });
+
+  test("an effect the reader owns, due in the same flush, still runs, and on its next change", async () => {
+    class IntentionalTestError extends Error {
+      override name = "IntentionalTestError";
+    }
+    const s = signal(0);
+    const t = signal(0);
+    const failing = createComputation(() => {
+      if (s() > 0) {
+        throw new IntentionalTestError("source failed");
+      }
+      return s();
+    }, true);
+    const seen: number[] = [];
+    const rejections = captureUnhandledRejections();
+    effect(() => {
+      updateComputation(failing);
+      onReadAtom(failing);
+      effect(() => {
+        seen.push(t());
+      });
+    });
+    t.set(1);
+    s.set(1);
+    await waitScheduler();
+    expect(await rejections()).toEqual(["IntentionalTestError: source failed"]);
+    t.set(2);
+    await waitScheduler();
+    expect(seen).toEqual([0, 1, 2]);
+  });
 });
 
 describe("disposed reader", () => {
