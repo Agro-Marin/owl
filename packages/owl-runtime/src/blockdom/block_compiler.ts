@@ -596,6 +596,7 @@ function createBlockClass(template: HTMLElement, ctx: BlockCtx, str: string): Bl
   const isDynamic = refN > 0;
 
   const locRefIdxs: number[] = locations.map((l) => l.refIdx);
+  cbRefs.sort((a, b) => locRefIdxs[a] - locRefIdxs[b]);
   const locSetters: Setter[] = locations.map((l) => l.setData);
   const locUpdaters: Updater[] = locations.map((l) => l.updateData);
   ctx.handlers.sort((a, b) => a.idx - b.idx);

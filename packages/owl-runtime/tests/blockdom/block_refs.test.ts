@@ -124,6 +124,18 @@ describe("removing a block releases the refs of the blocks inside it", () => {
   });
 });
 
+test("the ref callbacks of one block run in document order", () => {
+  const block = createBlock(
+    '<div><p block-ref="0"><span block-ref="1"/></p><i block-ref="2"/></div>'
+  );
+  const refFn = (el: any, prev: any) => logStep(el ? el.tagName : `unset ${prev.tagName}`);
+  const tree = block([refFn, refFn, refFn]);
+  mount(tree, fixture);
+  expect(["P", "SPAN", "I"]).toBeLogged();
+  remove(tree);
+  expect(["unset P", "unset SPAN", "unset I"]).toBeLogged();
+});
+
 test("nested ref callbacks run once the outermost block is inserted, parents first", () => {
   const block = createBlock('<div block-ref="0"><block-text-1/><block-child-0/></div>');
   const refFn = (el: any, prev: any) =>

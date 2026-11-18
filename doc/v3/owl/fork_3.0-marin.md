@@ -397,9 +397,10 @@ plugins: [] })` rendered asynchronously); a resource-driven start belongs to
   (`xlink:`, `xml:`, or a prefix in scope in the block string), a `t-att` name
   included, is set and removed in its namespace, as a static one is.
 - **A ref is set once its element is in the document, outermost first**: the
-  ref callbacks of a mount run once its outermost block is inserted, in
-  document order (upstream ran a nested block's before its parent element was
-  inserted, on a detached element). **Removing a block releases the refs of
+  ref callbacks of a mount run once its outermost block is inserted, a block's
+  before those of the blocks inside it, each block's in document order
+  (upstream ran a nested block's before its parent element was inserted, on a
+  detached element). **Removing a block releases the refs of
   the blocks inside it**: every VNode has `detachRefs()` (no DOM work; multi,
   list, toggler, catcher and component nodes forward it), which `remove()` of
   a block calls; upstream called only the removed block's own, and a `{set}`
