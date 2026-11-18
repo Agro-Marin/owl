@@ -92,16 +92,17 @@ function createEffect<T>(fn: () => T, immediate: boolean, options?: EffectOption
       computation.owner = null;
     }
     computation.state = ComputationState.EXECUTED;
-    removeSources(computation);
-    if (computation.value || computation.owned) {
-      runUnowned(release, computation);
-    }
+    detach(computation, true);
   }
 
   try {
     updateComputation(computation);
   } catch (error) {
-    cleanupEffect();
+    try {
+      cleanupEffect();
+    } catch (cleanupError) {
+      Promise.reject(cleanupError);
+    }
     throw error;
   }
   return cleanupEffect;
@@ -122,10 +123,12 @@ function detach(effect: ComputationAtom, throwFirst: boolean) {
   } catch (error) {
     (errors ||= []).push(error);
   }
-  try {
-    runUnowned(release, effect);
-  } catch (error) {
-    (errors ||= []).push(error);
+  if (effect.value || effect.owned) {
+    try {
+      runUnowned(release, effect);
+    } catch (error) {
+      (errors ||= []).push(error);
+    }
   }
   if (errors) {
     for (let i = throwFirst ? 1 : 0; i < errors.length; i++) {

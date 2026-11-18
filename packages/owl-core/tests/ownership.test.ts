@@ -263,6 +263,51 @@ describe("an effect created in a computed's getter", () => {
     expect(steps).toEqual(["first", "second"]);
     expect(observersOf((s as any)[atomSymbol])).toEqual([]);
   });
+
+  test("whose cleanup throws when the reader's dispose cascades to it: the reader's own cleanup and effects are released", () => {
+    const s = signal(0);
+    const steps: string[] = [];
+    const c = computed(
+      () => {
+        effect(() => () => {
+          throw new Error("cleanup failed");
+        });
+        return s();
+      },
+      { detached: true }
+    );
+    const dispose = effect(() => {
+      c();
+      effect(() => () => steps.push("child"));
+      return () => steps.push("own");
+    });
+    expect(dispose).toThrow("cleanup failed");
+    expect(steps).toEqual(["child", "own"]);
+  });
+
+  test("whose cleanup throws when a reader's failed first run disposes it: the run's error is thrown, the cleanup's reported", async () => {
+    class IntentionalTestError extends Error {
+      override name = "IntentionalTestError";
+    }
+    const rejections = captureUnhandledRejections();
+    const s = signal(0);
+    const c = computed(
+      () => {
+        effect(() => () => {
+          throw new IntentionalTestError("cleanup failed");
+        });
+        return s();
+      },
+      { detached: true }
+    );
+    expect(() =>
+      effect(() => {
+        c();
+        throw new Error("run failed");
+      })
+    ).toThrow("run failed");
+    expect(await rejections()).toEqual(["IntentionalTestError: cleanup failed"]);
+  });
 });
 
 describe("a cleanup that throws while computeds are disposed in bulk", () => {
