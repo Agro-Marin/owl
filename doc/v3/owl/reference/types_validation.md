@@ -467,9 +467,11 @@ Returns `value` with the defaults declared in `type` filled in, at any depth:
 a default fires when the value at its schema position is `undefined`. The
 input is never mutated; objects are copied along the changed paths only, so
 if nothing is filled in, the value is returned as is. Only plain data is
-filled in: an instance of a class (a `Map`, an `Array` subclass, an object
-with private members) is returned as it is, since a copy would lose its
-prototype and private members.
+filled in: an object whose prototype is `Object.prototype` (of any realm, an
+iframe's included) or `null`, or a plain array. Anything else (an instance of
+a class such as a `Map`, an `Array` subclass or an object with private
+members, an object inheriting from another) is returned as it is, since a
+copy would lose its prototype and private members.
 
 ```js
 const optionsType = t.object({

@@ -1,3 +1,4 @@
+import { runInNewContext } from "node:vm";
 import { describe, expect, test } from "vitest";
 import {
   applyDefaults,
@@ -1181,6 +1182,10 @@ describe("applyDefaults", () => {
     expect(applyDefaults(Object.create(Object.freeze(Object.create(null))), depth)).toEqual({
       depth: 3,
     });
+    expect(applyDefaults(runInNewContext("({})"), depth)).toEqual({ depth: 3 });
+    expect(applyDefaults(runInNewContext("[{}]"), t.array(depth))).toEqual([{ depth: 3 }]);
+    const inheriting = Object.create({ base: 1 });
+    expect(applyDefaults(inheriting, depth)).toBe(inheriting);
   });
 
   test("returns the input as is when there is nothing to fill in", () => {

@@ -248,9 +248,10 @@ true })` creates an effect owned by nothing. When a computed and an effect
   registry's `validation`, `props.static`); a `customValidator` of an optional
   type is optional, with that type's default. `t.ref()` can be declared
   without a DOM; only checking a non-null value needs one. `applyDefaults`
-  fills plain data only: an instance of a class (an `Array` subclass, an
-  object with private members) is returned as it is instead of copied into
-  a plain object.
+  fills plain data only (an object of `Object.prototype`, of any realm, or
+  `null`, or a plain array): an instance of a class (an `Array` subclass, an
+  object with private members) or an object inheriting from another is
+  returned as it is instead of copied into a plain object.
 - **A schema is typed as a schema**, not as the value it describes (upstream's
   `Type<T> = T & {…}` let `t.number().toFixed()` and `const s: string =
 t.string()` compile): `Schema<T>` is a validator carrying `T` under a

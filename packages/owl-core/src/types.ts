@@ -166,13 +166,7 @@ function applyDefaultsRec(value: any, type: any): any {
   if (typeof inner !== "function" || !value || typeof value !== "object") {
     return value;
   }
-  const prototype = Object.getPrototypeOf(value);
-  if (
-    prototype !== Object.prototype &&
-    prototype !== Array.prototype &&
-    prototype !== null &&
-    Object.hasOwn(prototype, "constructor")
-  ) {
+  if (!isPlainData(value)) {
     return value;
   }
   const members = inner[intersectionSymbol];
@@ -196,6 +190,16 @@ function applyDefaultsRec(value: any, type: any): any {
     return value;
   }
   return applyDefaultsAt(value, Object.keys(shape), (key) => shape[key]);
+}
+
+// Realm-independent: any realm's Array.prototype is an array, and any realm's
+// Object.prototype (or a null-prototype base) has no prototype of its own.
+function isPlainData(value: object): boolean {
+  const prototype = Object.getPrototypeOf(value);
+  if (Array.isArray(value)) {
+    return Array.isArray(prototype);
+  }
+  return prototype === null || Object.getPrototypeOf(prototype) === null;
 }
 
 function applyDefaultsAt(
