@@ -905,6 +905,26 @@ describe("a write during its own run", () => {
     expect(seen.length).toBe(3);
     expect(seen[2]).toBe(s());
   });
+
+  test("an effect still follows a computed it saw change during its run when its other reader lets it go", async () => {
+    const s = signal(0);
+    const c = computed(() => s(), { name: "c" });
+    const disposeOther = effect(() => {
+      c();
+    });
+    const seen: number[] = [];
+    effect(() => {
+      seen.push(c());
+      if (seen.length === 1) {
+        s.set(1);
+        c();
+        disposeOther();
+      }
+    });
+    s.set(2);
+    await waitScheduler();
+    expect(seen).toEqual([0, 2]);
+  });
 });
 
 describe("a failing source in a pending check", () => {

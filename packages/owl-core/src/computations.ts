@@ -117,8 +117,10 @@ export function createAtom<T, K extends string>(value: T, type: K): Atom<T> & { 
   };
 }
 
+// A source a running effect read and then saw written still has that effect
+// as an observer: its link is WRITTEN until the run ends.
 function isLive(link: Link): boolean {
-  return link.version === link.sub.version;
+  return link.version === link.sub.version || link.version === WRITTEN;
 }
 
 export function hasObservers(atom: Atom): boolean {

@@ -131,7 +131,9 @@ its own value` instead of recursing (upstream hangs); a computed that catches
   as destroying a component already did; a re-run that stops reading a
   computed nothing else reads disposes it at the flush (unless read again by
   then), instead of at the next write to its sources (which a computed
-  reading nothing never got). Read again, such a computed recomputes (a new
+  reading nothing never got). An effect that saw a computed it read change
+  during its run is still its observer: another reader letting it go then does
+  not dispose it. Read again, such a computed recomputes (a new
   object for an object result), and an effect its getter creates is created
   again, owned by the computed. `untrack` inside a getter reached through an
   `observe()` view keeps that getter's reads of other proxies off the view. A
