@@ -5,6 +5,7 @@ import {
   onWillDestroy,
   onWillStart,
   proxy,
+  signal,
   status,
   xml,
 } from "../../src";
@@ -333,3 +334,45 @@ test("mount() during a re-render of the prepared root waits for that render", as
   expect(fixture.innerHTML).toBe("<div>2<i>late</i></div>");
   app.destroy();
 });
+
+test.each([
+  ["once prepare() resolved and frames passed", "prepared"],
+  ["before prepare() resolves", "preparing"],
+  ["after mount() is called, before it commits", "mounting"],
+])(
+  "a prepared root whose signal changes %s renders it, and keeps reacting once mounted",
+  async (_, when) => {
+    const value = signal(1);
+    class Root extends Component {
+      static template = xml`<p t-out="this.value()"/>`;
+      value = value;
+    }
+    const app = new App({ test: true });
+    const root = app.createRoot(Root);
+    const prepared = root.prepare();
+    if (when === "preparing") {
+      value.set(2);
+    }
+    await prepared;
+    if (when === "prepared") {
+      value.set(2);
+      await nextTick();
+      await nextTick();
+    }
+    const mounted = root.mount(fixture);
+    if (when === "mounting") {
+      value.set(2);
+    }
+    await mounted;
+    await nextTick();
+    expect(fixture.innerHTML).toBe("<p>2</p>");
+    value.set(3);
+    await nextTick();
+    expect(fixture.innerHTML).toBe("<p>3</p>");
+    value.set(4);
+    await nextTick();
+    expect(fixture.innerHTML).toBe("<p>4</p>");
+    expect(app.scheduler.tasks.size).toBe(0);
+    app.destroy();
+  }
+);
