@@ -70,7 +70,7 @@ export async function compileTemplates(paths: string[]) {
         log("compile %s in %s", name, fileName);
         const fn = compile(template, { name, hasGlobalValues: true })
           .toString()
-          .replace("anonymous", fnName);
+          .replace("anonymous", () => fnName);
         templates.push(`[${JSON.stringify(name)}]: ${fn},\n`);
       } catch (e) {
         log("compile failed: %s in %s", name, fileName);

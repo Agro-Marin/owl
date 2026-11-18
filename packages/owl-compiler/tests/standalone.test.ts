@@ -90,6 +90,18 @@ describe("standalone compiler", () => {
     expect(source).toContain(`// Template name: "web.g"`);
   });
 
+  test("a precompiled template's function is named after the template, a $ included", async () => {
+    await writeFile(
+      path.join(dir, "n.xml"),
+      `<templates><t t-name="a$$b">a</t><t t-name="web.c$&amp;">b</t></templates>`
+    );
+    const code = await compileTemplates([dir]);
+    expect(getConsoleOutput()).toEqual(["log:2 templates compiled"]);
+    const templates = new Function(code.replace("export const templates =", "return"))();
+    expect(templates["a$$b"].name).toBe("template_a$$b");
+    expect(templates["web.c$&"].name).toBe("template_web_c$_");
+  });
+
   test("object prototype names are ordinary own template entries", async () => {
     await writeFile(
       path.join(dir, "special.xml"),
