@@ -209,26 +209,28 @@ export class Fiber {
   }
 
   render() {
-    const scheduler = this.root!.node.app.scheduler;
+    const node = this.node;
+    const root = this.root!;
+    const scheduler = node.app.scheduler;
     if (scheduler.tasks.size > 1 || Scheduler.active.size > 1) {
-      let prev = this.root!.node;
+      let prev = root.node;
       let current = above(prev);
       while (current) {
         if (current.fiber) {
-          let root = current.fiber.root!;
+          const pass = current.fiber.root!;
           if (
-            (root.counter === 0 || fibersInError.has(root)) &&
+            (pass.counter === 0 || fibersInError.has(pass)) &&
             (!prev.parent || !!current.fiber.childrenMap?.has(prev.parentKey!))
           ) {
-            current = root.node;
+            current = pass.node;
           } else {
             if (debug.fiber) {
               debugLog(
                 "fiber",
-                `delay ${this.node.componentName}: ${root.node.componentName} is rendering`
+                `delay ${node.componentName}: ${pass.node.componentName} is rendering`
               );
             }
-            root.node.app.scheduler.delayedRenders.push(this);
+            pass.node.app.scheduler.delayedRenders.push(this);
             return;
           }
         }
@@ -237,59 +239,55 @@ export class Fiber {
       }
     }
 
-    const node = this.node;
-    const root = this.root;
-    if (root) {
-      if (this.renderState >> 1 > MAX_RENDER_ITERATIONS) {
-        handleError({
-          node,
-          error: new OwlError(
-            `Maximum render iterations (${MAX_RENDER_ITERATIONS}) exceeded. ` +
-              `Component "${node.componentName}" is stuck in a render loop: rendering it ` +
-              `keeps triggering another render before the DOM is updated. A common cause is ` +
-              `updating reactive state during render or setup() — e.g. calling a parent's ` +
-              `state setter from a child's setup().`
-          ),
-        });
-        return;
-      }
-      node.signalComputation.state = ComputationState.EXECUTED;
-      node.previousMemos = node.memos;
-      node.memos = null;
-      const outerCollection = memoSuspend();
-      this.phase = FiberPhase.RENDERING;
-      const start = debug.fiber ? debugNow() : -1;
-      this.bdom = runTracked(node.signalComputation, () => {
-        try {
-          return node.renderFn() as BDom;
-        } catch (e) {
-          handleError({ node, error: e });
-          return null;
-        } finally {
-          this.phase = FiberPhase.RENDERED;
-          memoResume(outerCollection);
-        }
+    if (this.renderState >> 1 > MAX_RENDER_ITERATIONS) {
+      handleError({
+        node,
+        error: new OwlError(
+          `Maximum render iterations (${MAX_RENDER_ITERATIONS}) exceeded. ` +
+            `Component "${node.componentName}" is stuck in a render loop: rendering it ` +
+            `keeps triggering another render before the DOM is updated. A common cause is ` +
+            `updating reactive state during render or setup() — e.g. calling a parent's ` +
+            `state setter from a child's setup().`
+        ),
       });
-      if (this.deep && this.bdom) {
-        renderSubRootsDeep(node);
+      return;
+    }
+    node.signalComputation.state = ComputationState.EXECUTED;
+    node.previousMemos = node.memos;
+    node.memos = null;
+    const outerCollection = memoSuspend();
+    this.phase = FiberPhase.RENDERING;
+    const start = debug.fiber ? debugNow() : -1;
+    this.bdom = runTracked(node.signalComputation, () => {
+      try {
+        return node.renderFn() as BDom;
+      } catch (e) {
+        handleError({ node, error: e });
+        return null;
+      } finally {
+        this.phase = FiberPhase.RENDERED;
+        memoResume(outerCollection);
       }
-      const newCounter = root.counter - 1;
-      root.counter = newCounter;
-      if (debug.fiber) {
-        debugLog(
-          "fiber",
-          `render ${node.componentName}${start < 0 ? "" : ` in ${(debugNow() - start).toFixed(2)} ms`}, ${newCounter} left in ${root.node.componentName}'s pass`
-        );
-      }
-      if (root.merged && fibersInError.has(root)) {
-        renderMergedAlone(root);
-      }
-      if (newCounter === 0) {
-        if (fibersInError.has(root)) {
-          scheduler.requestFrame();
-        } else {
-          scheduler.flush();
-        }
+    });
+    if (this.deep && this.bdom) {
+      renderSubRootsDeep(node);
+    }
+    const newCounter = root.counter - 1;
+    root.counter = newCounter;
+    if (debug.fiber) {
+      debugLog(
+        "fiber",
+        `render ${node.componentName}${start < 0 ? "" : ` in ${(debugNow() - start).toFixed(2)} ms`}, ${newCounter} left in ${root.node.componentName}'s pass`
+      );
+    }
+    if (root.merged && fibersInError.has(root)) {
+      renderMergedAlone(root);
+    }
+    if (newCounter === 0) {
+      if (fibersInError.has(root)) {
+        scheduler.requestFrame();
+      } else {
+        scheduler.flush();
       }
     }
   }
