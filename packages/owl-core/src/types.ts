@@ -476,7 +476,7 @@ function setType<T = any>(): Type<Set<T>>;
 function setType<T>(member: Schema<T>): Type<Set<T>>;
 function setType(member?: Schema<unknown>): Type<Set<unknown>> {
   if (member !== undefined) assertSchema(member);
-  return makeType((context) => {
+  return makeType(function validateSet(context: ValidationContext) {
     if (!(context.value instanceof Set)) {
       context.addIssue({ message: "value is not a set" });
       return;
@@ -500,7 +500,7 @@ function mapType(key?: Schema<unknown>, value?: Schema<unknown>): Type<Map<unkno
     assertSchema(key);
     assertSchema(value);
   }
-  return makeType((context) => {
+  return makeType(function validateMap(context: ValidationContext) {
     if (!(context.value instanceof Map)) {
       context.addIssue({ message: "value is not a map" });
       return;

@@ -65,7 +65,7 @@ export abstract class Scope<TApp extends ScopeApp = ScopeApp> {
     } finally {
       scopeStack.pop();
     }
-    if (result !== null && typeof (result as any)?.then === "function") {
+    if (typeof (result as any)?.then === "function") {
       return this._guard(result as any) as T;
     }
     return result;

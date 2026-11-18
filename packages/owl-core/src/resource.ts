@@ -71,7 +71,7 @@ export class Resource<V> {
   }
 
   has(item: V): boolean {
-    return this._items().some(([s, value]) => value === item);
+    return this._items().some((entry) => entry[1] === item);
   }
 
   use(item: V, options: ResourceAddOptions = {}): Resource<V> {

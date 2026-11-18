@@ -34,7 +34,6 @@ export {
   getCurrentComputation,
   setComputation,
   runTracked,
-  removeSources,
   disposeComputation,
   hasObservers,
   observersOf,
