@@ -605,7 +605,8 @@ the new one rejects (`--old`, `--new`name other compiler modules).`npm run
    the build.
 
 3. Every HOOT suite, with the old and the new build, compared test by
-   test, on a database where every module whose tests they run is
+   test (`node tools/odoo_gate.mjs` does it for the suites it is given, and
+   `--bisect` finds the commit that breaks one HOOT test), on a database where every module whose tests they run is
    installed: `@web`'s `WebSuite`, `MobileWebSuite`, `AddonSuite` and
    `MobileAddonSuite` (the other addons' unit tests), `@mail`'s `MailSuite`
    and `MobileMailSuite`, and each addon's own runner (`WebsiteSuite`,

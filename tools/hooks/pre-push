@@ -1,0 +1,4 @@
+#!/bin/sh
+# Verifies every commit a push carries in a throwaway worktree (tools/hooks/pre_push.mjs).
+# Enabled by: git config core.hooksPath tools/hooks. Skipped by: git push --no-verify.
+exec node "$(git rev-parse --show-toplevel)/tools/hooks/pre_push.mjs"
