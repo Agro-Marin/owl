@@ -115,12 +115,16 @@ export class Scheduler {
         debugLog("scheduler", `frame, ${this.tasks.size} task(s)`);
       }
       for (let fiber of this.tasks) {
-        if (debug.invariant && fiber.root === fiber && fiber.node.fiber === fiber) {
-          checkPassCounter(fiber);
-        }
-        if (fiber.root !== fiber) {
-          this.tasks.delete(fiber);
-          continue;
+        // A task is a root fiber, forgotten before it stops being one (makeChildFiber).
+        if (debug.invariant) {
+          if (fiber.root !== fiber) {
+            throw new OwlError(
+              `invariant: a task of ${fiber.node.componentName} is not a root fiber`
+            );
+          }
+          if (fiber.node.fiber === fiber) {
+            checkPassCounter(fiber);
+          }
         }
         if (fiber.node.fiber !== fiber) {
           if (debug.scheduler) {
