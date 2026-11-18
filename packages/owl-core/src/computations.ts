@@ -447,7 +447,7 @@ export function onWriteAtom(atom: Atom, comparable: boolean = false) {
         } else if (ctx.immediate) {
           immediateObservers.push(ctx);
         } else {
-          observers.push(ctx);
+          queueEffect(ctx);
         }
       } else {
         if (state === ComputationState.RUNNING) {
@@ -465,7 +465,7 @@ export function onWriteAtom(atom: Atom, comparable: boolean = false) {
         ? ComputationState.PENDING
         : ComputationState.STALE;
     if (ctx.isDerived && ctx.subs === undefined) {
-      pendingDisposals.add(ctx);
+      queueDisposal(ctx);
     }
   }
   let errors: unknown[] | null = null;
@@ -473,9 +473,6 @@ export function onWriteAtom(atom: Atom, comparable: boolean = false) {
     const toRun = immediateObservers;
     immediateObservers = [];
     errors = updateEach(toRun);
-  }
-  if (!flushScheduled) {
-    scheduleFlush();
   }
   rethrow(errors);
 }
@@ -556,6 +553,20 @@ function rethrow(errors: unknown[] | null) {
 }
 
 let flushScheduled = false;
+
+function queueEffect(computation: ComputationAtom) {
+  observers.push(computation);
+  if (!flushScheduled) {
+    scheduleFlush();
+  }
+}
+
+function queueDisposal(computation: ComputationAtom) {
+  pendingDisposals.add(computation);
+  if (!flushScheduled) {
+    scheduleFlush();
+  }
+}
 
 function scheduleFlush() {
   flushScheduled = true;
@@ -819,10 +830,7 @@ function unread(computed: ComputationAtom, reader: ComputationAtom) {
   if (debug.computed) {
     debugLog("computed", `${computed.name} unread by ${reader.name}, disposed at the flush`);
   }
-  pendingDisposals.add(computed);
-  if (!flushScheduled) {
-    scheduleFlush();
-  }
+  queueDisposal(computed);
 }
 
 function observedSources(observer: ComputationAtom): Set<Atom> {
@@ -909,7 +917,7 @@ function markDownstream(computation: ComputationAtom) {
     for (let link = current.subs; link !== undefined; link = link.nextSub) {
       const observer = link.sub;
       if (observer.isDerived && observer.subs === undefined) {
-        pendingDisposals.add(observer);
+        queueDisposal(observer);
       }
       if (link.version !== observer.version) {
         continue;
@@ -935,7 +943,7 @@ function markDownstream(computation: ComputationAtom) {
       } else if (observer.immediate) {
         immediateObservers.push(observer);
       } else {
-        observers.push(observer);
+        queueEffect(observer);
       }
     }
   }

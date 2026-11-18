@@ -1,6 +1,6 @@
 import { afterAll, bench, describe } from "vitest";
 import * as owl from "../src";
-import { computed, effect, signal } from "../src";
+import { computed, effect, immediateEffect, signal } from "../src";
 import { workloads } from "./workloads";
 
 async function flushMicrotasks() {
@@ -25,6 +25,21 @@ describe("signal write — observer fan-out", () => {
     }
     return s;
   }
+
+  const s0 = setup(0);
+  bench("set, no observer", async () => {
+    s0.set(s0() + 1);
+    await flushMicrotasks();
+  });
+
+  const sImmediate = signal(0);
+  immediateEffect(() => {
+    sImmediate();
+  });
+  bench("set, 1 immediate observer", async () => {
+    sImmediate.set(sImmediate() + 1);
+    await flushMicrotasks();
+  });
 
   const s1 = setup(1);
   bench("set, 1 observer", async () => {

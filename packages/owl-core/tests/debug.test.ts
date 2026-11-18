@@ -3,6 +3,7 @@ import {
   debug,
   DEBUG_CHANNELS,
   effect,
+  immediateEffect,
   OwlError,
   Plugin,
   PluginManager,
@@ -44,6 +45,22 @@ test("a disabled channel logs nothing", async () => {
   s.set(1);
   await waitScheduler();
   expect(lines).toEqual([]);
+});
+
+test("a write that queues no effect schedules no flush", async () => {
+  setDebug(["effect"]);
+  const s = signal(0);
+  const dispose = immediateEffect(() => s(), { name: "reader" });
+  s.set(1);
+  signal(0).set(1);
+  await waitScheduler();
+  dispose();
+  expect(lines).toEqual([
+    "effect: create reader, owned by nothing",
+    "effect: run reader",
+    "effect: run reader",
+    "effect: dispose reader",
+  ]);
 });
 
 test("effect and reactivity channels trace a write through to the effect it re-runs", async () => {
