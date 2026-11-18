@@ -38,10 +38,14 @@ type ResolveProps<Shape> = [GetDefaultedKeys<Shape>] extends [never]
   ? Props<ResolveReaderObjectType<Shape>>
   : PropsWithDefaults<ResolveReaderObjectType<Shape>, GetDefaultedKeys<Shape> & PropertyKey>;
 
+// A schema typed `any` (`this.constructor.props` of a class whose statics are
+// untyped) gives untyped props, which the component's field may then declare.
+type IfAny<T, A, B> = 0 extends 1 & T ? A : B;
+
 export interface PropsFunction {
   (): Props<Record<string, any>>;
-  <const Keys extends string[]>(keys: Keys): Props<ResolveObjectType<Keys>>;
-  <Shape extends {}>(shape: Shape): ResolveProps<Shape>;
+  <const Keys extends string[]>(keys: Keys): IfAny<Keys, any, Props<ResolveObjectType<Keys>>>;
+  <Shape extends {}>(shape: Shape): IfAny<Shape, any, ResolveProps<Shape>>;
   static: typeof staticProp;
 }
 

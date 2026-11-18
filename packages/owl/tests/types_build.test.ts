@@ -170,6 +170,24 @@ test("a consumer outside the checkout gets complete collection and hook types", 
   ).toBe(0);
 });
 
+test("props read from an untyped schema are untyped, so a component can declare their type", () => {
+  const result = compileConsumer(`
+    import { Component, useProps, xml } from "@odoo/owl";
+    class Panel extends Component {
+      static template = xml\`<p/>\`;
+      static props: any = { record: Object };
+      props: { record: { resId: number } } = useProps(this.constructor.props);
+    }
+    const keys: any = ["a"];
+    const loose: { a: string } = useProps(keys);
+    const typed = useProps(["a", "b"]);
+    const n: string = typed.a;
+    void [Panel, loose, n];
+  `);
+  expect(result.output).toBe("");
+  expect(result.status).toBe(0);
+});
+
 test("an EventBus listener receives the CustomEvent trigger() dispatches", () => {
   const result = compileConsumer(`
     import { EventBus } from "@odoo/owl";
