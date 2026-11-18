@@ -53,7 +53,6 @@ export class Portal extends Component {
       mountedTarget = null;
       if (placement) {
         placements!.entries.delete(placement);
-        placements!.place();
         placement = null;
         placements = null;
       }
