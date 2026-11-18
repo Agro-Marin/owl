@@ -882,7 +882,7 @@ describe("collections", () => {
       ])
     );
     effect(() => [map.get("a"), map.has(key), map.size]);
-    expect(notifiedKeys(() => map.clear())).toEqual(["(keys)", "a", "[object Object]"]);
+    expect(notifiedKeys(() => map.clear())).toEqual(["(keys)", "a", "presence of [object Object]"]);
   });
 
   test("clearing an empty collection notifies nothing", () => {
@@ -911,8 +911,8 @@ describe("collections", () => {
     effect(() => [map.get("a"), map.has("a"), map.get("b"), map.has("b")]);
     expect(notifiedKeys(() => map.set("a", 1))).toEqual([]);
     expect(notifiedKeys(() => map.set("a", 2))).toEqual(["a"]);
-    expect(notifiedKeys(() => map.set("b", 1))).toEqual(["b", "b"]);
-    expect(notifiedKeys(() => map.delete("b"))).toEqual(["b", "b"]);
+    expect(notifiedKeys(() => map.set("b", 1))).toEqual(["presence of b", "b"]);
+    expect(notifiedKeys(() => map.delete("b"))).toEqual(["presence of b", "b"]);
     expect(notifiedKeys(() => map.delete("b"))).toEqual([]);
   });
 });

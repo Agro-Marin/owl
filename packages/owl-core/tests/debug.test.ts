@@ -107,6 +107,21 @@ test("the reactivity channel names each tracked proxy read and its reader", () =
   ]);
 });
 
+test("the reactivity channel names a write to a key's presence apart from one to its value", () => {
+  const state = proxy({ a: 1 } as any);
+  const dispose = effect(() => [state.b, "b" in state]);
+  setDebug(["reactivity"]);
+  state.b = 2;
+  setDebug(false);
+  dispose();
+  expect(lines).toEqual([
+    "reactivity: proxy write presence of b",
+    "reactivity: write, 1 observer(s)",
+    "reactivity: proxy write b",
+    "reactivity: write, 1 observer(s)",
+  ]);
+});
+
 test("the computed channel names a recompute and an equal result", async () => {
   setDebug("computed");
   const s = signal(1);

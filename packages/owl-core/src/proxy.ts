@@ -238,12 +238,20 @@ class TargetAtoms implements AtomHolder {
     return this.count - (this.keyChanges ? 1 : 0) - (this.members ? 1 : 0);
   }
 
+  describe(atom: KeyAtom): string {
+    const { table, key } = atom;
+    return table !== null && (table === this.presence || table === this.weakPresence)
+      ? `presence of ${String(key)}`
+      : describeKey(key);
+  }
+
   release(atom: Atom): void {
     const { table, key } = atom as KeyAtom;
     if (debug.reactivity) {
-      const presence = table !== null && (table === this.presence || table === this.weakPresence);
-      const what = presence ? `presence of ${String(key)}` : describeKey(key);
-      debugLog("reactivity", `release the atom of ${what}, nothing reads it`);
+      debugLog(
+        "reactivity",
+        `release the atom of ${this.describe(atom as KeyAtom)}, nothing reads it`
+      );
     }
     atom.holder = undefined;
     this.count--;
@@ -324,7 +332,7 @@ function onWriteItems(target: Target): void {
 function notify(target: Target, atom: KeyAtom | undefined): void {
   if (atom !== undefined) {
     if (debug.reactivity) {
-      debugLog("reactivity", `proxy write ${describeKey(atom.key)}`, target);
+      debugLog("reactivity", `proxy write ${(atom.holder as TargetAtoms).describe(atom)}`, target);
     }
     onWriteAtom(atom);
   }
