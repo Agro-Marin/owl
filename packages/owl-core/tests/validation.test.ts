@@ -1207,6 +1207,17 @@ describe("applyDefaults", () => {
     expect(result.a[1]).toBe(value.a[1]);
   });
 
+  test("fills in record values without mutating the input", () => {
+    const type = t.record(t.object({ n: t.number().optional(1) }));
+    const value = { a: {}, b: { n: 2 } };
+    const result = applyDefaults(value, type);
+    expect(result).toEqual({ a: { n: 1 }, b: { n: 2 } });
+    expect(value).toEqual({ a: {}, b: { n: 2 } });
+    expect(result.b).toBe(value.b);
+    const filled = { a: { n: 3 } };
+    expect(applyDefaults(filled, type)).toBe(filled);
+  });
+
   test("returns an array as is when there is nothing to fill in", () => {
     const type = t.array(t.object({ n: t.number().optional(1) }));
     const value = [{ n: 2 }, { n: 3 }];

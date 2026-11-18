@@ -8,6 +8,7 @@ const defaultSymbol = Symbol("default");
 const innerTypeSymbol = Symbol("innerType");
 const shapeSymbol = Symbol("shape");
 const elementTypeSymbol = Symbol("elementType");
+const valueTypeSymbol = Symbol("valueType");
 const optionalSymbol = Symbol("optional");
 const intersectionSymbol = Symbol("intersection");
 
@@ -175,26 +176,28 @@ function applyDefaultsRec(value: any, type: any): any {
   }
   const elementType = inner[elementTypeSymbol];
   if (elementType && Array.isArray(value)) {
-    let result = value;
-    for (let index = 0; index < value.length; index++) {
-      const newValue = applyDefaultsRec(value[index], elementType);
-      if (newValue !== value[index]) {
-        if (result === value) {
-          result = [...value];
-        }
-        result[index] = newValue;
-      }
-    }
-    return result;
+    return applyDefaultsAt(value, value.keys(), () => elementType);
+  }
+  const valueType = inner[valueTypeSymbol];
+  if (valueType) {
+    return applyDefaultsAt(value, Object.keys(value), () => valueType);
   }
   const shape = inner[shapeSymbol];
   if (!shape) {
     return value;
   }
+  return applyDefaultsAt(value, Object.keys(shape), (key) => shape[key]);
+}
+
+function applyDefaultsAt(
+  value: any,
+  keys: Iterable<PropertyKey>,
+  typeAt: (key: PropertyKey) => unknown
+): any {
   let result = value;
-  for (const key in shape) {
-    const subValue = result[key];
-    const newValue = applyDefaultsRec(subValue, shape[key]);
+  for (const key of keys) {
+    const subValue = value[key];
+    const newValue = applyDefaultsRec(subValue, typeAt(key));
     if (newValue !== subValue) {
       if (result === value) {
         result = Array.isArray(value) ? [...value] : { ...value };
@@ -447,7 +450,7 @@ function promiseType(type?: any): any {
 function recordType(): Type<Record<PropertyKey, any>>;
 function recordType<V>(valueType: V): Type<Record<PropertyKey, StripBrands<V>>>;
 function recordType(valueType?: any): any {
-  return makeType(function validateRecord(context: ValidationContext) {
+  const validate = makeType(function validateRecord(context: ValidationContext) {
     if (
       typeof context.value !== "object" ||
       Array.isArray(context.value) ||
@@ -463,6 +466,10 @@ function recordType(valueType?: any): any {
       context.withKey(key).validate(valueType);
     }
   });
+  if (valueType) {
+    validate[valueTypeSymbol] = valueType;
+  }
+  return validate;
 }
 
 function setType<T = any>(): Type<Set<T>>;
