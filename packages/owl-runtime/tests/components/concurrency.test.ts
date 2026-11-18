@@ -4390,6 +4390,104 @@ test("a node of another app rendering again inside a pending pass leaves no task
   expect(Scheduler.active.has(otherApp.scheduler)).toBe(false);
 });
 
+test("a render of a node of another app, cancelled by its parent's render, leaves no task in its app's scheduler", async () => {
+  class Child extends Component {
+    static template = xml`<p><t t-out="this.props.value"/><t t-out="this.state.n"/></p>`;
+    props = props();
+    state = proxy({ n: 0 });
+  }
+  class Parent extends Component {
+    static template = xml`<div><Child value="this.state.value"/></div>`;
+    static components = { Child };
+    state = proxy({ value: 1 });
+  }
+  const parent = await mount(Parent, fixture);
+  const childNode: any = Object.values((parent as any).__owl__.children)[0];
+  const otherApp = new App();
+  childNode.app = otherApp;
+
+  childNode.component.state.n = 1;
+  parent.state.value = 2;
+  await nextTick();
+  await nextTick();
+  expect(fixture.innerHTML).toBe("<div><p>21</p></div>");
+  expect(otherApp.scheduler.tasks.size).toBe(0);
+  expect(Scheduler.active.has(otherApp.scheduler)).toBe(false);
+});
+
+test("a render of a node of another app, delayed behind the pass that removes it, is not kept by the pass's app", async () => {
+  class Item extends Component {
+    static template = xml`<i><t t-out="this.props.id"/><t t-out="this.state.n"/></i>`;
+    props = props();
+    state = proxy({ n: 0 });
+  }
+  class Parent extends Component {
+    static template = xml`<div><t t-foreach="this.state.items" t-as="id" t-key="id"><Item id="id"/></t></div>`;
+    static components = { Item };
+    state = proxy({ items: [1, 2] });
+  }
+  const parent = await mount(Parent, fixture);
+  const app = parent.__owl__.app;
+  const second: any = Object.values((parent as any).__owl__.children)[1];
+  const otherApp = new App();
+  second.app = otherApp;
+
+  parent.state.items.pop();
+  await nextMicroTick();
+  await nextMicroTick();
+  second.component.state.n = 1;
+  await nextTick();
+  await nextTick();
+  expect(fixture.innerHTML).toBe("<div><i>10</i></div>");
+  expect(status(second.component)).toBe("destroyed");
+  expect(app.scheduler.delayedRenders).toEqual([]);
+  expect(otherApp.scheduler.tasks.size).toBe(0);
+});
+
+test("a delayed render whose fiber a re-render cancels is not kept once its component is removed", async () => {
+  let mid: any;
+  let child: any;
+  class Child extends Component {
+    static template = xml`<i><t t-out="this.props.v"/><t t-out="this.state.n"/></i>`;
+    props = props();
+    state = proxy({ n: 0 });
+    setup() {
+      child = this;
+    }
+  }
+  class Mid extends Component {
+    static template = xml`<span><Child v="this.state.m"/></span>`;
+    static components = { Child };
+    state = proxy({ m: 0 });
+    setup() {
+      mid = this;
+    }
+  }
+  class Parent extends Component {
+    static template = xml`<div><Mid t-if="this.state.show"/></div>`;
+    static components = { Mid };
+    state = proxy({ show: true });
+  }
+  const parent = await mount(Parent, fixture);
+  const app = parent.__owl__.app;
+
+  mid.state.m = 1;
+  await nextMicroTick();
+  await nextMicroTick();
+  parent.state.show = false;
+  await nextMicroTick();
+  await nextMicroTick();
+  child.state.n = 1;
+  await nextMicroTick();
+  await nextMicroTick();
+  mid.state.m = 2;
+  await nextTick();
+  await nextTick();
+  expect(fixture.innerHTML).toBe("<div></div>");
+  expect(status(child)).toBe("destroyed");
+  expect(app.scheduler.delayedRenders).toEqual([]);
+});
+
 test("a single render below a rendering ancestor of another app is delayed too", async () => {
   const def = makeDeferred();
   class Slow extends Component {

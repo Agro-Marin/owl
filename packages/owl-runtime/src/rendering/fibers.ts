@@ -4,7 +4,7 @@ import type { ComponentNode } from "../component_node";
 import { STATUS } from "../status";
 import { fibersInError, handleError } from "./error_handling";
 import { memoResume, memoSuspend } from "./memo";
-import { Scheduler } from "./scheduler";
+import { forgetDelayed, Scheduler } from "./scheduler";
 
 const MAX_RENDER_ITERATIONS = 1000;
 
@@ -20,6 +20,7 @@ export function makeChildFiber(node: ComponentNode, parent: Fiber): Fiber {
   let current = node.fiber;
   if (current) {
     cancelFibers(current.children);
+    node.app.scheduler.forget(current);
     current.root = null;
   }
   const fiber = new Fiber(node, parent);
@@ -163,6 +164,7 @@ function above(node: ComponentNode): ComponentNode | null {
 function cancelFibers(fibers: Fiber[]): number {
   let result = 0;
   for (let fiber of fibers) {
+    forgetDelayed(fiber);
     let node = fiber.node;
     if (node.status === STATUS.NEW) {
       node._destroy();
@@ -230,7 +232,7 @@ export class Fiber {
                 `delay ${node.componentName}: ${pass.node.componentName} is rendering`
               );
             }
-            pass.node.app.scheduler.delayedRenders.push(this);
+            pass.node.app.scheduler.delay(this);
             return;
           }
         }

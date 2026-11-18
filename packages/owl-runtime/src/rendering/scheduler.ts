@@ -10,6 +10,20 @@ function captureAnimationFrame(): Window["requestAnimationFrame"] {
 
 const requestAnimationFrame = /* @__PURE__ */ captureAnimationFrame();
 
+const delayedIn = new WeakMap<Fiber, Scheduler>();
+
+export function forgetDelayed(fiber: Fiber) {
+  const holder = delayedIn.get(fiber);
+  if (holder) {
+    delayedIn.delete(fiber);
+    const delayed = holder.delayedRenders;
+    const i = delayed.indexOf(fiber);
+    if (i >= 0) {
+      delayed.splice(i, 1);
+    }
+  }
+}
+
 export class Scheduler {
   static requestAnimationFrame = requestAnimationFrame;
   static active: Set<Scheduler> = new Set();
@@ -34,14 +48,13 @@ export class Scheduler {
     Scheduler.active.add(this);
   }
 
+  delay(fiber: Fiber) {
+    this.delayedRenders.push(fiber);
+    delayedIn.set(fiber, this);
+  }
+
   forget(fiber: Fiber) {
-    const delayed = this.delayedRenders;
-    if (delayed.length) {
-      const i = delayed.indexOf(fiber);
-      if (i >= 0) {
-        delayed.splice(i, 1);
-      }
-    }
+    forgetDelayed(fiber);
     if (fiber.root === fiber && this.tasks.delete(fiber as RootFiber)) {
       if (debug.scheduler) {
         debugLog("scheduler", `drop ${fiber.node.componentName}: destroyed`);
@@ -64,6 +77,7 @@ export class Scheduler {
         );
       }
       for (let f of renders) {
+        delayedIn.delete(f);
         if (f.root && f.node.fiber === f) {
           f.render();
         }
