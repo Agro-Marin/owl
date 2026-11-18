@@ -12,17 +12,7 @@ class VHtml {
 
   mount(parent: HTMLElement, afterNode: Node | null) {
     this.parentEl = parent;
-    const template = document.createElement("template");
-    template.innerHTML = this.html;
-    this.content = [...(template.content.childNodes as any)];
-    for (let elem of this.content) {
-      nodeInsertBefore.call(parent, elem, afterNode);
-    }
-    if (!this.content.length) {
-      const textNode = document.createTextNode("");
-      this.content.push(textNode);
-      nodeInsertBefore.call(parent, textNode, afterNode);
-    }
+    this.content = insertHtml(parent, this.html, afterNode);
   }
 
   moveBeforeDOMNode(node: Node | null) {
@@ -43,23 +33,10 @@ class VHtml {
     }
     const html2 = other.html;
     if (this.html !== html2) {
-      const parent = this.parentEl;
-      const afterNode = this.content[0];
-      const template = document.createElement("template");
-      template.innerHTML = html2;
-      const content = [...(template.content.childNodes as any)];
-      for (let elem of content) {
-        nodeInsertBefore.call(parent, elem, afterNode);
-      }
-      if (!content.length) {
-        const textNode = document.createTextNode("");
-        content.push(textNode);
-        nodeInsertBefore.call(parent, textNode, afterNode);
-      }
-
+      const content = insertHtml(this.parentEl!, html2, this.content[0]);
       this.remove();
       this.content = content;
-      this.html = other.html;
+      this.html = html2;
     }
   }
 
@@ -80,6 +57,19 @@ class VHtml {
   toString() {
     return this.html;
   }
+}
+
+function insertHtml(parent: HTMLElement, html: string, afterNode: Node | null): ChildNode[] {
+  const template = document.createElement("template");
+  template.innerHTML = html;
+  const content: ChildNode[] = [...template.content.childNodes];
+  if (!content.length) {
+    content.push(document.createTextNode(""));
+  }
+  for (const node of content) {
+    nodeInsertBefore.call(parent, node, afterNode);
+  }
+  return content;
 }
 
 export function html(str: string | String): VNode<VHtml> {
