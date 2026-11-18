@@ -1,3 +1,19 @@
+type EventBusListener = ((event: CustomEvent) => void) | EventListenerObject | null;
+
+// trigger() dispatches a CustomEvent: a listener receives one, its payload as `detail`.
+export interface EventBus {
+  addEventListener(
+    type: string,
+    listener: EventBusListener,
+    options?: boolean | AddEventListenerOptions
+  ): void;
+  removeEventListener(
+    type: string,
+    listener: EventBusListener,
+    options?: boolean | EventListenerOptions
+  ): void;
+}
+
 export class EventBus extends EventTarget {
   trigger(name: string, payload?: any) {
     this.dispatchEvent(new CustomEvent(name, { detail: payload }));

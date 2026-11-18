@@ -170,6 +170,20 @@ test("a consumer outside the checkout gets complete collection and hook types", 
   ).toBe(0);
 });
 
+test("an EventBus listener receives the CustomEvent trigger() dispatches", () => {
+  const result = compileConsumer(`
+    import { EventBus } from "@odoo/owl";
+    const bus = new EventBus();
+    const onKey = ({ detail }: CustomEvent<{ key: string }>) => void detail.key;
+    bus.addEventListener("key", onKey);
+    bus.removeEventListener("key", onKey);
+    bus.addEventListener("any", (event) => void event.detail);
+    bus.trigger("key", { key: "a" });
+  `);
+  expect(result.output).toBe("");
+  expect(result.status).toBe(0);
+});
+
 test("a consumer names the Markup that markup() and htmlEscape() return", () => {
   const result = compileConsumer(`
     import { htmlEscape, markup, type Markup } from "@odoo/owl";
