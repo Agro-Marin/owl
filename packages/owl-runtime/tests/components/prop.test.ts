@@ -285,6 +285,20 @@ describe("dev mode", () => {
     await nextTick();
     expect(fixture.innerHTML).toBe("<span>1</span><i>a</i>");
   });
+  test("a key another view defaults is validated by its default value", async () => {
+    class Child extends Component {
+      static template = xml`<i t-out="this.mode"/>`;
+      props = props({ mode: t.string().optional("a") });
+      mode = props.static("mode", t.string());
+    }
+    class Parent extends Component {
+      static template = xml`<Child/>`;
+      static components = { Child };
+    }
+
+    await mount(Parent, fixture, { dev: true });
+    expect(fixture.innerHTML).toBe("<i>a</i>");
+  });
 });
 
 test("throws if called outside a component scope", () => {

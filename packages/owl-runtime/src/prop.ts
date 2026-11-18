@@ -28,7 +28,7 @@ export function staticProp(key: string, type?: any): any {
       const message = usesDefault
         ? `Invalid default value for prop '${key}' in '${node.componentName}'`
         : `Invalid prop '${key}' in '${node.componentName}'`;
-      assertType(usesDefault ? value : propValue, type, message);
+      assertType(value, type, message);
     }
     node.addHook("willUpdateProps", (nextProps: Record<string, any>) => {
       const current = node.props[key] === undefined ? node.defaultProps?.[key] : node.props[key];
