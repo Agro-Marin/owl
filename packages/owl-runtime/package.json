@@ -20,7 +20,8 @@
   "scripts": {
     "test": "vitest run",
     "test:types": "tsc --project tsconfig.tests.json",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "coverage": "vitest run --coverage --coverage.provider=v8 --coverage.include='src/**' --coverage.reporter=text-summary --coverage.reporter=json-summary --coverage.reportsDirectory=../../temp/coverage/owl-runtime"
   },
   "repository": {
     "type": "git",
