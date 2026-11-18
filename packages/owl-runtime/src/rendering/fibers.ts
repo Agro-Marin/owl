@@ -169,6 +169,38 @@ function above(node: ComponentNode): ComponentNode | null {
   return node.parent || (node.status === STATUS.MOUNTED ? subRootHosts.get(node) || null : null);
 }
 
+// The pass a render of `root`'s subtree must wait for, or null: the one rule of
+// rendering across passes and apps. Walking up from the root's component (into
+// the host of a mounted sub-root), an ancestor another pass is rendering may
+// still render the subtree, so the render waits for that pass, in that pass's
+// app's scheduler, which resumes it at its next flush. Two passes are walked
+// past instead, from their own root: a failed one, which never commits, and
+// one done rendering (counter 0) that already holds the subtree (the component
+// below is in its children, or is an app's root), which will not render it
+// again. With one task and one active scheduler no other pass exists.
+function blockingPass(root: RootFiber): RootFiber | null {
+  if (root.node.app.scheduler.tasks.size <= 1 && Scheduler.active.size <= 1) {
+    return null;
+  }
+  let prev = root.node;
+  let current = above(prev);
+  while (current) {
+    if (current.fiber) {
+      const pass = current.fiber.root!;
+      const passedOver =
+        fibersInError.has(pass) ||
+        (pass.counter === 0 && (!prev.parent || !!current.fiber.childrenMap?.has(prev.parentKey!)));
+      if (!passedOver) {
+        return pass;
+      }
+      current = pass.node;
+    }
+    prev = current;
+    current = above(current);
+  }
+  return null;
+}
+
 function cancelFibers(fibers: Fiber[]): number {
   let result = 0;
   for (let fiber of fibers) {
@@ -221,33 +253,13 @@ export class Fiber {
   render() {
     const node = this.node;
     const root = this.root!;
-    const scheduler = root.node.app.scheduler;
-    if (scheduler.tasks.size > 1 || Scheduler.active.size > 1) {
-      let prev = root.node;
-      let current = above(prev);
-      while (current) {
-        if (current.fiber) {
-          const pass = current.fiber.root!;
-          if (
-            fibersInError.has(pass) ||
-            (pass.counter === 0 &&
-              (!prev.parent || !!current.fiber.childrenMap?.has(prev.parentKey!)))
-          ) {
-            current = pass.node;
-          } else {
-            if (debug.fiber) {
-              debugLog(
-                "fiber",
-                `delay ${node.componentName}: ${pass.node.componentName} is rendering`
-              );
-            }
-            pass.node.app.scheduler.delay(this);
-            return;
-          }
-        }
-        prev = current;
-        current = above(current);
+    const pass = blockingPass(root);
+    if (pass) {
+      if (debug.fiber) {
+        debugLog("fiber", `delay ${node.componentName}: ${pass.node.componentName} is rendering`);
       }
+      pass.node.app.scheduler.delay(this);
+      return;
     }
 
     if (this.renderState >> 1 > MAX_RENDER_ITERATIONS) {
@@ -304,6 +316,7 @@ export class Fiber {
       renderMergedAlone(root);
     }
     if (newCounter === 0) {
+      const scheduler = root.node.app.scheduler;
       if (fibersInError.has(root)) {
         scheduler.requestFrame();
       } else {
