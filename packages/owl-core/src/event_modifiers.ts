@@ -1,22 +1,29 @@
 import { OwlError } from "./owl_error";
 
+// Named before the objects that hold them: a module-level read of a property
+// (`EventModifier.CAPTURE`) is a possible side effect to a bundler, which then
+// keeps the object in every bundle importing anything from this package.
+const CAPTURE = 32;
+const PASSIVE = 64;
+const SYNTHETIC = 128;
+
 export const EventModifier = {
   PREVENT_ANY: 1,
   STOP_ANY: 2,
   SELF: 4,
   PREVENT: 8,
   STOP: 16,
-  CAPTURE: 32,
-  PASSIVE: 64,
-  SYNTHETIC: 128,
+  CAPTURE,
+  PASSIVE,
+  SYNTHETIC,
 } as const;
 
 export const HANDLER_MODIFIERS = 31;
 
 const LISTENER_MODIFIERS: { [m: string]: number } = {
-  capture: EventModifier.CAPTURE,
-  passive: EventModifier.PASSIVE,
-  synthetic: EventModifier.SYNTHETIC,
+  capture: CAPTURE,
+  passive: PASSIVE,
+  synthetic: SYNTHETIC,
 };
 
 export function eventModifierMask(key: string): number {

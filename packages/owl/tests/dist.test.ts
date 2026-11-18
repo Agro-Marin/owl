@@ -1,6 +1,7 @@
 import { spawnSync } from "child_process";
 import { build, transform } from "esbuild";
 import { readdirSync, readFileSync, rmSync, writeFileSync } from "fs";
+import { gzipSync } from "zlib";
 import { TARGET } from "../build_target.mjs";
 import { join } from "path";
 import { PACKAGE_SOURCES, scratchDir } from "../../../tools/workspace.mjs";
@@ -29,6 +30,12 @@ async function bundle(code: string, minify = true): Promise<string> {
 const COMPONENT_CODE = ["App", "TemplateSet", "ComponentNode", "Scheduler", "Fiber"];
 const BLOCKDOM_CODE = ["createBlock", "VMulti", "VList", "VToggler", "createCatcher"];
 const COMPILER_CODE = ["CodeGenerator", "parseXML", "compileExpr"];
+const EVENT_AND_ATTRIBUTE_CODE = [
+  "EventModifier",
+  "LISTENER_MODIFIERS",
+  "AttrsSnap",
+  "NO_ATTRS_SNAP",
+];
 
 describe.each(["@odoo/owl", "@odoo/owl/runtime"])("%s", (entry) => {
   test("importing it for its effects bundles nothing", async () => {
@@ -44,11 +51,44 @@ describe.each(["@odoo/owl", "@odoo/owl/runtime"])("%s", (entry) => {
       `import { signal } from ${JSON.stringify(entry)}; console.log(signal);`,
       false
     );
-    for (const name of [...COMPONENT_CODE, ...BLOCKDOM_CODE, ...COMPILER_CODE]) {
+    for (const name of [
+      ...COMPONENT_CODE,
+      ...BLOCKDOM_CODE,
+      ...COMPILER_CODE,
+      ...EVENT_AND_ATTRIBUTE_CODE,
+    ]) {
       expect(readable).not.toMatch(new RegExp(`\\b${name}\\b`));
     }
     expect(signalOnly.length / all.length).toBeLessThan(0.2);
   });
+});
+
+// Minified and gzipped (level 9) bytes of what a bundler keeps from each import.
+// A build over its budget fails; one more than 2 % under it fails too, so a
+// saving is written down here and a later regression cannot spend it unseen.
+const SIZE_BUDGETS: [string, string, number][] = [
+  ["everything", `export * from "@odoo/owl";`, 60397],
+  ["the runtime", `export * from "@odoo/owl/runtime";`, 41181],
+  ["the compiler", `import "@odoo/owl/compiler";`, 19787],
+  ["signal alone", `import { signal } from "@odoo/owl/runtime"; console.log(signal);`, 7601],
+];
+
+test.each(SIZE_BUDGETS)("%s stays within its size budget", async (_, code, budget) => {
+  // The build hash differs per checkout state, and gzip's output with it.
+  const hash = /var buildHash = "([^"]+)"/.exec(
+    readFileSync(join(BUILT, "dist/owl.es.js"), "utf8")
+  )![1];
+  const minified = (await bundle(code)).replaceAll(hash, "");
+  const size = gzipSync(minified, { level: 9 }).length;
+  console.debug("[owl:size-budget]", code, size, budget);
+  expect(
+    size,
+    `over its budget of ${budget} bytes: shrink it, or raise the budget saying why`
+  ).toBeLessThanOrEqual(budget);
+  expect(
+    size,
+    `under its budget of ${budget} bytes by over 2 %: lower the budget to ${size}`
+  ).toBeGreaterThan(budget * 0.98);
 });
 
 test("importing the compiler module for its effects keeps its registration", async () => {

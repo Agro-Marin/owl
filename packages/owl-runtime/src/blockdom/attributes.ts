@@ -100,7 +100,7 @@ function nullProtoClass(): new () => AttrsSnap {
 
 const AttrsSnap = /* @__PURE__ */ nullProtoClass();
 
-const NO_ATTRS_SNAP = /* @__PURE__ */ Object.freeze(new AttrsSnap());
+const NO_ATTRS_SNAP = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ new AttrsSnap());
 
 export function makeAttrsUpdater(
   updateClassFn: Snapshotter<HTMLElement>,

@@ -37,7 +37,8 @@ These remain deliberate differences from current upstream.
 - **A true ES module package**: every entry is one ES module (no CommonJS
   twin; Node's `require()` loads the same instance as `import`). Importing a
   build changes no global and registers nothing, so a bundle keeps only what
-  it uses (`import { signal }` bundles to 5.9 KB gz of the runtime's 35);
+  it uses (`import { signal }` bundles to 7.6 kB gz of the runtime's 41.2, minified
+  and gzipped; `tests/dist.test.ts` holds each entry to a size budget);
   `"sideEffects"` names the compiler module alone (whose registration is its
   purpose). No IIFE script and no global `owl` either: the devtools
   extension's own pages import the ES build like any other code. `window.__OWL_DEVTOOLS__` is set by the first
