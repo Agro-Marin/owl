@@ -39,7 +39,8 @@
     "release": "node tools/release.mjs",
     "vendor:odoo": "node tools/vendor_odoo.mjs",
     "compile_templates": "node tools/compile_owl_templates.mjs",
-    "verify": "node tools/verify.mjs"
+    "verify": "node tools/verify.mjs",
+    "mutate": "node tools/mutation/mutate.mjs"
   },
   "repository": {
     "type": "git",

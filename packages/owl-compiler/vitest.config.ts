@@ -7,6 +7,7 @@ export default defineConfig({
   },
   test: {
     ...TEST_DEFAULTS,
+    root: import.meta.dirname,
     environment: "jsdom",
     include: ["tests/**/*.test.ts"],
     setupFiles: ["./tests/setup.ts"],

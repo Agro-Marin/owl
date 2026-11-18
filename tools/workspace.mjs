@@ -51,7 +51,6 @@ export function scratchDir(prefix) {
 }
 
 export const TEST_DEFAULTS = {
-  root: ".",
   globals: true,
   testTimeout: 10000,
   globalSetup: [at("tools/testing/node_version.mjs")],

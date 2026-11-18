@@ -4,6 +4,7 @@ import { TEST_DEFAULTS } from "../../tools/workspace.mjs";
 export default defineConfig({
   test: {
     ...TEST_DEFAULTS,
+    root: import.meta.dirname,
     environment: "node",
     include: ["tests/**/*.test.ts"],
     setupFiles: ["./tests/setup.ts"],

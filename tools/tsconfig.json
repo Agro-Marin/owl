@@ -7,6 +7,8 @@
     "hooks/**/*.ts",
     "hooks/**/*.d.mts",
     "odoo_migration/**/*.ts",
+    "mutation/**/*.ts",
+    "mutation/*.d.mts",
     "../packages/*/vitest.config.ts",
     "../packages/*/*.d.mts"
   ],

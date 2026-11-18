@@ -2,7 +2,7 @@ import { defineConfig } from "vitest/config";
 import { PACKAGE_SOURCES, TEST_DEFAULTS } from "../../tools/workspace.mjs";
 
 const NODE_TESTS = ["tests/no_dom.test.ts"];
-const test = { ...TEST_DEFAULTS, setupFiles: ["./tests/setup.ts"] };
+const test = { ...TEST_DEFAULTS, root: import.meta.dirname, setupFiles: ["./tests/setup.ts"] };
 
 export default defineConfig({
   define: {

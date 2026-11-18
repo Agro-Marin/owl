@@ -12,7 +12,12 @@ const fullAliases = [
   },
 ];
 
-const test = { ...TEST_DEFAULTS, environment: "jsdom", setupFiles: ["./tests/setup.ts"] };
+const test = {
+  ...TEST_DEFAULTS,
+  root: import.meta.dirname,
+  environment: "jsdom",
+  setupFiles: ["./tests/setup.ts"],
+};
 
 export default defineConfig({
   define: {
