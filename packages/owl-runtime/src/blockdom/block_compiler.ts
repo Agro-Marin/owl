@@ -601,9 +601,8 @@ function createBlockClass(template: HTMLElement, ctx: BlockCtx, str: string): Bl
   ctx.handlers.sort((a, b) => a.idx - b.idx);
   const handlerN = ctx.handlers.length;
   const handlerRefIdxs: number[] = ctx.handlers.map((h) => h.refIdx);
-  const handlerSetups = ctx.handlers.map(
-    (h, n) =>
-      createEventHandler(h.event, { fn: n, ctx: h.idx, arg: ctx.handlerArgs[h.idx] ?? -1 }).setup
+  const handlerSetups = ctx.handlers.map((h, n) =>
+    createEventHandler(h.event, { fn: n, ctx: h.idx, arg: ctx.handlerArgs[h.idx] ?? -1 })
   );
   const locSync: boolean[] = locations.map((l) => !!l.sync);
   let snapN = 0;

@@ -7,7 +7,7 @@ import {
 } from "@odoo/owl-core";
 import { config, type HandlerFn } from "./config";
 import { nodeInsertBefore } from "./dom";
-import { createEventHandler, type HandlerOwner } from "./events";
+import { createSyntheticHandler, type SyntheticHandler } from "./events";
 import type { VNode } from "./index";
 
 type EventsSpec = { [name: string]: number };
@@ -56,30 +56,27 @@ function kindOf(key: string, mask: number): ListenerKind {
 }
 
 function makeKind(id: string, mask: number): ListenerKind {
+  const name = id.split(".")[0];
   const capture = !!(mask & EventModifier.CAPTURE);
   if (mask & EventModifier.SYNTHETIC) {
-    const creators: ReturnType<typeof createEventHandler>[] = [];
-    const creator = (passive: boolean) =>
-      (creators[+passive] ||= createEventHandler(
-        passive ? id + ".passive" : id,
-        { fn: 0, ctx: 0, arg: -1 },
-        true
-      ));
-    const handlers = [(parent: Node, ev: Event) => dispatch(kind, parent, ev)];
+    const dispatchKind = (parent: Node, ev: Event) => dispatch(kind, parent, ev);
+    const run = (parent: Node, ev: Event) =>
+      config.mainEventHandler(dispatchKind, 0, parent, ev, parent);
+    const handlers: SyntheticHandler[] = [];
+    const handler = (passive: boolean) =>
+      (handlers[+passive] ||= createSyntheticHandler(name, capture, passive, true, run));
     const kind: ListenerKind = {
       id,
       capture,
       listen(parent, passive) {
-        const owner: HandlerOwner = { data: [parent], handlers };
-        creator(passive).setup.call(parent, owner);
+        handler(passive).add(parent);
       },
       unlisten(parent, passive) {
-        creator(passive).remove.call(parent);
+        handler(passive).delete(parent);
       },
     };
     return kind;
   }
-  const name = id.split(".")[0];
   const passiveOptions = { capture, passive: true };
   const listener = (ev: Event) => {
     const parent = ev.currentTarget as Node | null;
