@@ -191,10 +191,12 @@ function expectedLog(target: VEl, event: string): string {
     h.mods.includes("capture") === capture &&
     h.mods.includes("synthetic") === synthetic;
   const at = (i: number, capture: boolean, synthetic: boolean): boolean => {
-    let stop = run(
-      path[i].on.filter((h) => matches(h, capture, synthetic)).map((h) => [h, i === 0])
-    );
-    if (i > 0) {
+    const own = () =>
+      run(path[i].on.filter((h) => matches(h, capture, synthetic)).map((h) => [h, i === 0]));
+    const catchers = () => {
+      if (i === 0) {
+        return false;
+      }
       const child = path[i - 1];
       const nested = child.catchers.map((catcher) =>
         catcher
@@ -204,14 +206,13 @@ function expectedLog(target: VEl, event: string): string {
       if (capture) {
         nested.reverse();
       }
-      for (const items of nested) {
-        if (run(items)) {
-          stop = true;
-          break;
-        }
-      }
+      return nested.some(run);
+    };
+    if (!synthetic) {
+      const stop = own();
+      return catchers() || stop;
     }
-    return stop;
+    return capture ? own() || catchers() : catchers() || own();
   };
   const finish = (label: string) => {
     flush(label);
