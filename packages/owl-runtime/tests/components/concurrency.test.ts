@@ -5,6 +5,7 @@ import {
   mount,
   onError,
   onMounted,
+  onPatched,
   onWillDestroy,
   onWillPatch,
   onWillStart,
@@ -4555,5 +4556,33 @@ describe("superseded and destroyed renders", () => {
     await nextTick();
     expect(app.scheduler.tasks.size).toBe(0);
     app.destroy();
+  });
+
+  test("a render asked during a commit, of a component destroyed before it runs, schedules nothing", async () => {
+    let child: Child;
+    class Child extends Component {
+      static template = xml`<b t-out="this.props.v"/>`;
+      props = props();
+      setup() {
+        child = this;
+      }
+    }
+    class Parent extends Component {
+      static template = xml`<div><Child v="this.v()"/></div>`;
+      static components = { Child };
+      v = signal(1);
+      setup() {
+        onWillPatch(() => child.__owl__.render(false));
+        onPatched(() => app.destroy());
+      }
+    }
+    const app = new App({ test: true });
+    const parent = await app.createRoot(Parent).mount(fixture);
+    parent.v.set(2);
+    await nextTick();
+    expect(status(child!)).toBe("destroyed");
+    expect(child!.__owl__.fiber).toBe(null);
+    expect(app.scheduler.tasks.size).toBe(0);
+    expect(Scheduler.active.has(app.scheduler)).toBe(false);
   });
 });

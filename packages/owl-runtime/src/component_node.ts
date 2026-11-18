@@ -178,6 +178,9 @@ export class ComponentNode extends Scope<App> implements VNode<ComponentNode> {
     let current = this.fiber;
     if (current && (current.root!.locked || current.phase === FiberPhase.RENDERING)) {
       await Promise.resolve();
+      if (this.status >= STATUS.DESTROYED) {
+        return;
+      }
       current = this.fiber;
     }
     if (current) {
