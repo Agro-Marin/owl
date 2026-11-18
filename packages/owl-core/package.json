@@ -1,7 +1,7 @@
 {
   "name": "@odoo/owl-core",
   "private": true,
-  "version": "3.0.0-alpha.49",
+  "version": "3.0.0-marin.1",
   "description": "Core reactivity primitives for Odoo Web Library (OWL)",
   "main": "src/index.ts",
   "module": "src/index.ts",

@@ -1,0 +1,569 @@
+# Changelog of the 3.0-marin fork
+
+## 3.0.0-marin.1 (2026-11-18)
+
+### FIX
+
+- tools release: a changelog entry escapes what the docs site reads as an element or an interpolation, so the release commit's doc build passes
+- tools release: the changelog is written formatted by prettier, so the release commit passes check-formatting
+- tools hooks pre_push: a push is verified once per commit, an annotated tag as the commit it names
+- owl tests: the tests that build the package wait for a build as long as a loaded machine takes, so the pre-push hook does not refuse a good commit
+- owl-core computations, computed: bringing a computed up to date is a batch, so an immediate effect it queues runs once it is, instead of inside an evaluation it reads and throwing "Cycle detected"
+- owl-core computations: a computation whose check ran a write to a source it had checked already ends up to date on what it checked and is forwarded that source's next write, instead of never running for it again
+- owl-core computations: a write that queues nothing new schedules no flush, also after an earlier write queued an effect while a flush was scheduled, or when it queues again a disposal the flush will run
+- owl-core effect: an effect disposed by its own run is not run again by a write later in that run, so an immediate one no longer makes that write throw "Cycle detected"
+- owl-core computations: an effect that saw a computed change during its run stays its observer, so another reader letting the computed go no longer disposes it under the effect
+- owl-runtime tests: the snapshots of two tests that no longer compile are removed, and validation.test.ts is formatted
+- owl-runtime component_node: a commit clears forceNextRender, so a component that committed on its own after a failed commit is neither rendered again by an unchanged parent nor misses its t-memo
+- owl-runtime app: a root whose render failed is not prepared, so a Suspense whose content fails at once keeps its fallback
+- owl-runtime template helpers, fibers: a render whose component an error handler destroyed sets up no further child, so a first mount failing on a child leaks no component
+- owl-runtime fibers: a render delayed behind a failed pass runs, though that pass's render left its component out, instead of waiting forever
+- owl-runtime fibers, scheduler: a fiber a render abandons leaves every scheduler holding it, its own pass's task and a render it had delayed in another app's scheduler
+- owl-runtime component_node: a render that recycles a fiber of another app's pass is scheduled by that pass's app, so an idle app keeps no task of a pass it does not run
+- tools compile_templates test: the raw checker's failure line carries the template name the compiler now adds
+- doc fork page: compile errors naming the invalid expression and its template are listed with the template differences
+- owl-runtime portal: tearing a positioned portal down places its target's portals again, as before c4319011
+- owl-core computations: a write schedules its flush after the immediate effects it runs, as before 5b96dcd1, so a microtask they queue runs before the effects the write queued
+- owl-core proxy: observe() views a raw-marked target again, so an observe() of a component's props calls back when a prop changes
+- owl-core types: applyDefaults recognizes plain data whatever its realm, so an iframe's plain object or array is filled in again
+- owl-compiler inline expressions: a method named function reached through optional chaining is called again, not refused as a function expression
+- owl-runtime fibers: a pass is flushed by its root's app again, so a pass whose last render is a node of another app commits
+- owl-core computations: a computation disposed during a nested read no longer stays reachable from the source it read
+- doc fork page: applyDefaults over class instances, the function expressions that throw, the main event handler's calls and a mounted block's toString are listed with the other differences
+- owl-runtime blockdom block_compiler: a mounted block stringifies its own element instead of mounting itself again into a throwaway div
+- doc fork page: a synthetic root is found when something mounts into it, so a target mounted detached and moved into a shadow root later gets only its composed events
+- owl-compiler inline expressions: a function expression with a name or parameters throws a named error instead of compiling them as context reads
+- owl-runtime blockdom event_catcher: a synthetic catcher runs its dispatch directly instead of through the main event handler, so a handler is reported and hooked once
+- owl-compiler parser, inline expressions: a t-set, t-as, t-slot-scope or t-call argument name no expression can read throws instead of compiling into a variable nothing reads
+- owl-core types: applyDefaults leaves an instance of a class as it is instead of copying it into a plain object
+- doc fork page: the standalone precompiler writes its output into the existing file once it compiled whole, not through a staged file
+- owl-runtime tests template fuzz: the reference runs a parent's synthetic catcher level as the fork page orders it, so a stop in one level skips the other
+- doc fork page: the expression and prop-suffix fixes are listed with the template differences
+- owl-compiler loop contexts: a context variable assigned through a rest element keeps the inner loop items inheriting from the outer one
+- owl-compiler attributes: an expression is an object literal only when its first brace closes at its end
+- owl-compiler standalone: a precompiled template's function keeps every $ of its name
+- owl-compiler props: a prop, t-call or slot argument with more than one suffix throws instead of applying one of them
+- owl-compiler parser: an empty t-tag, t-call, t-call-slot or t-slot throws naming its directive
+- owl-compiler inline expressions: an interpolation's end is found past a regular expression after a division, and past a division after an object literal
+- owl-compiler inline expressions: a numeric literal starting with its decimal point keeps its property access
+- owl-compiler inline expressions: a division before a regular expression, and &lt; before !--, no longer compile into a comment
+- owl-core proxy: observe() returns a raw-marked target as is, instead of an inert view of it
+- owl-core proxy debug: a write to a key's presence is logged as "proxy write presence of &lt;key&gt;", as its read and release are
+- owl-core types: applyDefaults fills in the values of a t.record, as it does array elements and shape keys
+- owl-core proxy: forEach called unbound hands out the shallow proxy it was read from, not the raw collection
+- owl-core validation: an issue prints a plain object with a "constructor" key as data, not as "[Instance of anonymous]"
+- owl-core validation: a hand-written validator whose source starts with "class" is a type, not a constructor
+- doc fork page: a cascading dispose releases the disposed effect too, and a failed first run throws its own error
+- owl-core effect: a dispose whose cascade throws still runs the effect's cleanup and disposes its children
+- owl-core computations: an effect whose owner fails in the same flush still runs, and keeps following its sources
+- owl-core computations: every due owner runs before the effect it owns, not only the outermost
+- owl-core computations: a write to a source a running computation has not read again yet does not invalidate it
+- owl-runtime blockdom events: a shadow root of another document's realm is a synthetic root
+- owl-runtime blockdom attributes: a dynamic attribute writes its value as a t-att entry does
+- owl-runtime blockdom block_compiler: the ref callbacks of one block run in document order
+- owl-runtime blockdom event_catcher: a parent's catcher listener is passive again once its last non-passive handler goes
+- owl-runtime prop: a props.static type is checked against the value the component gets, a default from props() included
+- owl-runtime scheduler: a commit that fails in the frame is dropped from the tasks, not left for a frame nobody asks for
+- owl-runtime component_node: a component's render computation is named whatever the debug flags were at its creation
+- owl-runtime component_node: a render deferred past a commit does not schedule a destroyed component
+- owl build, build hash, tools vendor_odoo, testing harness: git runs without a shell, an unknown build target is refused, the vendor step names the build once, and the harness test writes under temp/
+- tools workspace, verify, doc fork page: the tools find Odoo and ruff from the workspace holding the checkout instead of one machine's absolute paths, and the fork page's fork range names a commit every clone has
+- doc fork page: the fork page names what Odoo vendors: owl.runtime.es.js as @odoo/owl, owl.compiler.es.js as @odoo/owl/compiler, owl.es.js for the server precompiler
+- gitignore: Python bytecode caches are ignored, so running a codemod leaves the checkout clean
+- tools odoo_migration, doc fork page: a template checker skips a module root with nothing for it to check, with a note, and refuses only a run with nothing to check
+- tools odoo_migration: both template checkers refuse a Node older than .node-version by name instead of dying midway
+- owl tests observe, doc fork page: the fork page says exactly where untrack keeps reads off an observe() view, and a test pins the three cases
+- owl-core effect: an effect that disposes itself and then throws keeps its own error and releases its run when dropping a source throws
+- owl-core computations: an observe() view read late keeps the key's atom subscribed, so it still calls back when the key's last other reader stops before the callback runs
+- owl-runtime toggler, template helpers, blockdom list: a t-call-block multi or list of another shape is mounted in place of the previous one instead of patched into it
+- owl-compiler code generator, parser: a loop's item key is resolved through a marker instead of a rewrite of the generated code, and an attribute of any declared prefix keeps its namespace
+- owl-compiler inline expressions, parser: the globals an expression reads as JavaScript's own are every one all targets have, and every object literal method form throws
+- owl-runtime events, event_catcher, doc event_handling, fork page: a component's synthetic t-on runs inside its parent element's own, in a fixed order, and its stop keeps the element's out
+- tooling vendor_odoo, odoo_migration checkers, benchmarks, owl build, build_hash, owl tests: vendoring refuses what Odoo's checker refuses and any uncommitted build input, and the checkers refuse a bad root or a stale dist
+- tooling test helpers, owl-core effect, immediate_effect and owl-runtime proxy tests: the tests written against a four-microtick wait get it back
+- owl-runtime fibers, component_node, template_helpers: a failed first mount rolls its children back instead of destroying them mid-error, and owed hooks run once
+- owl-core plugin_manager, plugin_hooks: a child manager starts a plugin it lists itself, a nested start holds its batch, and a lookup looks past a same-named class
+- owl tests reactivity, doc fork page: an observe() view first read in onWillStart or inside untrack keeps calling back, and the fork page says what untrack does to a view
+- owl-compiler code generator, owl-runtime template_helpers: a proxied class or style object changed in place renders its component again
+- owl-compiler inline expressions, parser, code generator: four template inputs that compiled to broken code or the wrong output throw or render as written
+- owl-compiler code generator: a prefixed attribute is set with its namespace, so a template holding one compiles under JSDOM
+- owl-compiler inline expressions, parser: a template variable named like a global an expression reads as JavaScript's own throws, and the list of such globals is complete
+- owl-compiler parser: a t-set with a t-value and a blank body takes the value, and a CDATA section is text
+- owl-compiler parser: a directive the parser would drop throws, t-call-block and t-call-slot go on a &lt;t&gt;, and a t-set-slot's arguments exclude what a directive on it consumed
+- owl-compiler code generator, inline expressions: an arrow function given as a prop or argument reads the variables at its place, and handlers with no t-set between them share one context copy
+- owl-compiler code generator, owl-runtime template helpers: a t-call-block block and a slot without default content are replaced when their kind changes
+- owl-compiler code generator, owl-runtime template helpers: a t-key keys every component under it, and a list item is diffed by the key its components get
+- owl-runtime fibers: a first mount that fails after its children mounted destroys the children it made, instead of leaving them set up and unreachable
+- owl-runtime blockdom block_compiler, attributes: an explicit xmlns inside a namespaced block is its element's namespace, and a prefixed dynamic attribute is written in its namespace
+- owl-runtime blockdom block_compiler, multi, list, toggler, event_catcher, component_node: removing a block releases the refs inside it, and nested refs are set once in the document, outermost first
+- owl-core event_modifiers, owl-runtime blockdom event_catcher, events: nested component t-ons stop and capture in the right order, one listener per kind, and synthetic roots that were collected are dropped
+- owl-runtime blockdom attributes, block_compiler: a class, style or t-att object changed in place is applied again, and a truthy class is no longer rewritten on every patch
+- owl-runtime lifecycle_hooks: a synchronous throw in onWillUpdateProps goes to the component's own onError, as a rejection does, instead of failing the parent's render
+- owl-runtime app: mount() rejects with an AbortError when its App is destroyed before the mount is done, instead of never settling
+- owl-runtime fibers, component_node, error_handling, scheduler: a failed pass and a failed commit recover without committing a pass twice, crashing, orphaning a child or losing a render
+- owl-core computations, proxy: a key's atom is released when its last reader unsubscribes, so writes nobody observes any more take the fast path and clear() stops walking every entry
+- owl-core computations: a computed whose last reader stops reading it is disposed at the flush, and its effects with it
+- owl-core effect: an effect that disposes itself and then throws keeps no subscription
+- owl-core proxy: a write through a setter no longer fails on its getter, and calls it only when the key is observed
+- owl-core computations, proxy: an observe() view keeps the reads made between a change and its callback
+- owl-core proxy: a set operation on a proxied Set reads of its argument only what the native method reads
+- owl-core proxy: a Map or Set that already holds a proxy finds it, deletes it and notifies its readers through it
+- owl-core computations: an effect that writes a signal and reads it again runs when the value it corrected comes back
+- owl-core plugin_manager, plugin_hooks, debug: plugins are told apart by class without a declared id, nested and failed starts keep ready right, and a plugin is torn down before what it uses
+- owl-core types, validation, registry, resource, hooks, owl-runtime props: a schema is typed as a schema, not as the value it describes, and a top-level schema is checked
+- owl-runtime package: declare jsdom, which its test suite runs on, as a devDependency
+- tooling, eslint, prettier, tsconfigs, owl-runtime tests: lint, format and type checks cover the tooling, verify runs every step and reports a table, and the scripts no longer fall through
+- owl-core tests: the five tests that raise an IntentionalTestError assert that it was reported as an unhandled rejection
+- odoo_migration checkers: OWL, WEB and OLD default to this checkout and Odoo, a missing one is named, and an unknown custom directive is a failure
+- owl build, owl tests, devtools build: the tests build into their own directory and no longer rewrite dist/, builds are dated by their commit, devtools templates stay out of the source tree
+- tooling, owl tests, vitest configs: every suite refuses Node &lt;26 by name, and npm test runs every package whatever fails first
+- owl-core tests, conformance: the 18 behavioural cases pin owl's verdicts, and the batch adapter returns batch()'s value
+- owl tests: the restored type-test directive in types_hooks.ts says what it expects in full
+- owl-core, owl-compiler, owl-runtime, owl tests, snapshots, devtools: the comment strip took the bundler's purity annotations, the type tests' expected errors and the snapshot headers with it, and left 75 files unformatted
+- owl-core hooks, runtime, declarations: prevent contextual types from inventing unchecked config values and app methods
+- owl-core proxy, scope, plugin manager, runtime: inspect nested values once and type the app boundary without coupling core to runtime
+- owl: preserve reactive notifications, cleanup lifetimes and build contracts
+- owl-compiler code_generator, owl-runtime template_helpers, doc: what a template keeps for later (a handler, a slot, a called template, a t-set body) reads the variables at its place, as OWL 2 did, and the scoping rules are documented as they work
+- owl-runtime toggler, template_helpers: a t-out showing one t-set body, then another, replaces the content instead of patching one body's blocks with the other's
+- owl-core plugin_hooks, plugin_manager: plugins asking for each other in their setups each get the other again, so the devtools panel starts
+- template_helpers: a dynamic slot name that evaluates to undefined renders the default content again, instead of crashing the key escape
+- owl-runtime tests render_allocations: the context-writing handler is an arrow, so the test raises no unhandled error after its assertions pass
+- owl-runtime app, fibers: a deep render of a Portal or Suspense renders its content deep too, the components in it included
+- owl-compiler code_generator, owl-runtime template_helpers: a t-set body given to an attribute or a property is its string, taken in the render, so the attribute follows what the body reads
+- blockdom events: a synthetic event is replayed once over the path, passive handlers and others alike, and each root an app listens on replays the nodes of its own tree, with the target they see natively
+- owl-compiler code_generator, owl-runtime template_helpers: a component's key is an exact encoding of the path to its site, so no loop key, t-key, slot or template name spells another child's key, and a t-set body output by another component renders as that component's
+- devtools global hook: a hook breakpoint is added by giving the node a new hook list, so a component of the class still mounts, and each node's original lists are restored on removal
+- blockdom event_catcher: a catcher mounted by its component's own render finds the catcher enclosing it at its first dispatch, not while that render is still patching it
+- owl-compiler code_generator: every keyed site (slot call, t-out="0", t-set body) has an id of its own, so a site's loop keys never spell another site's id and two components never share a key
+- blockdom block_compiler: a block's handlers take their code in the order of their data index, not in the order its tree is walked, so an element runs its own handler when a child block sits among them
+- owl-core computations: a computed whose run writes a source it read ends out of date, and a run that invalidates a computed it read leaves that computed on the value it read, which forwards the next write instead of being recomputed
+- blockdom list, text, html, multi, dom: a list whose items, one node each, are all its parent holds is emptied or removed at once again, after a check that nothing else is there, and a text, html or multi anchor removal does nothing once its node is detached
+- owl-runtime tests t_component: a test pins the instance a pending switch between two same-named classes commits, and says what the class-id key is equivalent to
+- owl-core proxy: an array write and a delete are one batch, and an index write that grows an array behind its own Proxy notifies its length; a fixture runs the reactive contract against targets behind a foreign Proxy
+- owl package: @odoo/owl/compiler has a require condition, to a CommonJS build of the compiler module, and the build checks that every file the exports name is made
+- owl-core proxy: a Map proxy, and an observe() view of a Map, have no add method again, as a Map has none
+- owl-core effect, computed, selector, asyncComputed: an effect belongs to the computation whose run creates it, a computed's getter and an untracked block included, and is disposed when that run is superseded
+- owl-core proxy: Object.defineProperty through a proxy is untracked again, so a write is always made with the reactive proxy as the receiver and the fast path, its global guard and its prototype test are gone
+- owl-core proxy: a push or splice through an observe() view calls its callback again, as OWL 2's reactive() did
+- doc: the 3.0-marin fork page says what the verification round changed and corrects what the audit page overstated
+- owl-core proxy: a write through a setter is one batch, so an immediate reader of the keys the setter writes and of its own key runs once
+- owl-core proxy: a write on the target directly notifies nothing when it failed, and a key created with the value it inherited notifies its creation only
+- owl-core proxy: markRaw of a built-in prototype throws an OwlError instead of leaving every plain object, array or collection unobserved
+- owl-core proxy: a private member error is rewritten to the markRaw OwlError only when a class of the proxied object declares that member
+- selector tests: the test of a selector disposed while its run is queued fails when that run is not skipped
+- blockdom list, multi, event_catcher, block_compiler: a list removes its items one by one even as its parent's only child, so a node put between them survives, and the bulk clear with its releaseCatchers and isOnlyChild flag is gone
+- blockdom event_catcher: catchers share one listener per kind of listener (event name, capture, passive, synthetic), so a nested one runs first whatever .stop, .prevent or .self the enclosing one's key adds
+- owl template_set, compiler: compiler modules register under their build and a runtime takes its own build's, so two owl builds share a page; a compiler set by hand is checked, and null leaves the runtime without one
+- owl build_hash: a build outside a git checkout is named by a digest of its sources, not "nogit", and the version the release script writes before building does not make a release build dirty
+- odoo_migration custom_directives: t-custom-portal refuses an element other than &lt;t&gt; with spreadsheet's own error, as o_spreadsheet.js does
+- inline_expressions: the end of an interpolation or a template-literal `${}` reads a / after a ++ or a -- as a division, and a / after a keyword the tokenizer reads a regular expression after as one
+- owl-runtime index: batch() is exported from @odoo/owl and @odoo/owl/runtime, not from owl-core only
+- blockdom event_catcher: the catchers of every t-on site on a parent share one listener per event key, so a nested one runs before the one enclosing it whichever site listened first
+- owl-runtime tests t_call: the dynamic t-call key test re-renders, so it fails without the separator between key and template name
+- blockdom block_compiler: a bound value is written on every patch again, so a number input holding a partial entry is cleared when its model says ""
+- blockdom text: a text node stringifies to its text again, so an attribute of a t-set body holding only text shows that text, not its escaped HTML
+- owl-core proxy: a write skips the receiver only on a plain object or array, so an object behind its own Proxy sees the reactive proxy as receiver and is notified once
+- owl-core proxy: only a plain array's searches read the raw array; a subclass is searched through its proxy, tracked, as before 252453f3
+- parser: a t-custom-\* directive with no custom directive set is named as not defined again, not as an unknown QWeb directive
+- template_helpers: a component joins its parent render's children before its first render runs, so an error that render does not catch destroys it with the app
+- devtools global hook: two comments name the pass counter reaching 0, not setCounter(0), which the fibers refactor deleted
+- model_based tests: the timeout grows with OWL_MODEL_SEEDS, so a large run finishes instead of timing out at 120 s
+- event_catcher tests: the type error tsconfig.tests.json reports for the test patching a multi directly, which vitest does not check
+- template_helpers: a dynamic t-call key is separated from the template name, and a symbol t-key is told apart by identity
+- blockdom attributes: t-att given a string or a number throws an OwlError naming the value instead of a DOM error about attribute "0"
+- blockdom event_catcher: t-on-\*.self on a component runs when the event targets one of the component's root elements
+- blockdom block_compiler, template_helpers: a block string the XML parser rejects throws instead of rendering the parser's message, and t-tag refuses prefixed and block- names
+- template_helpers: stringifying a t-set body that holds a component throws an OwlError instead of creating a component that is never mounted
+- blockdom text: a bigint renders its digits (0n included) and a symbol its description, and a text node stringifies to the HTML it renders
+- blockdom events, index: a synthetic handler inside a shadow root receives the events that never leave it (change, submit, reset)
+- template_helpers: a plain {set} ref shared by a t-if and its t-else holds the element of the branch shown after the swap
+- blockdom block_compiler: a value property is set after the block's other locations and its children, so a select finds its t-foreach options and a range input its max
+- blockdom list, multi: an emptied or removed only child leaves the nodes its parent got from elsewhere, and a NaN key keeps its place in a keyed list
+- concurrency tests: scenario 16 resolves D's onWillStart itself instead of racing it against the frames it waits for
+- memo: a deep render renders the items of a t-memo list again, with their child components
+- app: a mount() that fails destroys the app it created
+- error_boundary: an error caught while the fallback shows goes to the boundary's parent instead of rendering the failing fallback again
+- owl-runtime app, error_handling: an error no handler catches under a Portal or Suspense destroys the app once and is reported like any other, and the error channel names the component whose onError caught an error
+- suspense: the content of a Suspense is part of its DOM, so it moves with it in a list, an item inserted before it goes before its content, and it shows under a shadow root
+- owl-runtime fibers, error_handling: after a pass failed and was handled without a re-render, its other components keep rendering on their own, and a component its commit mounted gets its onMounted from the next commit
+- owl-runtime component_node, fibers, scheduler, error_handling: a destroyed component holds no render, so a hook settling after its destroy, or after a newer render replaced its render, does nothing
+- owl-runtime component_node, template_helpers, owl-compiler: a dynamic t-component is keyed by its class's own id, and a component a pending render creates joins its parent's children once that render is committed
+- parse_xml, compiler options: an XML error's position is read past Firefox's location url, and compile's options are one interface
+- owl, template_set, package: the compiler module registers itself under a global key and the runtime takes it once checked to be of its own build, so runtime and compiler install whichever way they resolve; every build bundles each package from its sources, and the build hash names uncommitted changes
+- parser, code_generator: an empty expression names its directive, a content-less t-debug, t-log or translation directive renders nothing, a nested t-set-slot throws, and t-model.number checks a radio or selects an option by number
+- inline_expressions: an arrow's free variables include its parameter defaults, a computed key in a parameter pattern reads the context, interpolations and template-literal code end at the brace that closes them, comments are skipped and a statement is named in its error
+- owl-core registry: an entry use() overwrote with { force: true } is put back when that use() ends, the nearest one still in use first
+- owl-core plugin_manager, plugin_hooks: a dependency cycle through a setup throws, a synchronous start failure leaves no batch pending, and a plugin's id is its class name unless it declares one
+- owl-core validation, types: a BigInt is printed, a constructor in a schema is rejected, a customValidator of an optional type is optional with its default, and a union reports the member that failed deepest
+- owl-core proxy: an observe() view runs a length-changing array method unobserved, its forEach hands out views and observes only the entries, and its functions other than collection methods are handed out as they are
+- owl-core proxy: a collection's properties are read through the proxy and observed apart from its entries, set operations check their set-like argument, and forEach hands out the proxy it was called through
+- owl-core proxy: a shallow proxy keeps the proxy written into it, Object.defineProperty and hasOwnProperty are tracked, and a write through the proxy costs no receiver trap
+- owl-core proxy, owl_error: a private member reached through a proxy throws an OwlError naming markRaw, markRaw(Class.prototype) keeps every instance raw, and a locked property is handed out as it is by collections and observe() views
+- computations: disposing a computation releases every source and its owned effects even when a cascaded dispose throws
+- batched: a batched callback is called with the arguments of the latest call of its microtask
+- async_computed: currentPromise() waits for a run a dependency change or refresh() queued, and dispose() leaves it not loading
+- selector: a key notified to a reader that throws still notifies the other key, a failing source is rethrown for every key, and a selector nothing reads stops following its source
+- effect: an effect its own cleanup disposes does not run again, and an effect keeps only a cleanup function of what it returns
+- computations, computed, index: a computation read while it runs throws a cycle error, a disposed effect takes the computeds only it observed along, and batch() is public
+- owl-runtime props: a getter of a component held in reactive state reads its props, tested as Discuss's composer reads them
+- owl-core readArrayItems: a t-foreach reads a subclass of Array through its proxy, so a list that answers its index reads from elsewhere re-renders when it changes
+- owl-runtime props: a props view is raw to proxy(), so a component read through proxied state reads its props instead of throwing
+- template fuzz tests: the timeout grows with OWL_TEMPLATE_FUZZ, so the larger runs b4bccafc cites finish instead of timing out
+- parser: t-else with a t-if renders again as the else-if it always was, and a translation context beside t-out or t-call-block is no directive — two shapes template inheritance makes that 1d97aa39 rejected
+- inline_expressions: a template reads JavaScript's standard globals — String, Number, Boolean, JSON, parseInt, Map, Set, Intl, … — as the globals, not from the component's context
+- read_array_items tests: the two type errors tsconfig.tests.json reports, which vitest does not check
+- effect: an effect's children are disposed, their cleanups run, before the effect's own cleanup, on a re-run and on dispose
+- template_helpers: a child rendered again because its parent's pass was cancelled keeps its props without running onWillUpdateProps a second time for them
+- computations: an observe() callback that reads its view again stays subscribed to what it read, so Odoo's effect() helper sees every change, not only the first
+- component_node: renderFn is again an own function bound before setup, so Odoo's onWillRender and onRendered can wrap it and call the original unbound
+- plugin_hooks, plugin_manager: a component asking for a plugin its nearer provider has yet to start gets the clear error, not the instance of a provider further up
+- inline_expressions: an arrow's block body compiles return, const/let/var declarations and a statement-ending ;, a template literal nests inside an interpolation, and void or return precede a regular expression
+- inline_expressions, code_generator, parser: an arrow's block body is not a destructuring pattern, a dev t-foreach compares the keys a t-out stringifies, and a t-set-slot under t-call-block is rejected
+- event_handling, debug, fibers, template_set, component_node: a handler gets (context, event) unless it is a t-model one, and debug logging survives a missing performance, a channel turned on mid-render and empty channel names
+- computations, effect, computed, plugin_manager, proxy, validation, types: a computed's effects die with its scope, the topmost due owner runs first, set operations compare raw members on both sides, a plugin failing after destroy is dropped, and the printer bounds entries
+- component_node, fibers: an error recovery no longer revives a component it destroyed, keeps the onWillUnmount of the ancestors it mounts, skips onMounted of destroyed components, and leaves no stale fiber behind
+- proxy: sort, reverse, fill and copyWithin stay tracked, so an in-place sort re-runs when what its comparator reads changes; only the methods that change the length run untracked
+- tests: the t.and and t.object&lt;Shape&gt;() type assertions name their schemas as types, so lint passes
+- types: t.and over an optional member types its value as the members' intersection instead of never, and t.object&lt;Shape&gt;() no longer claims a shape it does not carry
+- inline_expressions: a shorthand property with a default in a destructured arrow parameter keeps its key, instead of being renamed so the default always wins
+- proxy: an array mutator runs untracked, so an effect that only pushes stops re-running on other pushes, and two of them no longer re-run each other forever
+- error_handling: a destroyed component's onWillStart or onWillUpdateProps rejection is dropped, instead of rethrown as an unhandled rejection that failed two of Odoo's web tests
+- inline_expressions: a + or - operator followed by a sign or an increment compiles as written, instead of merging into ++ or -- with it
+- parser: a t-set-slot is rejected only under a directive that renders its content conditionally, repeatedly or elsewhere, not under any t- attribute
+- template_helpers: an array key keeps its string form, so t-key="[a, b]" no longer recreates its component on every render, and no string key can read as an object key's id
+- code_generator, template_helpers: the dev duplicate-key check compares the string keys the loop body uses, so 1 and "1" are a duplicate again when they key components
+- code_generator, event_handling: a t-model handler runs only while its component is mounted again, as every other handler does
+- inline_expressions: a / after a postfix ++ or -- is a division, not the start of a regular expression literal
+- parser: a &lt;t t-set-slot&gt; keeps its t-slot-scope, t-on-_ and t-translation-context-_ when it also carries a t-out or a t-call, instead of failing to compile
+- inline_expressions: async and await are names again, and keywords only where an async arrow makes them one
+- blockdom, events: the synthetic dispatch gives the event back its own stopImmediatePropagation when it ends, instead of leaving a wrapper that every dispatch stacks one more of
+- scheduler, error_handling: a failed pass releases the renders it delayed when its own scheduler drops it, a frame later, instead of flushing the failing node's scheduler in the middle of the error
+- blockdom, list: a repeated key never takes an old child the keyed diff already matched, so a list with repeated keys patches to what a fresh mount gives
+- blockdom, attributes: a style property that only moves after a shorthand is applied again, so a layered or reordered style patches to what a fresh mount gives
+- portal: portal.md states the order in which content and host really mount, instead of claiming the content mounts before its host's onMounted
+- fibers, component_node, portal: a throwing onMounted or onPatched no longer withholds the hooks of the other components committed with it, and a recovering commit destroys the components it removes
+- plugin_manager, plugin_hooks, scope, validation: a host's early usePlugin of a waiting batch throws again instead of starting it before its data, a rethrowing reporter still destroys the scope, and a DAG prints in bounded size
+- proxy: set operations compare raw members on both sides, a shallow collection keeps the proxy it was given, and only an array's growth notifies its length
+- computations, effect, computed, fibers: an effect made in a render lives as long as its component, one made in a computed belongs to nothing, and an owner is pulled forward only when idle and in the same queue
+- odoo_migration: compile_templates builds a 3.0 App with its own config, compiles the templates using Odoo's t-custom-\* directives, and sets jsdom-only failures apart
+- computed, computations, registry, resource, template_helpers: a computed without a set option is typed read-only, instead of exposing a set() that only throws
+- scope: a destroyed scope disposes only the computeds nothing else observes, so a computed it shares keeps updating its other readers
+- signal: a collection signal set to a value it cannot hold throws every time and keeps its value, and signal.Map drops its unused `name` option
+- proxy: a write subscribes nothing even through accessors, and NaN written over NaN notifies nobody, as for a signal
+- proxy: includes, indexOf and lastIndexOf on a reactive array find an item passed raw, not only as its proxy
+- proxy: a reactive Set supports the ES2025 set methods, Map.set stores the raw value, and iterating keys no longer observes their values
+- computations, proxy: an array method that writes several indices runs the immediate effects and observe() callbacks it notifies once, after it returns, not between its writes
+- proxy: proxy() of a collection signal's value is deep and a collection signal of a proxy() is shallow, whichever flavor is handed in
+- async_computed: refresh() no longer subscribes its caller, a run is aborted with the effect or render that created it, and error() holds an Error
+- proxy: a reactive WeakMap no longer keeps its keys alive, and a removed key's unobserved atoms are released instead of kept for the target's lifetime
+- computations, effect: a parent effect due in the same flush runs before its child, so the child never runs once more on the parent's stale state
+- computations, effect, computed, fibers: an effect is owned by the computed or render that creates it, not registered as its dependent, and dies with that run
+- effect: a throwing cleanup no longer kills its effect or leaves its children alive, and an effect disposed by its own run stays disposed
+- proxy: writing an array index past its end notifies the array's length, so a t-foreach over `list[list.length] = x` re-renders
+- computations: an effect that writes the source of a computed it read keeps tracking that computed, instead of being cut off from it for good
+- computed: a throwing equals is the computed's error, instead of an exception that left every effect probing it pending forever
+- parser: t-else or t-elif beside another branch directive, t-foreach without t-as, and unknown t-model modifiers throw instead of compiling to something else
+- code_generator: t-set names, t-as, slot names, t-slot-scope and template names reach the generated code as string literals, and compileTSet assigns in one place
+- inline_expressions, code_generator: ?. and ?? no longer end an arrow body as a ternary, and regex literals, word-operator keys, async arrows and arrow parameter defaults compile
+- code_generator, parser: a non-breaking space in template text is kept as is, never condensed into a space or dropped as blank text
+- code_generator: translatable attributes and .translate props go to translateFn trimmed, as text nodes do, and whitespace-only values do not go at all
+- code_generator: a t-call without a body gives the called template an empty 0, and t-out="0" renders its default body when there is no 0
+- parser: t-out keeps a &lt;t&gt;'s body as its default and t-esc on a component fills its default slot, and t-out, t-call, t-call-slot and t-call-block reject the directives they used to drop
+- parser: a t-set-slot under a t-if, t-foreach or any other directive inside a component throws instead of being defined unconditionally
+- code_generator: a t-model select marks its selected option through an optgroup, not only among its direct children
+- inline_expressions, code_generator: the text around &#123;&#123; }} in t-attf, t-call and t-call-slot names is text, never template-literal syntax
+- code_generator, template_helpers: an object t-key is told apart by identity in component, slot and t-call keys, and the dev duplicate check compares keys as the list does
+- code_generator, template_helpers: a t-set body holding a component renders at every site that outputs it, once per loop iteration too
+- code_generator, template_helpers: a .signal prop gets its signal from the child component it feeds, so two call sites never share one
+- blockdom, block_compiler: a prefixed static attribute such as xlink:href keeps its namespace on the compiled template element
+- blockdom, attributes, block_compiler: a style several sources write is a merge of layers, so a dropped dynamic property restores the static or earlier one
+- blockdom, attributes: an array t-att-class lists its classes, and a string object is read as its string instead of its indexes
+- blockdom, events, event_handling, config: synthetic handlers sharing an element stop like native listeners, and mainEventHandler returns nothing
+- blockdom, event_catcher, list, multi: a parent cleared in bulk releases the t-on listeners its component catchers put on it
+- blockdom, list: a key repeated in the new children mounts the repeat instead of crashing the keyed diff on a moved-out slot
+- app, component_node: app.destroy() finishes its teardown when an onWillDestroy throws and then rethrows, and a destroyed app creates no root
+- component_node: a component whose setup throws runs the onWillDestroy hooks and disposes the effects its setup registered before the throw
+- scheduler, fibers, app: a single render below a rendering ancestor of another app is delayed like several, instead of skipping the ancestor walk
+- portal: content is committed to its target once the Portal itself is in the document, not while the render creating it is still pending or after it was cancelled
+- component_node, template_helpers, error_handling: an onWillStart or onWillUpdateProps rejecting after its component was destroyed no longer reaches onError nor destroys the app
+- scheduler, fibers, error_handling: a failed render pass leaves the scheduler, and the own renders it delayed resume instead of waiting for its owner to render again
+- error_handling: an error marks only the render pass it happened in, so a parent's unrelated pending render is no longer dropped
+- fibers, error_handling: a component recovering from its own failure lets the pass commit, but not while another failed render of the pass is still current
+- fibers, app, suspense: a prepared root that re-renders before its commit is mounted once that render is done, instead of crashing the app
+- types, validation, resource, registry: t.ref() accepts an iframe's element, defaults reach through customValidator, a value met twice is printed, and deleting an absent item notifies nobody
+- plugin_manager, plugin_hooks, lifecycle_hooks, app: a failed plugin start is undone, a dependency cycle throws, a host can use the plugins it provides, and an aborted start is not an unhandled rejection
+- scope: teardown runs the destroy callbacks its callbacks register and aborts the signal they read, a guarded promise that fails after death rejects as an abort, and a setup can be rolled back
+- test:types, blockdom, tests: every package's tests typecheck in CI, and a block's children may be undefined as its implementation and the generated code have them
+- parser: a t-ref on a plain &lt;t&gt; throws again, now that Odoo's form compiler stops putting one there
+- prop: in dev mode props.static() validates the default it returns, as props() validates its defaults
+- props: every view resolves a missing prop to its own default, else to the one another view of the component declared
+- app: mounting a root a second time throws instead of silently retargeting a pending mount or doing nothing after one
+- fibers: a component render drops its previous subscriptions before running, so a value it writes before reading no longer re-renders it
+- events: the synthetic document listener carries Symbol.for("owl.syntheticListener"), so a test harness can keep it without parsing its source
+- code_generator: block and data ids are counted per generator, so a template compiled during another's generation no longer corrupts it
+- code_generator: whitespace-only text is kept as is and never sent to translateFn
+- parser: the parse cache is keyed by custom directives as well as by element
+- standalone: every t-name yields a valid module, and an unparsable XML file is reported instead of skipped
+- parse_xml: an XML error at the first column throws the OwlError, and the reported column and caret match the parser's
+- code_generator: a t-call body or slot inside a t-model select no longer references the select's local value, so it compiles
+- parser: an attribute that merely starts with t-att is an unknown directive unless it is t-att, t-att-&lt;name&gt; or t-attf-&lt;name&gt;
+- parser: a t-ref on a &lt;t&gt; node throws instead of being dropped
+- inline_expressions: the tokenizer reads instanceof, void, typeof(…), properties named like word operators, every numeric literal, brace-holding interpolations and Unicode identifiers
+- parser: a t-set body of text and comments is a string, and a body with no content is no body
+- code_generator: t-model quotes static option and radio values as JSON strings, and a radio checks against its t-attf-value
+- code_generator: t-translation="off" also leaves translatable attributes and .translate props untranslated
+- code_generator, template_helpers: a t-out default body is compiled as its own function and rendered only when the value is missing
+- app: a sub-root's error forwarder is added behind the root component's own onError handlers instead of replacing them
+- tsconfig: every package typechecks from a clean checkout, siblings resolved to their sources instead of a dist/types only build:types creates
+- portal: a null or undefined target passes dev-mode props validation, as PortalTarget and the reference page allow
+- blockdom, event_catcher: a component's t-on modifiers apply only to events from inside it, and a patch allocates no handler wrapper
+- inline_expressions: an arrow parameter goes out of scope at the comma or ternary colon that ends the arrow body
+- async_computed: a fetcher returning a plain value resolves to it instead of failing with "promise.then is not a function"
+- template_helpers: a willUpdateProps hook that throws synchronously no longer leaves the parent's render untracked
+- code_generator: whitespace inside &lt;pre&gt; is kept under t-if, t-foreach and every other directive that opens a sub-context
+- code_generator: a dynamic value property evaluates its expression once per render
+- props, doc: a schema props view rejects a new key as the schema-less one does, and the docs state tie order and read-only views
+- template_set: a template that throws while being set up is looked up afresh, and templates may be named constructor or toString
+- code_generator: t-attf-value, like t-att-value, sets the value property of input, textarea and select, so it keeps updating after the user types
+- code_generator: a t-set made inside a loop is forgotten when the loop ends, so a later sibling loop scopes its own t-set locally
+- app: a test app is in dev mode before its templates load and its plugins start, so both get the dev-mode checks
+- plugin_manager: a later plugin batch does not start after the manager is destroyed, and a plugin whose setup throws is unregistered
+- registry, resource: both outlive the scope that created them, equal sequences keep insertion order, and use() removes only its own entry
+- blockdom, attributes: a class that several sources write stays while any of them still writes it, a static class included
+- parser: an empty t-elif is kept as a branch, so a true empty t-elif renders nothing instead of falling through to t-else
+- inline_expressions: only a whole-expression arrow prop is compared by its captured variables, and those include template-string interpolations
+- parser, code_generator: a t-foreach whose body is only t-set runs its loop and renders nothing instead of crashing at mount
+- tools/odoo_migration: compile_templates loads the 3.0 monorepo build instead of a stale dist/owl.cjs.js
+- code_generator: a root deferred past trailing t-sets keeps its slot t-on handlers, and a template of only t-set renders nothing instead of crashing
+- code_generator: every child block of a DOM block gets exactly one anchor, so t-key content inside a node renders and t-if leaves no duplicate anchors
+- code_generator: slot calls, t-out="0", t-set bodies and t-call build their key from the whole loop path and the t-key, so nested loops and re-keyed content mount
+- blockdom: stringifying a block runs none of its ref callbacks, so a lazy t-set body used as text binds no ref to a detached element
+- blockdom, component_node, template_helpers: a set-like t-ref drops elements removed in bulk, and a child mounted by a patch knows it is an only child
+- blockdom, html: equal markup in a new object patches nothing instead of re-parsing and replacing the content on every render
+- blockdom, list: object keys reconcile by identity instead of all colliding on "[object Object]"
+- blockdom, template_helpers, component_node: a t-ref whose target changes moves the element to the new ref, and an unchanged ref is not rebound
+- app, error_handling: the mount promise and the app reject with the error an onError handler rethrew, not the original one
+- template_helpers: a t-props key renamed while its value stays undefined updates the child instead of being ignored
+- prop: props.static() of a key another view defaults resolves that default and stays unchanged across parent re-renders
+- props: a schema-less view notifies readers of keys that appear or disappear, and resolves defaults declared after it
+- portal, suspense: portaled and suspended content re-renders with the slot scope of each new render instead of the one from setup
+- portal: a target changed after a mount-time lookup tears the old content down instead of leaving it in both targets
+- component_node: a throwing onWillUnmount no longer leaves its component alive, mounted and running its effects
+- code_generator, template_helpers: static text, translations and t-call names cannot run as code, and a t-tag value cannot inject markup
+- blockdom, events, event_catcher, utils: synthetic events propagate like native ones, handlers fire in nested shadow roots, and an empty component t-on or a removed catcher breaks no other handler
+- blockdom, attributes: t-att survives null and a pair changing name, a false class is no class, and style patches keep shorthands and custom-property case
+- blockdom, toggler: a toggler in a keyed list switches when its kind changes, leaves no anchor behind, and switches under a ShadowRoot
+- types, validation: a union tries every member before rejecting, and customValidator and issue depth count only their own issues
+- tooling, runtime, compiler, core: lint and format checks cover every package, and the drift they missed is fixed
+- proxy, signal: proxy() and a collection signal keep their own proxy of a shared object, and deleting a missing key notifies nobody
+- reactivity, effect, computed: a throwing effect no longer freezes the effects and components notified with it, and a computed's error is a result its readers track
+- observe: a derived source that may have changed notifies the callback without being recomputed inside the write
+- Portal: content whose target the same render replaced goes to the new target
+- observe: the view is the receiver of the reads made through it
+- observe: a map or set iterated through the view subscribes the callback
+- scheduler: a render delayed by an ancestor of another App resumes when that ancestor renders
+- scheduler: a root fiber whose node was patched through another render is dropped, not completed
+- Portal: content portaled into a target found at mount goes before what the target holds
+- props: a schema-less props() view resolves the defaults the component declared
+- Portal: a selector target missing at setup is looked up again at mount
+- reactivity: an observe() view of another view observes the same target
+- types: optional() on an optional type re-declares it instead of throwing
+- tools/odoo_migration: a render call's whole first argument names its templates, a template-literal prefix included
+- tools/odoo_migration: a template name chosen by a ternary before renderToElement is still a render-API template
+- tools/odoo_migration: an extension keeps its parent loop's tag_index bare, the self-test runner loads what a case declares, and the translation fixture is not a template
+- tools/odoo_migration: a template a component-less template calls stays bare too, and the member check counts what callers pass
+- tools/odoo_migration: this_scope leaves a template rendered without a component bare, however the JS names it
+- tools/odoo_migration: this_scope moves a t-call off a non-&lt;t&gt; element before converting anything
+- tools/odoo_migration: this_scope runs upstream's passes in upstream's order and to a fixed point
+- reactivity: keep immediate effects immediate
+
+### IMP
+
+- owl-core utils: an EventBus listener is typed as receiving the CustomEvent trigger() dispatches
+- owl-core debug, computations, owl-runtime scheduler, tools testing: an invariant debug channel checks the scheduler's and the reactivity's invariants, on in every test run, and track() drops the dead-link tests it proves redundant
+- owl-core tests: random reactive programs checked against an executable model of the reactivity contract, effects, immediate effects, batches and promise callbacks interleaved
+- owl-compiler, owl-runtime template_set: a template the runtime compiles is named after itself for debuggers, so an error in it is located in its file
+- owl-compiler: every expression error names why and where, the corpus holds one template per compiler error, and `this` is refused as a template variable
+- owl-compiler: a template that does not compile names the invalid expression, its attribute and element, and every compile error names its template
+- owl-runtime index: Markup is exported, so a consumer can name what markup() and htmlEscape() return
+- owl-runtime component: this.constructor is typed as the component's class, so useProps(this.constructor.props) type-checks
+- coverage per package, and Stryker for the mutation testing of the core
+- tools odoo_gate, hooks: Odoo's HOOT suites compare two OWL builds test by test and bisect a commit range with one HOOT test, and a push runs verify on what it carries
+- tools compare_codegen, verify, vendor_odoo: the code every Odoo template compiles to is compared with the vendored build's, and a commit no remote has is not vendored
+- owl-compiler expression fuzzer: operators and literals are also fuzzed side by side, not only parenthesized
+- owl: adapt upstream APIs to Marin contracts
+- tools odoo_migration: the inherited checker names each view-arch template both builds reject, as it does for static templates
+- tools odoo_migration, doc fork page: the inherited template checker also compares the templates of view archs, and the re-vendor checks name every HOOT suite
+- owl-core computations: a run that nothing wrote during reads a source again at the cost it had before e3716f2e, a write marks what a later read must refresh
+- owl-runtime tests refs, block_attributes, doc refs, fork page: a ref outlives an element other code removed, and owl repairs no class, style or attribute other code changed
+- doc slots, fork page: a directive on a t-set-slot node makes only its content conditional, and the slot is always given
+- owl-core proxy: once a class prototype is marked raw, a read of a plain object or array stops its prototype walk at Object.prototype
+- tooling, owl build hash: tools/vendor_odoo.mjs builds the committed checkout into Odoo and checks a vendored copy, and the upstream release script is removed
+- owl tests, types build: each entry's declarations name only values its build exports, with the four known phantoms listed
+- owl-core proxy: a write to an object nobody observes is a plain set, and a write to a plain object no longer passes the proxy as receiver
+- owl-core hooks, plugin manager, runtime: type app hooks and require narrowing unchecked plugin configuration
+- owl-core selector, benchmarks: publish changed keys without temporary arrays, and measure tracked reads and navigation
+- owl-runtime tests template_fuzz: the reference renderer scopes variables as the compiler does, and the generator sets variables again, so the fuzz covers t-set scoping and what is read later
+- owl-core proxy, utils, doc: own-key checks on raw objects take Object.hasOwn, and the fork page says why Object.hasOwn through a proxy stays untracked
+- owl build, devtools, doc: the package builds ES modules only — the IIFE scripts and their global owl are gone, and the devtools extension's panel and popup import the ES build like any other code
+- doc: the 3.0-marin fork page has a packaging section — a true ES module package with no side effect on import and no CommonJS twin, built for Odoo's browsers and Node 26 — and names the migration check's .mjs tool
+- tools compile_owl_templates, owl-compiler: Node 26 runs the compiler's TypeScript sources, so the standalone precompiler is no longer bundled first; test helpers and odoo_migration take Map getOrInsertComputed
+- owl-runtime app, lifecycle_hooks, props, owl-core async_computed: Promise.withResolvers and WeakMap getOrInsertComputed where they remove code off the hot paths; the atom tables keep get/set, which is faster
+- owl, owl-compiler: the builds target Odoo's browsers and Node 26 (chrome154, firefox157, safari27, node26), types follow, and a test keeps the dist off any API one of them lacks
+- owl, owl-core, owl-compiler, owl-runtime, playground: engines say Node &gt;=26 and .node-version/.nvmrc name it; the internal packages are private
+- owl: one ES module per entry, no CommonJS twin, require() loads the ES module itself; tools/release, odoo_migration and devtools build are ES modules on Node built-ins
+- owl, owl-runtime, owl-core, owl-compiler: importing a build changes no global and registers nothing, so a bundle keeps only what it uses, and "sideEffects" names the compiler module alone
+- owl-runtime tests template_fuzz: every third slot call has a dynamic name — the default slot, a missing one, or undefined — with default content
+- doc: the 3.0-marin fork page says what the allocation round changes — one block type per block string given its handlers at each call, slots not marked raw per render, loop contexts copied instead of inherited where nothing writes them
+- doc: the 3.0-marin fork page says what the fifth round changes — exact child keys, t-set bodies rendered by the component that outputs them, synthetic replay per root and phase, attribute values of t-set bodies taken during the render, deep renders into Portal and Suspense
+- owl-runtime tests template_fuzz, model_based: the interactive fuzz covers synthetic and passive handlers, textarea, t-model.proxy on loop variables, t-set, Portal, Suspense and shadow roots, and runs in a file of its own
+- owl-runtime tests template_fuzz, model_based: the randomized tests loop over keys that join into one another's, and check that every component alive is mounted, in its parent's children, reached by a deep render and destroyed with the app
+- doc: the 3.0-marin fork page lists the site ids of keyed sites, the catcher lookup at first dispatch, and the event-dispatching template fuzz, which says how far the handler-order bug fixed in d6c1a1da reached
+- owl-runtime tests template_fuzz, model_based: the randomized tests mount components, slots, t-call, t-on, t-model and bound properties, dispatch events on every element and check which handlers ran, and where
+- doc: the 3.0-marin fork page says what the fourth round changes — computeds written during their own run, no conformance divergence left, bound properties and handlers without per-render allocations
+- doc: the 3.0-marin fork page says what the third round changes — effect ownership, batched array writes and deletes, Map add and set operations, the exact list bulk clear, slots and t-calls in the context they are given, the CJS compiler — and lists the foreign-Proxy fixture
+- doc: the 3.0-marin fork page lists what the audit fixes change against upstream, by area, with batch(), markRaw(Class.prototype) and the self-registering compiler in the API table
+- owl-core proxy: the reactivity debug channel names each tracked proxy read, the atom it subscribes to and its reader
+- standalone, odoo_migration, .github: a precompiled template is named and reads the app's global values, the template checks share one copy of Odoo's custom directives, and the upstream workflows are gone
+- model_based tests: the random render sequences also drive a slot and an error boundary, so cancelled and superseded passes are checked through slot content and a render that throws
+- compile_inherited_templates: FREE_NAMES=1 lists the component templates that read a context name nothing in them sets, undefined at run time
+- compile_inherited_templates: extensions apply in module dependency order and xpaths evaluate as in the browser, so every Odoo extension applies and the check covers 3492 templates
+- computations, signal: a signal written and set back before its readers run changed nothing for them — they compare the value they read instead of recomputing
+- memo, template_helpers, fibers, parser, code_generator: a t-memo item may hold child components, carried with the item on a hit, and a memoized list inside a memoized item keeps its memos
+- proxy, template_helpers: a t-foreach over a proxy() array reads its items in one step, with one subscription, instead of one get trap per index
+- proxy: a tracked read through an object or array proxy finds its key atoms through the proxy's own handler, without a WeakMap lookup per read
+- computations, scope, proxy, fibers, component_node: a component re-render reuses the subscriptions of the previous render instead of dropping and re-creating every one of them
+- proxy: a key atom is one WeakMap and one Map lookup away, without a per-target wrapper object, and releasing a key allocates nothing
+- effect: an effect with a cleanup or children keeps its subscriptions across re-runs, and disposing an effect switches tracking off only to run user cleanups
+- computations: a computed's new value no longer makes its reader's run rescan every source, the flush is scheduled without a closure call per write, and markDownstream reuses one stack
+- computations, signal, proxy, scope: track dependencies with doubly linked edges stamped per run instead of two Sets per computation and a fresh Set per run
+- props, component_node, template_helpers: a schema-less view keeps its signals in a fast-mode table and is its own props listener
+- events: a non-passive t-on listener is added with a boolean capture flag, not an options dictionary
+- component_node, template_helpers, fibers: a node keeps its children in a Map, and the update path leaves the createComponent closure
+- blockdom: the DOM methods list, multi, text, html and the block compiler call are read once, in one module
+- component_node, template_helpers, lifecycle_hooks, props, prop, app: a node allocates its hook lists and its children map on first use, and renders without a bound template function
+- props: a schema-less props() view is one object behind a shared proxy handler, and builds its key set only once something reads it
+- code_generator, template_helpers: a t-out passes the parts of its site key and safeOutput joins them only for a t-set body, instead of every t-out building the string on every render
+- effect, computations: an effect is marked by a field of its computation and untracks its teardown without a closure, so creating and disposing one costs what it did before the ownership fixes
+- proxy: reading a nested object looks up its existing proxy first, instead of re-deriving it through two reactivity checks per read
+- proxy: an array truncation notifies the range of indices it dropped, instead of scanning every atom the array has, so pop() is no longer O(atoms)
+- code_generator, parser: t-model handlers are static functions, identical handlers are hoisted once, a dynamic option value is evaluated once, and a t-call-slot no longer turns on every loop flag
+- blockdom, attributes: a style patch re-applies an unchanged property only when a shorthand or removal overwrote it, not every property after a change
+- blockdom, multi: a slot that empties again reuses its anchor text node instead of creating a new one each time
+- proxy: a read nobody observes creates no atom for its key
+- computations, effect, fibers: a re-run keeps the subscriptions it reads again and drops only the stale ones, instead of unsubscribing from every source and subscribing anew
+- props: a schema-less view caches its key list until the props or the declared defaults change, instead of rebuilding it for every `in`, spread and update
+- proxy: `in` and has() subscribe to the presence of the key they ask about, not to every key the object gains or loses
+- proxy: plain objects share one handler per flavor, and a collection proxy builds a method on first read instead of all ten at creation
+- runtime index, scope docs: isAbortError is exported from owl-runtime and @odoo/owl, next to the scope API that produces AbortErrors
+- doc: template syntax states what t-tag does with a falsy value and which values it rejects
+- blockdom, block_compiler: an element with dynamic data and a child anchor is collected as one reference, not two
+- utils: htmlEscape escapes in one pass over one regex instead of six passes compiling six regexes per call, about 2.2x faster
+- doc: effects, computed values and signals state what a throwing effect or getter does, and that proxy() and a collection signal wrap one object differently
+- proxy: iterating a reactive Map's entries yields plain [key, value] pairs, not a proxy per pair, about 10x faster
+- component_node, fibers: onWillStart runs untracked through untrack(), and two no-op self-assignments go
+- computed: a detached option keeps a computed past the scope that created it
+- tools/odoo_migration: this_scope --check names the files it would change
+- compiler: a t-call-context's keys are variables of the called template, besides its `this`
+- scheduler: resolve processTasks at call time so hooks can wrap it
+
+### PERF
+
+- owl-core event_modifiers, owl-runtime attributes: a bundle that imports only signal no longer keeps the event-modifier table and the empty attributes snapshot, and each entry is held to a size budget
+- owl-compiler inline expressions: an operator is matched by one regular expression, and the renderer remembers its last character
+- owl-core computations: a write schedules the flush only when it queues an effect or a disposal, and a write nothing observes does no flush bookkeeping
+- owl-compiler code_generator: an item of a loop in a loop and the context of a t-call in a loop are made under the outer item's prototype with a copy of its names, when nothing writes that item
+- blockdom block_compiler, owl-compiler code_generator: a block string has one block type, which a call gives its handlers, so making an App's template functions makes none per block with handlers
+- owl-compiler code_generator, owl-runtime template_helpers: a render no longer marks its slots raw; callSlot renders a descriptor read through a proxy from its raw object
+- owl-compiler code_generator, blockdom block_compiler, events, event_catcher, owl-runtime event_handling: a handler's code is given to its block or catcher once, and a render gives it only its context
+- owl-compiler code_generator, blockdom block_compiler: a bound property is given as its value instead of a new String or Boolean, and its block sets it on every patch
+- owl-core computations, effect: a run no longer saves and restores the owner of the effects it creates: the tracking computation is that owner, untrack sets it aside only when it suspends one, and runUnowned allocates no closure
+- owl-runtime template_helpers: updating a child allocates no context and comparing t-props props no key array, and the fiber channel names the t-props key that changed
+- owl-runtime template_helpers, owl-compiler code_generator: a slot without a slot scope and a t-call with neither attributes nor body render in the context they are given, which no longer becomes a prototype each render
+- owl-compiler code_generator, template_helpers: a render makes no function for its slots, slot defaults, t-call bodies and t-out bodies, and no literal to copy for t-call attributes and t-props
+- owl-core proxy: toRaw makes one WeakMap lookup instead of two
+- owl-core proxy: a collection proxy makes its method table and its properties' stand-in when first needed, so making one costs what it did before 6291ac47
+- blockdom block_compiler, attributes: a property is written only when the element holds another value, and a style update checks emptiness with style.length
+- blockdom event_catcher: the components of one t-on site share a single listener per parent element, which finds the instance holding the target from the end anchors
+- owl-core proxy: includes, indexOf and lastIndexOf read an array's items as one atom and search the raw array
+- owl-runtime props, owl-core selector: a props view holds one plain atom per read key instead of a signal, a schema view's accessors are shared so its views share a hidden class, and the selector sweep allocates no entry arrays
+
+### REF
+
+- owl-runtime fibers: the rule of rendering across passes and apps is one documented function, blockingPass
+- owl-compiler: a t-out element's t-ref is parsed once, a quoted string is sliced instead of rebuilt
+- owl-core types, scope, resource, index: name the set and map validators, drop a redundant null test, an unused binding and an export nothing imports
+- owl-core proxy: one nativePrototype() picks a collection's native methods
+- owl-core computations, signal: drop redeclared members and a parameter every caller derived the same way
+- owl-runtime blockdom html: mount and patch insert their markup through one helper
+- owl-runtime blockdom block_compiler: the parsed node's namespace makes the element, and the tree carries no namespace
+- owl-runtime blockdom events: a synthetic handler is an entry running a function, and a block handler is its setup alone
+- owl-runtime portal: tearing a positioned portal down does not schedule a placement pass
+- owl-runtime fibers: Fiber.render reads its root once, without a guard for a root it already dereferenced
+- owl-compiler code generator: slots, t-call bodies and t-set bodies take the context copy handlers share, and a component's slots take one copy instead of one each
+- owl-compiler parser, code generator: a t-if holding only t-sets makes no block, the loop stack is the loop level, and prop entries are parsed in one place
+- owl-runtime component_node, template_helpers: a component no longer tracks and sweeps its refs after each patch, now that removing a block releases the refs inside it
+- owl-runtime template_set, props, template_helpers, component_node, utils: the template placeholder forwards every argument, and duplicated or dead rendering code goes
+- tooling, owl-core, owl-compiler, owl-runtime and owl tests, tsconfigs: one copy of the test helpers and of the source map, and the orphan parser snapshot goes
+- owl: remove code comments
+- owl-runtime scheduler: processTasks runs the frame itself, in the try that clears `processing`, and a pass that cannot complete yet is logged in the else of the one that can
+- blockdom event_catcher: whether a catcher holds a node, and which catcher encloses it, are module functions over its child and end anchor instead of two methods of every site's class
+- owl-core plugin_manager: startPlugin undoes a failed constructor and a failed setup in one catch, without an undo closure
+- owl-core event_modifiers: eventModifierMask walks the key's parts once, and checks a part against the three listener modifiers only when it is none of its own
+- owl-core debug, computed, blockdom list, owl-runtime event_handling, fibers, error_handling: the debug flags are built from the channel list, and debug lines no test reads say the same in fewer words
+- owl-core computations, effect, selector, async_computed: untrack and runUnowned suspend tracking in one path each, an effect releases in one function, a selector notifies its keys in one function
+- blockdom events, event_catcher: one mainEventHandler call per dispatch, event keys spelt in one template, and the catchers being updated stacked as themselves
+- owl-compiler parser, code_generator: the dead branches and duplicate helpers the audit left are gone, a t-call-slot's t-props is a field of its AST, and a slot merge line ends with a semicolon
+- owl-core proxy: hasKeyAtoms loops over both atom kinds, and the comment on the replaced methods is wrapped
+- owl-core proxy: collectionMethods(target) answers both "is it a collection" and "which methods does its proxy replace", and the raw type names are gone
+- owl-core proxy: the private-member rewrite asks one declaresMember over the prototype chain, which matches the private names of a class's source as whole tokens
+- owl-core proxy: an observe() view wraps a collection method and a view reader the same way, its forEach iterating its own entries()
+- owl-core proxy: one makeMethod builds every collection method, one generator every iterator, and a set operation runs the native one on the raw members
+- owl-core proxy: a write notifies from write() itself, a length write returning first, and onWriteKey and onWriteKeyCreated are gone
+- owl-core proxy: a collection's properties are read by the get trap of every proxy, its stand-in found through one host() method, and possiblyReactive and deepItem are one function
+- owl-core proxy: one atom table helper serves every key read, presence read and release, and an array's items atom is a key of its table
+- blockdom block_compiler, toggler, dom: every node of blockdom inserts and clones through the DOM methods dom.ts reads once
+- owl-runtime component_node, fibers, scheduler, app, template_helpers: one ComponentNode.start for a node's first render, one \_patch for every component patch, and the dead counter flush and cancelled-fiber guard deleted
+- owl-core index: drop six exports nothing imports - proxifyTarget, onReadAtom, onWriteAtom, updateComputation, disposeOwned, withObserver
+- code_generator: drop the dead BlockDescription.childNumber and createBlock's unused context, and insertBlock takes an expression only for the blocks that use one
+- blockdom, block_compiler, config, list, event_catcher: drop the DOM normalization owl always disabled, and two leftovers
+- template_set, owl, tests: the compiler plugs in as a typed TemplateSet.compiler, and the compile options are listed once in the runtime instead of in every file that wires it
+- code_generator, event_handling, core: handler data is `[handler, context, modifiers]` with modifiers a compile-time bitmask, not modifier strings in front of a handler slot that could be a hole
+- fibers, component_node: a fiber's render phase is an explicit NEW / RENDERING / RENDERED instead of `bdom = true` cast in as a sentinel
+- code_generator, inline_expressions, parser: drop dead branches and parameters, share the child-declaration hoisting, and test interpolation with a non-global regex
+- template_helpers: the unused shallowEqual template helper goes
+- blockdom, component_node: moveBeforeDOMNode loses a parent parameter no caller passes
+- blockdom, block_compiler: drop the never-read DynamicInfo.tag, a children array presized to a meaningless length, and a getter stored only to become a bit
+
+### ADD
+
+- doc computation_states, specification, fork page, vitepress: the reference of a computation's and a link's states, and the doc build passes again
+- doc specification, owl-runtime tests: the rendering, events and blockdom, and templates contract, each rule naming its test
+- doc specification, owl-core tests, owl-runtime tests, tools verify: the behaviour contract of reactivity and proxies, one rule per bullet naming its test, checked by verify
+- tools spec_check: a specification whose every rule names a test that exists
+- owl-core tests: counted benchmarks hold each reactive graph shape to its computed evaluations and effect runs
+- owl-runtime tests scheduler_model, prepare_mount: random render scenarios over three apps check that every pass commits or is dropped, every scheduler drains and the DOM is a fresh mount's; a prepared root keeps reacting
+- owl-runtime tests: counted benchmarks hold each keyed-table operation to its DOM mutations and row renders
+- tools release: fork versions 3.0.0-marin.N with a changelog and a tag per release, and vendoring takes only a tagged release
+- owl: @odoo/owl/compiler, the template compiler as a module that installs itself into a runtime build loaded as @odoo/owl, so a page ships the compiler only when it has templates to compile
+- doc: the 3.0-marin fork page lists what the fork adds to Owl 3 and where it behaves differently, and observe() gets its reference section
+- odoo_migration: compile_inherited_templates.mjs compiles every Odoo template after its inheritance, with two owl builds, and lists what only the new one rejects
+- template fuzz tests: random templates over the core directives must render, and patch to other values, what a reference renderer renders
+- expression fuzz tests: random template expressions, compiled and evaluated against a context, must give what JavaScript gives for the plain form
+- owl build, package: a runtime-only build, owl.runtime.es.js / .cjs / .iife.js, 34% smaller, for pages whose templates all arrive precompiled
+- conformance tests, package: owl-core runs the cross-framework reactive conformance suite, 193 of 196 cases, the three it knowingly differs on marked as expected failures
+- model_based tests: random render sequences against a component tree must settle on the render of the final state, with every live component mounted and tracked, and no onWillUpdateProps for props a component already holds
+- selector, index: selector(source) returns isSelected(key), whose readers depend on the answer for their key only, so a selection change notifies two readers instead of every row
+- parser, code_generator, template_helpers, fibers, component_node: t-memo on a keyed t-foreach keeps an item whose dependencies are unchanged, without rendering or patching it, and the template docs stop calling Set loops and object keys unsupported
+- debug, scheduler, fibers, component_node, error_handling, template_helpers, event_handling, template_set, app: the runtime traces scheduling, renders, lifecycle, error routing, events and template compilation
+- debug, computations, effect, computed, proxy, scope, plugin_manager: opt-in debug logging per channel, tracing writes, effect and computed runs, scope teardown and plugin starts
+- reactivity: observe(target, callback), OWL 2's reactive with a callback
+- tools/odoo_migration: two checks for what the `this.` codemod cannot see
+- tools/odoo_migration: compile_templates, compile every static template of an Odoo tree with a given owl build
+- tools/odoo_migration: this_scope, explicit `this.` template scope and parametric t-call for an Odoo tree
+- tools/odoo_migration: tesc_to_tout, the t-esc -&gt; t-out codemod for Odoo addon trees
+- reactivity: add immediateEffect
+
+### REV
+
+- parser: a t-ref on a &lt;t&gt; node is dropped again, not an error; Odoo's form compiler puts one there
