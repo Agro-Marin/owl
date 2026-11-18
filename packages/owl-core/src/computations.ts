@@ -439,28 +439,26 @@ export function onWriteAtom(atom: Atom, comparable: boolean = false) {
   }
   for (let link = atom.subs; link !== undefined; link = link.nextSub) {
     const ctx = link.sub;
-    const state = ctx.state;
-    if (state === ComputationState.EXECUTED || ctx.forward) {
-      if (link.version !== ctx.version) {
-        continue;
-      }
-      if (ctx.isDerived) {
-        markDownstream(ctx);
-      } else if (ctx.immediate) {
-        immediateObservers.push(ctx);
+    if (link.version === ctx.version) {
+      const state = ctx.state;
+      if (state === ComputationState.EXECUTED || ctx.forward) {
+        if (ctx.isDerived) {
+          markDownstream(ctx);
+        } else if (ctx.immediate) {
+          immediateObservers.push(ctx);
+        } else {
+          observers.push(ctx);
+        }
       } else {
-        observers.push(ctx);
+        if (state === ComputationState.RUNNING) {
+          invalidatedWhileRunning(ctx);
+        }
+        if (ctx.running && !ctx.isDerived) {
+          writtenWhileRunning(ctx, link);
+        }
       }
-    } else if (state === ComputationState.RUNNING) {
-      if (link.version !== ctx.version) {
-        continue;
-      }
-      invalidatedWhileRunning(ctx);
-      if (!ctx.isDerived) {
-        writtenWhileRunning(ctx, link);
-      }
-    } else if (ctx.running && link.version === ctx.version && !ctx.isDerived) {
-      writtenWhileRunning(ctx, link);
+    } else if (link.version !== WRITTEN) {
+      continue;
     }
     ctx.state =
       comparable && ctx.state !== ComputationState.STALE && !ctx.notifiesWithoutRecompute

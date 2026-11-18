@@ -850,6 +850,29 @@ describe("a write during its own run", () => {
     expect([c(), c(), runs]).toEqual([1, 1, 1]);
   });
 
+  test("a write to a source it reads later in the run changes nothing for it", () => {
+    const s = signal(1);
+    const other = signal(0, { equals: false });
+    let runs = 0;
+    let write = false;
+    const c = computed(() => {
+      runs++;
+      const value = s();
+      if (write) {
+        write = false;
+        s.set(value + 1);
+        other.set(5);
+        s.set(value);
+      }
+      return value + other();
+    });
+    expect([c(), runs]).toEqual([1, 1]);
+    other.set(0);
+    write = true;
+    expect([c(), runs]).toEqual([6, 2]);
+    expect([c(), runs]).toEqual([6, 2]);
+  });
+
   test("through a computed it reads, the same", () => {
     const s = signal(1);
     const double = computed(() => s() * 2);
