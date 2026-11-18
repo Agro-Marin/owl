@@ -79,10 +79,8 @@ const STATIC_TOKEN_MAP: { [key: string]: TKind } = /* @__PURE__ */ Object.assign
   }
 );
 
-const OPERATORS =
-  /* @__PURE__ */ "...,.,===,==,++,+,!==,!=,!,||,&&,>=,>,<=,<,??=,??,?.,?,--,-,*,/,%,typeof ,delete ,=>,=,;,in ,new ,|,&,^,~".split(
-    ","
-  );
+const OPERATOR_RE =
+  /^(?:\.\.\.|\.|===?|\+\+?|!==?|!|\|\||&&|>=?|<=?|\?\?=?|\?\.(?!\d)|\?|--?|\*|\/|%|=>|=|;|\||&|\^|~|(typeof|delete|in|new)(?![\p{ID_Continue}$\u200C\u200D]))/u;
 
 type Tokenizer = (
   expr: string,
@@ -342,23 +340,17 @@ const tokenizeProperty: Tokenizer = function (expr) {
 };
 
 const tokenizeOperator: Tokenizer = function (expr) {
-  for (let op of OPERATORS) {
-    if (op === "?." && /\d/.test(expr[2])) {
-      continue;
-    }
-    if (op.endsWith(" ")) {
-      const word = op.slice(0, -1);
-      const next = expr[word.length] || "";
-      if (expr.startsWith(word) && !IDENTIFIER_CHAR_RE.test(next)) {
-        return next === " "
-          ? { type: "OPERATOR", value: op }
-          : { type: "OPERATOR", value: op, size: word.length };
-      }
-    } else if (expr.startsWith(op)) {
-      return { type: "OPERATOR", value: op };
-    }
+  const match = OPERATOR_RE.exec(expr);
+  if (!match) {
+    return false;
   }
-  return false;
+  const word = match[1];
+  if (!word) {
+    return { type: "OPERATOR", value: match[0] };
+  }
+  return expr[word.length] === " "
+    ? { type: "OPERATOR", value: word + " " }
+    : { type: "OPERATOR", value: word + " ", size: word.length };
 };
 
 const TOKENIZERS = [
@@ -422,10 +414,10 @@ const INTEGER_RE = /^\d[\d_]*$/;
 
 function render(tokens: Token[]): string {
   let code = "";
+  let last = "";
   let previous: Token | undefined;
   for (const t of tokens) {
     const value = t.isKeyword ? t.value + " " : paddedValues.get(t.value) || t.value;
-    const last = code[code.length - 1];
     if (
       ((last === "+" || last === "-" || last === "/") && value[0] === last) ||
       (last === "<" && value[0] === "!") ||
@@ -435,6 +427,7 @@ function render(tokens: Token[]): string {
       code += " ";
     }
     code += value;
+    last = value[value.length - 1];
     previous = t;
   }
   return code;
