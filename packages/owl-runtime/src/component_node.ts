@@ -198,7 +198,12 @@ export class ComponentNode extends Scope<App> implements VNode<ComponentNode> {
         return;
       }
       deep = deep || current.deep;
-    } else if (!this.bdom) {
+    } else if (!this.bdom || this.status !== STATUS.MOUNTED) {
+      // Only a mounted component renders on its own: one a failed mount took
+      // back out of the DOM waits for an ancestor's render to mount it again.
+      if (this.bdom && debug.fiber) {
+        debugLog("fiber", `keep ${this.componentName}'s render: not mounted`);
+      }
       return;
     }
 

@@ -1117,6 +1117,46 @@ describe("a first mount that throws half way", () => {
     expect(seen).toEqual([""]);
   });
 
+  test("left unmounted by a handler that renders nothing, a child rendering on its own gets no onMounted while detached", async () => {
+    const state = { boom: true };
+    let leaf: any;
+    class Leaf extends Component {
+      static template = xml`<i t-out="this.state.n"/>`;
+      state = proxy({ n: 1 });
+      setup() {
+        leaf = this;
+        trackLifecycle("Leaf");
+      }
+    }
+    class Child extends Component {
+      static template = xml`<p t-ref="this.ref"><Leaf/></p>`;
+      static components = { Leaf };
+      ref = throwingRef(state);
+      setup() {
+        trackLifecycle("Child");
+      }
+    }
+    class Root extends Component {
+      static template = xml`<div><Child/></div>`;
+      static components = { Child };
+      setup() {
+        trackLifecycle("Root");
+        onError((e) => log.push(`caught ${e.message}`));
+      }
+    }
+    const app = new App();
+    app.createRoot(Root).mount(fixture);
+    await nextTick();
+    expect(log.splice(0)).toContain("caught ref");
+    expect(fixture.innerHTML).toBe("");
+    leaf.state.n = 2;
+    await nextTick();
+    await nextTick();
+    expect(log.filter((line) => line.endsWith(":mounted"))).toEqual([]);
+    expect(fixture.innerHTML).toBe("");
+    app.destroy();
+  });
+
   test("is mounted afresh by the recovery, its children set up again", async () => {
     const state = { boom: true };
     class Leaf extends Component {
