@@ -137,3 +137,21 @@ test("the template channel traces a compilation", async () => {
   expect(lines[0]).toMatch(/^template: __template__\d+: compiled in _ ms, \d+ chars$/);
   expect(lines[1]).toBe("template: block type made: 0 handlers, <p>compiled</p>");
 });
+
+test("a component created before the reactivity channel is on is named in its traces", async () => {
+  const value = signal(1);
+  class Reader extends Component {
+    static template = xml`<b t-out="this.value()"/>`;
+    value = value;
+  }
+  await mount(Reader, fixture);
+  const observers: unknown[] = [];
+  setDebugSink((channel: DebugChannel, message: string, details: unknown[]) => {
+    if (message.startsWith("write")) {
+      observers.push(details[0]);
+    }
+  });
+  setDebug("reactivity");
+  value.set(2);
+  expect(observers).toEqual([["render Reader"]]);
+});

@@ -77,7 +77,7 @@ export class ComponentNode extends Scope<App> implements VNode<ComponentNode> {
       false,
       ComputationState.EXECUTED,
       false,
-      debug.reactivity || debug.effect ? `render ${C.name}` : ""
+      `render ${C.name}`
     );
     this.signalComputation.tracksElsewhere = true;
     if (debug.lifecycle) {
