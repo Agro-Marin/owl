@@ -363,3 +363,24 @@ describe("batch", () => {
     expect(seen).toEqual([2, 4]);
   });
 });
+
+test("a microtask an immediate effect queues runs before the effects the same write queued", async () => {
+  const s = signal(0);
+  const order: string[] = [];
+  const disposeEffect = effect(() => {
+    s();
+    order.push("effect");
+  });
+  const disposeImmediate = immediateEffect(() => {
+    if (s()) {
+      Promise.resolve().then(() => order.push("microtask"));
+    }
+  });
+  order.length = 0;
+  s.set(1);
+  await Promise.resolve();
+  await Promise.resolve();
+  disposeEffect();
+  disposeImmediate();
+  expect(order).toEqual(["microtask", "effect"]);
+});

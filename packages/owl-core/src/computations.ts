@@ -465,6 +465,9 @@ export function onWriteAtom(atom: Atom, comparable: boolean = false) {
     immediateObservers = [];
     errors = updateEach(toRun);
   }
+  if (flushWanted && !flushScheduled) {
+    scheduleFlush();
+  }
   rethrow(errors);
 }
 
@@ -545,22 +548,21 @@ function rethrow(errors: unknown[] | null) {
 
 let flushScheduled = false;
 
+let flushWanted = false;
+
 function queueEffect(computation: ComputationAtom) {
   observers.push(computation);
-  if (!flushScheduled) {
-    scheduleFlush();
-  }
+  flushWanted = true;
 }
 
 function queueDisposal(computation: ComputationAtom) {
   pendingDisposals.add(computation);
-  if (!flushScheduled) {
-    scheduleFlush();
-  }
+  flushWanted = true;
 }
 
 function scheduleFlush() {
   flushScheduled = true;
+  flushWanted = false;
   Promise.resolve().then(processEffects);
 }
 
@@ -822,6 +824,9 @@ function unread(computed: ComputationAtom, reader: ComputationAtom) {
     debugLog("computed", `${computed.name} unread by ${reader.name}, disposed at the flush`);
   }
   queueDisposal(computed);
+  if (!flushScheduled) {
+    scheduleFlush();
+  }
 }
 
 function observedSources(observer: ComputationAtom): Set<Atom> {
