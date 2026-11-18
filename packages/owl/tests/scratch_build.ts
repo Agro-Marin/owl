@@ -6,6 +6,10 @@ import { scratchDir } from "../../../tools/workspace.mjs";
 
 export const PACKAGE = join(dirname(fileURLToPath(import.meta.url)), "..");
 
+// A build of the package (and of its declarations) takes seconds on an idle
+// machine and over a minute on a loaded one, where the pre-push hook runs.
+export const BUILD_TIMEOUT = 300_000;
+
 export function scratchPackage(prefix: string, { types = false } = {}): string {
   const root = scratchDir(prefix);
   copyFileSync(join(PACKAGE, "package.json"), join(root, "package.json"));

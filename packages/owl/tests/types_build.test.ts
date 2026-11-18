@@ -3,38 +3,42 @@ import { copyFileSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "no
 import { resolve } from "node:path";
 import ts from "typescript";
 import { scratchDir } from "../../../tools/workspace.mjs";
-import { removeScratchPackage, scratchPackage } from "./scratch_build";
+import { BUILD_TIMEOUT, removeScratchPackage, scratchPackage } from "./scratch_build";
 
 let BUILT: string;
 
 beforeAll(() => {
   BUILT = scratchPackage("owl-types-test", { types: true });
-}, 60000);
+}, BUILD_TIMEOUT);
 
 afterAll(() => removeScratchPackage(BUILT));
 
-test("declarations build with this Node even inside npm exec", () => {
-  const cwd = resolve(__dirname, "..");
-  const run = spawnSync(
-    process.execPath,
-    ["build.mjs", "types", "--outdir", resolve(BUILT, "dist")],
-    {
-      cwd,
-      encoding: "utf8",
-      timeout: 60000,
-      env: { ...process.env, npm_config_call: "node --version", NODE_DEBUG: "owl-build" },
+test(
+  "declarations build with this Node even inside npm exec",
+  () => {
+    const cwd = resolve(__dirname, "..");
+    const run = spawnSync(
+      process.execPath,
+      ["build.mjs", "types", "--outdir", resolve(BUILT, "dist")],
+      {
+        cwd,
+        encoding: "utf8",
+        timeout: BUILD_TIMEOUT,
+        env: { ...process.env, npm_config_call: "node --version", NODE_DEBUG: "owl-build" },
+      }
+    );
+    if (run.status !== 0) {
+      console.debug("[owl:types-build-test]", run.stdout, run.stderr);
     }
-  );
-  if (run.status !== 0) {
-    console.debug("[owl:types-build-test]", run.stdout, run.stderr);
-  }
-  expect(run.status).toBe(0);
-  expect(run.stderr).toMatch(/OWL-BUILD \d+: types owl using/);
-  expect(run.stderr).toMatch(/OWL-BUILD \d+: types compiler using/);
-  expect(run.stdout + run.stderr).not.toContain("type nodes were renamed");
-  expect(readFileSync(resolve(BUILT, "dist/types/owl.d.ts"), "utf8")).toContain("signal");
-  expect(readFileSync(resolve(BUILT, "dist/types/compiler.d.ts"), "utf8")).toContain("compile");
-}, 60000);
+    expect(run.status).toBe(0);
+    expect(run.stderr).toMatch(/OWL-BUILD \d+: types owl using/);
+    expect(run.stderr).toMatch(/OWL-BUILD \d+: types compiler using/);
+    expect(run.stdout + run.stderr).not.toContain("type nodes were renamed");
+    expect(readFileSync(resolve(BUILT, "dist/types/owl.d.ts"), "utf8")).toContain("signal");
+    expect(readFileSync(resolve(BUILT, "dist/types/compiler.d.ts"), "utf8")).toContain("compile");
+  },
+  BUILD_TIMEOUT
+);
 
 function compileConsumer(source: string): { status: number | null; output: string } {
   const packageRoot = resolve(__dirname, "..");
