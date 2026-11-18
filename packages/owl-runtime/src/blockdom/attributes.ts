@@ -11,21 +11,6 @@ const tokenListRemove = /* @__PURE__ */ fromDom(() => DOMTokenList.prototype.rem
 const isArray = Array.isArray;
 const wordRegexp = /\s+/;
 
-function setAttribute(this: HTMLElement, key: string, value: any) {
-  switch (value) {
-    case false:
-    case null:
-    case undefined:
-      removeAttribute.call(this, key);
-      break;
-    case true:
-      elemSetAttribute.call(this, key, "");
-      break;
-    default:
-      elemSetAttribute.call(this, key, value);
-  }
-}
-
 export function createAttrUpdater(attr: string, ns?: string | null): Setter<HTMLElement> {
   if (ns) {
     const localName = attr.slice(attr.indexOf(":") + 1);
@@ -39,7 +24,12 @@ export function createAttrUpdater(attr: string, ns?: string | null): Setter<HTML
     };
   }
   return function (this: HTMLElement, value: any) {
-    setAttribute.call(this, attr, value);
+    const str = toAttrValue(value);
+    if (str === null) {
+      removeAttribute.call(this, attr);
+    } else {
+      elemSetAttribute.call(this, attr, str);
+    }
   };
 }
 

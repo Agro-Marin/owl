@@ -42,6 +42,18 @@ test("updating attribute with falsy value", async () => {
   expect(fixture.innerHTML).toBe(`<div></div>`);
 });
 
+test("an attribute and a t-att entry write a value alike", async () => {
+  const single = createBlock('<div block-attribute-0="data-v"></div>');
+  const object = createBlock('<div block-attributes="0"></div>');
+  for (const value of [Symbol("s"), 0, 1n, true, "", null]) {
+    mount(single([value]), fixture);
+    mount(object([{ "data-v": value }]), fixture);
+    const [a, b] = fixture.children;
+    expect(a.getAttribute("data-v")).toBe(b.getAttribute("data-v"));
+    fixture.textContent = "";
+  }
+});
+
 test("dynamic attribute (pair)", async () => {
   const block = createBlock('<div block-attributes="0"></div>');
   const tree = block([["hello", "world"]]);
