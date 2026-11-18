@@ -442,10 +442,6 @@ export function proxy<T extends Target>(target: T): T {
 const viewBases = new WeakMap<object, any>();
 
 export function observe<T extends Target>(target: T, callback: () => void): T {
-  const reactive = proxy(target);
-  if (!targets.has(reactive)) {
-    return reactive;
-  }
   const computation = createComputation(
     () => {
       trackLateReads(computation);
@@ -541,7 +537,7 @@ export function observe<T extends Target>(target: T, callback: () => void): T {
       }
     }
   }
-  return view(reactive);
+  return view(proxy(target));
 }
 
 function isIterator(value: any): value is Iterator<any> {

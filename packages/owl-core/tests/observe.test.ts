@@ -380,15 +380,20 @@ describe("observe", () => {
     expect(new view.constructor([[1, 2]]).get(1)).toBe(2);
   });
 
-  test("a raw-marked object is returned as is, as OWL 2's reactive() did", () => {
-    class Raw {
-      a = 1;
-    }
-    markRaw(Raw.prototype);
-    const object = markRaw({ a: 1 });
-    const instance = new Raw();
-    expect(observe(object, () => {})).toBe(object);
-    expect(observe(instance, () => {})).toBe(instance);
+  test("a raw-marked target is still viewed: what is observable through it is observed", async () => {
+    const inner = proxy({ n: 1 });
+    const container = markRaw({ inner, plain: 1 });
+    let calls = 0;
+    const view = observe(container, () => calls++);
+    expect(view).not.toBe(container);
+    expect(view.inner.n).toBe(1);
+    expect(view.plain).toBe(1);
+    container.plain = 2;
+    await Promise.resolve();
+    expect(calls).toBe(0);
+    inner.n = 2;
+    await Promise.resolve();
+    expect(calls).toBe(1);
   });
 
   test("hasOwnProperty through the view observes the presence of its key", () => {

@@ -774,6 +774,28 @@ describe("ownership of the effects a component creates", () => {
   });
 });
 
+test("an observe() view of a component's props calls back when a prop it read changes", async () => {
+  let calls = 0;
+  class Child extends Component {
+    static template = xml`<i t-out="this.props.v"/>`;
+    props = props();
+    setup() {
+      const view: any = observe(this.props, () => calls++);
+      view.v;
+    }
+  }
+  class Parent extends Component {
+    static template = xml`<div><Child v="this.v()"/></div>`;
+    static components = { Child };
+    v = signal(1);
+  }
+  const parent = await mount(Parent, fixture);
+  parent.v.set(2);
+  await nextTick();
+  expect(fixture.innerHTML).toBe("<div><i>2</i></div>");
+  expect(calls).toBe(1);
+});
+
 test("an observe() view first read in onWillStart, or inside untrack, keeps calling back", async () => {
   const calls: string[] = [];
   class Child extends Component {

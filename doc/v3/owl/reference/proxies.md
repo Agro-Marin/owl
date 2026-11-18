@@ -148,7 +148,9 @@ view.count; // read again: observed again
   before `callback` ran (later in the same `batch`, or by an `immediateEffect`
   the change ran first) is observed once it ran.
 - Objects read through the view are views too, with the same callback. A
-  target marked with `markRaw` is returned as is: nothing of it is observed.
+  target marked with `markRaw` is viewed too: its own values are not
+  observed, but what is observable through it (a proxy it holds, a `props()`
+  view's props) is.
 - Collection iterators return live views of their members, including arrays.
   `entries()` returns a plain pair containing those views. Iterator helpers
   such as `.map()` and `.toArray()` observe each consumed item too.
