@@ -52,9 +52,8 @@ describe("basic validation", () => {
 
   test("compilation error", () => {
     const template = `<div t-att-class="a b">test</div>`;
-    expect(() => renderToString(template))
-      .toThrow(
-        `Failed to compile anonymous template: invalid expression \`a b\` in t-att-class="a b" (on a <div>): Unexpected identifier 'ctx'`
-      );
+    expect(() => renderToString(template)).toThrow(
+      `Failed to compile anonymous template: invalid expression \`a b\` in t-att-class="a b" (on a <div>): Unexpected identifier 'ctx'`
+    );
   });
 });
