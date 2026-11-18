@@ -258,7 +258,10 @@ t.string()` compile): `Schema<T>` is a validator carrying `T` under a
   module-private brand, so the declarations export no phantom symbol values.
   `Registry` / `Resource` `validation`, and the type of `useConfig` and
   `props.static`, take a `Schema<V>`, entries typed `V`. `registry.get(key,
-d)` is typed `V | D`; `useListener` takes any function reading a target.
+d)` is typed `V | D`; `useListener` takes any function reading a target. A component's
+  `this.constructor` is typed as its class (`template`, `components`, and the
+  `props` it declares), so `useProps(this.constructor.props)` type-checks;
+  upstream leaves it `Function`.
 - **A plugin dependency cycle through constructors or field initializers**
   throws "Circular plugin dependency" instead of overflowing the stack; plugins
   asking for each other in `setup()` each get the other (logged on the `plugin`

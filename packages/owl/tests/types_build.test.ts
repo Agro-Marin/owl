@@ -36,7 +36,7 @@ test("declarations build with this Node even inside npm exec", () => {
   expect(readFileSync(resolve(BUILT, "dist/types/compiler.d.ts"), "utf8")).toContain("compile");
 }, 60000);
 
-test("a consumer outside the checkout gets complete collection and hook types", () => {
+function compileConsumer(source: string): { status: number | null; output: string } {
   const packageRoot = resolve(__dirname, "..");
   const consumerRoot = scratchDir("owl-type-consumer");
   try {
@@ -49,9 +49,37 @@ test("a consumer outside the checkout gets complete collection and hook types", 
         resolve(installed, `dist/types/${entry}.d.ts`)
       );
     }
+    writeFileSync(resolve(consumerRoot, "consumer.ts"), source);
     writeFileSync(
-      resolve(consumerRoot, "consumer.ts"),
-      `
+      resolve(consumerRoot, "tsconfig.json"),
+      JSON.stringify({
+        compilerOptions: {
+          strict: true,
+          noEmit: true,
+          target: "ES2024",
+          module: "ESNext",
+          moduleResolution: "bundler",
+          types: [],
+          lib: ["ES2024", "ESNext.Iterator", "DOM", "DOM.Iterable"],
+        },
+        files: ["consumer.ts"],
+      })
+    );
+    const run = spawnSync(
+      process.execPath,
+      [resolve(packageRoot, "../../node_modules/typescript/bin/tsc"), "-p", "tsconfig.json"],
+      { cwd: consumerRoot, encoding: "utf8", timeout: 30000 }
+    );
+    console.debug("[owl:consumer-types]", run.status, run.stdout, run.stderr);
+    return { status: run.status, output: run.stdout + run.stderr };
+  } finally {
+    rmSync(consumerRoot, { recursive: true, force: true });
+  }
+}
+
+test("a consumer outside the checkout gets complete collection and hook types", () => {
+  expect(
+    compileConsumer(`
       import { App, signal, Registry, Resource, useApp, useConfig, config, providePlugins, t } from "@odoo/owl";
       import { signal as runtimeSignal, useApp as runtimeApp, useConfig as runtimeConfig } from "@odoo/owl/runtime";
       import { compile } from "@odoo/owl/compiler";
@@ -134,37 +162,23 @@ test("a consumer outside the checkout gets complete collection and hook types", 
         contextualConfig, contextualAlias, contextualRuntimeConfig,
         explicitConfigReader, returnContext, explicitOptional, explicitDefaulted,
         wrongExplicitOptional];
-    `
-    );
-    writeFileSync(
-      resolve(consumerRoot, "tsconfig.json"),
-      JSON.stringify({
-        compilerOptions: {
-          strict: true,
-          noEmit: true,
-          target: "ES2024",
-          module: "ESNext",
-          moduleResolution: "bundler",
-          types: [],
-          lib: ["ES2024", "ESNext.Iterator", "DOM", "DOM.Iterable"],
-        },
-        files: ["consumer.ts"],
-      })
-    );
-    const run = spawnSync(
-      process.execPath,
-      [resolve(packageRoot, "../../node_modules/typescript/bin/tsc"), "-p", "tsconfig.json"],
-      {
-        cwd: consumerRoot,
-        encoding: "utf8",
-        timeout: 30000,
-      }
-    );
-    console.debug("[owl:consumer-types]", run.status, run.stdout, run.stderr);
-    expect(run.status).toBe(0);
-  } finally {
-    rmSync(consumerRoot, { recursive: true, force: true });
-  }
+    `).status
+  ).toBe(0);
+});
+
+test("a consumer reads a component's static props through this.constructor, as useProps(this.constructor.props) does", () => {
+  const result = compileConsumer(`
+    import { Component, t, useProps } from "@odoo/owl";
+    class Child extends Component {
+      static template = "child";
+      static props = { title: t.string() };
+      props = useProps(this.constructor.props);
+      templateName: string = this.constructor.template;
+    }
+    void Child;
+  `);
+  expect(result.output).toBe("");
+  expect(result.status).toBe(0);
 });
 
 function declaredValues(file: string): string[] {
