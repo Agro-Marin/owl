@@ -239,7 +239,7 @@ export class ComponentNode extends Scope<App> implements VNode<ComponentNode> {
     const fiber = this.fiber;
     this.fiber = null;
     if (fiber !== null) {
-      this.app.scheduler.forget(fiber);
+      this.app.scheduler.forget(fiber, "destroyed");
     }
     let failure: { error: unknown } | null = null;
     if (debug.lifecycle) {

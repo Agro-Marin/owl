@@ -54,11 +54,11 @@ export class Scheduler {
     delayedIn.set(fiber, this);
   }
 
-  forget(fiber: Fiber) {
+  forget(fiber: Fiber, why: string) {
     forgetDelayed(fiber);
     if (fiber.root === fiber && this.tasks.delete(fiber as RootFiber)) {
       if (debug.scheduler) {
-        debugLog("scheduler", `drop ${fiber.node.componentName}: destroyed`);
+        debugLog("scheduler", `drop ${fiber.node.componentName}: ${why}`);
       }
       if (!this.tasks.size && !this.processing) {
         Scheduler.active.delete(this);

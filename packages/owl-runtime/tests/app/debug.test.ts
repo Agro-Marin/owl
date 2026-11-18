@@ -191,7 +191,7 @@ test("the scheduler channel says it drops a root fiber its node no longer render
   ]);
 });
 
-test("the scheduler channel drops without a trace a root render its parent's render took over", async () => {
+test("the scheduler channel says it drops a root render its parent's render took over", async () => {
   class Child extends Component {
     static template = xml`<b><t t-out="this.props.v"/><t t-out="this.state.n"/></b>`;
     props = props();
@@ -211,8 +211,8 @@ test("the scheduler channel drops without a trace a root render its parent's ren
   expect(lines).toEqual([
     "scheduler: schedule Child, 1 task(s)",
     "scheduler: schedule Parent, 2 task(s)",
-    "scheduler: resume 1 delayed render(s)",
-    "scheduler: frame, 2 task(s)",
+    "scheduler: drop Child: taken over by Parent's render",
+    "scheduler: frame, 1 task(s)",
   ]);
   expect(fixture.innerHTML).toBe("<div><b>22</b></div>");
 });

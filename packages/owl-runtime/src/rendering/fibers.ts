@@ -28,7 +28,7 @@ export function makeChildFiber(node: ComponentNode, parent: Fiber): Fiber {
   let current = node.fiber;
   if (current) {
     cancelFibers(current.children);
-    node.app.scheduler.forget(current);
+    node.app.scheduler.forget(current, `taken over by ${parent.root!.node.componentName}'s render`);
     current.root = null;
   }
   const fiber = new Fiber(node, parent);
