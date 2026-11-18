@@ -310,6 +310,42 @@ describe("a pass failed by one component, handled without a re-render", () => {
     expect(fixture.innerHTML).toBe("<div><a>2-7</a><b>ok</b></div>");
   });
 
+  test("a commit failed by an onWillPatch leaves no task behind, and the next render commits", async () => {
+    let boom = true;
+    class Child extends Component {
+      static template = xml`<p t-out="this.props.v"/>`;
+      props = props();
+      setup() {
+        onWillPatch(() => {
+          if (boom) {
+            boom = false;
+            throw new Error("boom");
+          }
+        });
+      }
+    }
+    class Parent extends Component {
+      static template = xml`<div><Child v="this.state.v"/></div>`;
+      static components = { Child };
+      state = proxy({ v: 1 });
+      setup() {
+        onError((e) => log.push(e.message));
+      }
+    }
+    const app = new App({ test: true });
+    const parent = await app.createRoot(Parent).mount(fixture);
+    parent.state.v = 2;
+    await nextTick();
+    await nextTick();
+    expect(log).toEqual(["boom"]);
+    expect(fixture.innerHTML).toBe("<div><p>1</p></div>");
+    expect(app.scheduler.tasks.size).toBe(0);
+    parent.state.v = 3;
+    await nextTick();
+    expect(fixture.innerHTML).toBe("<div><p>3</p></div>");
+    app.destroy();
+  });
+
   test("a component the pass created, never mounted, waits for the pass instead of committing alone", async () => {
     const shared = proxy({ n: 1 });
     class C extends Component {

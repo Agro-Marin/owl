@@ -78,6 +78,16 @@ export class Scheduler {
     }
   }
 
+  private dropFailed(fiber: RootFiber) {
+    if (debug.scheduler) {
+      debugLog("scheduler", `drop ${fiber.node.componentName}: failed`);
+    }
+    this.tasks.delete(fiber);
+    if (fiber.merged) {
+      renderMergedAlone(fiber);
+    }
+  }
+
   processTasks() {
     if (this.processing) {
       return;
@@ -102,20 +112,17 @@ export class Scheduler {
           continue;
         }
         if (fibersInError.has(fiber)) {
-          if (debug.scheduler) {
-            debugLog("scheduler", `drop ${fiber.node.componentName}: failed`);
-          }
-          this.tasks.delete(fiber);
+          this.dropFailed(fiber);
           failed = true;
-          if (fiber.merged) {
-            renderMergedAlone(fiber);
-          }
           continue;
         }
         if (fiber.counter === 0) {
           fiber.complete();
           if (fiber.renderState & APPLIED_TO_DOM) {
             this.tasks.delete(fiber);
+          } else if (fibersInError.has(fiber)) {
+            this.dropFailed(fiber);
+            failed = true;
           }
         } else if (debug.scheduler) {
           debugLog(
