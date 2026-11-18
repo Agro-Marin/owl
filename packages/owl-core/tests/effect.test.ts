@@ -954,6 +954,23 @@ describe("disposed by its own run", () => {
     await waitSchedulerThenMicroTick();
     expect(created).toEqual([0]);
   });
+
+  test("an immediate effect that disposed itself is not run again by a write later in that run", () => {
+    const x = signal(0);
+    const go = signal(0);
+    let runs = 0;
+    const dispose: () => void = immediateEffect(() => {
+      runs++;
+      if (go()) {
+        dispose();
+        x();
+        x.set(1);
+      }
+    });
+    expect(() => go.set(1)).not.toThrow();
+    expect(runs).toBe(2);
+    expect(observersOf((x as any)[atomSymbol])).toEqual([]);
+  });
 });
 
 describe("returned value", () => {

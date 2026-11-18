@@ -91,7 +91,11 @@ function createEffect<T>(fn: () => T, immediate: boolean, options?: EffectOption
       owner.owned?.delete(cleanupEffect);
       computation.owner = null;
     }
-    computation.state = ComputationState.EXECUTED;
+    // A run that disposes its own effect ends it up to date: until then, a
+    // write to what it reads after the dispose must not queue it again.
+    if (!computation.running) {
+      computation.state = ComputationState.EXECUTED;
+    }
     detach(computation, true);
   }
 
