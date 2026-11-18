@@ -968,6 +968,21 @@ test("assert class instance", () => {
 ]`);
 });
 
+test("assert plain object with a constructor key", () => {
+  expect(() => {
+    assertType({ a: { constructor: "x" } }, t.object({ a: t.number() }));
+  }).toThrow(`Value does not match the type
+[
+  {
+    "received": {
+      "constructor": "x"
+    },
+    "path": "a",
+    "message": "value is not a number"
+  }
+]`);
+});
+
 test("assertType path is not hidden", () => {
   const obj = {};
   expect(() => {

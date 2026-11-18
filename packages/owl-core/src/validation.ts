@@ -33,9 +33,9 @@ function makeSafeReplacer() {
       return `${value}n`;
     }
     if (value && typeof value === "object") {
-      const ctor = value.constructor;
-      if (ctor && ctor !== Object && ctor !== Array) {
-        return `[Instance of ${ctor.name || "anonymous"}]`;
+      const proto = Object.getPrototypeOf(value);
+      if (proto !== null && proto !== Object.prototype && proto !== Array.prototype) {
+        return `[Instance of ${proto.constructor?.name || "anonymous"}]`;
       }
       while (ancestors.length && ancestors[ancestors.length - 1] !== this) {
         ancestors.pop();
