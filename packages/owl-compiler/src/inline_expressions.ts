@@ -186,7 +186,7 @@ function startsRegExp(str: string, previous: number): boolean {
   return str[before] !== ".";
 }
 
-function findClosingBrace(str: string, start: number): number {
+export function findClosingBrace(str: string, start: number): number {
   let depth = 0;
   let previous = -1;
   let division = -1;

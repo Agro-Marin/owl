@@ -18,6 +18,21 @@ exports[`style and class handling > a class, style or t-att object changed in pl
 }"
 `;
 
+exports[`style and class handling > a proxied class object chosen between object literals re-renders on its own 1`] = `
+"function anonymous(app, bdom, helpers
+) {
+  let { text, createBlock, list, multi, html, toggler } = bdom;
+  let { objectAttrValue } = helpers;
+  
+  let block1 = createBlock(\`<div block-attribute-0="class"/>\`);
+  
+  return function template(ctx, node, key = "") {
+    let attr1 = objectAttrValue({on:1}.on?ctx['this'].state.cls:{off:true});
+    return block1([attr1]);
+  }
+}"
+`;
+
 exports[`style and class handling > a proxied class object in a class array or a t-att object re-renders on its own 1`] = `
 "function anonymous(app, bdom, helpers
 ) {

@@ -3,6 +3,7 @@ import type { CustomDirectives } from ".";
 import {
   compileExpr,
   escapeTemplateString,
+  findClosingBrace,
   interpolate,
   isInterpolated,
   processExpr,
@@ -81,7 +82,13 @@ function makeXmlDocument(): Document {
 }
 
 const LITERAL_RE =
-  /^(?:'[^'\\]*'|"[^"\\]*"|`(?:[^`\\]|\\.)*`|-?\d[\d.e+-]*|true|false|null|undefined|\{.*\})$/s;
+  /^(?:'[^'\\]*'|"[^"\\]*"|`(?:[^`\\]|\\.)*`|-?\d[\d.e+-]*|true|false|null|undefined)$/;
+
+function isLiteral(expr: string): boolean {
+  return (
+    LITERAL_RE.test(expr) || (expr[0] === "{" && findClosingBrace(expr, 1) === expr.length - 1)
+  );
+}
 
 function isProp(tag: string, key: string): boolean {
   switch (tag) {
@@ -848,7 +855,7 @@ export class CodeGenerator {
         if (!attrName) {
           this.helpers.add("attrsValue");
           expr = `attrsValue(${expr})`;
-        } else if (!LITERAL_RE.test(expr)) {
+        } else if (!isLiteral(expr)) {
           const helper =
             attrName === "class" || attrName === "style" ? "objectAttrValue" : "attrValue";
           this.helpers.add(helper);

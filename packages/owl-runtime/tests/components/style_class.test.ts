@@ -551,6 +551,18 @@ describe("style and class handling", () => {
     expect(fixture.innerHTML).toBe(`<div class="b" style="color: blue;"></div>`);
   });
 
+  test("a proxied class object chosen between object literals re-renders on its own", async () => {
+    class Test extends Component {
+      static template = xml`<div t-att-class="{ on: 1 }.on ? this.state.cls : { off: true }"/>`;
+      state = proxy({ cls: { a: true } as Record<string, boolean> });
+    }
+    const test = await mount(Test, fixture);
+    expect(fixture.innerHTML).toBe(`<div class="a"></div>`);
+    test.state.cls.b = true;
+    await nextTick();
+    expect(fixture.innerHTML).toBe(`<div class="a b"></div>`);
+  });
+
   test("a proxied class object in a class array or a t-att object re-renders on its own", async () => {
     class Test extends Component {
       static template = xml`<div t-att-class="['x', this.state.cls]"/><p t-att="{ class: this.state.cls }"/>`;
