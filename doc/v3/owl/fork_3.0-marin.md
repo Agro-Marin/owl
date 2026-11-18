@@ -247,7 +247,10 @@ true })` creates an effect owned by nothing. When a computed and an effect
   accepting everything, at the top level too (`validateType(42, String)`, a
   registry's `validation`, `props.static`); a `customValidator` of an optional
   type is optional, with that type's default. `t.ref()` can be declared
-  without a DOM; only checking a non-null value needs one.
+  without a DOM; only checking a non-null value needs one. `applyDefaults`
+  fills plain data only: an instance of a class (an `Array` subclass, an
+  object with private members) is returned as it is instead of copied into
+  a plain object.
 - **A schema is typed as a schema**, not as the value it describes (upstream's
   `Type<T> = T & {…}` let `t.number().toFixed()` and `const s: string =
 t.string()` compile): `Schema<T>` is a validator carrying `T` under a
@@ -341,8 +344,10 @@ plugins: [] })` rendered asynchronously); a resource-driven start belongs to
   `t-model`'s model in a slot linked by `block-handler-arg-N`), the element
   reads code, context and model from its block when the event fires, and
   modifiers come from the key. `config.mainEventHandler` is
-  `(fn, mods, ctx, ev, currentTarget, arg?)`. A render allocates no handler
-  array.
+  `(fn, mods, ctx, ev, currentTarget, arg?)`, called once per handler (a
+  synthetic catcher runs its dispatch itself, not through it). A render
+  allocates no handler array. A mounted block's `toString()` is its
+  element's markup (upstream mounted the block again, losing it).
 - **A child's key is exact**: the site id, each loop key and `t-key`, slot and
   template names are segments (`\u0002`, a tag, a payload; a payload's
   `\u0002` doubled), so no value of any type or content spells another
@@ -505,7 +510,8 @@ plugins: [] })` rendered asynchronously); a resource-driven start belongs to
 - **Template expressions skip comments**; a statement keyword in an arrow's
   block body, and an object literal method, accessor or generator
   (`{ f() {} }`, `{ 'f'() {} }`, `{ [k]() {} }`, `{ get g() {} }`,
-  `{ *g() {} }`), throw a named error; `1 .toString()` keeps its space; `delete` is an operator (`delete o.x`
+  `{ *g() {} }`), and a function expression with a name or parameters
+  (`function (x) {}`, `function f() {}`), throw a named error; `1 .toString()` keeps its space; `delete` is an operator (`delete o.x`
   compiles; a context variable cannot be named `delete`); `{{ }}` and `#{ }`
   end at the brace that closes them, past a regular expression after a
   division or a division after an object literal; an arrow prop's free
