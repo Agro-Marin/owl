@@ -92,14 +92,14 @@ function scratchRepo(): { root: string; git: (...args: string[]) => string } {
   return { root, git };
 }
 
-test("a release writes the version everywhere, lists the commits since the last release, commits and tags", () => {
+test("a release writes the version everywhere, lists the commits since the last release, commits and tags", async () => {
   const { root, git } = scratchRepo();
   try {
     const base = git("rev-parse", "HEAD");
     writeFileSync(join(root, "a.txt"), "a");
     git("add", "a.txt");
     git("commit", "-q", "-m", "[FIX] owl-core: first fix");
-    release({ root, version: "3.0.0-marin.1", date: "2026-11-18", base, log: () => {} });
+    await release({ root, version: "3.0.0-marin.1", date: "2026-11-18", base, log: () => {} });
     expect(readFileSync(join(root, "packages/owl-runtime/src/version.ts"), "utf8")).toBe(
       'export const version = "3.0.0-marin.1";\n'
     );
@@ -119,27 +119,31 @@ test("a release writes the version everywhere, lists the commits since the last 
 
     writeFileSync(join(root, "b.txt"), "b");
     git("add", "b.txt");
-    git("commit", "-q", "-m", "[IMP] tools: second");
-    release({ root, version: "3.0.0-marin.2", date: "2026-11-19", base, log: () => {} });
+    git("commit", "-q", "-m", "[IMP] tools: second, *emphasis* and a_b and   spaces");
+    await release({ root, version: "3.0.0-marin.2", date: "2026-11-19", base, log: () => {} });
     const second = readFileSync(join(root, "doc/v3/owl/changelog_marin.md"), "utf8");
     expect(second.indexOf("## 3.0.0-marin.2")).toBeLessThan(second.indexOf("## 3.0.0-marin.1"));
     expect(second.split("## 3.0.0-marin.1")[0]).not.toContain("first fix");
     expect(second.split("## 3.0.0-marin.1")[0]).toContain("- tools: second");
+    const { check } = await import("prettier");
+    expect(await check(second, { filepath: join(root, "doc/v3/owl/changelog_marin.md") })).toBe(
+      true
+    );
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
 });
 
-test("a release refuses a version that does not follow the current one, and a dirty checkout", () => {
+test("a release refuses a version that does not follow the current one, and a dirty checkout", async () => {
   const { root } = scratchRepo();
   try {
-    expect(() => release({ root, version: "3.0.0-alpha.48", date: "d", log: () => {} })).toThrow(
-      "refusing to release 3.0.0-alpha.48: it does not follow 3.0.0-alpha.49"
-    );
+    await expect(
+      release({ root, version: "3.0.0-alpha.48", date: "d", log: () => {} })
+    ).rejects.toThrow("refusing to release 3.0.0-alpha.48: it does not follow 3.0.0-alpha.49");
     writeFileSync(join(root, "packages/owl/package.json"), "{}\n");
-    expect(() => release({ root, version: "3.0.0-marin.1", date: "d", log: () => {} })).toThrow(
-      "refusing to release: the checkout differs from its commit"
-    );
+    await expect(
+      release({ root, version: "3.0.0-marin.1", date: "d", log: () => {} })
+    ).rejects.toThrow("refusing to release: the checkout differs from its commit");
   } finally {
     rmSync(root, { recursive: true, force: true });
   }

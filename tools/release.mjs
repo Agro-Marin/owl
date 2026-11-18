@@ -81,7 +81,7 @@ function writeJson(path, data) {
   writeFileSync(path, JSON.stringify(data, null, 2) + "\n");
 }
 
-export function release({ root = ROOT, version, date, base = FORK_BASE, log = console.log }) {
+export async function release({ root = ROOT, version, date, base = FORK_BASE, log = console.log }) {
   if (!VERSION_RE.test(version)) {
     throw new Error(`${version} is not a version (e.g. 3.0.0-marin.1)`);
   }
@@ -138,9 +138,15 @@ export function release({ root = ROOT, version, date, base = FORK_BASE, log = co
     ? readFileSync(changelogPath, "utf8").replace(/^# .*\n\n?/, "")
     : "";
   mkdirSync(dirname(changelogPath), { recursive: true });
+  // Written as check-formatting (a verify step) reads it: wrapped by prettier.
+  const { format, resolveConfig } = await import("prettier");
+  const changelog = `# Changelog of the 3.0-marin fork\n\n${changelogSection(version, date, subjects)}\n${existing}`;
   writeFileSync(
     changelogPath,
-    `# Changelog of the 3.0-marin fork\n\n${changelogSection(version, date, subjects)}\n${existing}`
+    await format(changelog, {
+      ...(await resolveConfig(changelogPath)),
+      filepath: changelogPath,
+    })
   );
   const files = [
     VERSION_FILE,
@@ -172,7 +178,7 @@ if (import.meta.main) {
     process.exit(2);
   }
   try {
-    release({ version, date: new Date().toISOString().slice(0, 10) });
+    await release({ version, date: new Date().toISOString().slice(0, 10) });
   } catch (error) {
     console.error(error.message);
     process.exitCode = 2;

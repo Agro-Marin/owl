@@ -10,4 +10,4 @@ export declare function release(options: {
   date: string;
   base?: string;
   log?: (line: string) => void;
-}): void;
+}): Promise<void>;
