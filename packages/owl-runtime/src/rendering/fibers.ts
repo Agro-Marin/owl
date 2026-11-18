@@ -651,9 +651,9 @@ export class MountFiber extends RootFiber {
         } catch (error) {
           refError = { error };
         }
-        for (const fiber of this.mounted) {
-          oweMounted(fiber.node);
-        }
+        // Nothing of this pass is mounted: its nodes stay or go back to new
+        // (destroyed, they run no onWillUnmount) and render again only
+        // through the recovery, whose commit runs their onMounted.
         if (this.childrenMap) {
           unmountChildren(this.childrenMap);
         }
