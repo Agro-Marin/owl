@@ -296,8 +296,16 @@ function exprAttr(node: Element, attr: string): string | null {
   return value;
 }
 
-function emptyExprError(attr: string, node: Element): OwlError {
-  return new OwlError(`Directive '${attr}' needs an expression (on a <${node.tagName}>)`);
+function emptyExprError(attr: string, node: Element, what: string = "an expression"): OwlError {
+  return new OwlError(`Directive '${attr}' needs ${what} (on a <${node.tagName}>)`);
+}
+
+function nameAttr(node: Element, attr: string, what: string): string {
+  const value = node.getAttribute(attr)!;
+  if (!value.trim()) {
+    throw emptyExprError(attr, node, what);
+  }
+  return value;
 }
 
 function wrapping<T extends AST>(ast: T, content: AST | null): T {
@@ -430,7 +438,7 @@ const SLOT_HIDING_DIRECTIVES = new Set([
 
 function parseDOMNode(node: Element, ctx: ParsingContext): AST | null {
   const { tagName } = node;
-  const dynamicTag = node.getAttribute("t-tag");
+  const dynamicTag = exprAttr(node, "t-tag");
   node.removeAttribute("t-tag");
   if (tagName === "t" && !dynamicTag) {
     return null;
@@ -731,7 +739,7 @@ function parseTCall(node: Element, ctx: ParsingContext): AST | null {
   if (node.tagName !== "t") {
     throw tOnlyError("t-call", node);
   }
-  const subTemplate = node.getAttribute("t-call")!;
+  const subTemplate = nameAttr(node, "t-call", "a template name");
   const context = exprAttr(node, "t-call-context");
   node.removeAttribute("t-call");
   node.removeAttribute("t-call-context");
@@ -1020,7 +1028,11 @@ function parseTCallSlot(node: Element, ctx: ParsingContext): AST | null {
   if (node.tagName !== "t") {
     throw tOnlyError(node.hasAttribute("t-slot") ? "t-slot" : "t-call-slot", node);
   }
-  const name = (node.getAttribute("t-call-slot") || node.getAttribute("t-slot"))!;
+  const name = nameAttr(
+    node,
+    node.hasAttribute("t-call-slot") ? "t-call-slot" : "t-slot",
+    "a slot name"
+  );
   node.removeAttribute("t-call-slot");
   node.removeAttribute("t-slot");
   const dynamicProps = exprAttr(node, "t-props");

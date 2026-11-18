@@ -2388,6 +2388,8 @@ describe("directives that need an expression", () => {
       [`<div t-ref=""/>`, "t-ref"],
       [`<t t-call-block=""/>`, "t-call-block"],
       [`<C t-props=""/>`, "t-props"],
+      [`<t t-tag="">x</t>`, "t-tag"],
+      [`<div t-tag=" "/>`, "t-tag"],
     ];
     for (const [template, directive] of cases) {
       expect(() => parse(template)).toThrow(`Directive '${directive}' needs an expression`);
@@ -2398,6 +2400,21 @@ describe("directives that need an expression", () => {
     expect(() =>
       parse(`<div t-on-click="" t-attf-class=""><t t-set="x" t-value=""/></div>`)
     ).not.toThrow();
+  });
+});
+
+describe("directives that name a template or a slot", () => {
+  test("an empty name is rejected with the directive's name", () => {
+    const cases = [
+      [`<t t-call=""/>`, "t-call", "a template name"],
+      [`<t t-call=" "><div/></t>`, "t-call", "a template name"],
+      [`<t t-call-slot=""/>`, "t-call-slot", "a slot name"],
+      [`<t t-slot=""/>`, "t-slot", "a slot name"],
+    ];
+    for (const [template, directive, what] of cases) {
+      expect(() => parse(template)).toThrow(`Directive '${directive}' needs ${what} (on a <t>)`);
+    }
+    expect(getConsoleOutput()).toEqual(["warn:t-slot has been renamed t-call-slot."]);
   });
 });
 

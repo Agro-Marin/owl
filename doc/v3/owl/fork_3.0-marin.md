@@ -484,8 +484,10 @@ plugins: [] })` rendered asynchronously); a resource-driven start belongs to
 - **A `t-set` with a `t-value` and a blank body takes the value** (upstream
   took the whitespace as its default, truthy for a falsy value), and **a CDATA
   section is text**, in an element or a `t-set` body (upstream dropped it).
-- **A directive that needs an expression throws on an empty one**, naming it;
-  a `t-set-slot` nested directly in another throws.
+- **A directive that needs an expression throws on an empty one**, naming it
+  (`t-tag` included, which upstream ignored), as do a `t-call`, `t-call-slot`
+  or `t-slot` with an empty name; a `t-set-slot` nested directly in another
+  throws.
 - **`t-out="0"` with blanks around the `0`** outputs the call's body (upstream:
   the number); **`t-model.trim` on a checkbox** throws (it compiled
   `ev.target.checked.trim()`).
