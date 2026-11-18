@@ -187,3 +187,24 @@ describe("a template that does not compile names what is wrong", () => {
     ).toBe("function");
   });
 });
+
+describe("sourceURL", () => {
+  test("a named template's code is named after it for debuggers, the name encoded", () => {
+    const fn = compile(`<div/>`, {
+      name: "web.List\n</script>",
+      sourceURL: true,
+      hasGlobalValues: false,
+    });
+    expect(fn.toString()).toMatch(
+      /\n\/\/# sourceURL=owl-templates:\/\/\/web\.List%0A%3C%2Fscript%3E\n\}$/
+    );
+  });
+
+  test("without the option, or without a name, the code is unchanged", () => {
+    const plain = compile(`<div/>`, { name: "x", hasGlobalValues: false }).toString();
+    expect(plain).not.toContain("sourceURL");
+    expect(compile(`<div/>`, { sourceURL: true, hasGlobalValues: false }).toString()).not.toContain(
+      "sourceURL"
+    );
+  });
+});

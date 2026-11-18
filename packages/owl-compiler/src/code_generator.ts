@@ -66,6 +66,8 @@ const whitespaceRE = /[ \t\n\r\f]+/g;
 
 export interface CompileOptions {
   name?: string;
+  // Name the generated code after the template, for debuggers and stack traces.
+  sourceURL?: boolean;
   dev?: boolean;
   translateFn?: (s: string, translationCtx: string) => string;
   translatableAttributes?: string[];

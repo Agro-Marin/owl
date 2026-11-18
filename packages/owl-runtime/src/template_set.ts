@@ -178,6 +178,7 @@ export class TemplateSet {
     try {
       return compiler.compile(template, {
         name,
+        sourceURL: true,
         dev: this.dev,
         translateFn: this.translateFn,
         translatableAttributes: this.translatableAttributes,

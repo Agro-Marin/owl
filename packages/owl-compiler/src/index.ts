@@ -36,8 +36,12 @@ export function compile(
     }
     throw error;
   }
+  const sourceURL =
+    options.sourceURL && options.name
+      ? `\n//# sourceURL=owl-templates:///${encodeURIComponent(options.name)}`
+      : "";
   try {
-    return new Function("app, bdom, helpers", code) as TemplateFunction;
+    return new Function("app, bdom, helpers", code + sourceURL) as TemplateFunction;
   } catch (originalError: any) {
     const culprit = invalidExpression(expressions);
     if (culprit) {
