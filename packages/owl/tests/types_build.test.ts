@@ -166,6 +166,17 @@ test("a consumer outside the checkout gets complete collection and hook types", 
   ).toBe(0);
 });
 
+test("a consumer names the Markup that markup() and htmlEscape() return", () => {
+  const result = compileConsumer(`
+    import { htmlEscape, markup, type Markup } from "@odoo/owl";
+    const safe: Markup = markup("<b>x</b>");
+    const escaped: Markup = htmlEscape("<x>");
+    void [safe, escaped];
+  `);
+  expect(result.output).toBe("");
+  expect(result.status).toBe(0);
+});
+
 test("a consumer reads a component's static props through this.constructor, as useProps(this.constructor.props) does", () => {
   const result = compileConsumer(`
     import { Component, t, useProps } from "@odoo/owl";

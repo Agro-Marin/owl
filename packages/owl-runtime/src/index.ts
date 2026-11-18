@@ -61,6 +61,7 @@ export {
 } from "@odoo/owl-core";
 export { useEffect, useImmediateEffect, useListener, useOnChange, useApp } from "./hooks";
 export { batched, EventBus, htmlEscape, shallowEqual, whenReady, markup } from "./utils";
+export { Markup } from "@odoo/owl-core";
 export {
   onWillStart,
   onMounted,
