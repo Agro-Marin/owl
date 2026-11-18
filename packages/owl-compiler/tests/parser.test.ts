@@ -1243,7 +1243,7 @@ describe("qweb parser", () => {
 
   test("component with event handler", async () => {
     expect(() => parse(`<MyComponent t-onclick="someMethod"/>`)).toThrow(
-      "unsupported directive on Component: t-onclick"
+      "Unsupported directive 't-onclick' on a component (<MyComponent>)"
     );
   });
 
@@ -1267,7 +1267,7 @@ describe("qweb parser", () => {
 
   test("component with other unsupported directive", async () => {
     expect(() => parse(`<MyComponent t-something="5"/>`)).toThrow(
-      "unsupported directive on Component: t-something"
+      "Unsupported directive 't-something' on a component (<MyComponent>)"
     );
   });
 
@@ -1477,7 +1477,7 @@ describe("qweb parser", () => {
 
   test("t-foreach without t-as throws", async () => {
     expect(() => parse(`<t t-foreach="[1]" t-key="1">x</t>`)).toThrow(
-      `Directive t-foreach should always be used with t-as (expression: t-foreach="[1]")`
+      `Directive 't-foreach' needs a t-as (expression: t-foreach="[1]")`
     );
   });
 

@@ -624,7 +624,7 @@ function parseTForEach(node: Element, ctx: ParsingContext): AST | null {
   const elem = node.getAttribute("t-as");
   if (!elem) {
     throw new OwlError(
-      `Directive t-foreach should always be used with t-as (expression: t-foreach="${collection}")`
+      `Directive 't-foreach' needs a t-as (expression: t-foreach="${collection}")`
     );
   }
   checkVariableName(elem, "t-as");
@@ -632,7 +632,7 @@ function parseTForEach(node: Element, ctx: ParsingContext): AST | null {
   const key = exprAttr(node, "t-key");
   if (!key) {
     throw new OwlError(
-      `"Directive t-foreach should always be used with a t-key!" (expression: t-foreach="${collection}" t-as="${elem}")`
+      `Directive 't-foreach' needs a t-key (expression: t-foreach="${collection}" t-as="${elem}")`
     );
   }
   node.removeAttribute("t-key");
@@ -915,7 +915,9 @@ function parseComponent(node: Element, ctx: ParsingContext): AST | null {
     }
     if (name.startsWith("t-")) {
       const message = directiveErrorMap.get(name.split("-").slice(0, 2).join("-"));
-      throw new OwlError(message || `unsupported directive on Component: ${name}`);
+      throw new OwlError(
+        message || `Unsupported directive '${name}' on a component (<${node.tagName}>)`
+      );
     }
     props = props || {};
     props[name] = value;

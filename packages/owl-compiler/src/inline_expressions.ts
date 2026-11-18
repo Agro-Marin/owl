@@ -16,6 +16,11 @@ const OPERATOR_WORDS = /* @__PURE__ */ wordSet("and,or,gt,gte,lt,lte,typeof,dele
 const VARIABLE_NAME_RE = /^[\p{ID_Start}_$][\p{ID_Continue}$\u200C\u200D]*$/u;
 
 export function checkVariableName(name: string, directive: string) {
+  if (name === "this") {
+    throw new OwlError(
+      `'this' cannot be a template variable (${directive}): expressions read it as the component`
+    );
+  }
   if (RESERVED_WORDS.has(name)) {
     throw new OwlError(
       `'${name}' cannot be a template variable (${directive}): an expression reads it as JavaScript's own`
@@ -119,7 +124,7 @@ const tokenizeString: Tokenizer = function (expr) {
     }
   }
   if (expr[i] !== quote) {
-    throw new OwlError("Invalid expression");
+    throw new OwlError("unterminated string");
   }
   return { type: "VALUE", value: expr.slice(0, i + 1) };
 };
@@ -134,7 +139,7 @@ function findTemplateEnd(str: string, start: number): number {
       i = findClosingBrace(str, i + 2);
     }
   }
-  throw new OwlError("Invalid expression");
+  throw new OwlError("unterminated template literal");
 }
 
 function replaceInterpolations(template: string, replacer: (expr: string) => string): string {
@@ -230,7 +235,7 @@ export function findClosingBrace(str: string, start: number): number {
       previous = i;
     }
   }
-  throw new OwlError("Invalid expression");
+  throw new OwlError("unclosed {");
 }
 
 function regExpEnd(str: string, start: number): number {
@@ -239,7 +244,7 @@ function regExpEnd(str: string, start: number): number {
   for (; str[i] !== "/" || inClass; i++) {
     const char = str[i];
     if (!char || char === "\n") {
-      throw new OwlError("Invalid expression");
+      throw new OwlError("unterminated regular expression");
     }
     if (char === "\\") {
       i++;
@@ -256,7 +261,7 @@ function commentEnd(str: string, start: number): number {
   if (str[start + 1] === "*") {
     const end = str.indexOf("*/", start + 2);
     if (end < 0) {
-      throw new OwlError("Invalid expression");
+      throw new OwlError("unterminated comment");
     }
     return end + 2;
   }
@@ -360,6 +365,18 @@ const TOKENIZERS = [
 ];
 const PROPERTY_TOKENIZERS = /* @__PURE__ */ [tokenizeProperty].concat(TOKENIZERS);
 
+// An expression the compiler rejects, with why; compile() adds where it is written.
+export class ExpressionError extends OwlError {
+  readonly expression: string;
+  readonly reason: string;
+
+  constructor(expression: string, reason: string) {
+    super(`Invalid expression \`${expression}\`: ${reason}`);
+    this.expression = expression;
+    this.reason = reason;
+  }
+}
+
 export function tokenize(expr: string): Token[] {
   const result: Token[] = [];
   let token: boolean | Token = true;
@@ -390,8 +407,11 @@ export function tokenize(expr: string): Token[] {
   } catch (e) {
     error = e;
   }
-  if (current.length || error) {
-    throw new OwlError(`Tokenizer error: could not tokenize \`${expr}\``);
+  if (error) {
+    throw new ExpressionError(expr, error.message);
+  }
+  if (current.length) {
+    throw new ExpressionError(expr, `unexpected \`${current[0]}\``);
   }
   return result;
 }
@@ -737,8 +757,9 @@ export function processExpr(
       (prevToken.type === "LEFT_BRACE" || prevToken.type === "COMMA") &&
       startsObjectMethod(tokens, i)
     ) {
-      throw new OwlError(
-        `Object literal methods and accessors are not supported in a template expression (\`${expr}\`): use a property holding an arrow function`
+      throw new ExpressionError(
+        expr,
+        "object literal methods and accessors are not supported: use a property holding an arrow function"
       );
     }
     if (
@@ -747,8 +768,9 @@ export function processExpr(
       !(prevToken?.type === "OPERATOR" && (prevToken.value === "." || prevToken.value === "?.")) &&
       startsNamedOrParameterizedFunction(tokens, i)
     ) {
-      throw new OwlError(
-        `Function expressions with a name or parameters are not supported in a template expression (\`${expr}\`): use an arrow function`
+      throw new ExpressionError(
+        expr,
+        "function expressions with a name or parameters are not supported: use an arrow function"
       );
     }
     let isVar = token.type === "SYMBOL" && !token.isKeyword && !RESERVED_WORDS.has(token.value);
@@ -781,8 +803,9 @@ export function processExpr(
           prevToken.type === "RIGHT_BRACE" ||
           prevToken.value === ";");
       if (isVar && startsStatement && STATEMENT_KEYWORDS.has(token.value)) {
-        throw new OwlError(
-          `Unsupported statement '${token.value}' in a template expression (\`${expr}\`): an arrow function's block body takes declarations, expressions and return only`
+        throw new ExpressionError(
+          expr,
+          `unsupported statement '${token.value}': an arrow function's block body takes declarations, expressions and return only`
         );
       }
     }

@@ -1,6 +1,6 @@
 import { OwlError } from "@odoo/owl-core";
 import { CodeGenerator, type CompileOptions } from "./code_generator";
-import { recordExpressions } from "./inline_expressions";
+import { ExpressionError, recordExpressions } from "./inline_expressions";
 import { parse } from "./parser";
 import { parseXML } from "./parse_xml";
 
@@ -27,8 +27,12 @@ export function compile(
       new CodeGenerator(parse(template, options.customDirectives), options).generateCode()
     );
   } catch (error) {
+    if (error instanceof ExpressionError) {
+      throw failedExpression(templateName, template, error.expression, error.reason, error);
+    }
     if (error instanceof OwlError && options.name && !error.message.includes(templateName)) {
-      error.message += ` (in ${templateName})`;
+      // On the first line: a multi-line message (invalid XML) ends with the source.
+      error.message = error.message.replace(/\n|$/, ` (in ${templateName})$&`);
     }
     throw error;
   }
@@ -36,24 +40,46 @@ export function compile(
     return new Function("app, bdom, helpers", code) as TemplateFunction;
   } catch (originalError: any) {
     const culprit = invalidExpression(expressions);
+    if (culprit) {
+      throw failedExpression(
+        templateName,
+        template,
+        culprit.expression,
+        culprit.reason,
+        originalError
+      );
+    }
     const err = new OwlError(
-      culprit
-        ? `Failed to compile ${templateName}: invalid expression \`${culprit.source}\`${attributeOf(template, culprit.source)}: ${culprit.message}`
-        : `Failed to compile ${templateName}: ${originalError.message}\n\ngenerated code:\nfunction(app, bdom, helpers) {\n${code}\n}`
+      `Failed to compile ${templateName}: ${originalError.message}\n\ngenerated code:\nfunction(app, bdom, helpers) {\n${code}\n}`
     );
     err.cause = originalError;
     throw err;
   }
 }
 
+function failedExpression(
+  templateName: string,
+  template: string | Element,
+  expression: string,
+  reason: string,
+  cause: unknown
+): OwlError {
+  const err = new OwlError(
+    `Failed to compile ${templateName}: invalid expression \`${expression}\`${attributeOf(template, expression)}: ${reason}`
+  );
+  err.cause = cause;
+  return err;
+}
+
+// The first recorded expression whose compiled code does not parse on its own.
 function invalidExpression(
   expressions: [string, string][]
-): { source: string; message: string } | null {
-  for (const [source, compiled] of expressions) {
+): { expression: string; reason: string } | null {
+  for (const [expression, compiled] of expressions) {
     try {
       new Function(`return (${compiled}\n);`);
     } catch (error: any) {
-      return { source, message: error.message };
+      return { expression, reason: error.message };
     }
   }
   return null;

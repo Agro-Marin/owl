@@ -1488,7 +1488,7 @@ export class CodeGenerator {
   ): PropEntry {
     const [name, suffix, ...more] = prop.split(".");
     if (more.length) {
-      throw new OwlError(`Invalid prop suffix: ${prop.slice(name.length + 1)}`);
+      throw new OwlError(`Invalid prop suffix: ${prop.slice(name.length + 1)} (prop '${prop}')`);
     }
     let code: string;
     let freeVariables: string[] | null = null;
@@ -1506,7 +1506,7 @@ export class CodeGenerator {
       suffix !== "translate" &&
       !(allowSignal && suffix === "signal")
     ) {
-      throw new OwlError(`Invalid prop suffix: ${suffix}`);
+      throw new OwlError(`Invalid prop suffix: ${suffix} (prop '${prop}')`);
     }
     return { name, code: code || "undefined", suffix, freeVariables };
   }

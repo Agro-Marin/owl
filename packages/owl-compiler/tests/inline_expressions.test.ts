@@ -67,14 +67,14 @@ describe("tokenizer", () => {
   });
 
   test("strings", () => {
-    expect(() => tokenize("'")).toThrow("Tokenizer error: could not tokenize `'`");
-    expect(() => tokenize("'\\")).toThrow("Tokenizer error: could not tokenize `'\\`");
-    expect(() => tokenize("'\\'")).toThrow("Tokenizer error: could not tokenize `'\\'`");
+    expect(() => tokenize("'")).toThrow("Invalid expression `'`: unterminated string");
+    expect(() => tokenize("'\\")).toThrow("Invalid expression `'\\`: unterminated string");
+    expect(() => tokenize("'\\'")).toThrow("Invalid expression `'\\'`: unterminated string");
     expect(tokenize("'hello ged'")).toEqual([{ type: "VALUE", value: "'hello ged'" }]);
     expect(tokenize("'hello \\'ged\\''")).toEqual([{ type: "VALUE", value: "'hello \\'ged\\''" }]);
 
-    expect(() => tokenize('"')).toThrow('Tokenizer error: could not tokenize `"`');
-    expect(() => tokenize('"\\"')).toThrow('Tokenizer error: could not tokenize `"\\"`');
+    expect(() => tokenize('"')).toThrow('Invalid expression `"`: unterminated string');
+    expect(() => tokenize('"\\"')).toThrow('Invalid expression `"\\"`: unterminated string');
     expect(tokenize('"hello ged"')).toEqual([{ type: "VALUE", value: '"hello ged"' }]);
     expect(tokenize('"hello ged"}')).toEqual([
       { type: "VALUE", value: '"hello ged"' },
@@ -399,12 +399,12 @@ describe("expression evaluation", () => {
 
   test("a statement is rejected with the keyword it starts with", () => {
     expect(() => compileExpr("() => { if (a) { b() } }")).toThrow(
-      "Unsupported statement 'if' in a template expression"
+      "unsupported statement 'if': an arrow function's block body"
     );
     expect(() => compileExpr("() => { for (const i of l) {} }")).toThrow(
-      "Unsupported statement 'for' in a template expression"
+      "unsupported statement 'for': an arrow function's block body"
     );
-    expect(() => compileExpr("() => { throw e }")).toThrow("Unsupported statement 'throw'");
+    expect(() => compileExpr("() => { throw e }")).toThrow("unsupported statement 'throw'");
     expect(compileExpr("o.if + o.for")).toBe("ctx['o'].if+ctx['o'].for");
     expect(compileExpr("({if: 1, else: x})")).toBe("({if:1,else:ctx['x']})");
     expect(compileExpr("var + 1")).toBe("ctx['var']+1");
@@ -509,7 +509,8 @@ describe("expression edge cases", () => {
   });
 
   test("a function expression with a name or parameters throws a named error", () => {
-    const error = "Function expressions with a name or parameters are not supported";
+    const error =
+      "function expressions with a name or parameters are not supported: use an arrow function";
     expect(() => compileExpr("function (x) { return x }")).toThrow(error);
     expect(() => compileExpr("function f() { return 1 }")).toThrow(error);
     expect(() => compileExpr("function* (a) {}")).toThrow(error);
@@ -522,7 +523,8 @@ describe("expression edge cases", () => {
   });
 
   test("an object literal method or accessor throws a named error", () => {
-    const error = "Object literal methods and accessors are not supported in a template expression";
+    const error =
+      "object literal methods and accessors are not supported: use a property holding an arrow function";
     expect(() => compileExpr("{ x() { return 1; } }")).toThrow(error);
     expect(() => compileExpr("{ a: 1, get g() { return 1; } }")).toThrow(error);
     expect(() => compileExpr("{ async f() {} }")).toThrow(error);
