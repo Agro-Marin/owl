@@ -104,6 +104,8 @@ function recycleFiber(node: ComponentNode, current: Fiber, root: RootFiber): Fib
   current.renderState += 2;
   if (current === root) {
     root.merged = null;
+  } else if (node.bdom && !fibersInError.has(current) && !root.merged?.includes(current)) {
+    (root.merged ||= []).push(current);
   }
   if (debug.fiber) {
     debugLog("fiber", `recycle ${node.componentName} (${current.renderState >> 1})`);

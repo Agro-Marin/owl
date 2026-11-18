@@ -2498,7 +2498,46 @@ describe("errors in a pending render pass", () => {
     loadB.resolve();
     await nextTick();
     await nextTick();
-    expect(fixture.innerHTML).toBe("<div><a>1</a><b>22</b><c>1</c></div>");
+    expect(fixture.innerHTML).toBe("<div><a>1</a><b>22</b><c>2</c></div>");
+  });
+
+  test("a component that renders again in a pending pass which then fails renders alone", async () => {
+    const load = makeDeferred();
+    const errors: string[] = [];
+    class A extends Component {
+      static template = xml`<a><t t-out="this.props.value"/></a>`;
+      props = props();
+      setup() {
+        onWillUpdateProps(() => load);
+      }
+    }
+    class C extends Component {
+      static template = xml`<c><t t-out="this.props.value"/><t t-out="this.state.value"/></c>`;
+      props = props();
+      state = proxy({ value: 1 });
+    }
+    class Parent extends Component {
+      static template = xml`<div><A value="this.state.value"/><C value="this.state.value"/></div>`;
+      static components = { A, C };
+      state = proxy({ value: 1 });
+      setup() {
+        onError((e) => errors.push(e.message));
+      }
+    }
+    const parent = await mount(Parent, fixture);
+    const c = Object.values(parent.__owl__.children)[1].component as C;
+    parent.state.value = 2;
+    await nextTick();
+    c.state.value = 2;
+    await nextTick();
+    expect(fixture.innerHTML).toBe("<div><a>1</a><c>11</c></div>");
+
+    load.reject(new Error("load failed"));
+    await nextTick();
+    await nextTick();
+    expect(errors).toEqual(["load failed"]);
+    expect(fixture.innerHTML).toBe("<div><a>1</a><c>22</c></div>");
+    expect(parent.__owl__.app.scheduler.tasks.size).toBe(0);
   });
 
   test("a pass failing in onWillUpdateProps of a node of another app resumes the renders it delayed", async () => {
