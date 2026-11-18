@@ -521,26 +521,26 @@ function updateEach(computations: ComputationAtom[]): unknown[] | null {
 }
 
 function updateOwnerFirst(computation: ComputationAtom) {
-  if (computation.state === ComputationState.EXECUTED) {
-    return;
-  }
-  let first: ComputationAtom | null = null;
-  for (let owner = computation.owner; owner !== null; owner = owner.owner) {
-    if (
-      owner.state !== ComputationState.EXECUTED &&
-      !owner.running &&
-      (owner.isDerived || owner.immediate === computation.immediate)
-    ) {
-      first = owner;
+  while (computation.state !== ComputationState.EXECUTED) {
+    let first: ComputationAtom | null = null;
+    for (let owner = computation.owner; owner !== null; owner = owner.owner) {
+      if (
+        owner.state !== ComputationState.EXECUTED &&
+        !owner.running &&
+        (owner.isDerived || owner.immediate === computation.immediate)
+      ) {
+        first = owner;
+      }
     }
-  }
-  if (first) {
+    if (first === null) {
+      updateComputation(computation);
+      return;
+    }
     if (debug.effect) {
       debugLog("effect", `run owner ${first.name} before ${computation.name}`);
     }
     updateComputation(first);
   }
-  updateComputation(computation);
 }
 
 function rethrow(errors: unknown[] | null) {

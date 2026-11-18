@@ -378,6 +378,28 @@ describe("effect", () => {
     expect(seen).toEqual(["parent=0 a=0", "parent=1 a=1"]);
   });
 
+  test("a parent due under a grandparent whose check finds nothing changed still runs before its child", async () => {
+    const a = signal(0);
+    const b = signal(0);
+    const c = signal(0);
+    const seen: string[] = [];
+    effect(() => {
+      a();
+      effect(() => {
+        const parentValue = b();
+        effect(() => {
+          seen.push(`parent=${parentValue} c=${c()}`);
+        });
+      });
+    });
+    c.set(1);
+    a.set(1);
+    a.set(0);
+    b.set(1);
+    await waitSchedulerThenMicroTick();
+    expect(seen).toEqual(["parent=0 c=0", "parent=1 c=1"]);
+  });
+
   describe("effects created by a computed", () => {
     test("a detached one is owned by nothing: not its observers, and kept across its recomputes", async () => {
       const n = signal(0);
