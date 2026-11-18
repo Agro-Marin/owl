@@ -592,6 +592,17 @@ describe("interpolate", () => {
     );
   });
 
+  test("a / after a division starts a regular expression, after a regular expression or an object it divides", () => {
+    expect(interpolate("{{ a / /}/.source.length }}")).toBe("(ctx['a']/ /}/.source.length)");
+    expect(compileExpr("`${ a / /}/.lastIndex }`")).toBe("`${ctx['a']/ /}/.lastIndex}`");
+    expect(interpolate("{{ /a/.lastIndex / 2 }}{{ b }}")).toBe("`${/a/.lastIndex/2}${ctx['b']}`");
+    expect(interpolate("#{ /}/ / 2 } #{ b }")).toBe("`${/}/ /2} ${ctx['b']}`");
+    expect(interpolate("{{ {}.x / 2 }}{{ {} / 2 }} {{ b }}")).toBe(
+      "`${{}.x/2}${{}/2} ${ctx['b']}`"
+    );
+    expect(compileExpr("`${ {} / a }`")).toBe("`${{}/ctx['a']}`");
+  });
+
   test("an unclosed interpolation is text", () => {
     expect(interpolate("a{{b")).toBe("`a{{b`");
     expect(interpolate("a{{b}")).toBe("`a{{b}`");

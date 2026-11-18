@@ -160,7 +160,7 @@ function replaceInterpolations(template: string, replacer: (expr: string) => str
   return result;
 }
 
-const REGEXP_PREFIX_RE = /[(,=:[!&|?{};+\-*%<>~^]/;
+const REGEXP_PREFIX_RE = /[(,=:[!&|?{;+\-*%<>~^]/;
 const REGEXP_PREFIX_WORDS = /* @__PURE__ */ regexpPrefixWords();
 
 function regexpPrefixWords(): Set<string> {
@@ -203,6 +203,7 @@ function startsRegExp(str: string, previous: number): boolean {
 function findClosingBrace(str: string, start: number): number {
   let depth = 0;
   let previous = -1;
+  let division = -1;
   for (let i = start; i < str.length; i++) {
     const char = str[i];
     if (char === "'" || char === '"') {
@@ -216,8 +217,12 @@ function findClosingBrace(str: string, start: number): number {
     } else if (str.startsWith("/*", i) || str.startsWith("//", i)) {
       i = commentEnd(str, i) - 1;
       continue;
-    } else if (char === "/" && startsRegExp(str, previous)) {
-      i = regExpEnd(str, i);
+    } else if (char === "/") {
+      if (previous === division || startsRegExp(str, previous)) {
+        i = regExpEnd(str, i);
+      } else {
+        division = i;
+      }
     } else if (char === "{") {
       depth++;
     } else if (char === "}") {
