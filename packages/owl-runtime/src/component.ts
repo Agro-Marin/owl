@@ -13,8 +13,9 @@ export class Component {
   static template: string = "";
 
   // A component's class with its statics, as `useProps(this.constructor.props)`
-  // reads them; `props` is whatever shape or key list the subclass declares.
-  declare ["constructor"]: ComponentConstructor & { props?: any };
+  // reads them: a subclass declares statics (props, defaults, ...) this class
+  // cannot know of.
+  declare ["constructor"]: ComponentConstructor & { props?: any; [key: string]: any };
 
   __owl__: ComponentNode;
 

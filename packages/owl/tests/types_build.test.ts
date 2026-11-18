@@ -176,7 +176,9 @@ test("props read from an untyped schema are untyped, so a component can declare 
     class Panel extends Component {
       static template = xml\`<p/>\`;
       static props: any = { record: Object };
+      static defaultProps = { size: 1 };
       props: { record: { resId: number } } = useProps(this.constructor.props);
+      defaults: { size: number } = this.constructor.defaultProps;
     }
     const keys: any = ["a"];
     const loose: { a: string } = useProps(keys);
