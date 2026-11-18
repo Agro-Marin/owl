@@ -49,6 +49,13 @@ test("the debug flags are one per channel, all off until setDebug, and take no o
   expect(Object.keys(debug).filter((channel) => (debug as any)[channel])).toEqual(["fiber"]);
 });
 
+test("the first write of all, which queues nothing, schedules no flush", async () => {
+  setDebug(["effect"]);
+  signal(0).set(1);
+  await waitScheduler();
+  expect(lines).toEqual([]);
+});
+
 test("a disabled channel logs nothing", async () => {
   const s = signal(0);
   effect(() => s(), { name: "reader" });

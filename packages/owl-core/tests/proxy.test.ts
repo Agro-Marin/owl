@@ -1160,6 +1160,44 @@ describe("what markRaw and the private member errors say", () => {
     expect(() => state.guarded.value).toThrow(OwlError);
   });
 
+  test("a private member error worded as Safari words it is explained with the member it names", () => {
+    class Vault {
+      #secret = 1;
+      get value(): number {
+        throw new TypeError("Cannot access invalid private field (evaluating 'this.#secret')");
+      }
+      read() {
+        return this.#secret;
+      }
+    }
+    const state = proxy({ vault: new Vault() });
+    expect(() => state.vault.value).toThrow("markRaw(Vault.prototype)");
+    expect(() => state.vault.value).toThrow(OwlError);
+  });
+
+  test("a TypeError that only quotes a private member error further in is left as it is", () => {
+    class Quoting {
+      #value = 1;
+      get value(): number {
+        throw new TypeError(
+          "value failed: Cannot read private member #value from an object whose class did not declare it"
+        );
+      }
+      read() {
+        return this.#value;
+      }
+    }
+    const state = proxy({ quoting: new Quoting() });
+    let error: unknown;
+    try {
+      state.quoting.value;
+    } catch (e) {
+      error = e;
+    }
+    expect(error).toBeInstanceOf(TypeError);
+    expect(error).not.toBeInstanceOf(OwlError);
+  });
+
   test("a private member error is explained through a prototype that is no class's", () => {
     class Secret {
       #value = 1;
@@ -1174,6 +1212,37 @@ describe("what markRaw and the private member errors say", () => {
 });
 
 describe("accessors", () => {
+  test("a write nobody reads does not read the old value through an accessor", () => {
+    let reads = 0;
+    class Box {
+      _value = 0;
+      get value(): number {
+        reads++;
+        return this._value;
+      }
+      set value(value: number) {
+        this._value = value;
+      }
+    }
+    const box = proxy(new Box());
+    box.value = 1;
+    expect(toRaw(box)._value).toBe(1);
+    class Slots extends Array {
+      stored: unknown;
+      get [0](): unknown {
+        reads++;
+        return this.stored;
+      }
+      set [0](value: unknown) {
+        this.stored = value;
+      }
+    }
+    const slots = proxy(new Slots());
+    slots[0] = 1;
+    expect(toRaw(slots).stored).toBe(1);
+    expect(reads).toBe(0);
+  });
+
   test("a non-configurable accessor with a getter hands out a proxy", () => {
     const inner = { a: 1 };
     const target = {};
