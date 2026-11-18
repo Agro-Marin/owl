@@ -558,8 +558,11 @@ function queueEffect(computation: ComputationAtom) {
 }
 
 function queueDisposal(computation: ComputationAtom) {
+  const queued = pendingDisposals.size;
   pendingDisposals.add(computation);
-  flushWanted = true;
+  if (pendingDisposals.size !== queued) {
+    flushWanted = true;
+  }
 }
 
 function scheduleFlush() {
@@ -570,6 +573,7 @@ function scheduleFlush() {
 
 function processEffects() {
   flushScheduled = false;
+  flushWanted = false;
   const pending = observers;
   observers = [];
   if (debug.effect) {

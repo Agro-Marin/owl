@@ -185,6 +185,10 @@ true })` creates an effect owned by nothing. When a computed and an effect
 - **Scope destruction and rollback** run cleanup without subscribing or
   assigning effect ownership to their caller. Rollback drains destroy
   callbacks registered during cleanup, preserving earlier registrations.
+- **A write schedules the effects' flush only if it queues an effect or a
+  computed's disposal that no scheduled flush will run**, at its end, after
+  its immediate effects (af18b4f5 scheduled one at every write): a promise
+  callback queued before such a write runs before the effects it queues.
 - **`batched`** calls its callback with the latest call's arguments.
 
 ### Proxies, validation, plugins, registries

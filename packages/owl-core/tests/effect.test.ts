@@ -9,6 +9,7 @@ import {
   proxy,
   signal,
   untrack,
+  type Signal,
 } from "../src";
 import {
   captureUnhandledRejections,
@@ -983,5 +984,51 @@ describe("returned value", () => {
     });
     expect(computation.value).toBeUndefined();
     dispose();
+  });
+});
+
+describe("flush scheduling", () => {
+  // A write that queues an effect while no flush is scheduled schedules one:
+  // a promise callback queued before that write runs before the effect.
+  async function order(prepare: (s: Signal<number>) => void): Promise<string[]> {
+    const s = signal(0);
+    const unobserved = signal(0);
+    const u = signal(0);
+    const log: string[] = [];
+    effect(() => {
+      if (s() === 1) {
+        unobserved.set(1);
+        s.set(2);
+        Promise.resolve().then(() => log.push("microtask"));
+        u.set(1);
+      }
+    });
+    effect(() => {
+      if (u()) log.push("effect");
+    });
+    prepare(s);
+    s.set(1);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    return log;
+  }
+
+  test("a write that queues nothing schedules no flush, whatever an earlier write queued", async () => {
+    expect(await order(() => {})).toEqual(["microtask", "effect"]);
+    expect(
+      await order(() => {
+        const other = signal(0);
+        effect(() => other());
+        other.set(1);
+      })
+    ).toEqual(["microtask", "effect"]);
+  });
+
+  test("a write that queues again a disposal the flush will run schedules no flush", async () => {
+    expect(
+      await order((s) => {
+        const unread = computed(() => s());
+        unread();
+      })
+    ).toEqual(["microtask", "effect"]);
   });
 });
