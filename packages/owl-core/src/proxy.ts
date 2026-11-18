@@ -410,7 +410,7 @@ function proxifyCheckedTarget<T extends Target>(target: T, shallow: boolean): T 
     return target;
   }
   const cache = shallow ? shallowProxies : deepProxies;
-  const reactive = cache.get(target)!;
+  const reactive = cache.get(target);
   if (reactive) {
     return reactive as T;
   }
@@ -827,16 +827,20 @@ function makeMethod(key: PropertyKey, target: any, shallow: boolean): Function {
 }
 
 function storedKey(target: any, item: any, raw: any): any {
-  const has = nativeHas(target);
+  const has = nativePrototype(target).has;
   return has.call(target, raw) || !has.call(target, item) ? raw : item;
 }
 
-function nativeHas(target: object): (this: object, key: any) => boolean {
-  return target instanceof Map
-    ? Map.prototype.has
-    : target instanceof Set
-      ? Set.prototype.has
-      : WeakMap.prototype.has;
+type NativeCollection = Map<any, any> & Set<any> & WeakMap<any, any>;
+
+function nativePrototype(target: object): NativeCollection {
+  return (
+    target instanceof Map
+      ? Map.prototype
+      : target instanceof Set
+        ? Set.prototype
+        : WeakMap.prototype
+  ) as NativeCollection;
 }
 
 function rawKey(key: unknown): unknown {
@@ -975,20 +979,10 @@ function makeSetOperation(name: string, target: Set<any>) {
 
 function delegateAndNotify(setterName: "set" | "add" | "delete", target: any, shallow: boolean) {
   const readsValue = setterName === "set" || (setterName === "delete" && !(target instanceof Set));
-  const prototype =
-    target instanceof Map
-      ? Map.prototype
-      : target instanceof Set
-        ? Set.prototype
-        : WeakMap.prototype;
+  const prototype = nativePrototype(target);
   const has = prototype.has;
-  const get = readsValue ? (prototype as Map<any, any>).get : undefined;
-  const nativeMethod =
-    setterName === "delete"
-      ? prototype.delete
-      : setterName === "add"
-        ? Set.prototype.add
-        : (prototype as Map<any, any>).set;
+  const get = readsValue ? prototype.get : undefined;
+  const nativeMethod = prototype[setterName];
   const collection = proxyOf(target, shallow);
   return (item: any, value: any) =>
     batch(() => {
@@ -1023,9 +1017,7 @@ function makeGetOrInsert(
   target: any,
   shallow: boolean
 ) {
-  const prototype = target instanceof Map ? Map.prototype : WeakMap.prototype;
-  const has = prototype.has;
-  const get = prototype.get;
+  const { has, get } = nativePrototype(target);
   return (item: any, value: any) =>
     batch(() => {
       const raw = rawKey(item);
@@ -1058,7 +1050,7 @@ function makeGetOrInsert(
 }
 
 function makeClearNotifier(target: Map<any, any> | Set<any>) {
-  const prototype = target instanceof Map ? Map.prototype : Set.prototype;
+  const prototype = nativePrototype(target);
   const size = Object.getOwnPropertyDescriptor(prototype, "size")!.get!;
   const keysOf = prototype.keys;
   const has = prototype.has;
