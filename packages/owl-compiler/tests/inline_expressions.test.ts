@@ -508,6 +508,17 @@ describe("expression edge cases", () => {
     expect(new Function(`return ${compileExpr("1 .toString()")}`)()).toBe("1");
   });
 
+  test("a function expression with a name or parameters throws a named error", () => {
+    const error = "Function expressions with a name or parameters are not supported";
+    expect(() => compileExpr("function (x) { return x }")).toThrow(error);
+    expect(() => compileExpr("function f() { return 1 }")).toThrow(error);
+    expect(() => compileExpr("function* (a) {}")).toThrow(error);
+    expect(() => compileExpr("[1].map(function (x) { return x + 1 })")).toThrow(error);
+    expect(compileExpr("function () { return a }")).toBe("function(){return ctx['a']}");
+    expect(compileExpr("a.function(1)")).toBe("ctx['a'].function(1)");
+    expect(compileExpr("{function: 1}")).toBe("{function:1}");
+  });
+
   test("an object literal method or accessor throws a named error", () => {
     const error = "Object literal methods and accessors are not supported in a template expression";
     expect(() => compileExpr("{ x() { return 1; } }")).toThrow(error);

@@ -575,6 +575,17 @@ function isAsyncArrow(tokens: Token[], i: number): boolean {
   return arrow?.type === "OPERATOR" && arrow.value === "=>";
 }
 
+function startsNamedOrParameterizedFunction(tokens: Token[], i: number): boolean {
+  let j = i + 1;
+  if (tokens[j]?.type === "OPERATOR" && tokens[j].value === "*") {
+    j++;
+  }
+  if (tokens[j]?.type === "SYMBOL") {
+    return true;
+  }
+  return tokens[j]?.type === "LEFT_PAREN" && tokens[j + 1]?.type !== "RIGHT_PAREN";
+}
+
 function startsObjectMethod(tokens: Token[], i: number): boolean {
   const token = tokens[i];
   const next = tokens[i + 1];
@@ -728,6 +739,16 @@ export function processExpr(
     ) {
       throw new OwlError(
         `Object literal methods and accessors are not supported in a template expression (\`${expr}\`): use a property holding an arrow function`
+      );
+    }
+    if (
+      token.type === "SYMBOL" &&
+      token.value === "function" &&
+      !(prevToken?.type === "OPERATOR" && prevToken.value === ".") &&
+      startsNamedOrParameterizedFunction(tokens, i)
+    ) {
+      throw new OwlError(
+        `Function expressions with a name or parameters are not supported in a template expression (\`${expr}\`): use an arrow function`
       );
     }
     let isVar = token.type === "SYMBOL" && !token.isKeyword && !RESERVED_WORDS.has(token.value);
