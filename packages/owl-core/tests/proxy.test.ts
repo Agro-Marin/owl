@@ -860,6 +860,18 @@ describe("collections", () => {
     expect(third).toBe(deep);
   });
 
+  test("forEach called unbound hands out the proxy it was read from", () => {
+    const shallow = signal.Map(new Map([["a", 1]]));
+    const deep = proxy(new Map([["a", 1]]));
+    let third: any;
+    const shallowForEach = shallow().forEach;
+    shallowForEach((_value, _key, map) => (third = map));
+    expect(third).toBe(shallow());
+    const deepForEach = deep.forEach;
+    deepForEach((_value, _key, map) => (third = map));
+    expect(third).toBe(deep);
+  });
+
   test("clearing a collection notifies the key list and each observed key, value or presence", () => {
     const key = { k: 1 };
     const map = proxy(

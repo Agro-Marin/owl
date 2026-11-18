@@ -866,6 +866,10 @@ function makeIteratorObserver(methodName: PropertyKey, target: any, shallow: boo
   };
 }
 
+function proxyOf(target: Target, shallow: boolean): Reactive<Target> {
+  return (shallow ? shallowProxies : deepProxies).get(target)!;
+}
+
 function makeForEachObserver(target: any, shallow: boolean) {
   const readsValues = target instanceof Map;
   return function forEach(
@@ -873,7 +877,7 @@ function makeForEachObserver(target: any, shallow: boolean) {
     callback: (value: any, key: any, collection: any) => void,
     thisArg?: any
   ) {
-    const collection = this ?? reactiveValue(target, shallow);
+    const collection = this ?? proxyOf(target, shallow);
     onReadKeys(target);
     target.forEach((value: any, key: any) => {
       if (readsValues) {
@@ -985,7 +989,7 @@ function delegateAndNotify(setterName: "set" | "add" | "delete", target: any, sh
       : setterName === "add"
         ? Set.prototype.add
         : (prototype as Map<any, any>).set;
-  const collection = (shallow ? shallowProxies : deepProxies).get(target)!;
+  const collection = proxyOf(target, shallow);
   return (item: any, value: any) =>
     batch(() => {
       const raw = rawKey(item);
