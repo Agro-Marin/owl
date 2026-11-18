@@ -67,10 +67,10 @@ describe.each(["@odoo/owl", "@odoo/owl/runtime"])("%s", (entry) => {
 // A build over its budget fails; one more than 2 % under it fails too, so a
 // saving is written down here and a later regression cannot spend it unseen.
 const SIZE_BUDGETS: [string, string, number][] = [
-  ["everything", `export * from "@odoo/owl";`, 60397],
-  ["the runtime", `export * from "@odoo/owl/runtime";`, 41181],
-  ["the compiler", `import "@odoo/owl/compiler";`, 19787],
-  ["signal alone", `import { signal } from "@odoo/owl/runtime"; console.log(signal);`, 7601],
+  ["everything", `export * from "@odoo/owl";`, 61122],
+  ["the runtime", `export * from "@odoo/owl/runtime";`, 41705],
+  ["the compiler", `import "@odoo/owl/compiler";`, 19963],
+  ["signal alone", `import { signal } from "@odoo/owl/runtime"; console.log(signal);`, 7761],
 ];
 
 test.each(SIZE_BUDGETS)("%s stays within its size budget", async (_, code, budget) => {

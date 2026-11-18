@@ -12,6 +12,7 @@ export const DEBUG_CHANNELS = [
   "error",
   "template",
   "event",
+  "invariant",
 ] as const;
 
 export type DebugChannel = (typeof DEBUG_CHANNELS)[number];

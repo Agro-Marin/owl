@@ -1,6 +1,7 @@
-import { debug, debugLog } from "@odoo/owl-core";
+import { debug, debugLog, OwlError } from "@odoo/owl-core";
 import { fibersInError } from "./error_handling";
-import { APPLIED_TO_DOM, Fiber, renderMergedAlone, RootFiber } from "./fibers";
+import { APPLIED_TO_DOM, Fiber, FiberPhase, renderMergedAlone, RootFiber } from "./fibers";
+import { STATUS } from "../status";
 
 function captureAnimationFrame(): Window["requestAnimationFrame"] {
   return typeof window === "undefined"
@@ -114,6 +115,9 @@ export class Scheduler {
         debugLog("scheduler", `frame, ${this.tasks.size} task(s)`);
       }
       for (let fiber of this.tasks) {
+        if (debug.invariant && fiber.root === fiber && fiber.node.fiber === fiber) {
+          checkPassCounter(fiber);
+        }
         if (fiber.root !== fiber) {
           this.tasks.delete(fiber);
           continue;
@@ -151,8 +155,41 @@ export class Scheduler {
       if (!this.tasks.size) {
         Scheduler.active.delete(this);
       }
+      if (debug.invariant) {
+        this.checkTasks();
+      }
     } finally {
       this.processing = false;
     }
+  }
+
+  private checkTasks() {
+    for (const task of this.tasks) {
+      if (task.node.status >= STATUS.DESTROYED || task.node.fiber !== task || task.root !== task) {
+        throw new OwlError(
+          `invariant: a frame kept a task of ${task.node.componentName} that is not its live pass`
+        );
+      }
+    }
+    if (this.tasks.size && !Scheduler.active.has(this)) {
+      throw new OwlError("invariant: a scheduler holding tasks is not active");
+    }
+  }
+}
+
+// A pass's counter is the number of its live fibers not rendered yet.
+function checkPassCounter(root: RootFiber) {
+  let unrendered = 0;
+  const stack: Fiber[] = [root];
+  for (let fiber = stack.pop(); fiber; fiber = stack.pop()) {
+    if (fiber.root === root && fiber.node.fiber === fiber && fiber.phase !== FiberPhase.RENDERED) {
+      unrendered++;
+    }
+    stack.push(...fiber.children);
+  }
+  if (unrendered !== root.counter) {
+    throw new OwlError(
+      `invariant: ${root.node.componentName}'s pass counts ${root.counter} render(s) pending, its tree ${unrendered}`
+    );
   }
 }

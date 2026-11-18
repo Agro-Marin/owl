@@ -247,7 +247,12 @@ export function onReadAtom(atom: Atom) {
 function track(dep: Atom, sub: ComputationAtom, tail: Link | undefined) {
   const version = sub.version;
   let active = dep.activeLink;
-  if (active !== undefined && active.sub === sub && active.version !== DEAD) {
+  // A source's active link is never dead: unlinking a link moves it to the
+  // live rollback (liveRollback), so a dead one is never reused here.
+  if (debug.invariant && active !== undefined && active.version === DEAD) {
+    throw new OwlError(`invariant: a source read by ${sub.name} has a dead active link`);
+  }
+  if (active !== undefined && active.sub === sub) {
     if (active.version !== version) {
       if (active.version === WRITTEN) {
         readAgainAfterWrite(active);
@@ -277,7 +282,7 @@ function track(dep: Atom, sub: ComputationAtom, tail: Link | undefined) {
         }
       }
       active = dep.activeLink;
-      if (active !== undefined && active.sub === sub && active.version !== DEAD) {
+      if (active !== undefined && active.sub === sub) {
         reuse(active, sub, tail, version);
         return;
       }

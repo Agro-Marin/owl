@@ -1,6 +1,11 @@
 import { afterAll, afterEach, beforeEach } from "vitest";
 import { inspect } from "node:util";
-import { setDebug, setDebugSink, type DebugChannel } from "../../packages/owl-core/src/debug";
+import {
+  debug,
+  setDebug,
+  setDebugSink,
+  type DebugChannel,
+} from "../../packages/owl-core/src/debug";
 import { consoleOutput } from "./console";
 
 for (const method of ["warn", "info", "log", "error"] as const) {
@@ -21,6 +26,7 @@ beforeEach(() => {
     traces.push({ channel, message, details });
   });
   setDebug(process.env.OWL_DEBUG || false);
+  debug.invariant = process.env.OWL_INVARIANTS !== "0";
 });
 
 afterEach((context) => {

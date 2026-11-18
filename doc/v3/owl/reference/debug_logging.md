@@ -31,19 +31,20 @@ setDebugSink((channel, message, details) => lines.push(`${channel}: ${message}`)
 
 ## Channels
 
-| Channel      | Traces                                                                                                                      |
-| ------------ | --------------------------------------------------------------------------------------------------------------------------- |
-| `reactivity` | every write to a signal, computed or proxy key, with the names of the computations it invalidates                           |
-| `effect`     | an effect's creation (and its owner), runs, disposal; each flush and the effects it runs                                    |
-| `computed`   | recomputes, an equal result that keeps readers, a failure kept as the value, disposal of a computed nobody reads            |
-| `scope`      | a scope's teardown, a rolled-back setup, a guarded promise aborted because its scope died                                   |
-| `plugin`     | each plugin start with its dependency path, batches and their `onWillStart`, an undone start, readiness                     |
-| `scheduler`  | a render pass scheduled, each animation frame and what it does with every pass: commit, wait, drop (and why)                |
-| `fiber`      | each component render and its duration, a child kept or updated (and why), a render delayed behind an ancestor, each commit |
-| `lifecycle`  | setup, `onWillStart` started and settled, `onMounted`/`onPatched` calls, destruction, roots created, apps destroyed         |
-| `error`      | which component's error was handled by an ancestor's `onError` or destroyed the app; a computation that threw               |
-| `template`   | each template compiled (time and size) or loaded precompiled                                                                |
-| `event`      | each event a template handler receives, and whether it ran                                                                  |
+| Channel      | Traces                                                                                                                                                                                 |
+| ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `reactivity` | every write to a signal, computed or proxy key, with the names of the computations it invalidates                                                                                      |
+| `effect`     | an effect's creation (and its owner), runs, disposal; each flush and the effects it runs                                                                                               |
+| `computed`   | recomputes, an equal result that keeps readers, a failure kept as the value, disposal of a computed nobody reads                                                                       |
+| `scope`      | a scope's teardown, a rolled-back setup, a guarded promise aborted because its scope died                                                                                              |
+| `plugin`     | each plugin start with its dependency path, batches and their `onWillStart`, an undone start, readiness                                                                                |
+| `scheduler`  | a render pass scheduled, each animation frame and what it does with every pass: commit, wait, drop (and why)                                                                           |
+| `fiber`      | each component render and its duration, a child kept or updated (and why), a render delayed behind an ancestor, each commit                                                            |
+| `lifecycle`  | setup, `onWillStart` started and settled, `onMounted`/`onPatched` calls, destruction, roots created, apps destroyed                                                                    |
+| `error`      | which component's error was handled by an ancestor's `onError` or destroyed the app; a computation that threw                                                                          |
+| `template`   | each template compiled (time and size) or loaded precompiled                                                                                                                           |
+| `event`      | each event a template handler receives, and whether it ran                                                                                                                             |
+| `invariant`  | logs nothing: checks the scheduler's and the reactivity's invariants and throws an `OwlError` naming the one broken (on in Owl's own test runs; `OWL_INVARIANTS=0` turns it off there) |
 
 ## Names
 
