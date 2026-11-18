@@ -3,6 +3,7 @@ import {
   computed,
   effect,
   immediateEffect,
+  markRaw,
   observe,
   proxy,
   signal,
@@ -377,6 +378,17 @@ describe("observe", () => {
     const view: any = observe(new Map(), () => {});
     expect(view.constructor).toBe(Map);
     expect(new view.constructor([[1, 2]]).get(1)).toBe(2);
+  });
+
+  test("a raw-marked object is returned as is, as OWL 2's reactive() did", () => {
+    class Raw {
+      a = 1;
+    }
+    markRaw(Raw.prototype);
+    const object = markRaw({ a: 1 });
+    const instance = new Raw();
+    expect(observe(object, () => {})).toBe(object);
+    expect(observe(instance, () => {})).toBe(instance);
   });
 
   test("hasOwnProperty through the view observes the presence of its key", () => {
