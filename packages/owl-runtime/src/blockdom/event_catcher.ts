@@ -59,9 +59,7 @@ function makeKind(id: string, mask: number): ListenerKind {
   const name = id.split(".")[0];
   const capture = !!(mask & EventModifier.CAPTURE);
   if (mask & EventModifier.SYNTHETIC) {
-    const dispatchKind = (parent: Node, ev: Event) => dispatch(kind, parent, ev);
-    const run = (parent: Node, ev: Event) =>
-      config.mainEventHandler(dispatchKind, 0, parent, ev, parent);
+    const run = (parent: Node, ev: Event) => dispatch(kind, parent, ev);
     const handlers: SyntheticHandler[] = [];
     const handler = (passive: boolean) =>
       (handlers[+passive] ||= createSyntheticHandler(name, capture, passive, true, run));

@@ -253,12 +253,18 @@ function expectedLog(target: VEl, event: string): string {
   return finish("");
 }
 
-function actualLog(log: LogEntry[], target: Element, prevented: boolean): string {
+function actualLog(
+  log: LogEntry[],
+  target: Element,
+  prevented: boolean,
+  catcherEntries: Set<string>
+): string {
   const groups: [string, string[]][] = [];
   for (const { entry, node, synthetic, phase } of log) {
+    const listener = synthetic && catcherEntries.has(entry) ? (node as Node).parentNode : node;
     let depth = 0;
     let n: Node | null = target;
-    while (n && n !== node) {
+    while (n && n !== listener) {
       n = n.parentNode;
       depth++;
     }
@@ -357,12 +363,13 @@ function eventProblems(
   composed: boolean
 ): string[] {
   const problems: string[] = [];
+  const catcherEntries = new Set(pairs.flatMap(([, v]) => v.catchers.flat().map((h) => h.entry)));
   for (const [el, v] of pairs) {
     for (const event of events) {
       world.log = [];
       const ev = new Event(event, { bubbles: true, cancelable: true, composed });
       el.dispatchEvent(ev);
-      const actual = actualLog(world.log, el, ev.defaultPrevented);
+      const actual = actualLog(world.log, el, ev.defaultPrevented, catcherEntries);
       const expected = expectedLog(v, event);
       if (actual !== expected) {
         problems.push(`${event} on ${pathOf(v)}: owl [${actual}] ref [${expected}]`);

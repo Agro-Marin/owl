@@ -1,4 +1,13 @@
-import { createBlock, createCatcher, list, mount, multi, patch, remove } from "../../src/blockdom";
+import {
+  config,
+  createBlock,
+  createCatcher,
+  list,
+  mount,
+  multi,
+  patch,
+  remove,
+} from "../../src/blockdom";
 import { setDebug, setDebugSink } from "@odoo/owl-core";
 import { makeTestFixture } from "./helpers";
 
@@ -337,6 +346,38 @@ test("removing a catcher keeps the other synthetic handlers of its parent", asyn
   patch(tree, parent([outer], [undefined], parent_handlers));
   (fixture.firstChild as HTMLElement).click();
   expect(calls).toEqual(["outer"]);
+});
+
+test("a synthetic catcher calls the main event handler once per handler, not for its own dispatch", async () => {
+  const calls: unknown[] = [];
+  const lines: string[] = [];
+  const mainEventHandler = config.mainEventHandler;
+  config.mainEventHandler = (fn, mods, ctx, ev, currentTarget, arg) => {
+    calls.push(currentTarget);
+    mainEventHandler(fn, mods, ctx, ev, currentTarget, arg);
+  };
+  setDebug("event");
+  setDebugSink((channel, message) => lines.push(message));
+  try {
+    const catcher = createCatcher({ "click.synthetic": 0 }, [() => {}]);
+    mount(
+      createBlock("<div><block-child-0/></div>")(
+        [],
+        [catcher(createBlock("<span>c</span>")(), {})]
+      ),
+      fixture
+    );
+    const span = fixture.querySelector("span")!;
+    span.click();
+    expect(calls).toEqual([span]);
+    expect(lines.filter((line) => line.includes("handled by"))).toEqual([
+      "click on SPAN: handled by a handler",
+    ]);
+  } finally {
+    config.mainEventHandler = mainEventHandler;
+    setDebug(false);
+    setDebugSink(null);
+  }
 });
 
 test("modifiers apply only to events from inside the catcher", async () => {
