@@ -196,3 +196,82 @@ test("compiled template expressions evaluate as the JavaScript they mean", () =>
   }
   expect(failures.slice(0, 5)).toEqual([]);
 });
+
+function adjacentGenerator(random: () => number) {
+  const pick = <T>(items: T[]): T => items[Math.floor(random() * items.length)];
+  const space = () => pick(["", " ", "  "]);
+  function operand(depth: number): string {
+    const r = random();
+    if (depth > 3 || r < 0.4) {
+      return pick([
+        ...NAMES,
+        "o.x",
+        "o.new",
+        "arr[0]",
+        "o.f?.()",
+        "n?.x",
+        "1",
+        "2.5",
+        "1.",
+        ".5",
+        ".5.toFixed(1)",
+        "1e2",
+        "0x1F",
+        "10n",
+        "'x'",
+        "`t${a}`",
+        "/e/",
+        "/[/]/g",
+        "/=/",
+        "[a, b]",
+        "{}",
+      ]);
+    }
+    if (r < 0.5) {
+      return pick(["- ", "+ ", "!", "~", "typeof ", "void "]) + space() + operand(depth + 1);
+    }
+    if (r < 0.55) {
+      return pick(["((x) => a+ ++x)(1)", "((x) => x-- -a)(1)", "((x) => b- --x)(1)"]);
+    }
+    if (r < 0.65) {
+      return "(" + expr(depth + 1) + ")";
+    }
+    if (r < 0.75) {
+      return operand(depth + 1) + space() + pick([".toString()", "?.[0]", ".length"]);
+    }
+    if (r < 0.85) {
+      return `((x)${space()}=>${space()}${expr(depth + 1)})(${operand(depth + 1)})`;
+    }
+    return `\`${pick(["", "}", "/"])}\${${expr(depth + 1)}}${pick(["", "$", "/*"])}\``;
+  }
+  function expr(depth: number): string {
+    const r = random();
+    if (depth > 3 || r < 0.3) {
+      return operand(depth);
+    }
+    if (r < 0.85) {
+      const op = pick(["+", "-", "*", "/", "%", "**", "<", ">", "<=", ">=", "===", "!=", "&&"]);
+      return operand(depth + 1) + space() + op + space() + operand(depth + 1);
+    }
+    return `${operand(depth + 1)}${space()}?${space()}${expr(depth + 1)}${space()}:${space()}${expr(depth + 1)}`;
+  }
+  return () => expr(0);
+}
+
+test("compiled expressions keep the meaning of operators and literals written side by side", () => {
+  const next = adjacentGenerator(prng(7));
+  const failures: string[] = [];
+  for (let i = 0; i < COUNT; i++) {
+    const template = next();
+    try {
+      new Function(`return (${template});`);
+    } catch {
+      continue;
+    }
+    const failure = check(template, template);
+    if (failure) {
+      failures.push(failure);
+    }
+  }
+  expect(failures.slice(0, 5)).toEqual([]);
+});
