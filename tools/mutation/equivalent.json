@@ -794,24 +794,6 @@
   {
     "tool": "stryker",
     "file": "packages/owl-core/src/proxy.ts",
-    "line": 946,
-    "operator": "ConditionalExpression",
-    "original": "iterator === null",
-    "replacement": "false",
-    "reason": "a null keys() result throws a TypeError either way (the native check, or reading next of null)"
-  },
-  {
-    "tool": "stryker",
-    "file": "packages/owl-core/src/proxy.ts",
-    "line": 953,
-    "operator": "ConditionalExpression",
-    "original": "step === null",
-    "replacement": "false",
-    "reason": "a null iterator step throws a TypeError either way (the native check, or reading its done)"
-  },
-  {
-    "tool": "stryker",
-    "file": "packages/owl-core/src/proxy.ts",
     "line": 974,
     "operator": "ConditionalExpression",
     "original": "Object(other) === other",

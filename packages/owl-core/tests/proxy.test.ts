@@ -1619,6 +1619,26 @@ describe("collection reads and writes, key by key", () => {
 });
 
 describe("set operations with set-likes", () => {
+  test("a set-like whose keys() returns a callable iterator, or callable steps, keeps its members", () => {
+    const setLike = (callableIterator: boolean) => ({
+      size: 1,
+      has: () => false,
+      keys: () => {
+        let done = false;
+        const step = (value: number) => Object.assign(function step() {}, { done: false, value });
+        const next = () =>
+          done
+            ? { done: true, value: undefined }
+            : ((done = true), callableIterator ? { done: false, value: 2 } : step(2));
+        return callableIterator ? Object.assign(function iterator() {}, { next }) : { next };
+      },
+    });
+    for (const callableIterator of [true, false]) {
+      expect([...(new Set([1]) as any).union(setLike(callableIterator))]).toEqual([1, 2]);
+      expect([...(proxy(new Set([1])) as any).union(setLike(callableIterator))]).toEqual([1, 2]);
+    }
+  });
+
   const hasSetMethods = "union" in Set.prototype;
 
   test.runIf(hasSetMethods)(

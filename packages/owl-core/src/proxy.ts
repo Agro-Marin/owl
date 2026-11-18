@@ -943,14 +943,14 @@ function rawSetRecord(other: any, mine: Map<any, any>, theirs: Map<any, any>): o
         ? keys
         : () => {
             const iterator: any = Reflect.apply(keys, other, []);
-            if (typeof iterator !== "object" || iterator === null) {
+            if (Object(iterator) !== iterator) {
               return iterator;
             }
             const next = iterator.next;
             return {
               next() {
                 const step: any = Reflect.apply(next, iterator, []);
-                if (typeof step !== "object" || step === null || step.done) {
+                if (Object(step) !== step || step.done) {
                   return step;
                 }
                 const member = step.value;
