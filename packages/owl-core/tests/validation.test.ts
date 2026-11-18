@@ -1368,6 +1368,14 @@ describe("values and schemas validation used to mishandle", () => {
     expect(validateType(3, even.bind(null))).toHaveLength(1);
   });
 
+  test("a hand-written arrow validator whose parameter name starts with class is a type", () => {
+    const validator = new Function(
+      'return classes => { if (classes.value !== 1) classes.addIssue({ message: "not one" }); }'
+    )();
+    expect(validateType(1, validator)).toEqual([]);
+    expect(validateType(2, validator)).toHaveLength(1);
+  });
+
   test("a customValidator wrapping an optional type may be omitted, and is not called on undefined", () => {
     let calls = 0;
     const positive = t.customValidator(t.number().optional(), (n) => {

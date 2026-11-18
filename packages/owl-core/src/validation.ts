@@ -76,7 +76,7 @@ function typeError(type: unknown): string | null {
   if (error === undefined) {
     const source = Function.prototype.toString.call(type);
     const isConstructor =
-      source.startsWith("class") ||
+      /^class\b/.test(source) ||
       (Object.hasOwn(type, "prototype") && /\{\s*\[native code\]\s*\}$/.test(source));
     error = isConstructor
       ? `${type.name || "an anonymous class"} is a constructor, not a type (use t.string(), t.instanceOf(...), ...)`
