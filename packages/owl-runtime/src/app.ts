@@ -4,6 +4,7 @@ import { ComponentNode } from "./component_node";
 import { GetProps } from "./props";
 import {
   debug,
+  DEBUG_CHANNELS,
   debugLog,
   makeAbortError,
   OwlError,
@@ -11,6 +12,8 @@ import {
   PluginManager,
   proxy,
   Resource,
+  setDebug,
+  setDebugSink,
   startPlugins,
   STATUS,
   toRaw,
@@ -58,6 +61,10 @@ declare global {
       RootFiber: typeof RootFiber;
       toRaw: typeof toRaw;
       proxy: typeof proxy;
+      // the debug channels, for the extension's timeline (C.5)
+      setDebug: typeof setDebug;
+      setDebugSink: typeof setDebugSink;
+      DEBUG_CHANNELS: typeof DEBUG_CHANNELS;
     };
   }
 }
@@ -75,7 +82,16 @@ interface Root<T extends ComponentConstructor> {
 
 function exposeToDevtools() {
   if (typeof window !== "undefined" && !window.__OWL_DEVTOOLS__) {
-    window.__OWL_DEVTOOLS__ = { apps, Fiber, RootFiber, toRaw, proxy };
+    window.__OWL_DEVTOOLS__ = {
+      apps,
+      Fiber,
+      RootFiber,
+      toRaw,
+      proxy,
+      setDebug,
+      setDebugSink,
+      DEBUG_CHANNELS,
+    };
     if (debug.lifecycle) {
       debugLog("lifecycle", "window.__OWL_DEVTOOLS__ set");
     }

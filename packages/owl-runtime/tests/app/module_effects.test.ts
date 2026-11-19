@@ -1,6 +1,7 @@
 import {
   App,
   Component,
+  DEBUG_CHANNELS,
   ErrorBoundary,
   globalTemplates,
   mount,
@@ -44,12 +45,38 @@ describe("the devtools hook", () => {
     setDebugSink((channel, message) => lines.push(`${channel}: ${message}`));
     const first = new App();
     const exposed = (window as any).__OWL_DEVTOOLS__;
-    expect(exposed).toEqual({ apps: App.apps, Fiber, RootFiber, toRaw, proxy });
+    expect(exposed).toEqual({
+      apps: App.apps,
+      Fiber,
+      RootFiber,
+      toRaw,
+      proxy,
+      setDebug,
+      setDebugSink,
+      DEBUG_CHANNELS,
+    });
     expect(exposed.apps).toBe(App.apps);
     expect(lines).toEqual(["lifecycle: window.__OWL_DEVTOOLS__ set"]);
     const second = new App();
     expect((window as any).__OWL_DEVTOOLS__).toBe(exposed);
     expect([...exposed.apps]).toEqual([first, second]);
+  });
+
+  test("the devtools record the debug channels through what the first App exposes", async () => {
+    new App();
+    const devtools = (window as any).__OWL_DEVTOOLS__;
+    const recorded: string[] = [];
+    devtools.setDebugSink((channel: string, message: string) =>
+      recorded.push(`${channel}: ${message}`)
+    );
+    devtools.setDebug(["scheduler"]);
+    class Clock extends Component {
+      static template = xml`<i/>`;
+    }
+    await mount(Clock, makeTestFixture());
+    devtools.setDebug(false);
+    expect(devtools.DEBUG_CHANNELS).toContain("scheduler");
+    expect(recorded.some((line) => line.startsWith("scheduler: "))).toBe(true);
   });
 
   test("a hook that watches the property before the first App sees it set then", () => {
