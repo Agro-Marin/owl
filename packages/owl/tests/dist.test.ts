@@ -67,19 +67,23 @@ describe.each(["@odoo/owl", "@odoo/owl/runtime"])("%s", (entry) => {
 // A build over its budget fails; one more than 2 % under it fails too, so a
 // saving is written down here and a later regression cannot spend it unseen.
 const SIZE_BUDGETS: [string, string, number][] = [
-  ["everything", `export * from "@odoo/owl";`, 61174],
-  ["the runtime", `export * from "@odoo/owl/runtime";`, 41749],
-  ["the compiler", `import "@odoo/owl/compiler";`, 19961],
+  ["everything", `export * from "@odoo/owl";`, 61161],
+  ["the runtime", `export * from "@odoo/owl/runtime";`, 41738],
+  ["the compiler", `import "@odoo/owl/compiler";`, 19947],
   ["signal alone", `import { signal } from "@odoo/owl/runtime"; console.log(signal);`, 7766],
 ];
 
 test.each(SIZE_BUDGETS)("%s stays within its size budget", async (_, code, budget) => {
-  // The build hash and date differ per checkout state and build time, and
-  // gzip's output by a byte or two with them.
+  // The build hash, date and version differ per checkout state, build time
+  // and release, and gzip's output by a byte or two with them.
   const built = readFileSync(join(BUILT, "dist/owl.es.js"), "utf8");
   const hash = /var buildHash = "([^"]+)"/.exec(built)![1];
   const date = /date: "([^"]+)"/.exec(built)![1];
-  const minified = (await bundle(code)).replaceAll(hash, "").replaceAll(date, "");
+  const version = /var version = "([^"]+)"/.exec(built)![1];
+  const minified = (await bundle(code))
+    .replaceAll(hash, "")
+    .replaceAll(date, "")
+    .replaceAll(version, "");
   const size = gzipSync(minified, { level: 9 }).length;
   console.debug("[owl:size-budget]", code, size, budget);
   expect(
