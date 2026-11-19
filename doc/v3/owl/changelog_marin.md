@@ -1,5 +1,17 @@
 # Changelog of the 3.0-marin fork
 
+## 3.0.0-marin.8 (2026-11-19)
+
+### FIX
+
+- owl-compiler type_shadow: a callee's unset variable is the one no open scope binds where it is read, and is typed any
+
+### IMP
+
+- owl-compiler type_shadow: an interpolated t-call writes the templates it may render in place, and this.props takes a type of its own
+- owl-compiler type_shadow: a template rendered with variables reads them from their type, and a shadow lists the callees it wrote
+- owl-compiler type_shadow: a t-call's callee is checked where it is called, as the runtime renders it
+
 ## 3.0.0-marin.7 (2026-11-19)
 
 ### IMP
