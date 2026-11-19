@@ -1,4 +1,10 @@
-import { findInterpolations, processExpr, render, tokenize } from "./inline_expressions";
+import {
+  findInterpolations,
+  isInterpolated,
+  processExpr,
+  render,
+  tokenize,
+} from "./inline_expressions";
 import type { CustomDirectives } from "./index";
 import { AST, ASTComponent, ASTDomNode, ASTType, parse } from "./parser";
 
@@ -23,6 +29,12 @@ export interface TypeShadowOptions {
   globalsType?: string;
   // The app's custom directives, which the compiler applies before parsing.
   customDirectives?: CustomDirectives;
+  // The template a static t-call names, as the app would render it, or null
+  // when the app has none by that name. A t-call renders its callee in the
+  // caller's context, so the shadow writes the callee where it is called:
+  // its reads are checked against the caller's component and variables.
+  // Without it, a callee is not followed.
+  getTemplate?: (name: string) => string | Element | null;
 }
 
 export interface TypeShadow {
@@ -34,11 +46,17 @@ export interface TypeShadow {
   // it, or null: what an editor looks for to place a diagnostic, since the
   // parsed template keeps no position.
   sources: (ShadowSource | null)[];
+  // The static t-calls whose callee getTemplate did not find: the app
+  // throws rendering them.
+  missingCalls: string[];
 }
 
 export interface ShadowSource {
   attribute: string;
   value: string;
+  // The called template the attribute is written in, when it is not the
+  // checked template itself.
+  template?: string;
 }
 
 // What every shadow refers to: declared once per checked file. A handler is
@@ -67,17 +85,62 @@ type __OwlMethodEvent<K extends string> = Omit<__OwlEvent<K>, "target" | "curren
 type __OwlHandler<C, E> = { handle(this: C, ev: E): unknown }["handle"];
 declare function __owlHandler<C, E>(component: C, handler: __OwlHandler<C, E>): void;
 declare function __owlRead(...values: unknown[]): void;
+declare function __owlWith<T>(context: T, body: (this: T) => void): void;
 `;
 
 const VARIABLE_RE = /^[\p{ID_Start}_$][\p{ID_Continue}$‌‍]*$/u;
 
+// A template variable may be named as a word TypeScript reserves (a t-call
+// passing class="..."): an expression reads it as ctx["class"]. The shadow
+// writes it under a name of its own.
+const KEYWORDS = new Set(
+  (
+    "break,case,catch,class,const,continue,default,do,else,enum,export,extends,finally,for," +
+    "if,import,let,super,switch,throw,try,var,while,with,yield,await,static,implements," +
+    "interface,package,private,protected,public"
+  ).split(",")
+);
+
+function variable(name: string): string {
+  return KEYWORDS.has(name) ? `__owlVar_${name}` : name;
+}
+
 // The expression as TypeScript reads it. An object literal may hold `this` as
 // a shorthand key, which processExpr expands and JavaScript does not.
+// The template variables the expressions written meanwhile read, while a
+// callee is being written.
+let reads: Set<string> | null = null;
+
 function shadowExpr(expr: string): string {
+  if (reads) {
+    for (const name of processExpr(expr).variables) {
+      reads.add(name);
+    }
+  }
   const tokens = tokenize(expr);
   tokens.forEach((token, i) => {
+    const before = tokens[i - 1];
+    const after = tokens[i + 1];
     if (token.type === "TEMPLATE_STRING") {
       token.value = token.replace!(shadowExpr);
+    } else if (
+      token.type === "SYMBOL" &&
+      !token.isKeyword &&
+      KEYWORDS.has(token.value) &&
+      !(before?.type === "OPERATOR" && (before.value === "." || before.value === "?.")) &&
+      !(after?.type === "COLON" && ["LEFT_BRACE", "COMMA"].includes(before?.type)) &&
+      !(
+        ["const", "let", "var", "await", "yield"].includes(token.value) &&
+        ["SYMBOL", "VALUE", "TEMPLATE_STRING", "LEFT_BRACE", "LEFT_BRACKET", "LEFT_PAREN"].includes(
+          after?.type
+        )
+      )
+    ) {
+      token.value =
+        ["LEFT_BRACE", "COMMA"].includes(before?.type) &&
+        ["RIGHT_BRACE", "COMMA"].includes(after?.type)
+          ? `${token.value}: ${variable(token.value)}`
+          : variable(token.value);
     } else if (
       token.value === "this" &&
       ["LEFT_BRACE", "COMMA"].includes(tokens[i - 1]?.type) &&
@@ -101,30 +164,61 @@ function eventName(key: string): string {
 
 class ShadowWriter {
   componentType: string;
+  options: TypeShadowOptions;
   lines: string[] = [];
   origins: (string | null)[] = [];
   sources: (ShadowSource | null)[] = [];
   depth = 1;
+  // The t-calls being written, innermost last: a callee calling a template
+  // already on it (a tree drawing its children) is not written again.
+  calls: string[] = [];
+  missingCalls: string[] = [];
+  // The template variables each open block declares, outermost first.
+  scopes: Set<string>[] = [new Set()];
 
-  constructor(componentType: string) {
-    this.componentType = componentType;
+  constructor(options: TypeShadowOptions) {
+    this.componentType = options.componentType;
+    this.options = options;
   }
 
   line(code: string, origin: string | null, source: ShadowSource | null = null) {
+    const callee = this.calls[this.calls.length - 1];
     this.lines.push("  ".repeat(this.depth) + code);
-    this.origins.push(origin);
-    this.sources.push(source);
+    this.origins.push(origin && callee ? `t-call="${callee}" ${origin}` : origin);
+    this.sources.push(source && callee ? { ...source, template: callee } : source);
   }
 
   open(code: string, origin: string | null, source: ShadowSource | null = null) {
     this.line(code, origin, source);
     this.depth++;
+    this.scopes.push(new Set());
+  }
+
+  // The next branch of an if chain: `} else {` closes a block and opens one.
+  branch(code: string, origin: string | null, source: ShadowSource | null = null) {
+    this.depth--;
+    this.scopes.pop();
+    this.open(code, origin, source);
   }
 
   close(code = "}") {
     this.depth--;
+    this.scopes.pop();
     this.line(code, null);
   }
+
+  declare(name: string, code: string, origin: string | null, source: ShadowSource | null) {
+    this.bind(name);
+    this.line(code, origin, source);
+  }
+
+  bind(name: string) {
+    this.scopes[this.scopes.length - 1].add(name);
+    this.declared?.add(name);
+  }
+
+  // The names declared while a callee is being written.
+  declared: Set<string> | null = null;
 
   read(expr: string, origin: string, attribute: string) {
     if (expr.trim()) {
@@ -226,13 +320,31 @@ function declareContext(w: ShadowWriter, ast: AST | null, bound: Set<string>) {
   collectSetNames(ast, names);
   for (const name of names) {
     if (!bound.has(name)) {
-      w.line(`let ${name}: any;`, `t-set="${name}"`, { attribute: "t-set", value: name });
+      w.declare(name, `let ${variable(name)}: any;`, `t-set="${name}"`, {
+        attribute: "t-set",
+        value: name,
+      });
     }
   }
 }
 
 function describe(ast: ASTDomNode | ASTComponent): string {
   return ast.type === ASTType.DomNode ? `<${ast.tag}>` : `<${ast.name}>`;
+}
+
+// The template a t-call renders: a static name, not one being written
+// already.
+function calleeOf(w: ShadowWriter, ast: { name: string }): AST | null {
+  const { getTemplate, customDirectives } = w.options;
+  if (!getTemplate || isInterpolated(ast.name) || w.calls.includes(ast.name)) {
+    return null;
+  }
+  const template = getTemplate(ast.name);
+  if (!template) {
+    w.missingCalls.push(ast.name);
+    return null;
+  }
+  return parse(template, customDirectives);
 }
 
 function emit(w: ShadowWriter, ast: AST | null): void {
@@ -283,16 +395,14 @@ function emit(w: ShadowWriter, ast: AST | null): void {
       });
       emit(w, ast.content);
       for (const branch of ast.tElif || []) {
-        w.depth--;
-        w.open(`} else if (${shadowExpr(branch.condition)}) {`, `t-elif="${branch.condition}"`, {
+        w.branch(`} else if (${shadowExpr(branch.condition)}) {`, `t-elif="${branch.condition}"`, {
           attribute: "t-elif",
           value: branch.condition,
         });
         emit(w, branch.content);
       }
       if (ast.tElse) {
-        w.depth--;
-        w.open("} else {", "t-else");
+        w.branch("} else {", "t-else");
         emit(w, ast.tElse);
       }
       w.close();
@@ -303,7 +413,7 @@ function emit(w: ShadowWriter, ast: AST | null): void {
       // fallback when there is a t-value: there is nothing in it to read.
       const origin = `t-set="${ast.name}"`;
       if (ast.value) {
-        w.line(`${ast.name} = ${shadowExpr(ast.value)};`, origin, {
+        w.line(`${variable(ast.name)} = ${shadowExpr(ast.value)};`, origin, {
           attribute: "t-value",
           value: ast.value,
         });
@@ -315,17 +425,20 @@ function emit(w: ShadowWriter, ast: AST | null): void {
       const elem = ast.elem;
       const origin = `t-foreach="${ast.collection}" t-as="${elem}"`;
       const source = { attribute: "t-foreach", value: ast.collection };
-      w.open(
-        `for (const [${elem}, ${elem}_value] of __owlLoop(${shadowExpr(ast.collection)})) {`,
-        origin,
-        source
-      );
+      // The collection is read outside the loop, as the runtime reads it:
+      // `t-foreach="item.children" t-as="item"` reads the enclosing item.
+      w.open("{", null);
+      w.line(`const __owlItems = __owlLoop(${shadowExpr(ast.collection)});`, origin, source);
+      w.open(`for (const [${variable(elem)}, ${elem}_value] of __owlItems) {`, origin);
       w.line(
         `const ${elem}_index = 0 as number, ${elem}_first = true as boolean, ${elem}_last = true as boolean;`,
         origin,
         source
       );
       w.line(`__owlRead(${elem}_value, ${elem}_index, ${elem}_first, ${elem}_last);`, null);
+      for (const suffix of ["", "_value", "_index", "_first", "_last"]) {
+        w.bind(elem + suffix);
+      }
       const bound = new Set([elem]);
       declareContext(w, ast.body, bound);
       if (ast.key) {
@@ -335,6 +448,7 @@ function emit(w: ShadowWriter, ast: AST | null): void {
         w.read(ast.memo, `${origin} t-memo`, "t-memo");
       }
       emit(w, ast.body);
+      w.close();
       w.close();
       return;
     }
@@ -349,8 +463,29 @@ function emit(w: ShadowWriter, ast: AST | null): void {
       if (name) {
         w.line(`__owlRead(${name});`, origin, source);
       }
-      if (ast.context) {
+      const callee = calleeOf(w, ast);
+      if (ast.context && !callee) {
         w.read(ast.context, `${origin} t-call-context`, "t-call-context");
+      }
+      const attrs = Object.entries(ast.attrs || {});
+      if (!ast.body && !attrs.length && !callee) {
+        return;
+      }
+      w.open("{", origin, source);
+      // Each attribute is a variable of the callee's context, as propEntry
+      // reads it, evaluated in the caller's: `record="record"` reads the
+      // caller's record.
+      for (const [key, value] of attrs) {
+        const [name, suffix] = key.split(".");
+        const expr =
+          suffix === "translate"
+            ? "undefined as unknown as string"
+            : !value.trim()
+              ? "undefined"
+              : suffix === "bind"
+                ? `(${shadowExpr(value)}).bind(this)`
+                : shadowExpr(value);
+        w.line(`const __owlArg_${name} = ${expr};`, `${origin} ${key}`, { attribute: key, value });
       }
       if (ast.body) {
         w.open("{", origin, source);
@@ -358,6 +493,57 @@ function emit(w: ShadowWriter, ast: AST | null): void {
         emit(w, ast.body);
         w.close();
       }
+      if (callee) {
+        const componentType = w.componentType;
+        const outer = new Set(w.scopes.flatMap((scope) => [...scope]));
+        if (ast.context) {
+          // The callee's `this` is the context, and its variables are the
+          // attributes alone: none of the caller's reaches it.
+          w.line(`const __owlContext = ${shadowExpr(ast.context)};`, `${origin} t-call-context`, {
+            attribute: "t-call-context",
+            value: ast.context,
+          });
+          w.open("__owlWith(__owlContext, function () {", null);
+          w.componentType = "typeof __owlContext";
+        } else {
+          w.open("{", null);
+        }
+        const bound = new Set<string>();
+        for (const [key] of attrs) {
+          const name = key.split(".")[0];
+          w.declare(name, `let ${variable(name)} = __owlArg_${name};`, null, null);
+          bound.add(name);
+        }
+        // A variable the callee reads and the call does not give it is
+        // undefined, as the runtime's context lookup finds it: an optional
+        // argument (t-if="onExpand") checks clean, a required one does not.
+        const at = w.lines.length;
+        const depth = w.depth;
+        const [savedReads, savedDeclared] = [reads, w.declared];
+        reads = new Set();
+        w.declared = new Set();
+        w.calls.push(ast.name);
+        declareContext(w, callee, bound);
+        emit(w, callee);
+        w.calls.pop();
+        const unset = [...reads].filter(
+          (name) =>
+            name !== "this" &&
+            !bound.has(name) &&
+            !w.declared!.has(name) &&
+            (ast.context || !outer.has(name))
+        );
+        [reads, w.declared] = [savedReads, savedDeclared];
+        const declarations = unset.map(
+          (name) => "  ".repeat(depth) + `const ${variable(name)} = undefined;`
+        );
+        w.lines.splice(at, 0, ...declarations);
+        w.origins.splice(at, 0, ...declarations.map(() => null));
+        w.sources.splice(at, 0, ...declarations.map(() => null));
+        w.componentType = componentType;
+        w.close(ast.context ? "});" : "}");
+      }
+      w.close();
       return;
     }
     case ASTType.TComponent: {
@@ -379,10 +565,15 @@ function emit(w: ShadowWriter, ast: AST | null): void {
           w.open("{", origin, { attribute: "t-set-slot", value: slotName });
           const bound = new Set<string>();
           if (slot.scope && VARIABLE_RE.test(slot.scope)) {
-            w.line(`const ${slot.scope}: any = {};`, `${origin} t-slot-scope`, {
-              attribute: "t-slot-scope",
-              value: slot.scope,
-            });
+            w.declare(
+              slot.scope,
+              `const ${variable(slot.scope)}: any = {};`,
+              `${origin} t-slot-scope`,
+              {
+                attribute: "t-slot-scope",
+                value: slot.scope,
+              }
+            );
             bound.add(slot.scope);
           }
           declareContext(w, slot.content, bound);
@@ -423,7 +614,7 @@ export function compileTypeShadow(
   options: TypeShadowOptions
 ): TypeShadow {
   const ast = parse(template, options.customDirectives);
-  const w = new ShadowWriter(options.componentType);
+  const w = new ShadowWriter(options);
   const header = `function ${options.functionName}(this: ${options.componentType}) {`;
   if (options.globalsType) {
     w.line(`const __globals__ = undefined as unknown as ${options.globalsType};`, null);
@@ -435,5 +626,6 @@ export function compileTypeShadow(
     code: [header, ...w.lines, "}"].join("\n"),
     origins: [null, ...w.origins, null],
     sources: [null, ...w.sources, null],
+    missingCalls: w.missingCalls,
   };
 }

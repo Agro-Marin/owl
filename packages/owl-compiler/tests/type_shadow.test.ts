@@ -231,3 +231,136 @@ test("each line names the attribute it reads as the template writes it", () => {
     { attribute: "value.bind", value: "this.increment" },
   ]);
 });
+
+describe("a t-call", () => {
+  const templates: Record<string, string> = {
+    row: `<span t-out="item.nmae"/><t t-out="this.state.cuont"/>`,
+    labelled: `<span t-out="label.toUpperCase()"/><t t-out="count.toFixed()"/>`,
+    tree: `<t t-foreach="node.children" t-as="child" t-key="child.id"><t t-call="tree"><t t-set="node" t-value="child"/></t></t>`,
+  };
+  const getTemplate = (name: string) => templates[name] ?? null;
+
+  test("is checked where it is called, against the caller's component and variables", () => {
+    expect(
+      check(`<t t-foreach="this.items" t-as="item" t-key="item.id"><t t-call="row"/></t>`, {
+        getTemplate,
+      })
+    ).toEqual([
+      `t-call="row" t-out="item.nmae": Property 'nmae' does not exist on type 'Item'.`,
+      `t-call="row" t-out="this.state.cuont": Property 'cuont' does not exist on type '{ count: number; label: string | null; }'. Did you mean 'count'?`,
+    ]);
+  });
+
+  test("binds its attributes as the callee's variables, .translate as text", () => {
+    expect(
+      check(`<t t-call="labelled" label.translate="Total" count="this.state.count"/>`, {
+        getTemplate,
+      })
+    ).toEqual([]);
+    expect(
+      check(`<t t-call="labelled" label.translate="Total" count="this.state.label"/>`, {
+        getTemplate,
+      })
+    ).toEqual([
+      `t-call="labelled" t-out="count.toFixed()": 'count' is possibly 'null'.`,
+      `t-call="labelled" t-out="count.toFixed()": Property 'toFixed' does not exist on type 'string'. Did you mean 'fixed'?`,
+    ]);
+  });
+
+  test("calling itself is written once", () => {
+    const shadow = compileTypeShadow(`<t t-call="tree"><t t-set="node" t-value="this"/></t>`, {
+      componentType: "Counter",
+      functionName: "shadow",
+      getTemplate,
+    });
+    expect(shadow.code.match(/__owlLoop/g)).toHaveLength(1);
+  });
+
+  test("names the callee its lines are written in, and a callee the app lacks", () => {
+    const shadow = compileTypeShadow(`<div><t t-call="row"/><t t-call="nowhere"/></div>`, {
+      componentType: "Counter",
+      functionName: "shadow",
+      getTemplate,
+    });
+    expect(shadow.sources.filter((source) => source !== null)).toEqual([
+      { attribute: "t-call", value: "row" },
+      { attribute: "t-out", value: "item.nmae", template: "row" },
+      { attribute: "t-out", value: "this.state.cuont", template: "row" },
+    ]);
+    expect(shadow.missingCalls).toEqual(["nowhere"]);
+  });
+});
+
+test("a variable named as a word TypeScript reserves is read under a name of its own", () => {
+  const templates: Record<string, string> = {
+    stroke: `<path t-att-class="class" t-att-data-x="{ class, default: 1 }.class"/>`,
+  };
+  expect(
+    check(
+      `<t t-set="default" t-value="this.state.count"/><t t-out="default.toFixed()"/>
+       <t t-call="stroke" class="'o_stroke'"/>
+       <t t-foreach="this.items" t-as="for" t-key="for.id"><t t-out="for.name"/></t>
+       <t t-out="(() => { const x = this.items; return x.length; })()"/>`,
+      { getTemplate: (name) => templates[name] ?? null }
+    )
+  ).toEqual([]);
+});
+
+test("a t-call's attribute reads the caller's variable of its own name", () => {
+  const templates: Record<string, string> = { item: `<t t-out="item.name"/>` };
+  expect(
+    check(
+      `<t t-foreach="this.items" t-as="item" t-key="item.id"><t t-call="item" item="item"/></t>`,
+      {
+        getTemplate: (name) => templates[name] ?? null,
+      }
+    )
+  ).toEqual([]);
+});
+
+test("a t-call-context callee reads the context as this, and only its attributes as variables", () => {
+  const templates: Record<string, string> = {
+    card: `<t t-out="this.name"/><t t-out="extra.toFixed()"/><t t-out="item"/>`,
+  };
+  expect(
+    check(
+      `<t t-foreach="this.items" t-as="item" t-key="item.id">
+        <t t-call="card" t-call-context="item" extra="this.state.count"/>
+      </t>`,
+      { getTemplate: (name) => templates[name] ?? null }
+    )
+  ).toEqual([]);
+  const shadow = compileTypeShadow(
+    `<t t-foreach="this.items" t-as="item" t-key="item.id"><t t-call="card" t-call-context="item" extra="1"/></t>`,
+    {
+      componentType: "Counter",
+      functionName: "shadow",
+      getTemplate: (name) => templates[name] ?? null,
+    }
+  );
+  expect(shadow.code).toContain("const item = undefined;");
+});
+
+test("a variable a callee reads and its call does not give is undefined", () => {
+  const templates: Record<string, string> = {
+    header: `<button t-if="onExpand" t-on-click="onExpand"/><t t-out="title.toUpperCase()"/>`,
+  };
+  expect(
+    check(`<t t-call="header" title.translate="Title"/>`, {
+      getTemplate: (name) => templates[name] ?? null,
+    })
+  ).toEqual([]);
+  expect(check(`<t t-call="header"/>`, { getTemplate: (name) => templates[name] ?? null })).toEqual(
+    [`t-call="header" t-out="title.toUpperCase()": 'title' is possibly 'undefined'.`]
+  );
+});
+
+test("a loop variable may be named as the collection it iterates", () => {
+  expect(
+    check(
+      `<t t-foreach="this.items" t-as="item" t-key="item.id">
+        <t t-foreach="[item]" t-as="item" t-key="item.id"><t t-out="item.name"/></t>
+      </t>`
+    )
+  ).toEqual([]);
+});
