@@ -35,6 +35,11 @@ export interface TypeShadowOptions {
   // its reads are checked against the caller's component and variables.
   // Without it, a callee is not followed.
   getTemplate?: (name: string) => string | Element | null;
+  // The type of the variables the template is rendered with, where it is
+  // rendered with some (renderToString's context, a tooltip's info): each
+  // variable it reads is a property of it. Without it, a variable the
+  // template does not set is undeclared.
+  variablesType?: string;
 }
 
 export interface TypeShadow {
@@ -49,6 +54,8 @@ export interface TypeShadow {
   // The static t-calls whose callee getTemplate did not find: the app
   // throws rendering them.
   missingCalls: string[];
+  // The callees written in place, each once.
+  callees: string[];
 }
 
 export interface ShadowSource {
@@ -173,6 +180,7 @@ class ShadowWriter {
   // already on it (a tree drawing its children) is not written again.
   calls: string[] = [];
   missingCalls: string[] = [];
+  callees = new Set<string>();
   // The template variables each open block declares, outermost first.
   scopes: Set<string>[] = [new Set()];
 
@@ -523,6 +531,7 @@ function emit(w: ShadowWriter, ast: AST | null): void {
         reads = new Set();
         w.declared = new Set();
         w.calls.push(ast.name);
+        w.callees.add(ast.name);
         declareContext(w, callee, bound);
         emit(w, callee);
         w.calls.pop();
@@ -620,12 +629,28 @@ export function compileTypeShadow(
     w.line(`const __globals__ = undefined as unknown as ${options.globalsType};`, null);
     w.line(`__owlRead(__globals__);`, null);
   }
+  if (options.variablesType) {
+    w.line(`const __owlVars = undefined as unknown as ${options.variablesType};`, null);
+    w.line(`__owlRead(__owlVars);`, null);
+    reads = new Set();
+    w.declared = new Set();
+  }
+  const at = w.lines.length;
   declareContext(w, ast, new Set());
   emit(w, ast);
+  if (options.variablesType) {
+    const given = [...reads!].filter((name) => name !== "this" && !w.declared!.has(name));
+    reads = null;
+    w.declared = null;
+    w.lines.splice(at, 0, ...given.map((name) => `  const ${variable(name)} = __owlVars.${name};`));
+    w.origins.splice(at, 0, ...given.map((name) => `variable "${name}"`));
+    w.sources.splice(at, 0, ...given.map(() => null));
+  }
   return {
     code: [header, ...w.lines, "}"].join("\n"),
     origins: [null, ...w.origins, null],
     sources: [null, ...w.sources, null],
     missingCalls: w.missingCalls,
+    callees: [...w.callees],
   };
 }

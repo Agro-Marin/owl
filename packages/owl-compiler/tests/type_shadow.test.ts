@@ -288,6 +288,7 @@ describe("a t-call", () => {
       { attribute: "t-out", value: "this.state.cuont", template: "row" },
     ]);
     expect(shadow.missingCalls).toEqual(["nowhere"]);
+    expect(shadow.callees).toEqual(["row"]);
   });
 });
 
@@ -363,4 +364,15 @@ test("a loop variable may be named as the collection it iterates", () => {
       </t>`
     )
   ).toEqual([]);
+});
+
+test("a template rendered with variables reads each as a property of their type", () => {
+  const options = { variablesType: "{ item: Item; label?: string }" };
+  expect(check(`<span t-out="item.name"/><t t-if="label" t-out="label.length"/>`, options)).toEqual(
+    []
+  );
+  expect(check(`<span t-out="item.nmae"/><t t-out="count"/>`, options)).toEqual([
+    `variable "count": Property 'count' does not exist on type '{ item: Item; label?: string | undefined; }'.`,
+    `t-out="item.nmae": Property 'nmae' does not exist on type 'Item'.`,
+  ]);
 });
