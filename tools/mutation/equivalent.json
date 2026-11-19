@@ -3994,5 +3994,14 @@
     "original": "delayedIn.delete(f);",
     "replacement": ";",
     "reason": "delayedIn only answers forgetDelayed's question 'which scheduler delays this fiber': a stale entry makes forgetDelayed search that scheduler's delayedRenders, find nothing and do nothing, and the WeakMap entry goes with the fiber; the deletion saves a lookup and memory, not behaviour"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 539,
+    "operator": "MethodExpression",
+    "original": "fibers.slice()",
+    "replacement": "fibers",
+    "reason": "(reasoned) waiting only saves and restores the waiting nodes' onWillUnmount around handleError, which does not change the list synchronously (a render it asks for waits), so iterating the list itself instead of a copy reads the same fibers"
   }
 ]

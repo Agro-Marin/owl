@@ -465,6 +465,53 @@ test("an owed onMounted that throws when a descendant's commit pays it goes to t
   expect(fixture.innerHTML).toBe("<div><gp><x></x><c>1</c></gp></div>");
 });
 
+test("a commit failed by an onWillPatch owes no onPatched of a component it did not patch, which a commit below would otherwise pay", async () => {
+  let boom = true;
+  let leaf: any;
+  class Leaf extends Component {
+    static template = xml`<i t-out="this.state.n"/>`;
+    state = proxy({ n: 1 });
+    setup() {
+      leaf = this;
+    }
+  }
+  class Mid extends Component {
+    static template = xml`<p><t t-out="this.props.v"/><Leaf/></p>`;
+    static components = { Leaf };
+    props = props();
+    setup() {
+      onPatched(() => log.push("Mid:patched"));
+    }
+  }
+  class Root extends Component {
+    static template = xml`<div><Mid v="this.state.v"/></div>`;
+    static components = { Mid };
+    state = proxy({ v: 1 });
+    setup() {
+      onWillPatch(() => {
+        if (boom) {
+          boom = false;
+          throw new Error("boom");
+        }
+      });
+      onError((e) => log.push(e.message));
+    }
+  }
+  const app = new App({ test: true });
+  const root = await app.createRoot(Root).mount(fixture);
+  root.state.v = 2;
+  await nextTick();
+  await nextTick();
+  expect(log.splice(0)).toEqual(["boom"]);
+  expect(fixture.innerHTML).toBe("<div><p>1<i>1</i></p></div>");
+  leaf.state.n = 2;
+  await nextTick();
+  await nextTick();
+  expect(fixture.innerHTML).toBe("<div><p>1<i>2</i></p></div>");
+  expect(log).toEqual([]);
+  app.destroy();
+});
+
 test("a commit failed by an onWillPatch owes the onMounted of what it mounted, not of the components already mounted", async () => {
   let boom = true;
   class Child extends Component {
