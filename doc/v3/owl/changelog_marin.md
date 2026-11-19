@@ -1,5 +1,16 @@
 # Changelog of the 3.0-marin fork
 
+## 3.0.0-marin.4 (2026-11-19)
+
+### IMP
+
+- tools vendor_odoo: the declarations of @odoo/owl and @odoo/owl/compiler are vendored and pinned with the builds
+- owl-core types, owl-runtime props: a subclass may give an optional prop a default, and still may not drop one
+- owl-runtime: ComponentNode is exported, so a component's scope can be named and narrowed
+- owl-core hooks: useListener takes the capture flag as a boolean, as addEventListener does
+- owl-core hooks: useListener types the event by its target and name, as addEventListener does
+- owl-runtime tests, tools mutation: a commit failed by an onWillPatch is shown to owe no onPatched a commit below would pay; one more survivor listed equivalent
+
 ## 3.0.0-marin.3 (2026-11-19)
 
 ### IMP

@@ -1,7 +1,7 @@
 {
   "name": "@odoo/owl-runtime",
   "private": true,
-  "version": "3.0.0-marin.3",
+  "version": "3.0.0-marin.4",
   "description": "Component runtime and blockdom for Odoo Web Library (OWL)",
   "main": "src/index.ts",
   "module": "src/index.ts",
@@ -34,10 +34,10 @@
   },
   "homepage": "https://github.com/odoo/owl#readme",
   "dependencies": {
-    "@odoo/owl-core": "3.0.0-marin.3"
+    "@odoo/owl-core": "3.0.0-marin.4"
   },
   "devDependencies": {
-    "@odoo/owl-compiler": "3.0.0-marin.3",
+    "@odoo/owl-compiler": "3.0.0-marin.4",
     "jsdom": "^25.0.1"
   }
 }
