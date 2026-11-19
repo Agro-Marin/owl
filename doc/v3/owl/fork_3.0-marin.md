@@ -8,7 +8,8 @@ the fork's releases are tagged `v3.0.0-marin.N` by `npm run release`, below). Od
 precompiler runs the full `owl.es.js`; `web/static/lib/versions.json` names the commit.
 This page lists what the fork adds and where it deliberately behaves
 differently from upstream; [the behaviour specification](specification.md)
-states the contract of reactivity and proxies, each rule naming its test.
+states the contract (reactivity, proxies, validation, plugins, registries,
+rendering, events and templates), each rule naming its test.
 
 The fork also adapts selected changes through upstream `d2c0fa9e`:
 `useImmediateEffect`, awaitable `asyncComputed.refresh()`, collection schemas,
@@ -70,517 +71,350 @@ These remain deliberate differences from current upstream.
 
 ## Behaviour that differs from upstream
 
-- **Template expressions read JavaScript's standard globals** (`String`,
-  `Number`, `Boolean`, `JSON`, `parseInt`, `parseFloat`, `isNaN`, `Map`, `Set`,
-  `Intl`, `Infinity`, `Promise`, `Reflect`, `WeakMap`, `globalThis`, the error
-  types, the typed arrays, the URI functions, …) as the globals, not from the
-  context: every global of a fresh JavaScript context that all four targets
-  have (a test holds the list to Node's), so not `SharedArrayBuffer` (a browser
-  global only in a cross-origin-isolated page), `Temporal`, `DisposableStack`,
-  `AsyncDisposableStack` or `SuppressedError` (not in Safari). Upstream
-  reads them from the component and gets `undefined`. A `t-set`, `t-as`,
-  `t-slot-scope` or `t-call` argument named like one (or like a keyword such
-  as `null`) throws, since no expression could read it; so does one that is
-  not an identifier (`a-b`, `data-label`, an empty name) or is an operator
-  word (`and`, `or`, `gt`, `gte`, `lt`, `lte`, `typeof`, `delete`). A `t-call`
-  argument's suffix (`label.translate`) is not part of its name.
-- **`t-else` with a `t-if` on the same node** is an else branch holding the
-  `if` — it reads as `t-elif`. Template inheritance produces it when an
-  extension adds a `t-if` to an else node. `t-elif` beside another branch
-  directive throws.
-- **A translation context** (`t-translation-context-*`) beside `t-out` or
-  `t-call-block` is not an unsupported directive.
-- **Nested effects clean up inner first**: an effect's children are disposed
-  before its own cleanup runs, on a re-run and on dispose.
-- **A signal written and set back** before its readers run changed nothing
-  for them (default equality only; a custom `equals` and `signal.trigger`
-  always notify). What an effect saw is the last value it read: one that
-  writes a signal and reads it again runs when the value it read first comes
-  back.
-- **A cancelled render pass** does not make a child run `onWillUpdateProps`
-  again for props it already holds.
-- **Proxy reads nobody observes create no atom**; `in` / `has()` subscribe to
-  the presence of the key they ask about only. The same holds for a `props()`
-  view: a key read only untracked (in `setup`) gets no atom. A key's atom is
-  released when its last reader unsubscribes (a re-run that stops reading it,
-  a dispose), so a target nobody reads any more is written as one never read,
-  and `clear()` notifies only the keys something reads, walking those keys
-  instead of the collection when they are fewer and all primitive.
-- **A `props({...})` view inherits from one frozen, empty object** whose own
-  prototype is `null`, instead of having a `null` prototype itself: the views
-  of a component class then share one hidden class, where upstream's are each
-  a dictionary. It still inherits no key.
-- **A props view is raw to `proxy()`**, both kinds: it is observable already, so
-  a proxy of its component (a component held in proxied state) hands out the
-  view itself, and its values unwrapped, instead of a proxy of it. Upstream's
-  getters close over their signals and read through such a proxy; the fork's
-  shared accessors find their view in a private field, which a proxy hides.
-- **A `t-foreach` over a `proxy()` of a plain array reads its items in one
-  step**, one subscription for the whole array. A subclass of `Array` (Odoo's
-  mail `RecordList`, which answers its index reads through its own proxy) is
-  iterated through its proxy, as upstream iterates every array.
+What the fork changed relative to upstream `v3.0.0-alpha.49`, one line per
+difference. Each behaviour is stated, rule by rule and with the test that
+asserts it, in [the specification](specification.md); what the specification
+does not hold is kept under [Not in the specification](#not-in-the-specification).
 
 ### Reactivity
 
-- **A computation read while it runs throws** `Cycle detected: <name> reads
-its own value` instead of recursing (upstream hangs); a computed that catches
-  it recovers once it stops reading itself.
-- **Bringing a computed up to date is a batch**: an `immediateEffect` or
-  `observe()` callback that a write or a computed's change queues meanwhile
-  runs once the outermost computed being evaluated is up to date (for a
-  read, once the reader holds its value), never in the middle of an
-  evaluation it could read. One that reads back through a computed what its
-  getter wrote, or that reads a computed which changed while another reader
-  pulled it (an immediate effect that wrote that computed's source), no
-  longer throws `Cycle detected` (upstream recomputed the computed
-  re-entrantly). What it writes reaches the reader as any later write does.
-  An owner whose sources are being checked does not run before the effect it
-  owns, and a computation disposed while its sources are checked stops
-  checking them (it brought its remaining sources up to date for nothing).
-- **Disposing an effect disposes the computeds it was the last observer of**,
-  as destroying a component already did; a re-run that stops reading a
-  computed nothing else reads disposes it at the flush (unless read again by
-  then), instead of at the next write to its sources (which a computed
-  reading nothing never got). An effect that saw a computed it read change
-  during its run is still its observer: another reader letting it go then does
-  not dispose it. Read again, such a computed recomputes (a new
-  object for an object result), and an effect its getter creates is created
-  again, owned by the computed. `untrack` inside a getter reached through an
-  `observe()` view keeps that getter's reads of other proxies off the view. A
-  read through the view (`this` in such a getter included), and what a getter
-  it reaches reads outside such an `untrack`, subscribes the view in any
-  context, `untrack` around the view read and lifecycle hooks included (Odoo's
-  `useRecordObserver` first reads its view in `onWillStart`, which runs
-  untracked).
-- **An effect belongs to the computation whose run creates it**, tracked or
-  not (`untrack` keeps the owner): an effect's, a computed's (detached ones
-  included), a selector source's or an `observe()` callback's effect is
-  disposed before that run is repeated and when the computation is disposed;
-  a render's lasts until its component is destroyed. A scope being set up is
-  an ownership root. Upstream gives a getter's effect to the computed's scope
-  (or to nothing), and `untrack` drops ownership. `effect(fn, { detached:
-true })` creates an effect owned by nothing. When a computed and an effect
-  it owns are both due, the computed runs first. An `asyncComputed` is
-  disposed whole by its owner (no longer loading, the abandoned run's result
-  ignored).
-- **A computed whose getter writes a source it read ends out of date**: its
-  next read checks its sources and recomputes if one changed since the getter
-  read it (upstream kept the value computed from the old source). An effect
-  that writes the source of a computed it read keeps the computed's value it
-  read, as it keeps a signal's: it runs when a later write changes the
-  computed from that value, not when the value comes back; the computed
-  forwards that write to its readers instead of being recomputed when the run
-  ends. So does a computation whose check (bringing its sources up to date to
-  see whether one changed) ran a write to a source it had checked already:
-  it ends up to date on what it checked, and that source forwards it the next
-  write (it held it back for good, the computation never running again for
-  it). Owl passes the cross-framework conformance suite with no expected
-  failure.
-- **A cleanup that throws while computeds are disposed** does not stop the
-  others: on a recompute it is reported as an unhandled rejection, on a
-  cascade the dispose throws after releasing everything (the disposed
-  effect's own cleanup and children included), and in bulk the error goes
-  to the flush or to `reportError`. An effect whose failed first run is
-  disposed throws the run's error and reports the dispose's.
-- **An effect its own cleanup disposes does not run again**, one its own run
-  disposes keeps no subscription (also when the run then throws: an error
-  dropping its sources or releasing it goes to `Promise.reject`, the run's
-  own error is thrown) and is not run again by a write later in that run (an
-  immediate one was, re-entrantly, and the write threw `Cycle detected`), and
-  an effect keeps only a returned function as its cleanup.
-- **A selector** notifies both keys of a change in one batch (a reader that
-  throws no longer starves the other key), rethrows its source's error for
-  every key and re-runs its readers on recovery, and follows its source only
-  while a key is read.
-- **`asyncComputed.currentPromise()`** also waits for a re-run a dependency
-  change or `refresh()` queued; `dispose()` sets `loading()` to false.
-- **An `asyncComputed` fetcher throwing synchronously** still leaves its run's
-  abort cleanup attached, so disposal or a re-run cancels work it started.
-- **Scope destruction and rollback** run cleanup without subscribing or
-  assigning effect ownership to their caller. Rollback drains destroy
-  callbacks registered during cleanup, preserving earlier registrations.
-- **A write schedules the effects' flush only if it queues an effect or a
-  computed's disposal that no scheduled flush will run**, at its end, after
-  its immediate effects (af18b4f5 scheduled one at every write): a promise
-  callback queued before such a write runs before the effects it queues.
-- **`batched`** calls its callback with the latest call's arguments.
+See [specification: Reactivity](specification.md#reactivity).
+
+- A computation read while it runs throws `Cycle detected` (upstream hangs).
+- Bringing a computed up to date is a batch: an immediate effect or
+  `observe()` callback it queues no longer runs inside the evaluation, nor
+  throws `Cycle detected` (upstream recomputed the computed re-entrantly).
+- Disposing an effect disposes the computeds it was the last observer of, and
+  a computed a re-run stops reading is disposed at the flush (upstream: at the
+  next write to its sources, which a computed reading nothing never got).
+- An effect belongs to the computation whose run creates it, through `untrack`
+  too (upstream gave a getter's effect to the computed's scope or to nothing,
+  and `untrack` dropped ownership); `effect(fn, { detached: true })` is new.
+- A computed whose getter writes its source ends out of date (upstream kept the
+  value computed from the old source); a write during a run or a check is
+  forwarded instead of held back for good.
+- The cross-framework conformance suite passes with no expected failure.
+- A cleanup that throws while computeds are disposed no longer stops the other
+  disposals.
+- An effect disposed by its own cleanup or run stays disposed (an immediate one
+  was run again re-entrantly, and the write threw `Cycle detected`); only a
+  returned function is kept as cleanup.
+- A selector notifies both keys in one batch (a throwing reader starved the
+  other key), rethrows its source's error for every key, and follows its source
+  only while a key is read.
+- `asyncComputed`: `currentPromise()` also waits for a queued run, `dispose()`
+  clears `loading()`, and a synchronous fetcher throw keeps its abort cleanup.
+- Scope destruction and rollback run cleanup unsubscribed and unowned; rollback
+  drains the callbacks its cleanup registers.
+- A write schedules the effects' flush only when it queues something no
+  scheduled flush will run (af18b4f5 scheduled one at every write).
+- `batched` calls its callback with the latest call's arguments.
 
 ### Proxies, validation, plugins, registries
 
-- **A getter or setter reaching a private member through a proxy** throws an
-  OwlError naming the class to mark with `markRaw(<Class>.prototype)`, when a
-  class of the proxied object declares that member (another class's private
-  member error passes through unchanged). `markRaw` of a built-in prototype
-  (`Object`, `Array`, `Map`, `Set`, `WeakMap`, `Function`) throws.
-- **A write through a setter, an array write (an index or the length) and a
-  delete are each one batch**: an immediate reader of several keys the write
-  notifies runs once, after it. A write through a setter calls the key's
-  getter only when the key is observed (to compare the values), and a getter
-  that throws there counts as a change instead of failing the write. An index
-  written past the end of an array behind its own Proxy notifies its length,
-  also through a shallow proxy.
-- **A Map proxy, and an `observe()` view of a Map, have no `add`** (it reads
-  `undefined`, as on a Map). A set operation (`union`, `intersection`, …) on a
-  proxy checks its argument as the native method does, reads of it only what
-  the native method reads (its `has` or its `keys()`, lazily), compares
-  members raw, and returns a plain Set of the members as their set holds them,
-  the target's first.
-- **Collection mutations are one batch**: immediate readers run once after a
-  `set`, `add`, `delete` or `clear`, even when they read several affected keys.
-  A throwing reader leaves the other keys' readers notified. `set` and `add`
-  return the reactive collection, so chained calls stay reactive.
-- **`Map` and `WeakMap` upsert methods** (`getOrInsert`,
-  `getOrInsertComputed`) read and notify their entry through the proxy,
-  keeping the same raw/deep and shallow value rules as `get` and `set`.
-- **A shallow proxy** (`signal.Array`, `signal.Object`) keeps a proxy written
-  into it, as a shallow Map keeps a proxy value. A Set member and a Map key are
-  stored raw by every kind, as upstream; a collection that already holds a
-  proxy (built before it was wrapped) finds it, deletes it and notifies its
-  readers through it.
-- **`obj.hasOwnProperty(k)` through a proxy subscribes to the presence of
-  `k`**, as `in` does. `Object.defineProperty` stays untracked, as upstream
-  (Odoo's web_studio defines a label getter on a proxied field inside a
-  computed). `Object.hasOwn`, `propertyIsEnumerable` and
-  `Object.getOwnPropertyDescriptor` stay untracked too: tracking them takes a
-  `getOwnPropertyDescriptor` trap, which also runs for every write through the
-  proxy (the write asks its receiver, the proxy, for the key's descriptor) and
-  for every key `Object.keys`, a spread or `JSON.stringify` lists. Measured on
-  Node 26, a forwarding trap alone: a write 244 -> 355 ns, `Object.keys` of 100
-  keys 16 -> 24 µs; in Odoo, 11 000 to 14 000 trap calls per list or kanban
-  navigation over 49 records. Ask with `in` or `obj.hasOwnProperty(k)`.
-- **A locked (non-configurable, non-writable) property** is handed out as it
-  is by collections and `observe()` views too, as the Proxy invariant requires.
-- **A collection's own properties** are read with the proxy as `this` (a
-  subclass getter is tracked) and observed apart from its entries. Set
-  operations reject a non-set-like argument as the native ones do.
-- **`includes` / `indexOf` / `lastIndexOf`** on a proxied plain array
-  subscribe to its items as one atom and search the raw array; a subclass of
-  `Array` is searched through its proxy, as for `t-foreach`.
-- **A read through an `observe()` view between a change and its callback**
-  (later in the same `batch`, or by an immediate reader the change ran first)
-  is observed after the callback, instead of being dropped with the
-  subscriptions the callback ends; the view holds it from the read on, so it
-  survives its last other reader stopping before the callback runs.
-- **Through an `observe()` view**, `forEach` hands out views; a `push` or
-  `splice` reads the length through the view and calls its callback, as OWL 2's
-  `reactive([], callback)` did. Collection iterators preserve array members'
-  identity, yield live views, and support iterator helpers.
-- **A constructor in a type schema** (`{ a: String }`) throws instead of
-  accepting everything, at the top level too (`validateType(42, String)`, a
-  registry's `validation`, `props.static`); a `customValidator` of an optional
-  type is optional, with that type's default. `t.ref()` can be declared
-  without a DOM; only checking a non-null value needs one. `applyDefaults`
-  fills plain data only (an object of `Object.prototype`, of any realm, or
-  `null`, or a plain array): an instance of a class (an `Array` subclass, an
-  object with private members) or an object inheriting from another is
-  returned as it is instead of copied into a plain object.
-- **A schema is typed as a schema**, not as the value it describes (upstream's
-  `Type<T> = T & {…}` let `t.number().toFixed()` and `const s: string =
-t.string()` compile): `Schema<T>` is a validator carrying `T` under a
-  module-private brand, so the declarations export no phantom symbol values.
-  `Registry` / `Resource` `validation`, and the type of `useConfig` and
-  `props.static`, take a `Schema<V>`, entries typed `V`. `registry.get(key,
-d)` is typed `V | D`; `useListener` takes any function reading a target. A component's
-  `this.constructor` is typed as its class (`template`, `components`, and the
-  `props` it declares), so `useProps(this.constructor.props)` type-checks;
-  upstream leaves it `Function`.
-- **A plugin dependency cycle through constructors or field initializers**
-  throws "Circular plugin dependency" instead of overflowing the stack; plugins
-  asking for each other in `setup()` each get the other (logged on the `plugin`
-  channel). A synchronous start failure leaves no later batch pending.
-- **A plugin without a declared `static id`** is found only for its own class
-  (`getPlugin` / `usePlugin` check `instanceof`, and look past another class of
-  that name to the parent managers): two classes named `Theme` were one plugin. A declared id keeps upstream's shadowing by id. A
-  dependency started implicitly with its dependent's id throws the
+See [specification: Proxies](specification.md#proxies),
+[Validation](specification.md#validation),
+[Plugins](specification.md#plugins) and
+[Registries](specification.md#registries).
+
+- A getter or setter reaching a private member through a proxy throws an
+  OwlError naming `markRaw(<Class>.prototype)`; `markRaw` of a built-in
+  prototype throws.
+- A write through a setter, an array write and a delete are each one batch; a
+  setter's getter is called only when the key is observed; an index written
+  past the end of an array behind its own Proxy notifies its length.
+- A Map proxy has no `add`; set operations (`union`, `intersection`, …) check
+  and read their argument as the native ones do, compare members raw and return
+  a plain Set.
+- Collection mutations are one batch, and `set` and `add` return the reactive
+  collection; `getOrInsert` and `getOrInsertComputed` are reactive.
+- A shallow proxy keeps a proxy written into it; a collection that already
+  holds a proxy finds it and notifies through it (members and keys stay raw, as
+  upstream).
+- `obj.hasOwnProperty(k)` through a proxy subscribes to the presence of `k`;
+  `Object.defineProperty`, `Object.hasOwn`, `propertyIsEnumerable` and
+  `Object.getOwnPropertyDescriptor` stay untracked, as upstream.
+- A locked property is handed out as it is by collections and `observe()`
+  views too.
+- A collection's own properties are read with the proxy as `this`, apart from
+  its entries.
+- `includes` / `indexOf` / `lastIndexOf` on a proxied plain array subscribe to
+  one atom and search the raw array.
+- An `observe()` view keeps a read made between a change and its callback
+  (upstream dropped it with the subscriptions the callback ends); `forEach`,
+  `push`, `splice` and collection iterators go through the view, as OWL 2's
+  `reactive([], callback)` did.
+- A constructor in a type schema throws (upstream accepted everything), at the
+  top level too; an optional type's `customValidator` is optional; `t.ref()`
+  is declared without a DOM; `applyDefaults` copies plain data only.
+- A schema is typed as a schema (upstream's `Type<T> = T & {…}` let
+  `t.number().toFixed()` compile), and so are `Registry` / `Resource`
+  `validation`, `useConfig`, `registry.get(key, d)` and `useListener`; a
+  component's `this.constructor` is typed as its class (upstream: `Function`).
+- A plugin dependency cycle throws "Circular plugin dependency" (upstream
+  overflowed the stack); plugins asking for each other in `setup()` each get
+  the other; a synchronous start failure leaves no later batch pending.
+- A plugin without a declared `static id` is found only for its own class (two
+  classes named `Theme` were one plugin), while a declared id still shadows by
+  id, as upstream; a dependency started with its dependent's id throws the
   duplicate-id error instead of being overwritten.
-- **Plugin starts**: plugins started from a plugin's `setup()` hold the batch
-  that started it, so neither `ready` nor the manager's status gets ahead of
-  them; a plugin of a child manager asking for one its parent has pending throws
-  "not started yet" instead of starting a copy, unless the child lists it; a plugin deferred
-  behind a pending start is pending too; a rejected start no longer blocks
-  later ones; an empty list or resource leaves the manager ready (`new App({
-plugins: [] })` rendered asynchronously); a resource-driven start belongs to
-  its manager, not to the effect it was called in; `startPlugin` runs in its
-  manager's scope, untracked, and refuses a destroyed manager.
-- **Plugins are torn down before the plugins they use**: each plugin's destroy
-  callbacks are one group, registered when its start ends, so groups run in
-  reverse order of completion. `useConfig` ignores `Object.prototype` members.
-- **An App whose constructor fails while starting plugins** destroys earlier
-  plugins and unregisters itself, since its caller gets no App to destroy.
-- **A forced `registry.use()`** restores the entry it overwrote when it ends.
+- Plugin starts: nested starts hold their batch, a child manager no longer
+  starts a copy of its parent's pending plugin, a plugin deferred behind a
+  pending start is pending too, a rejected start no longer blocks later ones,
+  an empty list leaves the manager ready, a resource-driven start belongs to
+  its manager, and `startPlugin` runs in its manager's scope.
+- Plugins are torn down before the plugins they use; `useConfig` ignores
+  `Object.prototype` members; an App whose constructor fails while starting
+  plugins cleans up after itself.
+- A forced `registry.use()` restores the entry it overwrote when it ends.
 
 ### Components and rendering
 
-- **A dynamic `t-component`** keys its child by an id of the class, not its
-  name: two classes with the same name are two components.
-- **`__owl__.children` lists committed children only**; a component a pending
-  render creates appears once that render is committed.
-- **A rejected `onWillStart` / `onWillUpdateProps`** of a render a newer one
-  replaced, or of a destroyed component, is dropped (logged on `error`).
-- **After a render pass fails** and its error is handled without a re-render,
-  its other mounted components keep rendering on their own, a render one asks
-  for while its `onWillUpdateProps` waits included; a component the pass
-  created waits for the pass. A commit is never committed again: a component a
-  failed commit already patched or mounted gets its `onPatched` or `onMounted`
-  (and only then `onWillUnmount`) from the next commit of it or of a component
-  below it, and no `onWillPatch` / `onPatched` while it is owed `onMounted`.
-- **A first mount that throws half way** removes what it inserted, unsets the
-  refs it set, and takes the children it mounted back to unmounted (no
-  `onWillUnmount` runs for them); the error is handled first, then the recovery
-  destroys them and mounts afresh instead of patching a half-mounted tree.
-  Nothing handling the error, `mount()` rejects with that error.
-- **An `onWillUnmount` that throws during a patch** no longer aborts it: the
-  error is handled, from the removed component, once the patch is done; a
-  removal outside any patch (`blockDom.remove`) throws it.
-- **A synchronous throw in `onWillUpdateProps`** is handled as a rejection is,
-  by the component's own `onError` first; props validation still fails the
-  parent's render.
-- **A Suspense's content belongs to its DOM**: it moves with the Suspense in
-  a list, and works under a shadow root.
-- **An error no handler catches under a Portal or Suspense** destroys the app
-  once, like any other.
-- **An `ErrorBoundary`** passes an error caught while its fallback shows to
-  its parent; **`mount()`** destroys the App it created when the mount fails,
-  and rejects with an `AbortError` when that App is destroyed first;
-  **`render(true)`** renders every `t-memo` item again, and the content of a
-  Portal or Suspense too (a separate root, once the host's render is done).
+See [specification: Rendering](specification.md#rendering).
+
+- A dynamic `t-component` keys its child by an id of the class, not its name.
+- `__owl__.children` lists committed children only.
+- A rejected `onWillStart` / `onWillUpdateProps` of a superseded render or a
+  removed component is dropped.
+- After a failed render pass, the other components keep rendering on their
+  own, and a commit is never committed again.
+- A first mount that throws half way rolls back, then the recovery mounts
+  afresh instead of patching a half-mounted tree.
+- An `onWillUnmount` that throws during a patch no longer aborts it.
+- A synchronous throw in `onWillUpdateProps` is handled as a rejection is.
+- A Suspense's content moves with its DOM and works under a shadow root; an
+  error no handler catches under a Portal or Suspense destroys the app once.
+- An `ErrorBoundary` passes an error of its fallback to its parent; `mount()`
+  destroys the App it created when the mount fails, and rejects with an
+  `AbortError` when that App is destroyed first; `render(true)` reaches
+  `t-memo` items and the content of a Portal or Suspense.
 
 ### Blockdom and events
 
-- **A bound property** (`t-att-value`, `t-attf-value`, `t-att-checked`,
-  `disabled`, `readOnly`, `selected`, `indeterminate`) is given to its block as
-  its value and its setter runs on every patch (a value is always written, a
-  flag only when the element differs); upstream wraps each in a new
-  `String`/`Boolean` per render. `t-model`'s property is set only when the
-  model changes.
-- **A `class`, `style` or `t-att` object is applied at every patch**, diffed
-  against a normalized copy of what its slot last wrote, so one changed in
-  place shows; upstream skips a value identical to the previous one and diffs
-  against that value, mutated too. A string equal to the last one is skipped.
-  A class whose value is truthy but not `true` is not written again; the
-  classes of an element without a static one are written in one
-  `setAttribute` on mount. Owl never repairs a class, style or attribute
-  changed by other code: it writes what differs from its own last write, so
-  a class removed by other code stays removed while its value stays truthy.
-- **A block string has one block type**, given its handlers at each call
-  (`type(data, children, handlers)`, the list checked by
-  `createBlock(str, list)`; a missing list throws at mount), so making an
-  App's template functions makes no block type per handler site.
-- **A handler's code is static**: `createCatcher(spec, [fns])`; a render gives a handler only its context (a
-  `t-model`'s model in a slot linked by `block-handler-arg-N`), the element
-  reads code, context and model from its block when the event fires, and
-  modifiers come from the key. `config.mainEventHandler` is
-  `(fn, mods, ctx, ev, currentTarget, arg?)`, called once per handler (a
-  synthetic catcher runs its dispatch itself, not through it). A render
-  allocates no handler array. A mounted block's `toString()` is its
-  element's markup (upstream mounted the block again, losing it).
-- **A child's key is exact**: the site id, each loop key and `t-key`, slot and
-  template names are segments (`\u0002`, a tag, a payload; a payload's
-  `\u0002` doubled), so no value of any type or content spells another
-  child's key. A loop key carries its type (`1` and `"1"` are two keys; an
-  array is compared by its items), and a slot's default content has its own
-  segment. Upstream concatenates strings, and a collision leaves a component
-  no deep render or destroy reaches. A list item is diffed by that same key
-  (an array or `NaN` key keeps its item, its `t-memo` entry and the dev
-  duplicate check), and a `t-key` keys every component under it, through a
-  `t-if`, several children or a nested `t-key`. Before, such an item or such a
-  `t-key`'s content was remounted while its components kept their key, and
-  the render crashed.
-- **A `t-set` body output by another component renders in that component**:
-  its components are that component's children, its expressions still read
-  the context they were written in (upstream creates them in the component
-  that set the body, whose fiber may be gone, and crashes).
-- **A `t-on` on a component or slot mounted by its component's own render**
-  looks up the handler enclosing it at its first dispatch, not mid-patch
-  (logged on `event`).
-- **A list empties its parent at once only when its items, one node each,
-  and its anchor are all the parent holds** (checked node by node, again
-  after the unmount hooks); otherwise it removes them one by one. What a
-  Portal or a widget put before, after or among the items survives either
-  way. A text, html or multi anchor removal does nothing once its node is
-  detached.
-- **A `value` property** (`t-att-value`, `t-model`) is set after the element's
-  other attributes and its children: a select finds its `t-foreach` options,
-  a range input its `max`. `disabled`, `readOnly`, `checked`, `selected` and
-  `indeterminate` are written only when the element holds another value;
-  `value` is written on every patch, as upstream.
-- **Synthetic (`.synthetic`) handlers** also listen on the shadow root or other
-  document an app is mounted in (a root is found when something mounts into
-  it: a target mounted detached and moved into a shadow root later is not
-  listened on there, so of the events inside it only the composed ones, which
-  the document's listener also sees, reach its synthetic handlers; a `change`
-  or `submit` does not); each root replays only the nodes of its own
-  tree, with the target a native listener there would see (capture handlers
-  inside a shadow root, closed ones included, run for composed events). The
-  handlers of one event and phase, passive or not, are replayed in one pass,
-  in path order, up to a stop; a passive one cannot prevent the default. On
-  one element, the synthetic `t-on`s of components among its children run as
-  a level inside the element's own: before them as the event bubbles, after
-  them for `.capture`, and a stop in one level skips the other (before, they
-  ran in the order their kinds were first used in the page, and never
-  stopped each other). A root that was garbage-collected is dropped, and with none left the events
-  of the document skip the per-root replay range again.
-- **Every component `t-on` on a parent element shares one listener per kind**
-  (event name, capture, synthetic), made once per kind and kept on no property
-  of the parent; it is passive while every handler of that kind on that parent
-  is (a passive one's `preventDefault` is ignored otherwise). The catchers run
-  as nested elements would, whatever site or render made each: a nested
-  component's handler before the enclosing one's as the event bubbles, the
-  enclosing one's first for `.capture`; a stop in one skips the ones around it,
-  `stopImmediatePropagation()` every other (upstream walked the catchers inside
-  out in both phases and never stopped). A native listener on that parent runs
-  before or after all of them, not between; the parent's own native `t-on`s
-  run before them in both phases, and a stop on either side does not skip
-  the other, as upstream (they are listeners of one element). `t-on-*.self` on a component means the event targets one of its
-  root elements.
-- **An explicit `xmlns` inside a namespaced block is its element's
-  namespace** (upstream kept the enclosing one: a `<div xmlns="…xhtml">` in a
-  `foreignObject` was an SVG element). **A prefixed dynamic attribute**
-  (`xlink:`, `xml:`, or a prefix in scope in the block string), a `t-att` name
-  included, is set and removed in its namespace, as a static one is.
-- **A ref is set once its element is in the document, outermost first**: the
-  ref callbacks of a mount run once its outermost block is inserted, a block's
-  before those of the blocks inside it, each block's in document order
-  (upstream ran a nested block's before its parent element was inserted, on a
-  detached element). **Removing a block releases the refs of
-  the blocks inside it**: every VNode has `detachRefs()` (no DOM work; multi,
-  list, toggler, catcher and component nodes forward it), which `remove()` of
-  a block calls; upstream called only the removed block's own, and a `{set}`
-  ref kept the removed element. A component tracks no refs: upstream checked
-  `isConnected` on every signal ref and set-like ref element it had bound,
-  after each of its patches. So a ref is cleared when owl removes its element,
-  however deep; an element removed by other code keeps its ref until owl
-  removes it or binds the ref elsewhere (upstream cleared it at the
-  component's next patch).
-- **A proxied class or style object** (`t-att-class`, `t-att-style`, inside a
-  class array, or the `class` / `style` of a `t-att` object) has its keys and
-  values read during the render (`objectAttrValue`), so a change made to it in
-  place renders the component again; upstream read them only at the patch,
-  untracked, and the change showed only once something else re-rendered. A
-  plain object is not walked again.
-- **A `t-set` body given to an attribute, interpolation, property or `t-att`
-  is its string taken during the render** (`attrValue` / `attrsValue`), so the
-  attribute follows what the body reads.
-- **`String()` of a `t-set` body** throws when the body holds a component
-  (which it would create and never mount); a text node stringifies to its text,
-  a bigint to its digits (`0n` included), a symbol as `String()` gives it
-  (`Symbol(s)`).
-- **`.passive` with `.prevent` throws** when the template compiles; the
-  modifier mask also carries `.capture`, `.passive` and `.synthetic`, the one
-  parse every listener reads.
-- **A prefixed attribute** (`xml:lang`, `xlink:href`, `xmlns:xlink`, or a
-  prefix the template declares) is given its namespace in the block string, so
-  it keeps it in a block of its own and the template compiles under JSDOM too
-  (the standalone precompiler). A
-  prefixed element name (`<s:Envelope>`) still does not compile there.
-- **`t-tag` rejects prefixed and `block-` names**; a malformed block string and
-  a `t-att` given a string (a `Markup` included) or a number throw an
-  OwlError. A dynamic `t-call` key cannot collide across loop items, and
-  symbols are valid `t-key`s.
+See [specification: Events and blockdom](specification.md#events-and-blockdom).
+
+- A bound property is given to its block as its value (upstream wraps each in
+  a new `String`/`Boolean` per render); `value` is set after the element's
+  other attributes and children.
+- A `class`, `style` or `t-att` object is applied at every patch against a
+  copy of what its slot last wrote (upstream skips a value identical to the
+  previous one and diffs against that value, mutated too); Owl never repairs
+  changes made by other code.
+- A proxied class or style object is read during the render (upstream read it
+  only at the patch, untracked, so a change in place showed only once something
+  else re-rendered).
+- A block string has one block type, given its handlers at each call; a
+  handler's code is static; a mounted block's `toString()` is its element's
+  markup (upstream mounted the block again, losing it).
+- A child's key is exact (upstream concatenates strings, and a collision leaves
+  a component no deep render or destroy reaches); a list item is diffed by that
+  key, and a `t-key` keys every component under it (before, such content was
+  remounted while its components kept their key, and the render crashed).
+- A `t-set` body output by another component renders in that component
+  (upstream creates its components in the component that set the body, whose
+  fiber may be gone, and crashes); given to an attribute it is its string at
+  render; `String()` of it throws when it holds a component.
+- A `t-on` on a component or slot mounted by its component's own render finds
+  its enclosing handler at its first dispatch, not mid-patch.
+- The component `t-on`s on a parent element share one listener per kind and
+  run as nested elements would (upstream walked the catchers inside out in both
+  phases and never stopped).
+- Synthetic handlers also listen on shadow roots and other documents, each
+  root replaying its own nodes in one pass; a component's synthetic handlers
+  form a level inside its parent element's (before, they ran in the order their
+  kinds were first used in the page, and never stopped each other).
+- A list empties its parent at once only when its items and anchor are all the
+  parent holds.
+- An explicit `xmlns` inside a namespaced block is its element's namespace
+  (upstream kept the enclosing one); a prefixed attribute, static or dynamic,
+  keeps its namespace.
+- A ref is set once its element is in the document, outermost first (upstream
+  ran a nested block's before its parent element was inserted); removing a
+  block releases the refs inside it (upstream released only the removed
+  block's own); an element removed by other code keeps its ref until owl
+  removes it (upstream cleared it at the component's next patch).
+- `.passive` with `.prevent` throws when the template compiles.
+- `t-tag` rejects prefixed and `block-` names; a malformed block string, and a
+  `t-att` given a string or a number, throw; a dynamic `t-call` key cannot
+  collide across loop items; symbols are valid `t-key`s.
 
 ### Templates
 
-- **What is read later sees the values at its place**: an event handler, a
-  slot's content, a called template's context, a `t-set` body and an arrow
-  function given as a prop, a `t-props` value, a `t-call` argument or a slot
-  argument read the variables as they were where the template gives them, as
-  OWL 2 did
-  (upstream OWL 3 read them when the event fires, or when the child renders
-  its slot on its own: a later `t-set`, or a later loop item writing a
-  variable of an enclosing scope, showed through). The compiler copies the
-  context there only when a later `t-set` of the same template can write a
-  variable that code reads (a called template's reads are not known: any);
-  else it is kept as it is. Handlers, arrow functions, slots, t-call bodies
-  and `t-set` bodies with no `t-set` between them share one copy (a
-  component's slots too, which took one each). In Odoo's 3491 templates
-  (2026-10-19), 127 places in 55 templates are copied. A `t-set` body reads its variables at its `t-set`
-  (upstream: at its output), as QWeb in Python does.
-- **A directive on a `t-set-slot` node makes only its content conditional**,
-  as upstream, documented as it works: the slot is always given, so the
-  child's default content never shows and `props.slots.<name>` is always set.
-  Odoo's 15 such sites (a `t-if` on the slot node) rely on the slot being
-  there: `hasSlot()` in `ViewLayout`, `props.slots.collapse` in `BuilderRow`.
-- **Scoping as QWeb's**, documented as it works: a `t-if` or an element opens
-  no scope; a loop item does, and writes a variable `t-set` earlier outside
-  it in the same template.
-- **A `t-out` showing one `t-set` body, then another** (the variable set again
-  in a branch) replaces the content: upstream patched one body's blocks with
-  the other's, which crashed when one was a list, and else kept showing the
-  first.
-- **A `t-call-block`'s block and a slot output without default content are
-  replaced when their kind changes**: a block of another constructor (a
-  multi of another length or with children of another kind at a place both
-  fill, a list of items of another kind), or a slot of another render function (a
-  forwarded slot that comes, goes or is swapped), is mounted in place of the
-  previous one. Upstream patched one into
-  the other (a text into a `<div>` block rendered an empty `<div>`).
-- **A directive Owl would drop throws**: a `<t>` left bare (also by `t-if`,
-  `t-foreach`, …) takes no `t-*` attribute but a template root's `t-name`,
-  `t-inherit`, `t-inherit-mode` and translation contexts, a `t-set` none but
-  `t-value`; `t-call-block` and `t-call-slot` go on a `<t>`, and `t-call-block`
-  takes no content. A `t-set-slot`'s arguments are the attributes no directive
-  on it consumed (a `t-call` there keeps its own). Upstream ignored them
-  (`t-raw`, a typo such as `t-esle`, `t-att-class` on a `<t>`, a `t-set-slot`
-  outside a component).
-- **A `t-set` with a `t-value` and a blank body takes the value** (upstream
-  took the whitespace as its default, truthy for a falsy value), and **a CDATA
-  section is text**, in an element or a `t-set` body (upstream dropped it).
-- **A directive that needs an expression throws on an empty one**, naming it
-  (`t-tag` included, which upstream ignored), as do a `t-call`, `t-call-slot`
-  or `t-slot` with an empty name; a `t-set-slot` nested directly in another
-  throws.
-- **`t-out="0"` with blanks around the `0`** outputs the call's body (upstream:
-  the number); **`t-model.trim` on a checkbox** throws (it compiled
-  `ev.target.checked.trim()`).
-- **`t-model.number`** checks the radio, or selects the static option, whose
-  value equals the model's number.
-- **A template that does not compile names what is wrong**: an invalid
-  expression is named with why and with the attribute and element holding it
-  (``invalid expression `'abc` in t-att-x="'abc" (on a <i>): unterminated string``),
-  whether the tokenizer rejects it or JavaScript does, instead of "could not
-  tokenize" or the bare JavaScript error and the generated code (shown only
-  when no single expression is to blame); every compile error of a named
-  template names it, on its first line; `this` is refused as a template
-  variable (expressions read it as the component).
-  `owl-compiler/tests/compile_errors.test.ts` holds one template per error.
-- **Template expressions skip comments**; a statement keyword in an arrow's
-  block body, and an object literal method, accessor or generator
-  (`{ f() {} }`, `{ 'f'() {} }`, `{ [k]() {} }`, `{ get g() {} }`,
-  `{ *g() {} }`), and a function expression with a name or parameters
-  (`function (x) {}`, `function f() {}`), throw a named error; `1 .toString()` keeps its space; `delete` is an operator (`delete o.x`
-  compiles; a context variable cannot be named `delete`); `{{ }}` and `#{ }`
-  end at the brace that closes them, past a regular expression after a
-  division or a division after an object literal; an arrow prop's free
-  variables include those its parameter defaults read; a division before a
-  regular expression, and `<` before `!--`, compile apart instead of into a
-  comment, and `.5.toFixed(1)` keeps its property.
-- **A prop, t-call or slot argument with two suffixes** (`a.bind.translate`)
-  throws `Invalid prop suffix`; upstream applied one of them.
-- **Slots are not marked raw per render**: `callSlot` renders a descriptor
-  read through a proxy from its raw object (logged on `template`); slots put in
-  proxied state come back proxied, like any prop.
-- **An item of a loop in a loop, and a t-call context (with attributes or a
-  body) in a loop, are made under the outer item's prototype with a copy of
-  its loop names**, when no `t-set` writes that loop level and no expression
-  of the template assigns a context variable: the outer item does not become a
-  prototype (V8 deoptimizes a fresh object made one). Only a context variable
-  assigned at event time by a bare-called template could tell the difference.
-- **A slot without a slot scope and a t-call with neither attributes nor body
-  render in the context they are given**, not a child of it (only a bare-name
-  `t-model.proxy` can tell): a new context under one made in this render costs
-  V8 about 1.6 µs and 1.2 KB. A render makes no function for its slots, slot
-  defaults, t-call bodies and t-out bodies. `t-props` copies with object
-  spread (an own `__proto__` key is a prop). A t-call attribute is assigned on
-  the new context, so one named like a getter-only property up the context
-  chain is ignored (Owl's own contexts hold none).
-- **`__info__.hash`** is the commit, plus `-dirty-<digest>` when the sources
-  differ from it; outside a git checkout, `nogit-<digest of the sources>`. **`__info__.date`**
-  is `SOURCE_DATE_EPOCH` if set (whole seconds; anything else fails the
-  build by name), else the commit's date for a clean build (two builds of a
-  commit are the same bytes), else the build time.
+See [specification: Templates](specification.md#templates).
 
-Several debug texts are shorter than in earlier fork builds, and `debug` is
-built from `DEBUG_CHANNELS`.
+- What is read later (handlers, slots, `t-set` bodies, arrow props, …) sees the
+  variables at its place, as OWL 2 did (upstream OWL 3 read them when the event
+  fires, or when the child renders its slot on its own); a `t-set` body reads
+  them at its `t-set` (upstream: at its output), as QWeb in Python does.
+- A directive on a `t-set-slot` node makes only its content conditional, and
+  scoping is QWeb's: both as upstream, now documented.
+- A `t-out` showing one `t-set` body, then another, replaces the content
+  (upstream patched one body's blocks with the other's, crashing on a list).
+- A `t-call-block`'s block or a slot output of another kind replaces the
+  previous one (upstream patched one into the other).
+- A directive Owl would drop throws (upstream ignored `t-raw`, a typo such as
+  `t-esle`, `t-att-class` on a `<t>`, a `t-set-slot` outside a component).
+- A `t-set` with a `t-value` and a blank body takes the value (upstream took
+  the whitespace); a CDATA section is text (upstream dropped it).
+- A directive needing an expression throws on an empty one, `t-tag` included
+  (upstream ignored it); a `t-set-slot` nested directly in another throws.
+- `t-out="0"` with blanks around the `0` outputs the call's body (upstream: the
+  number); `t-model.trim` on a checkbox throws (it compiled
+  `ev.target.checked.trim()`); `t-model.number` matches radios and static
+  options.
+- A template that does not compile names the expression, its attribute,
+  element and template (upstream: "could not tokenize", or the bare JavaScript
+  error and the generated code); `this` is refused as a template variable.
+- Template expressions skip comments, reject statements, object literal
+  methods and function expressions by name, and parse `1 .toString()`,
+  `delete`, interpolation ends and divisions correctly.
+- A prop with two suffixes throws `Invalid prop suffix` (upstream applied one
+  of them).
+- Slots are not marked raw per render.
+- Nested loop items, and t-call contexts in loops, are made under the outer
+  item's prototype; a slot without a slot scope and a bare t-call render in the
+  context they are given.
+- `__info__.hash` and `__info__.date` name the build's sources and date.
+
+### Not in the specification
+
+What the specification does not state: behaviour no test there asserts, the
+reasons behind a design, and Odoo's stakes.
+
+**Template expressions and names.**
+
+- Template expressions read JavaScript's standard globals (`String`, `Number`,
+  `Boolean`, `JSON`, `parseInt`, `parseFloat`, `isNaN`, `Map`, `Set`, `Intl`,
+  `Infinity`, `Promise`, `Reflect`, `WeakMap`, `globalThis`, the error types,
+  the typed arrays, the URI functions, …) as the globals, not from the
+  context: every global of a fresh JavaScript context that all four targets
+  have (a test holds the list to Node's), so not `SharedArrayBuffer` (a
+  browser global only in a cross-origin-isolated page), `Temporal`,
+  `DisposableStack`, `AsyncDisposableStack` or `SuppressedError` (not in
+  Safari).
+  Upstream reads them from the component and gets `undefined`.
+- A `t-set`, `t-as`, `t-slot-scope` or `t-call` argument named like a global
+  or a keyword (`null`), not an identifier (`a-b`, `data-label`, an empty
+  name), or an operator word (`and`, `or`, `gt`, `gte`, `lt`, `lte`, `typeof`,
+  `delete`) throws; a `t-call` argument's suffix (`label.translate`) is not
+  part of its name.
+- `t-else` with a `t-if` on the same node is an else branch holding the `if`,
+  as `t-elif` reads (template inheritance produces it when an extension adds a
+  `t-if` to an else node); `t-elif` beside another branch directive throws.
+- A translation context (`t-translation-context-*`) beside `t-out` or
+  `t-call-block` is not an unsupported directive.
+- `String()` of a `t-set` body gives a symbol as `String()` gives it
+  (`Symbol(s)`).
+- The standalone precompiler: a prefixed attribute is given its namespace in
+  the block string so the template compiles under JSDOM too, while a prefixed
+  element name (`<s:Envelope>`) still does not compile there.
+- Values at their place hold for a `t-props` value, a `t-call` argument, a
+  slot argument and a called template's context too; two suffixes throw for a
+  t-call or slot argument too; an element, like a `t-if`, opens no scope.
+- `owl-compiler/tests/compile_errors.test.ts` holds one template per compile
+  error.
+
+**Reactivity, proxies and props.**
+
+- Nested effects clean up inner first: an effect's children are disposed
+  before its own cleanup runs, on a re-run and on dispose.
+- A signal written and set back before its readers run changed nothing for
+  them (default equality only; a custom `equals` and `signal.trigger` always
+  notify); an effect that writes a signal and reads it again runs when the
+  value it read first comes back.
+- Proxy reads nobody observes create no atom, and `in` / `has()` subscribe to
+  the presence of the key they ask about only; a `props()` view's key read
+  only untracked (in `setup`) gets no atom. A key's atom is released when its
+  last reader unsubscribes, so a target nobody reads any more is written as one
+  never read, and `clear()` notifies only the keys something reads, walking
+  those keys instead of the collection when they are fewer and all primitive.
+- A `props({...})` view inherits from one frozen, empty object whose own
+  prototype is `null`: the views of a component class share one hidden class,
+  where upstream's are each a dictionary. It still inherits no key.
+- A props view is raw to `proxy()`, both kinds: a proxy of its component hands
+  out the view itself and its values unwrapped. Upstream's getters close over
+  their signals and read through such a proxy; the fork's shared accessors
+  find their view in a private field, which a proxy hides.
+- A `t-foreach` over a `proxy()` of a plain array reads its items in one step,
+  one subscription for the whole array; a subclass of `Array` (Odoo's mail
+  `RecordList`, which answers its index reads through its own proxy) is
+  iterated, and searched, through its proxy.
+- `Object.hasOwn`, `propertyIsEnumerable` and `Object.getOwnPropertyDescriptor`
+  stay untracked because tracking them takes a `getOwnPropertyDescriptor` trap,
+  which also runs for every write through the proxy and for every key
+  `Object.keys`, a spread or `JSON.stringify` lists. Measured on Node 26, a
+  forwarding trap alone: a write 244 -> 355 ns, `Object.keys` of 100 keys
+  16 -> 24 µs; in Odoo, 11 000 to 14 000 trap calls per list or kanban
+  navigation over 49 records. Ask with `in` or `obj.hasOwnProperty(k)`.
+- `Object.defineProperty` stays untracked because Odoo's web_studio defines a
+  label getter on a proxied field inside a computed.
+- An `observe()` view subscribes in any context because Odoo's
+  `useRecordObserver` first reads its view in `onWillStart`, which runs
+  untracked.
+- `props.static` takes a `Schema<V>`, and a constructor given to it as a type
+  throws, as for `validateType`.
+
+**Rendering.**
+
+- A cancelled render pass does not make a child run `onWillUpdateProps` again
+  for props it already holds.
+- A failed commit's component gets no `onWillPatch` either while it is owed
+  `onMounted`.
+- `render(true)` renders a Portal's or Suspense's content as a separate root,
+  once the host's render is done.
+
+**Blockdom internals.**
+
+- A handler's code is static: `createCatcher(spec, [fns])`; a render gives a
+  handler only its context (a `t-model`'s model in a slot linked by
+  `block-handler-arg-N`), the element reads code, context and model from its
+  block when the event fires, and modifiers come from the key.
+  `config.mainEventHandler` is `(fn, mods, ctx, ev, currentTarget, arg?)`.
+- A child key's segments are `\u0002`, a tag and a payload, a payload's
+  `\u0002` doubled.
+- The classes of an element without a static one are written in one
+  `setAttribute` on mount; a plain class or style object is not walked again
+  during the render, as a proxied one is (`objectAttrValue`); a `t-set` body
+  given to an attribute is taken by `attrValue` / `attrsValue`.
+- A list checks that it is alone in its parent node by node, again after the
+  unmount hooks; a text, html or multi anchor removal does nothing once its
+  node is detached.
+- Every VNode has `detachRefs()` (no DOM work; multi, list, toggler, catcher
+  and component nodes forward it), which `remove()` of a block calls. A
+  component tracks no refs: upstream checked `isConnected` on every signal ref
+  and set-like ref element it had bound, after each of its patches.
+- One listener per kind is made once per kind. In a root not listened on, a
+  synthetic `submit` does not reach its handlers either, as `change` does not:
+  only composed events, which the document's listener also sees, do.
+- The modifier mask is the one parse every listener reads.
+
+**Context copies and allocations.**
+
+- The compiler copies the context for values read later only when a later
+  `t-set` of the same template can write a variable that code reads (a called
+  template's reads are not known: any); a component's slots share that copy
+  too, where they took one each. In Odoo's 3491 templates (2026-10-19), 127
+  places in 55 templates are copied.
+- Nested loop items are made under the outer item's prototype so the outer
+  item does not become a prototype (V8 deoptimizes a fresh object made one);
+  only a context variable assigned at event time by a bare-called template
+  could tell the difference.
+- A slot without a slot scope and a bare t-call render in the given context
+  because a new context under one made in this render costs V8 about 1.6 µs
+  and 1.2 KB; only a bare-name `t-model.proxy` can tell.
+
+**Odoo's stakes.**
+
+- A directive on a `t-set-slot` node: Odoo's 15 such sites (a `t-if` on the
+  slot node) rely on the slot being there: `hasSlot()` in `ViewLayout`,
+  `props.slots.collapse` in `BuilderRow`.
+
+**Build and debugging.**
+
+- Two builds of a commit are the same bytes, since a clean build is dated by
+  its commit.
+- Several debug texts are shorter than in earlier fork builds, and `debug` is
+  built from `DEBUG_CHANNELS`.
 
 ## Odoo integration contract
 
