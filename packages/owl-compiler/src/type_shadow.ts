@@ -35,6 +35,15 @@ export interface TypeShadowOptions {
   // its reads are checked against the caller's component and variables.
   // Without it, a callee is not followed.
   getTemplate?: (name: string) => string | Element | null;
+  // The templates an interpolated t-call may render
+  // (`{{ this.constructor.rowTemplate }}`), by name, each written in place
+  // as a static callee is. Without it, such a call is not followed.
+  dynamicCallees?: (name: string) => string[];
+  // The type of `this.props`, where it is not the component type's own
+  // (an Odoo component's props field is typed any; OWL validates the static
+  // schema): the shadow reads `this.props` as a value of it, and `this`
+  // keeps the component type whole, its private members included.
+  propsType?: string;
   // The type of the variables the template is rendered with, where it is
   // rendered with some (renderToString's context, a tooltip's info): each
   // variable it reads is a property of it. Without it, a variable the
@@ -112,19 +121,40 @@ function variable(name: string): string {
   return KEYWORDS.has(name) ? `__owlVar_${name}` : name;
 }
 
-// The expression as TypeScript reads it. An object literal may hold `this` as
-// a shorthand key, which processExpr expands and JavaScript does not.
 // The template variables the expressions written meanwhile read, while a
 // callee is being written.
 let reads: Set<string> | null = null;
+// Whether `this.props` is read as __owlProps: outside a t-call-context
+// callee, whose `this` is its context.
+let aliasProps = false;
 
+// The expression as TypeScript reads it. An object literal may hold `this` as
+// a shorthand key, which processExpr expands and JavaScript does not.
 function shadowExpr(expr: string): string {
   if (reads) {
     for (const name of processExpr(expr).variables) {
       reads.add(name);
     }
   }
-  const tokens = tokenize(expr);
+  let tokens = tokenize(expr);
+  if (aliasProps) {
+    const aliased = [];
+    for (let i = 0; i < tokens.length; i++) {
+      const before = tokens[i - 1];
+      if (
+        tokens[i].value === "this" &&
+        tokens[i + 1]?.value === "." &&
+        tokens[i + 2]?.value === "props" &&
+        !(before?.type === "OPERATOR" && (before.value === "." || before.value === "?."))
+      ) {
+        aliased.push({ ...tokens[i], value: "__owlProps" });
+        i += 2;
+      } else {
+        aliased.push(tokens[i]);
+      }
+    }
+    tokens = aliased;
+  }
   tokens.forEach((token, i) => {
     const before = tokens[i - 1];
     const after = tokens[i + 1];
@@ -340,19 +370,27 @@ function describe(ast: ASTDomNode | ASTComponent): string {
   return ast.type === ASTType.DomNode ? `<${ast.tag}>` : `<${ast.name}>`;
 }
 
-// The template a t-call renders: a static name, not one being written
-// already.
-function calleeOf(w: ShadowWriter, ast: { name: string }): AST | null {
-  const { getTemplate, customDirectives } = w.options;
-  if (!getTemplate || isInterpolated(ast.name) || w.calls.includes(ast.name)) {
-    return null;
+// The templates a t-call renders: the one its static name names, or those
+// dynamicCallees gives for an interpolated one; none being written already.
+function calleesOf(w: ShadowWriter, ast: { name: string }): { name: string; ast: AST }[] {
+  const { getTemplate, dynamicCallees, customDirectives } = w.options;
+  if (!getTemplate) {
+    return [];
   }
-  const template = getTemplate(ast.name);
-  if (!template) {
-    w.missingCalls.push(ast.name);
-    return null;
+  const names = isInterpolated(ast.name) ? (dynamicCallees?.(ast.name) ?? []) : [ast.name];
+  const callees = [];
+  for (const name of names) {
+    if (w.calls.includes(name)) {
+      continue;
+    }
+    const template = getTemplate(name);
+    if (!template) {
+      w.missingCalls.push(name);
+      continue;
+    }
+    callees.push({ name, ast: parse(template, customDirectives) });
   }
-  return parse(template, customDirectives);
+  return callees;
 }
 
 function emit(w: ShadowWriter, ast: AST | null): void {
@@ -471,12 +509,12 @@ function emit(w: ShadowWriter, ast: AST | null): void {
       if (name) {
         w.line(`__owlRead(${name});`, origin, source);
       }
-      const callee = calleeOf(w, ast);
-      if (ast.context && !callee) {
+      const callees = calleesOf(w, ast);
+      if (ast.context && !callees.length) {
         w.read(ast.context, `${origin} t-call-context`, "t-call-context");
       }
       const attrs = Object.entries(ast.attrs || {});
-      if (!ast.body && !attrs.length && !callee) {
+      if (!ast.body && !attrs.length && !callees.length) {
         return;
       }
       w.open("{", origin, source);
@@ -501,8 +539,9 @@ function emit(w: ShadowWriter, ast: AST | null): void {
         emit(w, ast.body);
         w.close();
       }
-      if (callee) {
+      for (const callee of callees) {
         const componentType = w.componentType;
+        let savedAlias = aliasProps;
         const outer = new Set(w.scopes.flatMap((scope) => [...scope]));
         if (ast.context) {
           // The callee's `this` is the context, and its variables are the
@@ -513,6 +552,8 @@ function emit(w: ShadowWriter, ast: AST | null): void {
           });
           w.open("__owlWith(__owlContext, function () {", null);
           w.componentType = "typeof __owlContext";
+          savedAlias = aliasProps;
+          aliasProps = false;
         } else {
           w.open("{", null);
         }
@@ -530,10 +571,10 @@ function emit(w: ShadowWriter, ast: AST | null): void {
         const [savedReads, savedDeclared] = [reads, w.declared];
         reads = new Set();
         w.declared = new Set();
-        w.calls.push(ast.name);
-        w.callees.add(ast.name);
-        declareContext(w, callee, bound);
-        emit(w, callee);
+        w.calls.push(callee.name);
+        w.callees.add(callee.name);
+        declareContext(w, callee.ast, bound);
+        emit(w, callee.ast);
         w.calls.pop();
         const unset = [...reads].filter(
           (name) =>
@@ -550,6 +591,7 @@ function emit(w: ShadowWriter, ast: AST | null): void {
         w.origins.splice(at, 0, ...declarations.map(() => null));
         w.sources.splice(at, 0, ...declarations.map(() => null));
         w.componentType = componentType;
+        aliasProps = savedAlias;
         w.close(ast.context ? "});" : "}");
       }
       w.close();
@@ -629,6 +671,11 @@ export function compileTypeShadow(
     w.line(`const __globals__ = undefined as unknown as ${options.globalsType};`, null);
     w.line(`__owlRead(__globals__);`, null);
   }
+  if (options.propsType) {
+    w.line(`const __owlProps = undefined as unknown as ${options.propsType};`, null);
+    w.line(`__owlRead(__owlProps);`, null);
+    aliasProps = true;
+  }
   if (options.variablesType) {
     w.line(`const __owlVars = undefined as unknown as ${options.variablesType};`, null);
     w.line(`__owlRead(__owlVars);`, null);
@@ -638,6 +685,7 @@ export function compileTypeShadow(
   const at = w.lines.length;
   declareContext(w, ast, new Set());
   emit(w, ast);
+  aliasProps = false;
   if (options.variablesType) {
     const given = [...reads!].filter((name) => name !== "this" && !w.declared!.has(name));
     reads = null;

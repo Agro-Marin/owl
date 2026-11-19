@@ -376,3 +376,33 @@ test("a template rendered with variables reads each as a property of their type"
     `t-out="item.nmae": Property 'nmae' does not exist on type 'Item'.`,
   ]);
 });
+
+test("an interpolated t-call writes in place each template dynamicCallees gives", () => {
+  const templates: Record<string, string> = {
+    pill: `<span t-out="item.name"/>`,
+    wrongPill: `<span t-out="item.nmae"/>`,
+  };
+  const options = {
+    getTemplate: (name: string) => templates[name] ?? null,
+    dynamicCallees: (name: string) =>
+      name === "{{ this.state.label }}" ? ["pill", "wrongPill"] : [],
+  };
+  expect(
+    check(
+      `<t t-foreach="this.items" t-as="item" t-key="item.id"><t t-call="{{ this.state.label }}"/></t>`,
+      options
+    )
+  ).toEqual([
+    `t-call="wrongPill" t-out="item.nmae": Property 'nmae' does not exist on type 'Item'.`,
+  ]);
+});
+
+test("with propsType, this.props is read as it, and this keeps its private members", () => {
+  const options = { propsType: "{ title: string }" };
+  expect(
+    check(`<span t-out="this.props.title.length"/><t t-out="this.state.count"/>`, options)
+  ).toEqual([]);
+  expect(check(`<span t-out="this.props.titel"/>`, options)).toEqual([
+    `t-out="this.props.titel": Property 'titel' does not exist on type '{ title: string; }'. Did you mean 'title'?`,
+  ]);
+});
