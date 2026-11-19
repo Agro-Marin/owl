@@ -1,5 +1,11 @@
 # Changelog of the 3.0-marin fork
 
+## 3.0.0-marin.6 (2026-11-19)
+
+### PERF
+
+- owl-compiler parser: the branch, t-out and slot normalisations walk the template instead of querying it by selector
+
 ## 3.0.0-marin.5 (2026-11-19)
 
 ### FIX
