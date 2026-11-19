@@ -68,7 +68,7 @@ type TKind =
   | "OPERATOR"
   | "COLON";
 
-interface Token {
+export interface Token {
   type: TKind;
   value: string;
   size?: number;
@@ -429,7 +429,7 @@ const paddedValues = new Map([
 
 const INTEGER_RE = /^\d[\d_]*$/;
 
-function render(tokens: Token[]): string {
+export function render(tokens: Token[]): string {
   let code = "";
   let last = "";
   let previous: Token | undefined;
@@ -897,7 +897,7 @@ export function compileExpr(expr: string): string {
   return processExpr(expr).expr;
 }
 
-function findInterpolations(s: string): { start: number; end: number; expr: string }[] {
+export function findInterpolations(s: string): { start: number; end: number; expr: string }[] {
   const result = [];
   for (let i = 0; i < s.length; i++) {
     const isDouble = s.startsWith("{{", i);
