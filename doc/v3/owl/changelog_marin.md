@@ -1,5 +1,20 @@
 # Changelog of the 3.0-marin fork
 
+## 3.0.0-marin.5 (2026-11-19)
+
+### FIX
+
+- owl-compiler type_shadow: an object literal's shorthand this is written out, as processExpr expands it
+
+### ADD
+
+- owl: owl.type_shadow.es.js, the type shadow emitter as a node tool, vendored with the builds
+- owl-compiler type_shadow: a template's expressions as TypeScript against its component, for a type checker to read
+
+### DOC
+
+- fork_3.0-marin: vendoring copies and pins the declarations with the builds, and they are odoo's only typing of owl
+
 ## 3.0.0-marin.4 (2026-11-19)
 
 ### IMP
