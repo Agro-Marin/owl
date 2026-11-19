@@ -1,4 +1,6 @@
 export declare const FILES: string[];
+export declare const TYPE_FILES: string[];
+export declare const PINNED: string[];
 export declare const DEFAULT_PROBE: { file: string; pattern: string };
 export interface OwlPin {
   version?: string;

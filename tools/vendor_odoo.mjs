@@ -1,12 +1,16 @@
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { copyFileSync, existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { copyFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { dirname, join, resolve } from "node:path";
 import { parseArgs } from "node:util";
 import { buildHash, SOURCES } from "../packages/owl/build_hash.mjs";
 import { checkNodeVersion, ROOT, scratchDir, SIBLING_ODOO } from "./workspace.mjs";
 
 export const FILES = ["owl.es.js", "owl.runtime.es.js", "owl.compiler.es.js"];
+// The declarations of @odoo/owl and @odoo/owl/compiler, which Odoo's tsconfig
+// maps the specifiers to: vendored and pinned with the builds they describe.
+export const TYPE_FILES = ["types/owl.d.ts", "types/compiler.d.ts"];
+export const PINNED = [...FILES, ...TYPE_FILES];
 export const DEFAULT_PROBE = { file: "owl.es.js", pattern: 'var version = "{version}"' };
 
 const sha256 = (bytes) => createHash("sha256").update(bytes).digest("hex");
@@ -94,8 +98,8 @@ export function releaseVersion(packageVersion, built) {
 export function pinErrors(pin, files) {
   const errors = [];
   const pinned = Object.keys(pin.checksums ?? {});
-  if (pinned.length !== FILES.length || !FILES.every((file) => pinned.includes(file))) {
-    errors.push(`checksums pin ${pinned.join(", ")}: they must pin exactly ${FILES.join(", ")}`);
+  if (pinned.length !== PINNED.length || !PINNED.every((file) => pinned.includes(file))) {
+    errors.push(`checksums pin ${pinned.join(", ")}: they must pin exactly ${PINNED.join(", ")}`);
   }
   if (!/^[0-9a-f]{40}$/.test(pin.commit ?? "")) {
     return [...errors, `commit ${pin.commit} is not a full SHA-1`];
@@ -202,13 +206,18 @@ export function vendor({
   }
   const out = scratchDir("owl-vendor");
   try {
-    execFileSync(process.execPath, ["build.mjs", "--outdir", out], {
-      cwd: join(root, "packages/owl"),
-      stdio: ["ignore", "ignore", "inherit"],
-    });
-    const built = Object.fromEntries(FILES.map((file) => [file, readFileSync(join(out, file))]));
-    const version = releaseVersion(packageVersion, built);
-    const checksums = Object.fromEntries(FILES.map((file) => [file, sha256(built[file])]));
+    for (const args of [[], ["types"]]) {
+      execFileSync(process.execPath, ["build.mjs", ...args, "--outdir", out], {
+        cwd: join(root, "packages/owl"),
+        stdio: ["ignore", "ignore", "inherit"],
+      });
+    }
+    const built = Object.fromEntries(PINNED.map((file) => [file, readFileSync(join(out, file))]));
+    const version = releaseVersion(
+      packageVersion,
+      Object.fromEntries(FILES.map((file) => [file, built[file]]))
+    );
+    const checksums = Object.fromEntries(PINNED.map((file) => [file, sha256(built[file])]));
     const versionsText = readFileSync(versionsFile, "utf8");
     const pinned = JSON.parse(versionsText).libs.owl;
     log(`owl ${version} at ${commit} (build ${hash}) -> ${join(lib, "owl")}`);
@@ -218,16 +227,17 @@ export function vendor({
       if (errors.length) {
         throw new Error(`refusing to vendor: Odoo's checker would reject it: ${errors.join("; ")}`);
       }
-      for (const file of FILES) {
+      for (const file of PINNED) {
+        mkdirSync(dirname(join(lib, "owl", file)), { recursive: true });
         copyFileSync(join(out, file), join(lib, "owl", file));
       }
       writeFileSync(versionsFile, updated);
-      log(`vendored ${FILES.join(", ")}; versions.json: commit ${pinned.commit} -> ${commit}`);
+      log(`vendored ${PINNED.join(", ")}; versions.json: commit ${pinned.commit} -> ${commit}`);
       return 0;
     }
     let differences = 0;
     const vendoredFiles = {};
-    for (const file of FILES) {
+    for (const file of PINNED) {
       const path = join(lib, "owl", file);
       const vendored = existsSync(path) ? readFileSync(path) : null;
       vendoredFiles[file] = vendored;
