@@ -30,6 +30,15 @@ export interface TypeShadow {
   code: string;
   // For each line of `code`, what in the template it comes from, or null.
   origins: (string | null)[];
+  // For each line of `code`, the attribute it reads as the template writes
+  // it, or null: what an editor looks for to place a diagnostic, since the
+  // parsed template keeps no position.
+  sources: (ShadowSource | null)[];
+}
+
+export interface ShadowSource {
+  attribute: string;
+  value: string;
 }
 
 // What every shadow refers to: declared once per checked file. A handler is
@@ -94,19 +103,21 @@ class ShadowWriter {
   componentType: string;
   lines: string[] = [];
   origins: (string | null)[] = [];
+  sources: (ShadowSource | null)[] = [];
   depth = 1;
 
   constructor(componentType: string) {
     this.componentType = componentType;
   }
 
-  line(code: string, origin: string | null) {
+  line(code: string, origin: string | null, source: ShadowSource | null = null) {
     this.lines.push("  ".repeat(this.depth) + code);
     this.origins.push(origin);
+    this.sources.push(source);
   }
 
-  open(code: string, origin: string | null) {
-    this.line(code, origin);
+  open(code: string, origin: string | null, source: ShadowSource | null = null) {
+    this.line(code, origin, source);
     this.depth++;
   }
 
@@ -115,9 +126,9 @@ class ShadowWriter {
     this.line(code, null);
   }
 
-  read(expr: string, origin: string) {
+  read(expr: string, origin: string, attribute: string) {
     if (expr.trim()) {
-      this.line(`__owlRead(${shadowExpr(expr)});`, origin);
+      this.line(`__owlRead(${shadowExpr(expr)});`, origin, { attribute, value: expr });
     }
   }
 
@@ -133,7 +144,8 @@ class ShadowWriter {
       const expr = shadowExpr(value);
       this.line(
         suffix === "bind" ? `__owlRead((${expr}).bind(this));` : `__owlRead(${expr});`,
-        `${where} ${prop}`
+        `${where} ${prop}`,
+        { attribute: prop, value }
       );
     }
   }
@@ -160,7 +172,8 @@ class ShadowWriter {
           : `__OwlMethodEvent<${JSON.stringify(name)}>`;
         this.line(
           `__owlHandler<${this.componentType}, ${event}>(this, ${shadowExpr(handler)});`,
-          `${where} t-on-${key}`
+          `${where} t-on-${key}`,
+          { attribute: `t-on-${key}`, value: handler }
         );
       }
     }
@@ -213,7 +226,7 @@ function declareContext(w: ShadowWriter, ast: AST | null, bound: Set<string>) {
   collectSetNames(ast, names);
   for (const name of names) {
     if (!bound.has(name)) {
-      w.line(`let ${name}: any;`, `t-set="${name}"`);
+      w.line(`let ${name}: any;`, `t-set="${name}"`, { attribute: "t-set", value: name });
     }
   }
 }
@@ -233,24 +246,24 @@ function emit(w: ShadowWriter, ast: AST | null): void {
     case ASTType.DomNode: {
       const where = describe(ast);
       if (ast.dynamicTag) {
-        w.read(ast.dynamicTag, `${where} t-tag`);
+        w.read(ast.dynamicTag, `${where} t-tag`, "t-tag");
       }
       for (const name in ast.attrs || {}) {
         const value = ast.attrs![name];
         if (name.startsWith("t-attf-")) {
           const parts = shadowInterpolation(value);
           if (parts) {
-            w.line(`__owlRead(${parts});`, `${where} ${name}`);
+            w.line(`__owlRead(${parts});`, `${where} ${name}`, { attribute: name, value });
           }
         } else if (name === "t-att" || name.startsWith("t-att-")) {
-          w.read(value, `${where} ${name}`);
+          w.read(value, `${where} ${name}`, name);
         }
       }
       if (ast.ref) {
-        w.read(ast.ref, `${where} t-ref`);
+        w.read(ast.ref, `${where} t-ref`, "t-ref");
       }
       if (ast.model) {
-        w.read(ast.model.expr, `${where} t-model`);
+        w.read(ast.model.expr, `${where} t-model`, "t-model");
       }
       w.handlers(ast.on, where, ast.dynamicTag ? "" : ast.tag);
       ast.content.forEach((child) => emit(w, child));
@@ -260,15 +273,21 @@ function emit(w: ShadowWriter, ast: AST | null): void {
       ast.content.forEach((child) => emit(w, child));
       return;
     case ASTType.TOut:
-      w.read(ast.expr, `t-out="${ast.expr}"`);
+      w.read(ast.expr, `t-out="${ast.expr}"`, "t-out");
       ast.body?.forEach((child) => emit(w, child));
       return;
     case ASTType.TIf: {
-      w.open(`if (${shadowExpr(ast.condition)}) {`, `t-if="${ast.condition}"`);
+      w.open(`if (${shadowExpr(ast.condition)}) {`, `t-if="${ast.condition}"`, {
+        attribute: "t-if",
+        value: ast.condition,
+      });
       emit(w, ast.content);
       for (const branch of ast.tElif || []) {
         w.depth--;
-        w.open(`} else if (${shadowExpr(branch.condition)}) {`, `t-elif="${branch.condition}"`);
+        w.open(`} else if (${shadowExpr(branch.condition)}) {`, `t-elif="${branch.condition}"`, {
+          attribute: "t-elif",
+          value: branch.condition,
+        });
         emit(w, branch.content);
       }
       if (ast.tElse) {
@@ -284,7 +303,10 @@ function emit(w: ShadowWriter, ast: AST | null): void {
       // fallback when there is a t-value: there is nothing in it to read.
       const origin = `t-set="${ast.name}"`;
       if (ast.value) {
-        w.line(`${ast.name} = ${shadowExpr(ast.value)};`, origin);
+        w.line(`${ast.name} = ${shadowExpr(ast.value)};`, origin, {
+          attribute: "t-value",
+          value: ast.value,
+        });
       }
       ast.body?.forEach((child) => emit(w, child));
       return;
@@ -292,42 +314,46 @@ function emit(w: ShadowWriter, ast: AST | null): void {
     case ASTType.TForEach: {
       const elem = ast.elem;
       const origin = `t-foreach="${ast.collection}" t-as="${elem}"`;
+      const source = { attribute: "t-foreach", value: ast.collection };
       w.open(
         `for (const [${elem}, ${elem}_value] of __owlLoop(${shadowExpr(ast.collection)})) {`,
-        origin
+        origin,
+        source
       );
       w.line(
         `const ${elem}_index = 0 as number, ${elem}_first = true as boolean, ${elem}_last = true as boolean;`,
-        origin
+        origin,
+        source
       );
       w.line(`__owlRead(${elem}_value, ${elem}_index, ${elem}_first, ${elem}_last);`, null);
       const bound = new Set([elem]);
       declareContext(w, ast.body, bound);
       if (ast.key) {
-        w.read(ast.key, `${origin} t-key`);
+        w.read(ast.key, `${origin} t-key`, "t-key");
       }
       if (ast.memo) {
-        w.read(ast.memo, `${origin} t-memo`);
+        w.read(ast.memo, `${origin} t-memo`, "t-memo");
       }
       emit(w, ast.body);
       w.close();
       return;
     }
     case ASTType.TKey:
-      w.read(ast.expr, `t-key="${ast.expr}"`);
+      w.read(ast.expr, `t-key="${ast.expr}"`, "t-key");
       emit(w, ast.content);
       return;
     case ASTType.TCall: {
       const origin = `t-call="${ast.name}"`;
+      const source = { attribute: "t-call", value: ast.name };
       const name = shadowInterpolation(ast.name);
       if (name) {
-        w.line(`__owlRead(${name});`, origin);
+        w.line(`__owlRead(${name});`, origin, source);
       }
       if (ast.context) {
-        w.read(ast.context, `${origin} t-call-context`);
+        w.read(ast.context, `${origin} t-call-context`, "t-call-context");
       }
       if (ast.body) {
-        w.open("{", origin);
+        w.open("{", origin, source);
         declareContext(w, ast.body, new Set());
         emit(w, ast.body);
         w.close();
@@ -337,10 +363,10 @@ function emit(w: ShadowWriter, ast: AST | null): void {
     case ASTType.TComponent: {
       const where = describe(ast);
       if (ast.isDynamic) {
-        w.read(ast.name, `${where} t-component`);
+        w.read(ast.name, `${where} t-component`, "t-component");
       }
       if (ast.dynamicProps) {
-        w.read(ast.dynamicProps, `${where} t-props`);
+        w.read(ast.dynamicProps, `${where} t-props`, "t-props");
       }
       w.props(ast.props, where);
       w.handlers(ast.on, where);
@@ -350,10 +376,13 @@ function emit(w: ShadowWriter, ast: AST | null): void {
         w.props(slot.attrs, origin);
         w.handlers(slot.on, origin);
         if (slot.content) {
-          w.open("{", origin);
+          w.open("{", origin, { attribute: "t-set-slot", value: slotName });
           const bound = new Set<string>();
           if (slot.scope && VARIABLE_RE.test(slot.scope)) {
-            w.line(`const ${slot.scope}: any = {};`, `${origin} t-slot-scope`);
+            w.line(`const ${slot.scope}: any = {};`, `${origin} t-slot-scope`, {
+              attribute: "t-slot-scope",
+              value: slot.scope,
+            });
             bound.add(slot.scope);
           }
           declareContext(w, slot.content, bound);
@@ -367,10 +396,10 @@ function emit(w: ShadowWriter, ast: AST | null): void {
       const origin = `t-call-slot="${ast.name}"`;
       const name = shadowInterpolation(ast.name);
       if (name) {
-        w.line(`__owlRead(${name});`, origin);
+        w.line(`__owlRead(${name});`, origin, { attribute: "t-call-slot", value: ast.name });
       }
       if (ast.dynamicProps) {
-        w.read(ast.dynamicProps, `${origin} t-props`);
+        w.read(ast.dynamicProps, `${origin} t-props`, "t-props");
       }
       w.props(ast.attrs, origin);
       w.handlers(ast.on, origin);
@@ -378,7 +407,7 @@ function emit(w: ShadowWriter, ast: AST | null): void {
       return;
     }
     case ASTType.TLog:
-      w.read(ast.expr, `t-log="${ast.expr}"`);
+      w.read(ast.expr, `t-log="${ast.expr}"`, "t-log");
       emit(w, ast.content);
       return;
     case ASTType.TDebug:
@@ -405,5 +434,6 @@ export function compileTypeShadow(
   return {
     code: [header, ...w.lines, "}"].join("\n"),
     origins: [null, ...w.origins, null],
+    sources: [null, ...w.sources, null],
   };
 }

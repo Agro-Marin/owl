@@ -204,3 +204,30 @@ test("a prop is read as propEntry reads it: .translate is text, .bind a function
     `<Child> onSave.bind: Property 'bind' does not exist on type 'number'.`,
   ]);
 });
+
+test("each line names the attribute it reads as the template writes it", () => {
+  const shadow = compileTypeShadow(
+    `<div t-att-class="this.state.label" t-on-click="this.onClick">
+      <t t-foreach="this.items" t-as="item" t-key="item.id">
+        <span t-if="item.name &amp;&amp; this.state.count" t-out="item.name"/>
+      </t>
+      <t t-set="total" t-value="this.items.length"/>
+      <Child value.bind="this.increment"/>
+    </div>`,
+    { componentType: "Counter", functionName: "shadow" }
+  );
+  expect(shadow.sources).toHaveLength(shadow.code.split("\n").length);
+  const sources = shadow.sources.filter((source) => source !== null);
+  expect(sources).toEqual([
+    { attribute: "t-set", value: "total" },
+    { attribute: "t-att-class", value: "this.state.label" },
+    { attribute: "t-on-click", value: "this.onClick" },
+    { attribute: "t-foreach", value: "this.items" },
+    { attribute: "t-foreach", value: "this.items" },
+    { attribute: "t-key", value: "item.id" },
+    { attribute: "t-if", value: "item.name && this.state.count" },
+    { attribute: "t-out", value: "item.name" },
+    { attribute: "t-value", value: "this.items.length" },
+    { attribute: "value.bind", value: "this.increment" },
+  ]);
+});
