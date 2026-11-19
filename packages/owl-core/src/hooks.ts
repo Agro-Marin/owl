@@ -36,10 +36,21 @@ export function useOnChange<T extends unknown[]>(
   });
 }
 
-export function useListener(
-  target: EventTarget | (() => EventTarget | null),
-  eventName: string,
-  handler: EventListener,
+// The events a target dispatches by name, as addEventListener types them; an
+// event this map does not name (a custom one, another kind of target) is any.
+type EventMapOf<T> = T extends Window
+  ? WindowEventMap
+  : T extends Document
+    ? DocumentEventMap
+    : T extends HTMLElement
+      ? HTMLElementEventMap
+      : {};
+type ListenedEvent<T, K extends string> = K extends keyof EventMapOf<T> ? EventMapOf<T>[K] : any;
+
+export function useListener<T extends EventTarget, K extends string>(
+  target: T | (() => T | null),
+  eventName: K,
+  handler: (this: T, ev: ListenedEvent<T, K>) => void,
   eventParams?: AddEventListenerOptions
 ): void {
   useScope();
@@ -68,7 +79,7 @@ export function setCurrentEvent(ev: Event): void {
   }
 }
 
-function makeListener(handler: EventListener): EventListener {
+function makeListener(handler: (this: any, ev: any) => void): EventListener {
   const attachedDuring = currentEvent?.deref();
   return function (this: EventTarget, ev: Event) {
     if (ev === attachedDuring) {

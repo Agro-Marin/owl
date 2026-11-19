@@ -190,6 +190,26 @@ test("props read from an untyped schema are untyped, so a component can declare 
   expect(result.status).toBe(0);
 });
 
+test("useListener types the event by the target and event name, and takes any other event", () => {
+  const result = compileConsumer(`
+    import { Component, useListener, xml } from "@odoo/owl";
+    class Keys extends Component {
+      static template = xml\`<p/>\`;
+      setup() {
+        useListener(document, "keydown", (ev: KeyboardEvent) => void ev.key);
+        useListener(window, "resize", (ev: UIEvent) => void ev.detail);
+        useListener(() => document.body, "click", (ev) => void ev.clientX);
+        useListener(new EventTarget(), "custom", (ev: CustomEvent) => void ev.detail);
+        // @ts-expect-error a keydown is no MouseEvent
+        useListener(document, "keydown", (ev: MouseEvent) => void ev.clientX);
+      }
+    }
+    void Keys;
+  `);
+  expect(result.output).toBe("");
+  expect(result.status).toBe(0);
+});
+
 test("an EventBus listener receives the CustomEvent trigger() dispatches", () => {
   const result = compileConsumer(`
     import { EventBus } from "@odoo/owl";
