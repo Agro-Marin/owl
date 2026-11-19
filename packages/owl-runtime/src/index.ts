@@ -31,6 +31,7 @@ export { xml, TemplateSet, globalTemplates } from "./template_set";
 export type { TemplateCompiler, TemplateSetConfig } from "./template_set";
 export { Component } from "./component";
 export type { ComponentConstructor } from "./component";
+export { ComponentNode } from "./component_node";
 export { ErrorBoundary } from "./error_boundary";
 export { Portal } from "./portal";
 export { Suspense } from "./suspense";

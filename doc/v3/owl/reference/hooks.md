@@ -257,6 +257,16 @@ setup() {
 }
 ```
 
+In a component's `setup`, the scope is the component's `ComponentNode`
+(exported), which also carries `component` and `componentName`:
+
+```js
+const node = useScope();
+if (node instanceof ComponentNode) {
+  console.log(node.componentName);
+}
+```
+
 See the [Scope page](scope.md) for full details.
 
 ## Example: mouse position

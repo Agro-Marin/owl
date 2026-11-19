@@ -190,6 +190,27 @@ test("props read from an untyped schema are untyped, so a component can declare 
   expect(result.status).toBe(0);
 });
 
+test("a component's scope is its ComponentNode, with the component and its name", () => {
+  const result = compileConsumer(`
+    import { Component, ComponentNode, useScope, xml } from "@odoo/owl";
+    class Named extends Component {
+      static template = xml\`<p/>\`;
+      setup() {
+        const node = useScope();
+        if (!(node instanceof ComponentNode)) {
+          throw new Error("not a component");
+        }
+        const name: string = node.componentName;
+        const component: Component = node.component;
+        void [name, component];
+      }
+    }
+    void Named;
+  `);
+  expect(result.output).toBe("");
+  expect(result.status).toBe(0);
+});
+
 test("useListener types the event by the target and event name, and takes any other event", () => {
   const result = compileConsumer(`
     import { Component, useListener, xml } from "@odoo/owl";
