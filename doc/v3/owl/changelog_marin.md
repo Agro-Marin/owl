@@ -1,5 +1,35 @@
 # Changelog of the 3.0-marin fork
 
+## 3.0.0-marin.2 (2026-11-19)
+
+### FIX
+
+- owl tests dist: the size budgets strip the version too, so a release commit passes them
+- owl-runtime component_node: a component a failed mount took out of the DOM does not render on its own, so it gets no onMounted while detached
+- owl-runtime scheduler: a task dropped because a parent's render took its fiber over says so, not "destroyed"; and the size budgets strip the build date, which made them flaky
+- owl-runtime fibers: a component asked to render again inside a pending pass that then fails renders alone
+- owl-core proxy: a set operation of a reactive Set keeps the members of a set-like whose keys() iterator or steps are functions
+
+### IMP
+
+- tools mutation: an equivalent mutant is matched a few lines from where it was written, and a full run saves where it found it
+- owl-runtime component: a component's constructor admits any static, since a subclass declares statics its base cannot know of
+- owl-runtime props: useProps of a schema typed any gives untyped props, so a component's field can declare their type
+- owl-runtime tests: the fibers.ts survivors left after the fix of 4ce0d95f
+- owl-runtime tests: the survivors of mutation testing of fibers.ts and scheduler.ts, killed or listed as equivalent
+- owl-core tests: the last survivors of computations.ts and proxy.ts, which the first run's timeouts had hidden
+- owl-core tests: the survivors of mutation testing of computations.ts and proxy.ts, killed or listed as equivalent
+- tools mutation: Stryker and OWL's own mutation operators on the four core hot spots
+
+### REF
+
+- owl-runtime fibers: a failed first mount no longer records onMounted debts it can never pay
+- owl-runtime scheduler: a frame no longer drops tasks that are not root fibers, which cannot exist; the invariant channel checks it
+
+### ADD
+
+- owl-runtime tests: each scheduler invariant check is shown to fire on the state it forbids, and to stay silent with the channel off
+
 ## 3.0.0-marin.1 (2026-11-18)
 
 ### FIX
