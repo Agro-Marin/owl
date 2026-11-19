@@ -315,6 +315,16 @@ function wrapping<T extends AST>(ast: T, content: AST | null): T {
   return ast;
 }
 
+// The descendants of el carrying one of the attributes, in document order.
+// A selector would say the same, but jsdom, which compiles templates on
+// the server and in the type check, spends about a millisecond on each
+// querySelectorAll of a template.
+function descendantsWithAttribute(el: Element, ...names: string[]): Element[] {
+  return [...el.getElementsByTagName("*")].filter((node) =>
+    names.some((n) => node.hasAttribute(n))
+  );
+}
+
 function isComponentNode(el: Element): boolean {
   const first = el.tagName[0];
   return first === first.toUpperCase() || el.hasAttribute("t-component");
@@ -928,7 +938,7 @@ function parseComponent(node: Element, ctx: ParsingContext): AST | null {
   if (node.hasChildNodes()) {
     const clone = node.cloneNode(true) as Element;
 
-    const slotNodes = Array.from(clone.querySelectorAll("[t-set-slot]")).filter((slotNode) =>
+    const slotNodes = descendantsWithAttribute(clone, "t-set-slot").filter((slotNode) =>
       isOwnSlot(slotNode, clone)
     );
     for (let slotNode of slotNodes) {
@@ -1130,7 +1140,7 @@ function parseChildNodes(node: Element, ctx: ParsingContext): AST | null {
 }
 
 function normalizeTIf(el: Element) {
-  let tbranch = el.querySelectorAll("[t-elif], [t-else]");
+  let tbranch = descendantsWithAttribute(el, "t-elif", "t-else");
   for (let i = 0, ilen = tbranch.length; i < ilen; i++) {
     let node = tbranch[i];
     let prevElem = node.previousElementSibling;
@@ -1161,7 +1171,7 @@ function normalizeTIf(el: Element) {
 }
 
 function normalizeTOut(el: Element) {
-  const elements = [...el.querySelectorAll(`[t-out], [t-esc]`)].filter(isComponentNode);
+  const elements = descendantsWithAttribute(el, "t-out", "t-esc").filter(isComponentNode);
   for (const el of elements) {
     if (el.childNodes.length) {
       throw new OwlError(`Cannot have t-out on a component that already has content`);
