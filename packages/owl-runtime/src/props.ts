@@ -20,14 +20,20 @@ import { types } from "./types";
 
 declare const isProps: unique symbol;
 
-export type Props<T extends {}> = T & { [isProps]: never };
-export type PropsWithDefaults<T extends {}, DK extends PropertyKey> = T & { [isProps]: DK };
+// The brand names the keys that have a default, as a parameter: a subclass
+// that adds defaults stays assignable to its parent, one that drops them not.
+export type Props<T extends {}> = T & { [isProps]: (defaulted: never) => void };
+export type PropsWithDefaults<T extends {}, DK extends PropertyKey> = T & {
+  [isProps]: (defaulted: DK) => void;
+};
 
-type GetPropsWithOptionals<T> = T extends { [isProps]: infer DK extends PropertyKey }
+type GetPropsWithOptionals<T> = T extends {
+  [isProps]: (defaulted: infer DK extends PropertyKey) => void;
+}
   ? Omit<T, typeof isProps | (DK & keyof T)> & Partial<Pick<T, DK & keyof T>>
   : never;
 export type GetProps<T> = {
-  [K in keyof T]: T[K] extends { [isProps]: PropertyKey }
+  [K in keyof T]: T[K] extends { [isProps]: (defaulted: never) => void }
     ? (x: GetPropsWithOptionals<T[K]>) => void
     : never;
 }[keyof T] extends (x: infer I) => void

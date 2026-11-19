@@ -211,6 +211,34 @@ test("a component's scope is its ComponentNode, with the component and its name"
   expect(result.status).toBe(0);
 });
 
+test("a subclass may give an optional prop a default, which then reads as present, but not drop one", () => {
+  const result = compileConsumer(`
+    import { Component, props, t, xml } from "@odoo/owl";
+    class Group extends Component {
+      static template = xml\`<p/>\`;
+      static props = { cols: t.number().optional(), title: t.string().optional("") };
+      props = props(Group.props);
+      maybe(): number | undefined {
+        return this.props.cols;
+      }
+    }
+    class Outer extends Group {
+      static props = { ...Group.props, cols: Group.props.cols.optional(2) };
+      props = props(Outer.props);
+      width(): number {
+        return this.props.cols * 10;
+      }
+    }
+    // @ts-expect-error title has a default in Group, which its code relies on
+    class Bare extends Group {
+      static props = { ...Group.props, title: t.string().optional() };
+    }
+    void [Outer, Bare];
+  `);
+  expect(result.output).toBe("");
+  expect(result.status).toBe(0);
+});
+
 test("useListener types the event by the target and event name, and takes any other event", () => {
   const result = compileConsumer(`
     import { Component, useListener, xml } from "@odoo/owl";

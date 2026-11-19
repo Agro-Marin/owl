@@ -35,7 +35,10 @@ export interface Optional<T> extends Schema<T | undefined> {
   optional(value: DefaultValue<T>): WithDefault<T>;
 }
 
+// A value with a default may be omitted, as an optional one may: a subclass
+// that gives an optional prop a default still accepts what its parent did.
 export interface WithDefault<T> extends Schema<T> {
+  readonly [isOptional]: T;
   readonly [hasDefault]: T;
   optional(): WithDefault<T>;
   optional(value: DefaultValue<T>): WithDefault<T>;
@@ -58,10 +61,12 @@ type IntersectionValue<T extends any[]> = [T[number]] extends [never]
 type IsAny<T> = 0 extends 1 & T ? true : false;
 type HasDefault<T> = IsAny<T> extends true ? false : T extends { [hasDefault]: any } ? true : false;
 type IsOptional<T> = IsAny<T> extends true ? false : T extends { [isOptional]: any } ? true : false;
+// Optional with no default: the one kind a reader may find undefined.
+type IsUndefinedWhenOmitted<T> = HasDefault<T> extends true ? false : IsOptional<T>;
 type StripDefault<T> = T extends { [hasDefault]: infer U } ? U : T;
 type StripOptional<T> = T extends { [isOptional]: infer U } ? U | undefined : T;
 type StripType<T> = T extends { [typeBrand]: infer U } ? U : T;
-export type StripBrands<T> = StripType<StripDefault<StripOptional<T>>>;
+export type StripBrands<T> = StripType<StripOptional<StripDefault<T>>>;
 type StripBrandsAll<T extends any[]> = { [K in keyof T]: StripBrands<T[K]> };
 
 export type GetDefaultedKeys<T> = keyof T extends infer K
@@ -93,9 +98,9 @@ export type ResolveOptionalEntries<T> = PrettifyShape<
 
 export type ResolveReaderObjectType<T> = PrettifyShape<
   {
-    [K in keyof T as IsOptional<T[K]> extends true ? never : K]: StripBrands<T[K]>;
+    [K in keyof T as IsUndefinedWhenOmitted<T[K]> extends true ? never : K]: StripBrands<T[K]>;
   } & {
-    [K in keyof T as IsOptional<T[K]> extends true ? K : never]?: StripBrands<T[K]>;
+    [K in keyof T as IsUndefinedWhenOmitted<T[K]> extends true ? K : never]?: StripBrands<T[K]>;
   }
 >;
 
