@@ -136,20 +136,11 @@ export class Search {
         const templateNameRegex = new RegExp(`template\\s*=\\s*["'](${templateName})["']`, 'g');
         const templateIndex = [...str.matchAll(templateNameRegex)][0]?.index ?? 0;
 
-        const matches = [...str.matchAll(new RegExp(`class\\s+([A-Za-z_]+)\\sextends\\s+[A-Za-z_]+`, 'g'))];
+        const classRegex = /class\s+([A-Za-z_]+)\sextends\s+[A-Za-z_]+/g;
         let result = "";
-        let currentIndex = -1;
-        for (const match of matches) {
-            if (match.index > templateIndex) {
-                continue;
-            }
-
-            if (match.index > currentIndex) {
-                result = match[1];
-                currentIndex = match.index;
-            }
+        for (let match; (match = classRegex.exec(str)) && match.index <= templateIndex; ) {
+            result = match[1];
         }
-
         return result;
     }
 

@@ -4,7 +4,7 @@
     "description": "Owl framework extension that highlights templates and ease navigation between components and templates.",
     "publisher": "Odoo",
     "license": "LGPL-3.0-only",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "repository": {
         "type": "git",
         "url": "https://github.com/odoo/owl/tree/master/tools/owl-vision"
@@ -47,6 +47,11 @@
                 "command": "owl-vision.find-template",
                 "title": "Find Template",
                 "category": "Owl Vision"
+            },
+            {
+                "command": "owl-vision.check-templates",
+                "title": "Check Templates' Types",
+                "category": "Owl Vision"
             }
         ],
         "configuration": {
@@ -70,6 +75,33 @@
                     "editPresentation": "multilineText",
                     "default": "/**\n* @template T\n* @param {T} obj\n* @returns {T}\n*/\nfunction useState(obj) {}\n\n/**\n* @typedef {Object} Ref\n* @property {HTMLElement} el\n*/\n/**\n* @returns {Ref}\n*/\nfunction useRef(name) {}",
                     "description": "Mocks for functions or object that are imported but not resolved by the autcomplete. Add docstring comments for them to work properly."
+                },
+                "owl-vision.templateTypes.command": {
+                    "order": 3,
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "default": [],
+                    "markdownDescription": "The template type checker to run on save, as a program and its arguments, which prints its findings as JSON (Odoo: `[\"node\", \"tooling/typing/template_types.mjs\", \"--json\"]`). Empty: no check."
+                },
+                "owl-vision.templateTypes.cwd": {
+                    "order": 4,
+                    "type": "string",
+                    "default": ".",
+                    "description": "The checker's working directory, from the first workspace folder."
+                },
+                "owl-vision.templateTypes.severity": {
+                    "order": 5,
+                    "type": "string",
+                    "enum": [
+                        "error",
+                        "warning",
+                        "information",
+                        "hint"
+                    ],
+                    "default": "warning",
+                    "description": "How the checker's findings are shown."
                 }
             }
         },

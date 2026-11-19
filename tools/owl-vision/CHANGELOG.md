@@ -4,6 +4,17 @@ All notable changes to the "owl-vision" extension will be documented in this fil
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [0.2.0] - 2026-11-19
+
+### Added
+
+- Template type diagnostics: the configured checker (`owl-vision.templateTypes.command`) runs on
+  save and its findings show where each is written, with their count in the status bar.
+
+### Fixed
+
+- The extension type-checks again: the component lookup read `matchAll`'s optional index.
+
 ## [0.1.0] - 2024-11-06
 
 ### Added

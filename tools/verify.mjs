@@ -23,6 +23,14 @@ const STEPS = [
   ["test:tools", npm("test:tools")],
   ...PACKAGES.map((name) => [`types ${name}`, npm("test:types", "-w", `packages/${name}`)]),
   ["types tools", npm("test:types:tools")],
+  [
+    "types owl-vision",
+    existsSync("tools/owl-vision/node_modules") && [
+      process.execPath,
+      ["tools/owl-vision/node_modules/typescript/bin/tsc", "-p", "tools/owl-vision", "--noEmit"],
+    ],
+    "its dependencies are not installed: npm ci in tools/owl-vision",
+  ],
   ["specification", [process.execPath, ["tools/spec_check.mjs"]]],
   ["lint", npm("lint")],
   ["check-formatting", npm("check-formatting")],
