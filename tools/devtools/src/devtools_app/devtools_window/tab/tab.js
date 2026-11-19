@@ -21,6 +21,8 @@ export class Tab extends Component {
         return "Components";
       case "ProfilerTab":
         return "Profiler";
+      case "TimelineTab":
+        return "Timeline";
     }
   }
 

@@ -3,6 +3,7 @@ import { IS_FIREFOX, getActiveTabURL, browserInstance } from "../../utils";
 import globalHook from "../../page_scripts/owl_devtools_global_hook";
 import { ComponentsPlugin } from "./components_plugin";
 import { ProfilerPlugin } from "./profiler_plugin";
+import { TimelinePlugin } from "./timeline_plugin";
 
 export class StorePlugin extends Plugin {
   devtoolsId = signal(0);
@@ -24,6 +25,7 @@ export class StorePlugin extends Plugin {
   setup() {
     this._components = plugin(ComponentsPlugin);
     this._profiler = plugin(ProfilerPlugin);
+    this._timeline = plugin(TimelinePlugin);
     this._init();
     this._setupPortListener();
   }
@@ -236,6 +238,9 @@ export class StorePlugin extends Plugin {
           }
           if (msg.type === "Event") {
             this._profiler._loadEvents(msg.data);
+          }
+          if (msg.type === "Timeline") {
+            this._timeline.load(msg.data);
           }
           if (msg.type === "NewIFrame") {
             const isLoaded = await loadScripts(msg.data);

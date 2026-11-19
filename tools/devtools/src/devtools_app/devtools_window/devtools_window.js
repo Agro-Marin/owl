@@ -4,11 +4,12 @@ import { StorePlugin } from "../store/store";
 import { ComponentsPlugin } from "../store/components_plugin";
 import { ComponentsTab } from "./components_tab/components_tab";
 import { ProfilerTab } from "./profiler_tab/profiler_tab";
+import { TimelineTab } from "./timeline_tab/timeline_tab";
 import { Tab } from "./tab/tab";
 
 export class DevtoolsWindow extends Component {
   static template = "devtools.DevtoolsWindow";
-  static components = { ComponentsTab, Tab, ProfilerTab, ContextMenu };
+  static components = { ComponentsTab, Tab, ProfilerTab, TimelineTab, ContextMenu };
   setup() {
     this.store = plugin(StorePlugin);
     this.components = plugin(ComponentsPlugin);

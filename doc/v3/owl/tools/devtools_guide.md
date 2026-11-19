@@ -176,6 +176,22 @@ future.
 
 <img src="./screenshots/iframes.png"/>
 
+## Timeline
+
+The Timeline tab records what owl's [debug channels](../reference/debug_logging.md)
+say while the page runs: each render pass the scheduler schedules, every frame
+and what it does with each pass, each component render and commit, the
+lifecycle hooks, the errors and who handled them, the effects a write runs.
+Choose the channels, click the record button, use the page, and click it again
+to stop; the events are listed with their time since the recording started, a
+scheduler frame in bold opening the events that ran in it, and the filter keeps
+the lines that contain its text. The newest 20 000 events are kept.
+
+Unlike the profiler, the timeline reads only the interface owl exposes for it
+(`setDebug` and `setDebugSink` on `window.__OWL_DEVTOOLS__`), so it reads the
+same events on every owl build that has the channels; a build without them
+shows no timeline.
+
 ## Options
 
 The owl devtools extension has a dark mode feature which defaults to your general devtools settings and can

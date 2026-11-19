@@ -11,6 +11,7 @@
         <div class="panel-top d-flex align-items-center custom-navbar">
           <Tab tabName="'ComponentsTab'"/>
           <Tab tabName="'ProfilerTab'"/>
+          <Tab tabName="'TimelineTab'"/>
           <select t-if="this.store.frameUrls().length > 1" class="form-select form-select-sm custom-select navbar-select border-0" t-on-change="this.selectFrame">
             <t t-foreach="this.store.frameUrls()" t-as="frame" t-key="frame_index">
               <option t-att-value="frame"><t t-out="frame"/></option>
@@ -22,6 +23,7 @@
         </div>
         <ComponentsTab t-if="this.store.page() === 'ComponentsTab'"/>
         <ProfilerTab t-if="this.store.page() === 'ProfilerTab'"/>
+        <TimelineTab t-if="this.store.page() === 'TimelineTab'"/>
       </t>
       <t t-else="">
         <div class="status-message d-flex justify-content-center align-items-center">

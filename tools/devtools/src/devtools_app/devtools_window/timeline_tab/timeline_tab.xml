@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<templates xml:space="preserve">
+  <t t-name="devtools.TimelineTab">
+    <div class="position-relative overflow-hidden d-flex flex-column h-100">
+      <t t-if="this.timeline.channels() === null">
+        <div class="status-message d-flex justify-content-center align-items-center">
+          This page's owl build is older than the debug channels' devtools interface: it has no timeline.
+        </div>
+      </t>
+      <t t-else="">
+        <div class="panel-top d-flex align-items-center flex-wrap">
+          <i title="Start/Stop Recording" class="fa fa-circle profiler-icon p-2" t-attf-style="color: {{this.timeline.recording() ? 'var(--active-recorder)' : 'var(--text-color)'}};" t-on-click.stop="() => this.timeline.toggleRecording()" aria-hidden="true"></i>
+          <i title="Clear events" class="fa fa-ban profiler-icon p-2" t-on-click.stop="() => this.timeline.clear()" aria-hidden="true"></i>
+          <div class="icons-separator"/>
+          <t t-foreach="this.timeline.channels()" t-as="channel" t-key="channel">
+            <label class="p-1 mx-1 form-check-label pointer-icon" t-att-title="this.timeline.recording() ? 'Stop recording to change the channels' : ''">
+              <input type="checkbox" class="form-check-input me-1 pointer-icon" t-att-checked="this.timeline.selected().has(channel)" t-att-disabled="this.timeline.recording()" t-on-input="() => this.timeline.toggleChannel(channel)"/>
+              <t t-out="channel"/>
+            </label>
+          </t>
+          <div class="icons-separator"/>
+          <input type="text" class="form-control form-control-sm w-auto ms-1" placeholder="Filter" t-att-value="this.timeline.filter()" t-on-input="(ev) => this.timeline.filter.set(ev.target.value)"/>
+        </div>
+        <div class="events-container h-100 font-monospace overflow-auto">
+          <t t-if="!this.timeline.events().length">
+            <div class="status-message d-flex justify-content-center align-items-center">
+              <div>
+                Choose channels and click on the <i class="fa fa-circle" style="font-size: 0.8em;"></i> button to record what owl does.
+              </div>
+            </div>
+          </t>
+          <t t-else="">
+            <t t-foreach="this.timeline.visibleEvents()" t-as="event" t-key="event_index">
+              <div class="d-flex px-2" t-att-class="{ 'border-top fw-bold': this.isFrame(event) }">
+                <span class="text-muted me-2" style="min-width: 6em;" t-out="this.time(event)"/>
+                <span class="me-2" style="min-width: 6em;" t-out="event.channel"/>
+                <span t-out="event.message"/>
+              </div>
+            </t>
+          </t>
+        </div>
+      </t>
+    </div>
+  </t>
+</templates>

@@ -480,6 +480,55 @@
       this.eventId = 0;
     }
 
+    // The timeline: what the debug channels of the page's owl say, recorded
+    // through the API the owl build exposes (setDebug, setDebugSink), and sent
+    // to the panel in batches. An owl build without that API has no timeline.
+    getDebugChannels() {
+      const channels = window.__OWL_DEVTOOLS__.DEBUG_CHANNELS;
+      return channels ? [...channels] : null;
+    }
+
+    startTimeline(channels) {
+      const api = window.__OWL_DEVTOOLS__;
+      if (!api.setDebug || !api.setDebugSink) {
+        return false;
+      }
+      this.stopTimeline();
+      const start = performance.now();
+      this.timelineBatch = [];
+      api.setDebugSink((channel, message) => {
+        this.timelineBatch.push({ time: performance.now() - start, channel, message });
+      });
+      api.setDebug(channels);
+      this.timelineTimer = setInterval(() => this.flushTimeline(), 250);
+      return true;
+    }
+
+    flushTimeline() {
+      if (this.timelineBatch?.length) {
+        const data = this.timelineBatch;
+        this.timelineBatch = [];
+        window.top.postMessage({
+          source: "owl-devtools",
+          type: "Timeline",
+          data,
+          origin: { frame: this.frame },
+        });
+      }
+    }
+
+    stopTimeline() {
+      if (this.timelineTimer === undefined) {
+        return;
+      }
+      const api = window.__OWL_DEVTOOLS__;
+      api.setDebug(false);
+      api.setDebugSink(null);
+      clearInterval(this.timelineTimer);
+      this.timelineTimer = undefined;
+      this.flushTimeline();
+    }
+
     getIFrameUrls() {
       let frames = [];
       for (const frame of document.querySelectorAll("iframe")) {
