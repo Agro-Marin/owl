@@ -62,13 +62,21 @@ declare function __owlRead(...values: unknown[]): void;
 
 const VARIABLE_RE = /^[\p{ID_Start}_$][\p{ID_Continue}$‌‍]*$/u;
 
+// The expression as TypeScript reads it. An object literal may hold `this` as
+// a shorthand key, which processExpr expands and JavaScript does not.
 function shadowExpr(expr: string): string {
   const tokens = tokenize(expr);
-  for (const token of tokens) {
+  tokens.forEach((token, i) => {
     if (token.type === "TEMPLATE_STRING") {
       token.value = token.replace!(shadowExpr);
+    } else if (
+      token.value === "this" &&
+      ["LEFT_BRACE", "COMMA"].includes(tokens[i - 1]?.type) &&
+      ["RIGHT_BRACE", "COMMA"].includes(tokens[i + 1]?.type)
+    ) {
+      token.value = "this: this";
     }
-  }
+  });
   return render(tokens);
 }
 

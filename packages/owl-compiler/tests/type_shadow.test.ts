@@ -177,6 +177,15 @@ test("a t-set's text body is text, and its t-value is read", () => {
   ]);
 });
 
+test("an object literal's shorthand this is read as processExpr expands it", () => {
+  expect(check(`<t t-call="other" t-call-context="{ this, count: this.state.count }"/>`)).toEqual(
+    []
+  );
+  expect(check(`<t t-call="other" t-call-context="{ this, count: this.state.cuont }"/>`)).toEqual([
+    `t-call="other" t-call-context: Property 'cuont' does not exist on type '{ count: number; label: string | null; }'. Did you mean 'count'?`,
+  ]);
+});
+
 test("a t-if narrows what its branch reads", () => {
   expect(check(`<p t-out="this.state.label.trim()"/>`)).toEqual([
     `t-out="this.state.label.trim()": Object is possibly 'null'.`,
