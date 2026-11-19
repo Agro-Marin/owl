@@ -1,5 +1,12 @@
 # Changelog of the 3.0-marin fork
 
+## 3.0.0-marin.7 (2026-11-19)
+
+### IMP
+
+- owl-vision: a template type checker's findings show where they are written, on save
+- owl-compiler type_shadow: each line names the attribute it reads, as the template writes it
+
 ## 3.0.0-marin.6 (2026-11-19)
 
 ### PERF

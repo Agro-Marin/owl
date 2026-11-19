@@ -1,6 +1,6 @@
 {
   "name": "@odoo/owl",
-  "version": "3.0.0-marin.6",
+  "version": "3.0.0-marin.7",
   "description": "Odoo Web Library (OWL)",
   "main": "dist/owl.es.js",
   "types": "dist/types/owl.d.ts",
@@ -54,9 +54,9 @@
   },
   "homepage": "https://github.com/odoo/owl#readme",
   "devDependencies": {
-    "@odoo/owl-compiler": "3.0.0-marin.6",
-    "@odoo/owl-core": "3.0.0-marin.6",
-    "@odoo/owl-runtime": "3.0.0-marin.6",
+    "@odoo/owl-compiler": "3.0.0-marin.7",
+    "@odoo/owl-core": "3.0.0-marin.7",
+    "@odoo/owl-runtime": "3.0.0-marin.7",
     "jsdom": "^25.0.1"
   }
 }

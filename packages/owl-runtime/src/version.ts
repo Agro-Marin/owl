@@ -1,1 +1,1 @@
-export const version = "3.0.0-marin.6";
+export const version = "3.0.0-marin.7";

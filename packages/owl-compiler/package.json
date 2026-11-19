@@ -1,7 +1,7 @@
 {
   "name": "@odoo/owl-compiler",
   "private": true,
-  "version": "3.0.0-marin.6",
+  "version": "3.0.0-marin.7",
   "description": "Template compiler for Odoo Web Library (OWL)",
   "main": "src/index.ts",
   "module": "src/index.ts",
@@ -34,7 +34,7 @@
   },
   "homepage": "https://github.com/odoo/owl#readme",
   "dependencies": {
-    "@odoo/owl-core": "3.0.0-marin.6",
+    "@odoo/owl-core": "3.0.0-marin.7",
     "jsdom": "^25.0.1"
   }
 }
