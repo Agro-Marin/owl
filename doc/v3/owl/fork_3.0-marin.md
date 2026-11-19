@@ -488,16 +488,18 @@ the new one rejects (`--old`, `--new`name other compiler modules).`npm run
    module's shape (it imports nothing since the compiler registers itself).
 
 `npm run vendor:odoo` (`tools/vendor_odoo.mjs`) builds the committed checkout
-and its declarations (`build.mjs types`) and copies the three builds and
-`types/owl.d.ts` and `types/compiler.d.ts` into Odoo's `web/static/lib/owl/`,
-writing the full commit, the five sha256 (exactly those five: a stray pin is
+and its declarations (`build.mjs types`) and copies the three builds,
+`types/owl.d.ts` and `types/compiler.d.ts`, and the node tool
+`owl.type_shadow.es.js` with `types/type_shadow.d.ts` (templates' type
+shadows, for Odoo's template type check) into Odoo's `web/static/lib/owl/`,
+writing the full commit, the seven sha256 (exactly those seven: a stray pin is
 dropped) and the version into the `owl` entry of `web/static/lib/versions.json`
 (nothing else in it changes). Odoo's tsconfig maps `@odoo/owl` and
 `@odoo/owl/compiler` to the two declarations, so they are Odoo's only typing
 of OWL: a type OWL gets wrong is fixed here and re-vendored. `-- --check` only
 compares the build with both and exits 1 on a difference, or on what Odoo's
 `tooling/assets/check_vendored_libs.py` rejects (checksums pinning other files
-than the five, the entry's `probe`
+than the seven, the entry's `probe`
 missing from its file, a file whose `var buildHash` is not the commit's). The
 version is the build's `var version` (`owl-runtime/src/version.ts`, what
 Odoo's probe reads); a `packages/owl/package.json` saying otherwise is

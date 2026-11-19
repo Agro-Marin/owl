@@ -86,6 +86,8 @@ const PIN = {
     "owl.compiler.es.js": "c",
     "types/owl.d.ts": "d",
     "types/compiler.d.ts": "e",
+    "owl.type_shadow.es.js": "g",
+    "types/type_shadow.d.ts": "h",
   },
   probe: { file: "owl.es.js", pattern: 'var version = "{version}"' },
 };
@@ -108,13 +110,13 @@ test("the pins are judged as Odoo's checker judges them", () => {
       builds("3.0.0-alpha.2")
     )
   ).toEqual([
-    "checksums pin owl.es.js, owl.runtime.es.js, owl.compiler.es.js, types/owl.d.ts, types/compiler.d.ts, owl.iife.js: they must pin exactly owl.es.js, owl.runtime.es.js, owl.compiler.es.js, types/owl.d.ts, types/compiler.d.ts",
+    "checksums pin owl.es.js, owl.runtime.es.js, owl.compiler.es.js, types/owl.d.ts, types/compiler.d.ts, owl.type_shadow.es.js, types/type_shadow.d.ts, owl.iife.js: they must pin exactly owl.es.js, owl.runtime.es.js, owl.compiler.es.js, types/owl.d.ts, types/compiler.d.ts, owl.type_shadow.es.js, types/type_shadow.d.ts",
   ]);
   const withoutCompilerTypes = Object.fromEntries(
     Object.entries(PIN.checksums).filter(([file]) => file !== "types/compiler.d.ts")
   );
   expect(pinErrors({ ...PIN, checksums: withoutCompilerTypes }, builds("3.0.0-alpha.2"))).toEqual([
-    "checksums pin owl.es.js, owl.runtime.es.js, owl.compiler.es.js, types/owl.d.ts: they must pin exactly owl.es.js, owl.runtime.es.js, owl.compiler.es.js, types/owl.d.ts, types/compiler.d.ts",
+    "checksums pin owl.es.js, owl.runtime.es.js, owl.compiler.es.js, types/owl.d.ts, owl.type_shadow.es.js, types/type_shadow.d.ts: they must pin exactly owl.es.js, owl.runtime.es.js, owl.compiler.es.js, types/owl.d.ts, types/compiler.d.ts, owl.type_shadow.es.js, types/type_shadow.d.ts",
   ]);
   expect(pinErrors(PIN, builds("3.0.0-alpha.20"))).toEqual([
     "owl.es.js does not match its pinned probe (version 3.0.0-alpha.2)",

@@ -104,7 +104,12 @@ test("importing the compiler module for its effects keeps its registration", asy
 
 test("the build makes ES modules only: no IIFE script, no CommonJS", () => {
   const files = readdirSync(join(BUILT, "dist")).filter((name) => name.endsWith("js"));
-  expect(files.sort()).toEqual(["owl.compiler.es.js", "owl.es.js", "owl.runtime.es.js"]);
+  expect(files.sort()).toEqual([
+    "owl.compiler.es.js",
+    "owl.es.js",
+    "owl.runtime.es.js",
+    "owl.type_shadow.es.js",
+  ]);
 });
 
 test(
@@ -125,6 +130,7 @@ test(
         "owl.compiler.es.js",
         "owl.es.js",
         "owl.runtime.es.js",
+        "owl.type_shadow.es.js",
         "package.json",
       ]);
       expect(readFileSync(join(outdir, "notes.txt"), "utf8")).toBe("kept?");
@@ -292,6 +298,7 @@ describe("the dist and its targets", () => {
     expect(calls["owl.es.js"]).toEqual(adopted);
     expect(calls["owl.runtime.es.js"]).toEqual(adopted);
     expect(calls["owl.compiler.es.js"]).toEqual([]);
+    expect(calls["owl.type_shadow.es.js"]).toEqual([]);
   });
 
   test("owl's sources need no lowering for the targets", async () => {

@@ -319,6 +319,7 @@ test.each([
   ["owl.es.js", "owl.d.ts"],
   ["owl.runtime.es.js", "owl.d.ts"],
   ["owl.compiler.es.js", "compiler.d.ts"],
+  ["owl.type_shadow.es.js", "type_shadow.d.ts"],
 ])("%s exports every value %s declares, and declares every value it exports", (js, dts) => {
   const declared = declaredValues(resolve(BUILT, "dist/types", dts));
   const run = spawnSync(

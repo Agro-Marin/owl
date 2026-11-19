@@ -8,8 +8,15 @@ import { checkNodeVersion, ROOT, scratchDir, SIBLING_ODOO } from "./workspace.mj
 
 export const FILES = ["owl.es.js", "owl.runtime.es.js", "owl.compiler.es.js"];
 // The declarations of @odoo/owl and @odoo/owl/compiler, which Odoo's tsconfig
-// maps the specifiers to: vendored and pinned with the builds they describe.
-export const TYPE_FILES = ["types/owl.d.ts", "types/compiler.d.ts"];
+// maps the specifiers to, and the node tool that writes templates' type
+// shadows for Odoo's template type check: vendored and pinned with the builds
+// they describe, without the builds' version and build hash.
+export const TYPE_FILES = [
+  "types/owl.d.ts",
+  "types/compiler.d.ts",
+  "owl.type_shadow.es.js",
+  "types/type_shadow.d.ts",
+];
 export const PINNED = [...FILES, ...TYPE_FILES];
 export const DEFAULT_PROBE = { file: "owl.es.js", pattern: 'var version = "{version}"' };
 

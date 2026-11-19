@@ -96,6 +96,7 @@ function buildTypes() {
   for (const [name, entry] of [
     ["owl", "index"],
     ["compiler", "compiler"],
+    ["type_shadow", "type_shadow"],
   ]) {
     log("types %s using %s", name, process.execPath);
     execFileSync(
@@ -138,6 +139,12 @@ switch (target) {
       outfile: join(outdir, "owl.runtime.es.js"),
     });
     await buildCompilerModule();
+    await esbuild.build({
+      ...common,
+      entryPoints: ["src/type_shadow.ts"],
+      outfile: join(outdir, "owl.type_shadow.es.js"),
+      alias: { ...PACKAGE_SOURCES, "@odoo/owl-core": "./src/compiler_core.ts" },
+    });
     checkExportedFiles();
     break;
   default:

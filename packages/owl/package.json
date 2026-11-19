@@ -17,6 +17,10 @@
       "types": "./dist/types/compiler.d.ts",
       "default": "./dist/owl.compiler.es.js"
     },
+    "./type-shadow": {
+      "types": "./dist/types/type_shadow.d.ts",
+      "default": "./dist/owl.type_shadow.es.js"
+    },
     "./dist/*": "./dist/*",
     "./package.json": "./package.json"
   },
