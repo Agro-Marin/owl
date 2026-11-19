@@ -1,5 +1,17 @@
 # Changelog of the 3.0-marin fork
 
+## 3.0.0-marin.3 (2026-11-19)
+
+### IMP
+
+- doc fork page: the behaviour that differs from upstream is a short history pointing to the specification, which states it rule by rule
+- owl-runtime app: the devtools global carries setDebug, setDebugSink and DEBUG_CHANNELS, so the extension can record the debug channels
+- owl-runtime tests, tools mutation: the fiber channel's line for a render dropped because its component was destroyed while rendering is asserted; four survivors are listed equivalent with their reason
+
+### ADD
+
+- tools devtools: a Timeline tab records what owl's debug channels say while the page runs
+
 ## 3.0.0-marin.2 (2026-11-19)
 
 ### FIX
