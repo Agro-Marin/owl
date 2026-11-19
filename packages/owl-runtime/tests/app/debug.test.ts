@@ -709,3 +709,24 @@ test("a component created before the reactivity channel is on is named in its tr
   value.set(2);
   expect(observers).toEqual([["render Reader"]]);
 });
+
+test("the fiber channel says it drops a render whose component an error destroyed while it rendered", async () => {
+  class Bad extends Component {
+    static template = xml`<b t-out="this.boom()"/>`;
+    boom(): string {
+      throw new Error("boom");
+    }
+  }
+  class After extends Component {
+    static template = xml`<i/>`;
+  }
+  class Root extends Component {
+    static template = xml`<div><Bad/><After/></div>`;
+    static components = { Bad, After };
+  }
+  const app = new App({ test: true });
+  setDebug("fiber");
+  await expect(app.createRoot(Root).mount(fixture)).rejects.toThrow("boom");
+  expect(lines).toContain("fiber: drop Root's render: destroyed while rendering");
+  expect(app.destroyed).toBe(true);
+});

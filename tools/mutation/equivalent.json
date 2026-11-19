@@ -3958,5 +3958,41 @@
     "original": "node.status = STATUS.MOUNTED;",
     "replacement": "moved below: this.renderState |= APPLIED_TO_DOM;",
     "reason": "two independent assignments, to the node's status and to the fiber's renderState, with nothing between them"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 294,
+    "operator": "ConditionalExpression",
+    "original": "node.status === STATUS.DESTROYED",
+    "replacement": "true",
+    "reason": "(reasoned) a component's fiber stops being the rendering one during its own render only when the component is destroyed: renders asked from inside a render wait (render() awaits a rendering fiber, and every ancestor of a rendering child is itself rendering), and a child rendering as its own root cancels nothing synchronously; so the message is always 'destroyed' (debug.test.ts asserts it), and 'cancelled' is unreachable"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-runtime/src/rendering/fibers.ts",
+    "line": 294,
+    "operator": "StringLiteral",
+    "original": "\"cancelled\"",
+    "replacement": "\"\"",
+    "reason": "(reasoned) a component's fiber stops being the rendering one during its own render only when the component is destroyed: renders asked from inside a render wait (render() awaits a rendering fiber, and every ancestor of a rendering child is itself rendering), and a child rendering as its own root cancels nothing synchronously; so the message is always 'destroyed' (debug.test.ts asserts it), and 'cancelled' is unreachable"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-runtime/src/rendering/scheduler.ts",
+    "line": 19,
+    "operator": "CallExpression",
+    "original": "delayedIn.delete(fiber);",
+    "replacement": ";",
+    "reason": "delayedIn only answers forgetDelayed's question 'which scheduler delays this fiber': a stale entry makes forgetDelayed search that scheduler's delayedRenders, find nothing and do nothing, and the WeakMap entry goes with the fiber; the deletion saves a lookup and memory, not behaviour"
+  },
+  {
+    "tool": "stryker",
+    "file": "packages/owl-runtime/src/rendering/scheduler.ts",
+    "line": 81,
+    "operator": "CallExpression",
+    "original": "delayedIn.delete(f);",
+    "replacement": ";",
+    "reason": "delayedIn only answers forgetDelayed's question 'which scheduler delays this fiber': a stale entry makes forgetDelayed search that scheduler's delayedRenders, find nothing and do nothing, and the WeakMap entry goes with the fiber; the deletion saves a lookup and memory, not behaviour"
   }
 ]
