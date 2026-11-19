@@ -121,9 +121,12 @@ function variable(name: string): string {
   return KEYWORDS.has(name) ? `__owlVar_${name}` : name;
 }
 
-// The template variables the expressions written meanwhile read, while a
-// callee is being written.
+// The template variables the expressions written meanwhile read where no
+// open scope from readsFrom on binds them, while a callee (or a template
+// rendered with variables) is being written.
 let reads: Set<string> | null = null;
+let readsFrom = 0;
+let writer: ShadowWriter | null = null;
 // Whether `this.props` is read as __owlProps: outside a t-call-context
 // callee, whose `this` is its context.
 let aliasProps = false;
@@ -131,9 +134,12 @@ let aliasProps = false;
 // The expression as TypeScript reads it. An object literal may hold `this` as
 // a shorthand key, which processExpr expands and JavaScript does not.
 function shadowExpr(expr: string): string {
-  if (reads) {
+  if (reads && writer) {
+    const scopes = writer.scopes.slice(readsFrom);
     for (const name of processExpr(expr).variables) {
-      reads.add(name);
+      if (!scopes.some((scope) => scope.has(name))) {
+        reads.add(name);
+      }
     }
   }
   let tokens = tokenize(expr);
@@ -252,11 +258,7 @@ class ShadowWriter {
 
   bind(name: string) {
     this.scopes[this.scopes.length - 1].add(name);
-    this.declared?.add(name);
   }
-
-  // The names declared while a callee is being written.
-  declared: Set<string> | null = null;
 
   read(expr: string, origin: string, attribute: string) {
     if (expr.trim()) {
@@ -542,7 +544,6 @@ function emit(w: ShadowWriter, ast: AST | null): void {
       for (const callee of callees) {
         const componentType = w.componentType;
         let savedAlias = aliasProps;
-        const outer = new Set(w.scopes.flatMap((scope) => [...scope]));
         if (ast.context) {
           // The callee's `this` is the context, and its variables are the
           // attributes alone: none of the caller's reaches it.
@@ -564,28 +565,25 @@ function emit(w: ShadowWriter, ast: AST | null): void {
           bound.add(name);
         }
         // A variable the callee reads and the call does not give it is
-        // undefined, as the runtime's context lookup finds it: an optional
-        // argument (t-if="onExpand") checks clean, a required one does not.
+        // undefined at runtime, read as an optional argument (t-if="group"):
+        // typed any, since a guard would narrow undefined to never and report
+        // the branch it guards. It is checked in the calls that give it.
         const at = w.lines.length;
         const depth = w.depth;
-        const [savedReads, savedDeclared] = [reads, w.declared];
+        // With a context, none of the caller's variables reaches it: only
+        // what its own block binds counts.
+        const [savedReads, savedFrom] = [reads, readsFrom];
         reads = new Set();
-        w.declared = new Set();
+        readsFrom = ast.context ? w.scopes.length - 1 : 0;
         w.calls.push(callee.name);
         w.callees.add(callee.name);
         declareContext(w, callee.ast, bound);
         emit(w, callee.ast);
         w.calls.pop();
-        const unset = [...reads].filter(
-          (name) =>
-            name !== "this" &&
-            !bound.has(name) &&
-            !w.declared!.has(name) &&
-            (ast.context || !outer.has(name))
-        );
-        [reads, w.declared] = [savedReads, savedDeclared];
+        const unset = [...reads].filter((name) => name !== "this");
+        [reads, readsFrom] = [savedReads, savedFrom];
         const declarations = unset.map(
-          (name) => "  ".repeat(depth) + `const ${variable(name)} = undefined;`
+          (name) => "  ".repeat(depth) + `const ${variable(name)}: any = undefined;`
         );
         w.lines.splice(at, 0, ...declarations);
         w.origins.splice(at, 0, ...declarations.map(() => null));
@@ -666,6 +664,7 @@ export function compileTypeShadow(
 ): TypeShadow {
   const ast = parse(template, options.customDirectives);
   const w = new ShadowWriter(options);
+  writer = w;
   const header = `function ${options.functionName}(this: ${options.componentType}) {`;
   if (options.globalsType) {
     w.line(`const __globals__ = undefined as unknown as ${options.globalsType};`, null);
@@ -680,20 +679,20 @@ export function compileTypeShadow(
     w.line(`const __owlVars = undefined as unknown as ${options.variablesType};`, null);
     w.line(`__owlRead(__owlVars);`, null);
     reads = new Set();
-    w.declared = new Set();
+    readsFrom = 0;
   }
   const at = w.lines.length;
   declareContext(w, ast, new Set());
   emit(w, ast);
   aliasProps = false;
   if (options.variablesType) {
-    const given = [...reads!].filter((name) => name !== "this" && !w.declared!.has(name));
+    const given = [...reads!].filter((name) => name !== "this");
     reads = null;
-    w.declared = null;
     w.lines.splice(at, 0, ...given.map((name) => `  const ${variable(name)} = __owlVars.${name};`));
     w.origins.splice(at, 0, ...given.map((name) => `variable "${name}"`));
     w.sources.splice(at, 0, ...given.map(() => null));
   }
+  writer = null;
   return {
     code: [header, ...w.lines, "}"].join("\n"),
     origins: [null, ...w.origins, null],

@@ -339,21 +339,18 @@ test("a t-call-context callee reads the context as this, and only its attributes
       getTemplate: (name) => templates[name] ?? null,
     }
   );
-  expect(shadow.code).toContain("const item = undefined;");
+  expect(shadow.code).toContain("const item: any = undefined;");
 });
 
-test("a variable a callee reads and its call does not give is undefined", () => {
+test("a variable a callee reads and its call does not give is typed any there, and checked where given", () => {
   const templates: Record<string, string> = {
-    header: `<button t-if="onExpand" t-on-click="onExpand"/><t t-out="title.toUpperCase()"/>`,
+    header: `<button t-if="onExpand" t-on-click="onExpand"/><t t-if="title" t-out="title.toUpperCase()"/>`,
   };
-  expect(
-    check(`<t t-call="header" title.translate="Title"/>`, {
-      getTemplate: (name) => templates[name] ?? null,
-    })
-  ).toEqual([]);
-  expect(check(`<t t-call="header"/>`, { getTemplate: (name) => templates[name] ?? null })).toEqual(
-    [`t-call="header" t-out="title.toUpperCase()": 'title' is possibly 'undefined'.`]
-  );
+  const getTemplate = (name: string) => templates[name] ?? null;
+  expect(check(`<t t-call="header"/>`, { getTemplate })).toEqual([]);
+  expect(check(`<t t-call="header" title="this.state.count"/>`, { getTemplate })).toEqual([
+    `t-call="header" t-out="title.toUpperCase()": Property 'toUpperCase' does not exist on type 'number'.`,
+  ]);
 });
 
 test("a loop variable may be named as the collection it iterates", () => {
@@ -405,4 +402,16 @@ test("with propsType, this.props is read as it, and this keeps its private membe
   expect(check(`<span t-out="this.props.titel"/>`, options)).toEqual([
     `t-out="this.props.titel": Property 'titel' does not exist on type '{ title: string; }'. Did you mean 'title'?`,
   ]);
+});
+
+test("a callee's variable it sets only inside a loop is undefined where it reads it outside", () => {
+  const templates: Record<string, string> = {
+    rows: `<t t-if="group" t-out="group.name"/>
+      <t t-foreach="this.items" t-as="item" t-key="item.id"><t t-set="group" t-value="item"/><t t-out="group.name"/></t>`,
+  };
+  expect(
+    check(`<t t-foreach="this.items" t-as="group" t-key="group.id"/><t t-call="rows"/>`, {
+      getTemplate: (name) => templates[name] ?? null,
+    })
+  ).toEqual([]);
 });
