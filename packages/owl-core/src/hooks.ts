@@ -51,7 +51,7 @@ export function useListener<T extends EventTarget, K extends string>(
   target: T | (() => T | null),
   eventName: K,
   handler: (this: T, ev: ListenedEvent<T, K>) => void,
-  eventParams?: AddEventListenerOptions
+  eventParams?: boolean | AddEventListenerOptions
 ): void {
   useScope();
   if (typeof target === "function") {

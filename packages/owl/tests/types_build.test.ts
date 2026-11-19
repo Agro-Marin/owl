@@ -198,6 +198,7 @@ test("useListener types the event by the target and event name, and takes any ot
       setup() {
         useListener(document, "keydown", (ev: KeyboardEvent) => void ev.key);
         useListener(window, "resize", (ev: UIEvent) => void ev.detail);
+        useListener(document, "focus", (ev: FocusEvent) => void ev.relatedTarget, true);
         useListener(() => document.body, "click", (ev) => void ev.clientX);
         useListener(new EventTarget(), "custom", (ev: CustomEvent) => void ev.detail);
         // @ts-expect-error a keydown is no MouseEvent
